@@ -56,13 +56,19 @@ public class KafkaAdminClientServiceTest {
         new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_MATCHED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_HOLDING_MATCHED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_ITEM_MATCHED", 1),
+        new InventoryKafkaTopic("DI_SRS_MARC_BIB_RECORD_MATCHED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_UPDATED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_HOLDING_UPDATED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_ITEM_UPDATED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_NOT_MATCHED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_HOLDING_NOT_MATCHED", 1),
         new InventoryKafkaTopic("DI_INVENTORY_ITEM_NOT_MATCHED", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", 1)
+        new InventoryKafkaTopic("DI_SRS_MARC_BIB_RECORD_NOT_MATCHED", 1),
+        new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", 1),
+        new InventoryKafkaTopic("DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING", 1),
+        new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING", 1),
+        new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING", 1),
+        new InventoryKafkaTopic("DI_SRS_MARC_BIB_RECORD_MODIFIED_PARTITIONS", 1)
     };
 
 
@@ -150,18 +156,24 @@ public class KafkaAdminClientServiceTest {
   }
 
   private final Set<String> allExpectedTopics = Set.of(
-      "folio.foo-tenant.DI_INVENTORY_INSTANCE_CREATED",
-      "folio.foo-tenant.DI_INVENTORY_HOLDING_CREATED",
-      "folio.foo-tenant.DI_INVENTORY_ITEM_CREATED",
-      "folio.foo-tenant.DI_INVENTORY_INSTANCE_MATCHED",
-      "folio.foo-tenant.DI_INVENTORY_HOLDING_MATCHED",
-      "folio.foo-tenant.DI_INVENTORY_ITEM_MATCHED",
-      "folio.foo-tenant.DI_INVENTORY_INSTANCE_UPDATED",
-      "folio.foo-tenant.DI_INVENTORY_HOLDING_UPDATED",
-      "folio.foo-tenant.DI_INVENTORY_ITEM_UPDATED",
-      "folio.foo-tenant.DI_INVENTORY_INSTANCE_NOT_MATCHED",
-      "folio.foo-tenant.DI_INVENTORY_HOLDING_NOT_MATCHED",
-      "folio.foo-tenant.DI_INVENTORY_ITEM_NOT_MATCHED",
-      "folio.foo-tenant.DI_INVENTORY_AUTHORITY_UPDATED"
+      "folio.Default.foo-tenant.DI_INVENTORY_INSTANCE_CREATED",
+      "folio.Default.foo-tenant.DI_INVENTORY_HOLDING_CREATED",
+      "folio.Default.foo-tenant.DI_INVENTORY_ITEM_CREATED",
+      "folio.Default.foo-tenant.DI_INVENTORY_INSTANCE_MATCHED",
+      "folio.Default.foo-tenant.DI_INVENTORY_HOLDING_MATCHED",
+      "folio.Default.foo-tenant.DI_INVENTORY_ITEM_MATCHED",
+      "folio.Default.foo-tenant.DI_SRS_MARC_BIB_RECORD_MATCHED",
+      "folio.Default.foo-tenant.DI_INVENTORY_INSTANCE_UPDATED",
+      "folio.Default.foo-tenant.DI_INVENTORY_HOLDING_UPDATED",
+      "folio.Default.foo-tenant.DI_INVENTORY_ITEM_UPDATED",
+      "folio.Default.foo-tenant.DI_INVENTORY_INSTANCE_NOT_MATCHED",
+      "folio.Default.foo-tenant.DI_INVENTORY_HOLDING_NOT_MATCHED",
+      "folio.Default.foo-tenant.DI_INVENTORY_ITEM_NOT_MATCHED",
+      "folio.Default.foo-tenant.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED",
+      "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_UPDATED",
+      "folio.Default.foo-tenant.DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING",
+      "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING",
+      "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING",
+      "folio.Default.foo-tenant.DI_SRS_MARC_BIB_RECORD_MODIFIED_PARTITIONS"
   );
 }

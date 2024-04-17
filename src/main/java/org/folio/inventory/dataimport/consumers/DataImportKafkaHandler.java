@@ -31,7 +31,6 @@ import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateMarcHoldingsEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.DeleteAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
-import org.folio.inventory.dataimport.handlers.actions.MarcBibMatchedPostProcessingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.MarcBibModifiedPostProcessingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
@@ -39,6 +38,9 @@ import org.folio.inventory.dataimport.handlers.actions.UpdateAuthorityEventHandl
 import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateMarcHoldingsEventHandler;
+import org.folio.inventory.dataimport.handlers.actions.modify.MarcBibModifyEventHandler;
+import org.folio.inventory.dataimport.handlers.matching.CommonMatchEventHandler;
+import org.folio.inventory.dataimport.handlers.matching.MarcBibliographicMatchEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
@@ -77,6 +79,7 @@ import org.folio.processing.matching.reader.MatchValueReaderFactory;
 import org.folio.processing.matching.reader.StaticValueReaderImpl;
 import org.folio.rest.jaxrs.model.Event;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -88,6 +91,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   private static final Logger LOGGER = LogManager.getLogger(DataImportKafkaHandler.class);
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
+  private static final String USER_ID_HEADER = "userId";
   private static final String PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
 
   private final Vertx vertx;
@@ -120,10 +124,12 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
       String recordId = headersMap.get(RECORD_ID_HEADER);
       String chunkId = headersMap.get(CHUNK_ID_HEADER);
+      String userId = headersMap.get(USER_ID_HEADER);
       String jobExecutionId = eventPayload.getJobExecutionId();
       LOGGER.info("Data import event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", eventPayload.getEventType(), recordId, jobExecutionId, chunkId);
       eventPayload.getContext().put(RECORD_ID_HEADER, recordId);
       eventPayload.getContext().put(CHUNK_ID_HEADER, chunkId);
+      eventPayload.getContext().put(USER_ID_HEADER, userId);
 
       Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
       String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
@@ -157,10 +163,10 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     HoldingsPreloader holdingsPreloader = new HoldingsPreloader(ordersPreloaderHelper);
     ItemPreloader itemPreloader = new ItemPreloader(ordersPreloaderHelper);
 
-    MatchValueLoaderFactory.register(new InstanceLoader(storage, vertx, instancePreloader));
-    MatchValueLoaderFactory.register(new ItemLoader(storage, vertx, itemPreloader));
-    MatchValueLoaderFactory.register(new HoldingLoader(storage, vertx, holdingsPreloader));
-    MatchValueLoaderFactory.register(new AuthorityLoader(storage, vertx));
+    MatchValueLoaderFactory.register(new InstanceLoader(storage, instancePreloader));
+    MatchValueLoaderFactory.register(new ItemLoader(storage, itemPreloader));
+    MatchValueLoaderFactory.register(new HoldingLoader(storage, holdingsPreloader));
+    MatchValueLoaderFactory.register(new AuthorityLoader(storage));
 
     MatchValueReaderFactory.register(new MarcValueReaderImpl());
     MatchValueReaderFactory.register(new StaticValueReaderImpl());
@@ -175,9 +181,13 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     MatchingManager.registerMatcherFactory(new HoldingsItemMatcherFactory());
 
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
-    EventManager.registerEventHandler(new MatchInstanceEventHandler(mappingMetadataCache, consortiumService));
-    EventManager.registerEventHandler(new MatchItemEventHandler(mappingMetadataCache, consortiumService));
-    EventManager.registerEventHandler(new MatchHoldingEventHandler(mappingMetadataCache, consortiumService));
+    EventManager.registerEventHandler(new CommonMatchEventHandler(List.of(
+      new MatchInstanceEventHandler(mappingMetadataCache, consortiumService),
+      new MatchHoldingEventHandler(mappingMetadataCache, consortiumService),
+      new MatchItemEventHandler(mappingMetadataCache, consortiumService),
+      new MarcBibliographicMatchEventHandler(consortiumService, client, storage)
+    )));
+
     EventManager.registerEventHandler(new MatchAuthorityEventHandler(mappingMetadataCache, consortiumService));
     EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache, new ItemIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService, consortiumService));
@@ -191,6 +201,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, consortiumService));
     EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, mappingMetadataCache));
-    EventManager.registerEventHandler(new MarcBibMatchedPostProcessingEventHandler(storage));
+    EventManager.registerEventHandler(new MarcBibModifyEventHandler(mappingMetadataCache, new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, client));
   }
 }

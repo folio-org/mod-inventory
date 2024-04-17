@@ -1,8 +1,40 @@
 package org.folio.inventory.dataimport.util;
 
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_001;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_035;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_035_SUB;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addControlledFieldToMarcRecord;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addDataFieldToMarcRecord;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addFieldToMarcRecord;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.dateTime005Formatter;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.get035SubfieldOclcValues;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getCacheStats;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValue;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValueFromControlledField;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.isFieldExist;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.removeField;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.io.File;
+import java.io.IOException;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.IntStream;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.inventory.TestUtil;
@@ -17,33 +49,17 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.BlockJUnit4ClassRunner;
-
-import java.io.IOException;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.stream.IntStream;
-
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addDataFieldToMarcRecord;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addControlledFieldToMarcRecord;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addFieldToMarcRecord;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.dateTime005Formatter;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.isFieldExist;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getCacheStats;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValueFromControlledField;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.removeField;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import org.junit.runners.Parameterized;
+import org.marc4j.MarcException;
+import org.marc4j.marc.Subfield;
 
 @RunWith(BlockJUnit4ClassRunner.class)
 public class AdditionalFieldsUtilTest {
 
   private static final String PARSED_MARC_RECORD_PATH = "src/test/resources/marc/parsedMarcRecord.json";
+  private static final String PARSED_RECORD = "src/test/resources/marc/parsedRecord.json";
+  private static final String REORDERED_PARSED_RECORD = "src/test/resources/marc/reorderedParsedRecord.json";
+  private static final String REORDERING_RESULT_RECORD = "src/test/resources/marc/reorderingResultRecord.json";
 
   @Test
   public void shouldAddInstanceIdSubfield() throws IOException {
@@ -56,8 +72,8 @@ public class AdditionalFieldsUtilTest {
     String leader = new JsonObject(parsedRecordContent).getString("leader");
     Record record = new Record().withId(recordId).withParsedRecord(parsedRecord);
     // when
-    boolean addedSourceRecordId = AdditionalFieldsUtil.addFieldToMarcRecord(record, AdditionalFieldsUtil.TAG_999, 's', recordId);
-    boolean addedInstanceId = AdditionalFieldsUtil.addFieldToMarcRecord(record, AdditionalFieldsUtil.TAG_999, 'i', instanceId);
+    boolean addedSourceRecordId = addFieldToMarcRecord(record, TAG_999, 's', recordId);
+    boolean addedInstanceId = addFieldToMarcRecord(record, TAG_999, 'i', instanceId);
     // then
     Assert.assertTrue(addedSourceRecordId);
     Assert.assertTrue(addedInstanceId);
@@ -69,8 +85,8 @@ public class AdditionalFieldsUtilTest {
     int totalFieldsCount = 0;
     for (int i = fields.size(); i-- > 0; ) {
       JsonObject targetField = fields.getJsonObject(i);
-      if (targetField.containsKey(AdditionalFieldsUtil.TAG_999)) {
-        JsonArray subfields = targetField.getJsonObject(AdditionalFieldsUtil.TAG_999).getJsonArray("subfields");
+      if (targetField.containsKey(TAG_999)) {
+        JsonArray subfields = targetField.getJsonObject(TAG_999).getJsonArray("subfields");
         for (int j = subfields.size(); j-- > 0; ) {
           JsonObject targetSubfield = subfields.getJsonObject(j);
           if (targetSubfield.containsKey("i")) {
@@ -94,7 +110,7 @@ public class AdditionalFieldsUtilTest {
     Record record = new Record();
     String instanceId = UUID.randomUUID().toString();
     // when
-    boolean added = AdditionalFieldsUtil.addFieldToMarcRecord(record, AdditionalFieldsUtil.TAG_999, 'i', instanceId);
+    boolean added = addFieldToMarcRecord(record, TAG_999, 'i', instanceId);
     // then
     Assert.assertFalse(added);
     Assert.assertNull(record.getParsedRecord());
@@ -108,7 +124,7 @@ public class AdditionalFieldsUtilTest {
     record.setParsedRecord(new ParsedRecord().withContent(content));
     String instanceId = UUID.randomUUID().toString();
     // when
-    boolean added = AdditionalFieldsUtil.addFieldToMarcRecord(record, AdditionalFieldsUtil.TAG_999, 'i', instanceId);
+    boolean added = addFieldToMarcRecord(record, TAG_999, 'i', instanceId);
     // then
     Assert.assertFalse(added);
     Assert.assertNotNull(record.getParsedRecord());
@@ -124,7 +140,7 @@ public class AdditionalFieldsUtilTest {
     record.setParsedRecord(new ParsedRecord().withContent(content));
     String instanceId = UUID.randomUUID().toString();
     // when
-    boolean added = AdditionalFieldsUtil.addFieldToMarcRecord(record, AdditionalFieldsUtil.TAG_999, 'i', instanceId);
+    boolean added = addFieldToMarcRecord(record, TAG_999, 'i', instanceId);
     // then
     Assert.assertFalse(added);
     Assert.assertNotNull(record.getParsedRecord());
@@ -140,7 +156,7 @@ public class AdditionalFieldsUtilTest {
     record.setParsedRecord(new ParsedRecord().withContent(content));
     String instanceId = UUID.randomUUID().toString();
     // when
-    boolean added = AdditionalFieldsUtil.addFieldToMarcRecord(record, AdditionalFieldsUtil.TAG_999, 'i', instanceId);
+    boolean added = addFieldToMarcRecord(record, TAG_999, 'i', instanceId);
     // then
     Assert.assertFalse(added);
     Assert.assertNotNull(record.getParsedRecord());
@@ -154,7 +170,7 @@ public class AdditionalFieldsUtilTest {
     record.setParsedRecord(new ParsedRecord().withContent(null));
     String instanceId = UUID.randomUUID().toString();
     // when
-    boolean added = AdditionalFieldsUtil.addFieldToMarcRecord(record, AdditionalFieldsUtil.TAG_999, 'i', instanceId);
+    boolean added = addFieldToMarcRecord(record, TAG_999, 'i', instanceId);
     // then
     Assert.assertFalse(added);
     Assert.assertNotNull(record.getParsedRecord());
@@ -169,7 +185,7 @@ public class AdditionalFieldsUtilTest {
     String leader = new JsonObject(parsedRecordContent).getString("leader");
     parsedRecord.setContent(parsedRecordContent);
     Record record = new Record().withId(recordId).withParsedRecord(parsedRecord);
-    boolean deleted = AdditionalFieldsUtil.removeField(record, "001");
+    boolean deleted = removeField(record, "001");
     Assert.assertTrue(deleted);
     JsonObject content = new JsonObject(parsedRecord.getContent().toString());
     JsonArray fields = content.getJsonArray("fields");
@@ -187,7 +203,7 @@ public class AdditionalFieldsUtilTest {
     String parsedRecordContent = TestUtil.readFileFromPath(PARSED_MARC_RECORD_PATH);
     ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedRecordContent);
     Record record = new Record().withId(recordId).withParsedRecord(parsedRecord);
-    boolean added = AdditionalFieldsUtil.addControlledFieldToMarcRecord(record, "002", "", null);
+    boolean added = addControlledFieldToMarcRecord(record, "002", "", null);
     Assert.assertFalse(added);
   }
 
@@ -198,7 +214,7 @@ public class AdditionalFieldsUtilTest {
     ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedRecordContent);
     String leader = new JsonObject(parsedRecordContent).getString("leader");
     Record record = new Record().withId(recordId).withParsedRecord(parsedRecord);
-    boolean added = AdditionalFieldsUtil.addControlledFieldToMarcRecord(
+    boolean added = addControlledFieldToMarcRecord(
       record, "002", "test", AdditionalFieldsUtil::addControlledFieldToMarcRecord);
     Assert.assertTrue(added);
     JsonObject content = new JsonObject(parsedRecord.getContent().toString());
@@ -218,8 +234,8 @@ public class AdditionalFieldsUtilTest {
     ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedRecordContent);
     String leader = new JsonObject(parsedRecordContent).getString("leader");
     Record record = new Record().withId(recordId).withParsedRecord(parsedRecord);
-    boolean added = AdditionalFieldsUtil.addControlledFieldToMarcRecord(
-      record, "003", "test", AdditionalFieldsUtil::replaceControlledFieldInMarcRecord);
+    boolean added = addControlledFieldToMarcRecord(
+      record, "003", "test", AdditionalFieldsUtil::replaceOrAddControlledFieldInMarcRecord);
     Assert.assertTrue(added);
     JsonObject content = new JsonObject(parsedRecord.getContent().toString());
     JsonArray fields = content.getJsonArray("fields");
@@ -257,7 +273,7 @@ public class AdditionalFieldsUtilTest {
     String leader = new JsonObject(parsedRecordContent).getString("leader");
     Record record = new Record().withId(UUID.randomUUID().toString()).withParsedRecord(parsedRecord);
     // when
-    boolean added = AdditionalFieldsUtil.addDataFieldToMarcRecord(record, "035", ' ', ' ', 'a', instanceHrId);
+    boolean added = addDataFieldToMarcRecord(record, "035", ' ', ' ', 'a', instanceHrId);
     // then
     Assert.assertTrue(added);
     JsonObject content = new JsonObject(parsedRecord.getContent().toString());
@@ -287,7 +303,7 @@ public class AdditionalFieldsUtilTest {
     ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
     Record record = new Record().withId(UUID.randomUUID().toString()).withParsedRecord(parsedRecord);
     // when
-    boolean added = AdditionalFieldsUtil.addDataFieldToMarcRecord(record, "999", 'f', 'f', 'i', instanceId);
+    boolean added = addDataFieldToMarcRecord(record, "999", 'f', 'f', 'i', instanceId);
     // then
     Assert.assertTrue(added);
     Assert.assertEquals(expectedParsedContent, parsedRecord.getContent());
@@ -327,6 +343,149 @@ public class AdditionalFieldsUtilTest {
     AdditionalFieldsUtil.move001To035(record);
     // then
     Assert.assertEquals(expectedParsedContent, parsedRecord.getContent());
+  }
+
+  @RunWith(Parameterized.class)
+  public static class OclcFieldNormalizationTest {
+
+    @Parameterized.Parameter(0)
+    public String parsedContent;
+
+    @Parameterized.Parameter(1)
+    public String expectedParsedContent;
+
+    @Parameterized.Parameters(name = "{index}: parsedContent={0}, expectedParsedContent={1}")
+    public static Collection<Object[]> data() {
+      return Arrays.asList(new Object[][]{
+        {
+          "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
+          "{\"a\":\"(OCoLC)00006475800\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+
+          "{\"leader\":\"00115nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
+          "{\"a\":\"(OCoLC)6475800\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+         },
+        {
+          "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
+          "{\"a\":\"(OCoLC)tfe0006475800\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+
+          "{\"leader\":\"00118nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
+          "{\"a\":\"(OCoLC)tfe6475800\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+        },
+        {
+          "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
+          "{\"a\":\"(OCoLC)00064758\"}," +
+          "{\"a\":\"(OCoLC)ocm00064758\"}," +
+          "{\"z\":\"(OCoLC)00024758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+
+          "{\"leader\":\"00127nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
+          "{\"a\":\"(OCoLC)64758\"},{\"z\":\"(OCoLC)24758\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+        },
+        {
+          "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)00064758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocn000064758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocm0000064758\"}, {\"z\":\"(OCoLC)11114758\"} ],\"ind1\":\" \"," +
+          "\"ind2\":\" \"}}," +
+          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+
+          "{\"leader\":\"00111nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)64758\"},{\"z\":\"(OCoLC)11114758\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+        },
+        {
+          "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocn00064758\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocm000064758\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+
+          "{\"leader\":\"00128nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)64758\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+        },
+        {
+          "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocn607TST001\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+
+          "{\"leader\":\"00098nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)607TST001\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+        }
+      });
+    }
+
+    @Test
+    public void shouldNormalizeOCoLCField035() {
+      // given
+      ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
+
+      Record record = new Record().withId(UUID.randomUUID().toString())
+        .withParsedRecord(parsedRecord)
+        .withGeneration(0)
+        .withState(Record.State.ACTUAL)
+        .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
+      // when
+      AdditionalFieldsUtil.normalize035(record);
+      Assert.assertEquals(expectedParsedContent, parsedRecord.getContent());
+    }
+  }
+
+  @Test
+  public void shouldReturnSubfieldIfOclcExist() {
+    // given
+    String parsedContent = "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+      "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
+      "{\"a\":\"(OCoLC)64758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    var expectedSubfields =  List.of("(ybp7406411)in001", "(OCoLC)64758");
+
+    ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
+
+    Record record = new Record().withId(UUID.randomUUID().toString())
+      .withParsedRecord(parsedRecord)
+      .withGeneration(0)
+      .withState(Record.State.ACTUAL)
+      .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
+
+    // when
+    var subfields = get035SubfieldOclcValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData).toList();
+    // then
+    Assert.assertEquals(expectedSubfields.size(), subfields.size());
+    Assert.assertEquals(expectedSubfields.get(0), subfields.get(0));
+  }
+
+  @Test
+  public void shouldNotReturnSubfieldIfOclcNotExist() {
+    // given
+    String parsedContent = "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+      "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+
+    ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
+
+    Record record = new Record().withId(UUID.randomUUID().toString())
+      .withParsedRecord(parsedRecord)
+      .withGeneration(0)
+      .withState(Record.State.ACTUAL)
+      .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
+
+    // when
+    var subfields = get035SubfieldOclcValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData).toList();
+    // then
+    Assert.assertEquals(0, subfields.size());
   }
 
   @Test
@@ -396,7 +555,7 @@ public class AdditionalFieldsUtilTest {
     AdditionalFieldsUtil.updateLatestTransactionDate(record,
       new MappingParameters().withMarcFieldProtectionSettings(List.of(new MarcFieldProtectionSetting().withField("*").withData("*"))));
 
-    String actualDate = AdditionalFieldsUtil.getValueFromControlledField(record, TAG_005);
+    String actualDate = getValueFromControlledField(record, TAG_005);
     assertNotNull(actualDate);
     assertEquals("20141107001016.0", actualDate);
   }
@@ -414,9 +573,44 @@ public class AdditionalFieldsUtilTest {
 
     AdditionalFieldsUtil.updateLatestTransactionDate(record, new MappingParameters());
 
-    String actualDate = AdditionalFieldsUtil.getValueFromControlledField(record, TAG_005);
+    String actualDate = getValueFromControlledField(record, TAG_005);
     assertNotNull(actualDate);
     assertEquals(expectedDate.substring(0, 10), actualDate.substring(0, 10));
+  }
+
+  @Test
+  public void shouldReturnFields() {
+    // given
+    var id = UUID.randomUUID().toString();
+    var hrId = "in001";
+    var parsedContent = """
+      {
+          "fields": [
+              {"001": "%s"},
+              {"999": {
+                  "ind1": "f",
+                  "ind2": "f",
+                  "subfields": [
+                      {"i": "%s"}
+                  ]
+              }}
+          ]
+      }
+      """.formatted(hrId, id);
+    var record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedContent));
+
+    // when
+    var parsedHrId = getValue(record, TAG_001, ' ');
+    var parsedId = getValue(record, TAG_999, 'i');
+    var missingField = getValue(record, TAG_005, ' ');
+
+    // then
+    assertTrue(parsedHrId.isPresent());
+    assertTrue(parsedId.isPresent());
+    assertTrue(missingField.isEmpty());
+
+    assertEquals(hrId, parsedHrId.get());
+    assertEquals(id, parsedId.get());
   }
 
   @Test
@@ -513,7 +707,7 @@ public class AdditionalFieldsUtilTest {
     Assert.assertEquals(2, cacheStats.missCount());
     Assert.assertEquals(2, cacheStats.loadCount());
     // add field to marc record
-    Assert.assertTrue(addFieldToMarcRecord(record, AdditionalFieldsUtil.TAG_999, 'i', instanceId));
+    Assert.assertTrue(addFieldToMarcRecord(record, TAG_999, 'i', instanceId));
     cacheStats = getCacheStats().minus(initialCacheStats);
     Assert.assertEquals(9, cacheStats.requestCount());
     Assert.assertEquals(7, cacheStats.hitCount());
@@ -606,5 +800,25 @@ public class AdditionalFieldsUtilTest {
     AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(record);
     // then
     Assert.assertEquals(expectedParsedContent, parsedRecord.getContent());
+  }
+
+  @Test
+  public void shouldReorderMarcRecordFields() throws IOException, MarcException {
+    var reorderedRecordContent = readFileFromPath(PARSED_RECORD);
+    var sourceRecordContent = readFileFromPath(REORDERED_PARSED_RECORD);
+    var reorderingResultRecord = readFileFromPath(REORDERING_RESULT_RECORD);
+
+    var resultContent = AdditionalFieldsUtil.reorderMarcRecordFields(sourceRecordContent, reorderedRecordContent);
+
+    assertNotNull(resultContent);
+    assertEquals(formatContent(resultContent), formatContent(reorderingResultRecord));
+  }
+
+  private static String readFileFromPath(String path) throws IOException {
+    return new String(FileUtils.readFileToByteArray(new File(path)));
+  }
+
+  private String formatContent(String content) {
+    return content.replaceAll("\\s", "");
   }
 }

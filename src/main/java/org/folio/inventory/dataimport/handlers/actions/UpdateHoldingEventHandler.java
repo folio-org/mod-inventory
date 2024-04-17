@@ -45,7 +45,9 @@ import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
+import static org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler.getItemFromJson;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -56,7 +58,6 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
   private static final Logger LOGGER = LogManager.getLogger(UpdateHoldingEventHandler.class);
 
-  private static final String UPDATE_HOLDING_ERROR_MESSAGE = "Can`t update  holding by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s'";
   private static final String CONTEXT_EMPTY_ERROR_MESSAGE = "Can`t update Holding entity: context or Holding-entity are empty or doesn`t exist!";
   private static final String EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE = "Can`t update Holding entity: one of required fields(hrid, permanentLocationId, instanceId) are empty!";
   private static final String MAPPING_METADATA_NOT_FOUND_MESSAGE = "MappingMetadata snapshot was not found by jobExecutionId '%s'. Record: '%s', chunkId: '%s' ";
@@ -102,7 +103,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
-      LOGGER.info("handle:: Processing UpdateHoldingEventHandler starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
+      LOGGER.info("handle:: Processing UpdateHoldingEventHandler starting with jobExecutionId: {} and incomingRecordId: {}.",
+        dataImportEventPayload.getJobExecutionId(), dataImportEventPayload.getContext().get(INCOMING_RECORD_ID));
       List<PartialError> errors = new ArrayList<>();
 
       validateRequiredHoldingsFields(dataImportEventPayload, errors);
@@ -139,9 +141,14 @@ public class UpdateHoldingEventHandler implements EventHandler {
             updatedHoldingsRecordFutures.add(updatePromise.future());
             holdingsRecordCollection.update(holding,
               success -> {
-                LOGGER.info(format("handle:: Successfully updated holdings with id: %s", holding.getId()));
-                updatedHoldingsRecord.add(holding);
-                constructDataImportEventPayload(updatePromise, dataImportEventPayload, list, context, errors);
+                try {
+                  LOGGER.info(format("handle:: Successfully updated holdings with id: %s", holding.getId()));
+                  updatedHoldingsRecord.add(holding);
+                  constructDataImportEventPayload(updatePromise, dataImportEventPayload, list, context, errors);
+                } catch (Exception e) {
+                  LOGGER.warn("handle:: Error updating inventory Holdings by jobExecutionId: '{}'", jobExecutionId, e);
+                  future.completeExceptionally(e);
+                }
               },
               failure -> {
                 if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
@@ -308,29 +315,36 @@ public class UpdateHoldingEventHandler implements EventHandler {
     }
   }
 
-  private void updateDataImportEventPayloadItem(Promise<Void> future, DataImportEventPayload dataImportEventPayload, ItemCollection itemCollection, List<PartialError> errors) {
+  private void updateDataImportEventPayloadItem(Promise<Void> promise, DataImportEventPayload dataImportEventPayload, ItemCollection itemCollection, List<PartialError> errors) {
     JsonArray oldItemsAsJson = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
     JsonArray resultedItemsList = new JsonArray();
+    List<Future> updateItemsFutures = new ArrayList<>();
 
     for (int i = 0; i < oldItemsAsJson.size(); i++) {
-      JsonObject singleItemAsJson = oldItemsAsJson.getJsonObject(i);
-      String itemId = singleItemAsJson.getJsonObject("item").getString(ITEM_ID_HEADER);
+      Promise<Void> updateItemPromise = Promise.promise();
+      updateItemsFutures.add(updateItemPromise.future());
+
+      JsonObject singleItemAsJson = getItemFromJson(oldItemsAsJson.getJsonObject(i));
+      String itemId = singleItemAsJson.getString(ITEM_ID_HEADER);
       itemCollection.findById(itemId, findResult -> {
         if (Objects.nonNull(findResult)) {
           JsonObject itemAsJson = new JsonObject(ItemUtil.mapToMappingResultRepresentation(findResult.getResult()));
           resultedItemsList.add(itemAsJson);
-          dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(itemAsJson));
         }
-        future.complete();
+        updateItemPromise.complete();
       }, failure -> {
         errors.add(new PartialError(itemId != null ? itemId : BLANK, failure.getReason()));
         EventProcessingException processingException =
           new EventProcessingException(format(CANNOT_GET_ACTUAL_ITEM_MESSAGE, itemId, failure.getReason(), failure.getStatusCode()));
         LOGGER.warn("updateDataImportEventPayloadItem:: " + processingException);
-        future.complete();
+        updateItemPromise.complete();
       });
     }
-    dataImportEventPayload.getContext().put(ITEM.value(), resultedItemsList.encode());
+    CompositeFuture.all(updateItemsFutures)
+      .onComplete(ar -> {
+        dataImportEventPayload.getContext().put(ITEM.value(), resultedItemsList.encode());
+        promise.complete();
+      });
   }
 
   private Future<List<HoldingsRecord>> getActualHoldingsList(List<HoldingsRecord> holdingsRecords, HoldingsRecordCollection holdingsRecordCollection) {

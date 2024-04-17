@@ -1,6 +1,5 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
-import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
@@ -23,8 +22,7 @@ public class AuthorityLoader extends AbstractLoader<Authority> {
 
   private Storage storage;
 
-  public AuthorityLoader(Storage storage, Vertx vertx) {
-    super(vertx);
+  public AuthorityLoader(Storage storage) {
     this.storage = storage;
   }
 

@@ -39,7 +39,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -91,11 +90,13 @@ public class MatchInstanceEventHandlerUnitTest {
   private static final String INSTANCE_HRID = "in0001234";
   private static final String INSTANCE_ID = "ddd266ef-07ac-4117-be13-d418b8cd6902";
 
+  private static final String ID_FIELD = "id";
   private static final String MAPPING_PARAMS = "MAPPING_PARAMS";
   private static final String RELATIONS = "MATCHING_PARAMETERS_RELATIONS";
   private static final String MATCHING_RELATIONS = "{\"item.statisticalCodeIds[]\":\"statisticalCode\",\"instance.classifications[].classificationTypeId\":\"classificationTypes\",\"instance.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"item.permanentLoanTypeId\":\"loantypes\",\"holdingsrecord.temporaryLocationId\":\"locations\",\"holdingsrecord.statisticalCodeIds[]\":\"statisticalCode\",\"instance.statusId\":\"instanceStatuses\",\"instance.natureOfContentTermIds\":\"natureOfContentTerms\",\"item.notes[].itemNoteTypeId\":\"itemNoteTypes\",\"holdingsrecord.permanentLocationId\":\"locations\",\"instance.alternativeTitles[].alternativeTitleTypeId\":\"alternativeTitleTypes\",\"holdingsrecord.illPolicyId\":\"illPolicies\",\"item.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.identifiers[].identifierTypeId\":\"identifierTypes\",\"holdingsrecord.holdingsTypeId\":\"holdingsTypes\",\"item.permanentLocationId\":\"locations\",\"instance.modeOfIssuanceId\":\"issuanceModes\",\"item.itemLevelCallNumberTypeId\":\"callNumberTypes\",\"instance.notes[].instanceNoteTypeId\":\"instanceNoteTypes\",\"instance.instanceFormatIds\":\"instanceFormats\",\"holdingsrecord.callNumberTypeId\":\"callNumberTypes\",\"holdingsrecord.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.instanceTypeId\":\"instanceTypes\",\"instance.statisticalCodeIds[]\":\"statisticalCode\",\"instancerelationship.instanceRelationshipTypeId\":\"instanceRelationshipTypes\",\"item.temporaryLoanTypeId\":\"loantypes\",\"item.temporaryLocationId\":\"locations\",\"item.materialTypeId\":\"materialTypes\",\"holdingsrecord.notes[].holdingsNoteTypeId\":\"holdingsNoteTypes\",\"instance.contributors[].contributorNameTypeId\":\"contributorNameTypes\",\"item.itemDamagedStatusId\":\"itemDamageStatuses\",\"instance.contributors[].contributorTypeId\":\"contributorTypes\"}";
   private static final String LOCATIONS_PARAMS = "{\"initialized\":true,\"locations\":[{\"id\":\"53cf956f-c1df-410b-8bea-27f712cca7c0\",\"name\":\"Annex\",\"code\":\"KU/CC/DI/A\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257690,\"updatedDate\":1592219257690}},{\"id\":\"b241764c-1466-4e1d-a028-1a3684a5da87\",\"name\":\"Popular Reading Collection\",\"code\":\"KU/CC/DI/P\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257711,\"updatedDate\":1592219257711}}]}";
   private static final String CENTRAL_TENANT_ID_KEY = "CENTRAL_TENANT_ID";
+  private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
 
 
   @Mock
@@ -112,7 +113,7 @@ public class MatchInstanceEventHandlerUnitTest {
   private AbstractPreloader preloader;
   private EventHandler eventHandler;
   @InjectMocks
-  private final InstanceLoader instanceLoader = new InstanceLoader(storage, Vertx.vertx(), preloader);
+  private final InstanceLoader instanceLoader = new InstanceLoader(storage, preloader);
 
   @Before
   public void setUp() {
@@ -254,7 +255,7 @@ public class MatchInstanceEventHandlerUnitTest {
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      testContext.assertEquals(matchedInstanceAsJsonObject.getString("id"), INSTANCE_ID);
+      testContext.assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
       testContext.assertEquals(matchedInstanceAsJsonObject.getString("hrid"), INSTANCE_HRID);
       async.complete();
     });
@@ -302,7 +303,7 @@ public class MatchInstanceEventHandlerUnitTest {
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      testContext.assertEquals(matchedInstanceAsJsonObject.getString("id"), INSTANCE_ID);
+      testContext.assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
       async.complete();
     });
   }
@@ -351,7 +352,7 @@ public class MatchInstanceEventHandlerUnitTest {
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      testContext.assertEquals(matchedInstanceAsJsonObject.getString("id"), instance.getId());
+      testContext.assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), instance.getId());
       testContext.assertEquals(centralTenantId, updatedEventPayload.getContext().get(CENTRAL_TENANT_ID_KEY));
       async.complete();
     });
@@ -401,7 +402,7 @@ public class MatchInstanceEventHandlerUnitTest {
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      testContext.assertEquals(matchedInstanceAsJsonObject.getString("id"), INSTANCE_ID);
+      testContext.assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
       verify(storage, times(0)).getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)));
       async.complete();
     });
@@ -451,7 +452,7 @@ public class MatchInstanceEventHandlerUnitTest {
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      testContext.assertEquals(matchedInstanceAsJsonObject.getString("id"), INSTANCE_ID);
+      testContext.assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
       verify(storage, times(0)).getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)));
       async.complete();
     });
@@ -674,7 +675,7 @@ public class MatchInstanceEventHandlerUnitTest {
         singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
       testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processedPayload.getEventType());
-      testContext.assertEquals(new JsonObject(processedPayload.getContext().get(INSTANCE.value())).getString("id"), expectedInstance.getId());
+      testContext.assertEquals(new JsonObject(processedPayload.getContext().get(INSTANCE.value())).getString(ID_FIELD), expectedInstance.getId());
       async.complete();
     });
   }
@@ -748,6 +749,40 @@ public class MatchInstanceEventHandlerUnitTest {
 
     eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> {
       testContext.assertNotNull(throwable);
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldMatchWithSubConditionBasedOnMarcBibMultipleMatchResult(TestContext testContext)
+    throws UnsupportedEncodingException {
+    Async async = testContext.async();
+
+    List<String> marcBibMultiMatchResult = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+    Instance expectedInstance = createInstance();
+
+    doAnswer(invocation -> {
+      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(2);
+      Success<MultipleRecords<Instance>> result =
+        new Success<>(new MultipleRecords<>(singletonList(expectedInstance), 1));
+      successHandler.accept(result);
+      return null;
+    }).when(instanceCollection)
+      .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, marcBibMultiMatchResult.get(0), marcBibMultiMatchResult.get(1))),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    HashMap<String, String> context = new HashMap<>();
+    context.put(INSTANCES_IDS_KEY, Json.encode(marcBibMultiMatchResult));
+    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
+    context.put(RELATIONS, MATCHING_RELATIONS);
+    DataImportEventPayload eventPayload = createEventPayload().withContext(context);
+
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(1, processedPayload.getEventsChain().size());
+      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processedPayload.getEventType());
+      testContext.assertEquals(expectedInstance.getId(), new JsonObject(processedPayload.getContext().get(INSTANCE.value())).getString(ID_FIELD));
+      testContext.assertNull(processedPayload.getContext().get(INSTANCES_IDS_KEY));
       async.complete();
     });
   }

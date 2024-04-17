@@ -5,7 +5,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
@@ -27,7 +26,6 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.EntityType;
-import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.Record;
 
 import java.util.HashMap;
@@ -38,13 +36,12 @@ import java.util.concurrent.CompletableFuture;
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.codehaus.plexus.util.StringUtils.isNotEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.*;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
@@ -58,6 +55,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload - event payload context does not contain MARC_BIBLIOGRAPHIC data";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Instance requires a mapping profile by jobExecutionId: '%s' and recordId: '%s'";
   private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId: '%s'. RecordId: '%s', chunkId: '%s' ";
+  private static final String INSTANCE_CREATION_999_ERROR_MESSAGE = "A new Instance was not created because the incoming record already contained a 999ff$s or 999ff$i field";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private final IdStorageService idStorageService;
@@ -94,6 +92,13 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Record targetRecord = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
+      var sourceContent = targetRecord.getParsedRecord().getContent().toString();
+
+      if (!Boolean.parseBoolean(payloadContext.get("acceptInstanceId")) && AdditionalFieldsUtil.getValue(targetRecord, TAG_999, SUBFIELD_I).isPresent()) {
+        LOGGER.error(INSTANCE_CREATION_999_ERROR_MESSAGE);
+        return CompletableFuture.failedFuture(new EventProcessingException(INSTANCE_CREATION_999_ERROR_MESSAGE));
+      }
+
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
       LOGGER.info("Create instance with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
 
@@ -106,6 +111,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                 MappingParameters mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
                 AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
                 AdditionalFieldsUtil.move001To035(targetRecord);
+                AdditionalFieldsUtil.normalize035(targetRecord);
                 payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
                 return prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()), mappingParameters);
               })
@@ -125,7 +131,12 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
               return addInstance(mappedInstance, instanceCollection)
                 .compose(createdInstance -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
                 .compose(createdInstance -> executeFieldsManipulation(createdInstance, targetRecord))
-                .compose(createdInstance -> saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection));
+                .compose(createdInstance -> {
+                  var targetContent = targetRecord.getParsedRecord().getContent().toString();
+                  var content = reorderMarcRecordFields(sourceContent, targetContent);
+                  targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(content));
+                  return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection, dataImportEventPayload.getTenant());
+                });
             })
             .onSuccess(ar -> {
               dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));

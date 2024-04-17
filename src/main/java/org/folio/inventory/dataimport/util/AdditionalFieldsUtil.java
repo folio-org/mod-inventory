@@ -1,6 +1,14 @@
 package org.folio.inventory.dataimport.util;
 
-import org.apache.commons.lang3.tuple.Pair;
+import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -9,8 +17,29 @@ import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.ForkJoinPool;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.domain.instances.Instance;
@@ -30,22 +59,6 @@ import org.marc4j.marc.MarcFactory;
 import org.marc4j.marc.Subfield;
 import org.marc4j.marc.VariableField;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.ForkJoinPool;
-
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-
 /**
  * Util to work with additional fields
  */
@@ -57,14 +70,19 @@ public final class AdditionalFieldsUtil {
   public static final String TAG_999 = "999";
   public static final String TAG_001 = "001";
   private static final String TAG_003 = "003";
-  private static final String TAG_035 = "035";
-  private static final char TAG_035_SUB = 'a';
+  public static final String TAG_035 = "035";
+  public static final char TAG_035_SUB = 'a';
   private static final char TAG_035_IND = ' ';
   private static final String ANY_STRING = "*";
   private static final char INDICATOR = 'f';
+  public static final char SUBFIELD_I = 'i';
   private static final String HR_ID_FIELD = "hrid";
   private static final CacheLoader<String, org.marc4j.marc.Record> parsedRecordContentCacheLoader;
   private static final LoadingCache<String, org.marc4j.marc.Record> parsedRecordContentCache;
+  private static final String OCLC = "OCoLC";
+  private static final ObjectMapper objectMapper = new ObjectMapper();
+  public static final String FIELDS = "fields";
+  private static final String OCLC_PATTERN = "\\((" + OCLC + ")\\)((ocm|ocn)?0*|([a-zA-Z]+)0*)(\\d+\\w*)";
 
   static {
     // this function is executed when creating a new item to be saved in the cache.
@@ -177,7 +195,7 @@ public final class AdditionalFieldsUtil {
     if (isField005NeedToUpdate(recordForUpdate, mappingParameters)) {
       String date = dateTime005Formatter.format(ZonedDateTime.ofInstant(Instant.now(), ZoneId.systemDefault()));
       boolean isLatestTransactionDateUpdated = addControlledFieldToMarcRecord(
-        recordForUpdate, TAG_005, date, AdditionalFieldsUtil::replaceControlledFieldInMarcRecord);
+        recordForUpdate, TAG_005, date, AdditionalFieldsUtil::replaceOrAddControlledFieldInMarcRecord);
       if (!isLatestTransactionDateUpdated) {
         throw new EventProcessingException(format("Failed to update field '005' to record with id '%s'",
           recordForUpdate != null ? recordForUpdate.getId() : "null"));
@@ -227,11 +245,13 @@ public final class AdditionalFieldsUtil {
     marcRecord.addVariableField(dataField);
   }
 
-  public static void replaceControlledFieldInMarcRecord(String field, String value, org.marc4j.marc.Record marcRecord) {
-    ControlField currentField = (ControlField) marcRecord.getVariableField(field);
+  public static void replaceOrAddControlledFieldInMarcRecord(String field, String value, org.marc4j.marc.Record marcRecord) {
+    var currentField =  (ControlField) marcRecord.getVariableField(field);
+    var newControlField = MarcFactory.newInstance().newControlField(field, value);
     if (currentField != null) {
-      ControlField newControlField = MarcFactory.newInstance().newControlField(field, value);
       marcRecord.getControlFields().set(marcRecord.getControlFields().indexOf(currentField), newControlField);
+    } else {
+      marcRecord.addVariableField(newControlField);
     }
   }
 
@@ -250,6 +270,108 @@ public final class AdditionalFieldsUtil {
       }
     }
     removeField(srcRecord, TAG_003);
+  }
+
+  public static void normalize035(Record srsRecord) {
+    List<Subfield> subfields = get035SubfieldOclcValues(srsRecord, TAG_035, TAG_035_SUB);
+    if (!subfields.isEmpty()) {
+      Set<String> normalized035Subfields = formatOclc(subfields);
+
+      updateOclcSubfield(srsRecord, normalized035Subfields);
+    }
+  }
+
+  private static Set<String> formatOclc(List<Subfield> subFields) {
+    Set<String> processedSet = new LinkedHashSet<>();
+    Pattern pattern = Pattern.compile(OCLC_PATTERN);
+
+    for (Subfield subfield : subFields) {
+      String data = subfield.getData();
+      var code = subfield.getCode();
+      Matcher matcher = pattern.matcher(data);
+
+      if (matcher.find()) {
+        String oclcTag = matcher.group(1); // "OCoLC"
+        String numericAndTrailing = matcher.group(5); // Numeric part and any characters that follow
+        String prefix = matcher.group(2); // Entire prefix including letters and potentially leading zeros
+
+        if (prefix != null && (prefix.startsWith("ocm") || prefix.startsWith("ocn"))) {
+          // If "ocm" or "ocn", strip entirely from the prefix
+          processedSet.add(code + "&(" + oclcTag + ")" + numericAndTrailing);
+        } else {
+          // For other cases, strip leading zeros only from the numeric part
+          numericAndTrailing = numericAndTrailing.replaceFirst("^0+", "");
+          if (prefix != null) {
+            prefix = prefix.replaceAll("\\d+", ""); // Safely remove digits from the prefix if not null
+          }
+          // Add back any other prefix that might have been included like "tfe"
+          processedSet.add(code + "&(" + oclcTag + ")" + (prefix != null ? prefix : "") + numericAndTrailing);
+        }
+      } else {
+        // If it does not match, add the data as is
+        processedSet.add(code + "&" + data);
+      }
+    }
+    return processedSet;
+  }
+
+  private static void updateOclcSubfield(Record recordForUpdate,
+                                            Set<String> normalizedValues) {
+    try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+      if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null && recordForUpdate.getParsedRecord().getContent() != null) {
+        MarcWriter streamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
+        MarcJsonWriter jsonWriter = new MarcJsonWriter(os);
+        MarcFactory factory = MarcFactory.newInstance();
+        org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
+        if (marcRecord != null) {
+          removeOclcField(marcRecord, TAG_035);
+
+          DataField dataField = factory.newDataField(TAG_035, TAG_035_IND, TAG_035_IND);
+
+          normalizedValues.forEach(value -> {
+            var v = value.split("&");
+            dataField.addSubfield(factory.newSubfield(v[0].charAt(0), v[1]));
+          });
+
+          addDataFieldInNumericalOrder(dataField, marcRecord);
+
+          // use stream writer to recalculate leader
+          streamWriter.write(marcRecord);
+          jsonWriter.write(marcRecord);
+
+          String parsedContentString = new JsonObject(os.toString()).encode();
+          // save parsed content string to cache then set it on the record
+          parsedRecordContentCache.put(parsedContentString, marcRecord);
+          recordForUpdate.setParsedRecord(recordForUpdate.getParsedRecord().withContent(parsedContentString));
+        }
+      }
+    } catch (Exception e) {
+      LOGGER.warn("Failed to update OCLC subfield for record: {}", recordForUpdate.getId(), e);
+    }
+  }
+
+  public static List<Subfield> get035SubfieldOclcValues(Record srcRecord, String tag, char subfield) {
+    return Optional.ofNullable(computeMarcRecord(srcRecord))
+      .stream()
+      .flatMap(marcRecord -> marcRecord.getVariableFields(tag).stream())
+      .flatMap(field -> get035oclcSubfields(field, subfield).stream())
+      .toList();
+  }
+
+  private static List<Subfield> get035oclcSubfields(VariableField field, char subfield) {
+    if (field instanceof DataField dataField) {
+
+      Optional<Subfield> oclcSubfield = dataField.getSubfields(subfield).stream()
+        .filter(sf -> sf.find(OCLC))
+        .findFirst();
+
+      if (oclcSubfield.isPresent()) {
+        return dataField.getSubfields();
+      } else {
+        return Collections.emptyList();
+      }
+    }
+    return Collections.emptyList();
   }
 
   public static void fill001FieldInMarcRecord(Record marcRecord, String hrId) {
@@ -286,6 +408,24 @@ public final class AdditionalFieldsUtil {
       return null;
     }
     return null;
+  }
+
+  public static Optional<String> getValue(Record srcRecord, String tag, char subfield) {
+      return Optional.ofNullable(computeMarcRecord(srcRecord))
+        .stream()
+        .flatMap(marcRecord -> marcRecord.getVariableFields(tag).stream())
+        .flatMap(field -> getFieldValue(field, subfield).stream())
+        .findFirst();
+  }
+
+  private static Optional<String> getFieldValue(VariableField field, char subfield) {
+    if (field instanceof DataField dataField) {
+      return dataField.getSubfields(subfield).stream().findFirst().map(Subfield::getData);
+    } else if (field instanceof ControlField controlField) {
+      return Optional.ofNullable(controlField.getData());
+    } else {
+      return Optional.empty();
+    }
   }
 
   private static MarcReader buildMarcReader(Record srcRecord) {
@@ -439,6 +579,15 @@ public final class AdditionalFieldsUtil {
       isFieldFound = true;
     }
     return isFieldFound;
+  }
+
+  private static void removeOclcField(org.marc4j.marc.Record marcRecord, String fieldName) {
+    List<VariableField> variableFields = marcRecord.getVariableFields(fieldName);
+    if (!variableFields.isEmpty()) {
+      variableFields.stream()
+        .filter(variableField -> variableField.find(OCLC))
+        .forEach(marcRecord::removeVariableField);
+    }
   }
 
   /**
@@ -619,5 +768,96 @@ public final class AdditionalFieldsUtil {
       AdditionalFieldsUtil.remove035WithActualHrId(recordInstancePair.getKey(), hrid);
     }
     AdditionalFieldsUtil.removeField(recordInstancePair.getKey(), TAG_003);
+  }
+
+  /**
+   * Reorders MARC record fields
+   *
+   * @param sourceContent source parsed record
+   * @param targetContent target parsed record
+   * @return MARC txt
+   */
+  public static String reorderMarcRecordFields(String sourceContent, String targetContent) {
+    try {
+      var parsedContent = objectMapper.readTree(targetContent);
+      var fieldsArrayNode = (ArrayNode) parsedContent.path(FIELDS);
+
+      var jsonNodesByTag = groupNodesByTag(fieldsArrayNode);
+      var sourceFields = getSourceFields(sourceContent);
+      var rearrangedArray = objectMapper.createArrayNode();
+
+      var nodes001 = jsonNodesByTag.get(TAG_001);
+      if (nodes001 != null && !nodes001.isEmpty()) {
+        rearrangedArray.addAll(nodes001);
+        jsonNodesByTag.remove(TAG_001);
+      }
+
+      var nodes005 = jsonNodesByTag.get(TAG_005);
+      if (nodes005 != null && !nodes005.isEmpty()) {
+        rearrangedArray.addAll(nodes005);
+        jsonNodesByTag.remove(TAG_005);
+      }
+
+      for (String tag : sourceFields) {
+        Queue<JsonNode> nodes = jsonNodesByTag.get(tag);
+        if (nodes != null && !nodes.isEmpty()) {
+          rearrangedArray.addAll(nodes);
+          jsonNodesByTag.remove(tag);
+        }
+
+      }
+
+      jsonNodesByTag.values().forEach(rearrangedArray::addAll);
+
+      ((ObjectNode) parsedContent).set(FIELDS, rearrangedArray);
+      return parsedContent.toString();
+    } catch (Exception e) {
+      LOGGER.error("An error occurred while reordering Marc record fields: {}", e.getMessage(), e);
+      return targetContent;
+    }
+  }
+
+  private static Map<String, Queue<JsonNode>> groupNodesByTag(ArrayNode fieldsArrayNode) {
+    var jsonNodesByTag = new LinkedHashMap<String, Queue<JsonNode>>();
+    for (JsonNode node : fieldsArrayNode) {
+      var tag = getTagFromNode(node);
+      jsonNodesByTag.putIfAbsent(tag, new LinkedList<>());
+      jsonNodesByTag.get(tag).add(node);
+    }
+    return jsonNodesByTag;
+  }
+
+  private static String getTagFromNode(JsonNode node) {
+    return node.fieldNames().next();
+  }
+
+  private static List<String> getSourceFields(String source) {
+    var sourceFields = new ArrayList<String>();
+    var remainingFields = new ArrayList<String>();
+    var has001 = false;
+    try {
+      var sourceJson = objectMapper.readTree(source);
+      var fieldsNode = sourceJson.get(FIELDS);
+
+      for (JsonNode fieldNode : fieldsNode) {
+        var tag = getTagFromNode(fieldNode);
+        if (tag.equals(TAG_001)) {
+          sourceFields.add(0, tag);
+          has001 = true;
+        } else if (tag.equals(TAG_005)) {
+          if (!has001) {
+            sourceFields.add(0, tag);
+          } else {
+            sourceFields.add(1, tag);
+          }
+        } else {
+          remainingFields.add(tag);
+        }
+      }
+      sourceFields.addAll(remainingFields);
+    } catch (Exception e) {
+      LOGGER.error("An error occurred while parsing source JSON: {}", e.getMessage(), e);
+    }
+    return sourceFields;
   }
 }

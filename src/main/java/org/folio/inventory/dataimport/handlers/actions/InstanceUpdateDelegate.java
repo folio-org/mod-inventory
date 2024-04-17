@@ -43,7 +43,6 @@ public class InstanceUpdateDelegate {
     try {
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
       MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
-
       JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
       String instanceId = marcRecord.getExternalIdsHolder().getInstanceId();
       LOGGER.info("Instance update with instanceId: {}", instanceId);
