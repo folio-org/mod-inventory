@@ -599,7 +599,8 @@ public class Item {
       .withPurchaseOrderLineIdentifier(purchaseOrderLineIdentifier)
       .withIsBoundWith(this.isBoundWith)
       .withTags(tags)
-      .withCirculationNotes(circulationNotes);
+      .withCirculationNotes(circulationNotes)
+      .withLastCheckIn(this.lastCheckIn);
   }
 
   @Override
