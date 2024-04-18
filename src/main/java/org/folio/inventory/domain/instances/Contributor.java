@@ -1,7 +1,9 @@
 package org.folio.inventory.domain.instances;
 
 import io.vertx.core.json.JsonObject;
+import lombok.Getter;
 
+@Getter
 public class Contributor extends Authorized {
   // JSON property names
   public static final String CONTRIBUTOR_NAME_TYPE_ID_KEY = "contributorNameTypeId";

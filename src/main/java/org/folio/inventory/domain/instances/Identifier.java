@@ -1,7 +1,9 @@
 package org.folio.inventory.domain.instances;
 
 import io.vertx.core.json.JsonObject;
+import lombok.Getter;
 
+@Getter
 public class Identifier {
   public static final String IDENTIFIER_TYPE_ID_KEY = "identifierTypeId";
   public static final String VALUE_KEY = "value";

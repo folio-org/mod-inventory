@@ -1,11 +1,13 @@
 package org.folio.inventory.domain.instances;
 
 import io.vertx.core.json.JsonObject;
+import lombok.Getter;
 
 /**
  *
  * @author ne
  */
+@Getter
 public class Classification {
   // JSON property names
   public static final String CLASSIFICATION_NUMBER_KEY = "classificationNumber";

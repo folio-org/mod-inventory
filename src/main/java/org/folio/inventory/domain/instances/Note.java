@@ -1,11 +1,13 @@
 package org.folio.inventory.domain.instances;
 
 import io.vertx.core.json.JsonObject;
+import lombok.Getter;
 
 /**
  *
  * @author ne
  */
+@Getter
 public class Note {
   public static final String INSTANCE_NOTE_TYPE_ID_KEY = "instanceNoteTypeId";
   public static final String NOTE_KEY = "note";
@@ -26,5 +28,5 @@ public class Note {
          json.getString(NOTE_KEY),
          json.getBoolean(STAFF_ONLY_KEY));
   }
-  
+
 }

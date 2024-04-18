@@ -7,10 +7,12 @@
 package org.folio.inventory.domain.instances;
 
 import io.vertx.core.json.JsonObject;
+import lombok.Getter;
 
 /**
  * @author ne
  */
+@Getter
 public class AlternativeTitle extends Authorized {
 
   public static final String ALTERNATIVE_TITLE_TYPE_ID_KEY = "alternativeTitleTypeId";
