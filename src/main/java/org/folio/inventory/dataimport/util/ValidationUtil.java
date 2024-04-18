@@ -24,7 +24,8 @@ public class ValidationUtil {
   public static List<String> validateUUIDs(Instance instance) {
     ArrayList<String> errorMessages = new ArrayList<>();
 
-    //TODO: There will be extended for different fields and entities.That's why it is so different methods for 1 field. Branch for it: MODINV-1012-extended
+    //TODO: This will be extended for different fields and entities.That's why there are so many methods just for 1 field.
+    // Branch for it extending validation: MODINV-1012-extended
     validateField(errorMessages, instance.getNatureOfContentTermIds(), "natureOfContentTermIds");
 
     return errorMessages;
