@@ -14,6 +14,13 @@ public class ValidationUtil {
   private ValidationUtil() {
   }
 
+  /**
+   * Validate fields inside the Instance entity. Validation based on checking if specific fields were mapped as UUIDs.
+   * If not - then the list with errors will be returned.
+   * Example: "Value 'invalid not UUID value' is not a UUID for someFieldName field"
+   * @param instance target Instance for validation
+   * @return ArrayList with errors when the needed fields are NOT as UUID.
+   */
   public static List<String> validateUUIDs(Instance instance) {
     ArrayList<String> errorMessages = new ArrayList<>();
 
