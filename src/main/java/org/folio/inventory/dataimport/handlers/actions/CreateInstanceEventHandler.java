@@ -15,6 +15,7 @@ import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.services.OrderHelperService;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
+import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
@@ -118,15 +119,24 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
             .compose(v -> {
               InstanceCollection instanceCollection = storage.getInstanceCollection(context);
               JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, instanceId, jobExecutionId);
-              List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
-              if (!errors.isEmpty()) {
-                String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
+              List<String> requiredFieldsErrors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
+              if (!requiredFieldsErrors.isEmpty()) {
+                String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", requiredFieldsErrors,
                   jobExecutionId, recordId, chunkId);
                 LOGGER.warn(msg);
                 return Future.failedFuture(msg);
               }
 
               Instance mappedInstance = Instance.fromJson(instanceAsJson);
+
+              List<String> invalidUUIDsErrors = ValidationUtil.validateUUIDs(mappedInstance);
+              if (!invalidUUIDsErrors.isEmpty()) {
+                String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", invalidUUIDsErrors,
+                  jobExecutionId, recordId, chunkId);
+                LOGGER.warn(msg);
+                return Future.failedFuture(msg);
+              }
+
               return addInstance(mappedInstance, instanceCollection)
                 .compose(createdInstance -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
                 .compose(createdInstance -> executeFieldsManipulation(createdInstance, targetRecord))
