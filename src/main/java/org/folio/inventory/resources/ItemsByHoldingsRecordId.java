@@ -29,6 +29,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -178,7 +179,10 @@ public class ItemsByHoldingsRecordId extends Items {
 
   private void respondWithPagedManyItems(List<Item> itemList, WebContext webContext, RoutingContext routingContext) {
     PagingParameters pagingParameters = getPagingParameters(webContext);
-    MultipleRecords<Item> items = new MultipleRecords<>(getPage(itemList,
+    List<Item> sortedList = itemList.stream().sorted(
+        Comparator.comparing(i -> i.getBarcode() == null ? "~" : i.getBarcode()))
+      .toList();
+    MultipleRecords<Item> items = new MultipleRecords<>(getPage(sortedList,
       pagingParameters.offset, pagingParameters.limit), itemList.size());
     respondWithManyItems(routingContext, webContext, items);
   }
