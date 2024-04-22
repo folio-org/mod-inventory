@@ -132,7 +132,7 @@ class ItemRepresentation {
     includeIfPresent(representation, Item.ITEM_IDENTIFIER_KEY, item.getItemIdentifier());
     includeIfPresent(representation,Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
     representation.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
-    putNotNull(representation, Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
+    putNotNullValues(representation, Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
     representation.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
     representation.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineIdentifier());
     includeReferenceIfPresent(representation, "materialType",
@@ -282,7 +282,7 @@ class ItemRepresentation {
     return itemObject;
   }
 
-  private void putNotNull(JsonObject representation, String field, Object obj) {
+  private void putNotNullValues(JsonObject representation, String field, Object obj) {
     if (obj != null) {
       if (obj instanceof Collection<?>) {
         representation.put(field, new JsonArray(toNotNullList((Collection<?>) obj)));
@@ -305,7 +305,7 @@ class ItemRepresentation {
           return jsonItem;
         }
       })
-      .collect(Collectors.toList());
+      .toList();
   }
 
 }
