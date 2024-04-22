@@ -1,13 +1,18 @@
 package org.folio.inventory.support;
 
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import liquibase.util.StringUtil;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
-import io.vertx.core.json.JsonObject;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 public class JsonHelper {
   public static String getNestedProperty(
@@ -41,6 +46,18 @@ public class JsonHelper {
     return new JsonObject(readFile(is));
   }
 
+  public static void putNotNullValues(JsonObject representation, String propertyName, Object obj) {
+    if (obj != null && isNotBlank(propertyName)) {
+      if (obj instanceof Collection<?>) {
+        representation.put(propertyName, new JsonArray(toNotNullList((Collection<?>) obj)));
+      } else {
+        JsonObject json = JsonObject.mapFrom(obj);
+        handleNullNestedFields(json);
+        representation.put(propertyName, json);
+      }
+    }
+  }
+
   private String readFile(InputStream is) throws IOException {
     try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
       StringBuilder sb = new StringBuilder();
@@ -53,4 +70,37 @@ public class JsonHelper {
       return sb.toString();
     }
   }
+
+  private static JsonObject handleNullNestedFields(JsonObject itemObject) {
+    var keysToRemove = new ArrayList<String>();
+    for (var key : itemObject.fieldNames()) {
+      var value = itemObject.getValue(key);
+      if (value == null) {
+        keysToRemove.add(key);
+      } else if (value instanceof String && StringUtil.isEmpty((String) value)) {
+        keysToRemove.add(key);
+      } else if (value instanceof JsonObject) {
+        handleNullNestedFields((JsonObject) value);
+      }
+    }
+
+    keysToRemove.forEach(itemObject::remove);
+    return itemObject;
+  }
+
+  private static List<Iterable<?>> toNotNullList(Collection<?> collection) {
+    return collection.stream()
+      .filter(item -> item != null)
+      .map(item -> {
+        if (item instanceof Collection<?>) {
+          return toNotNullList((Collection<?>) item);
+        } else {
+          var jsonItem = JsonObject.mapFrom(item);
+          handleNullNestedFields(jsonItem);
+          return jsonItem;
+        }
+      })
+      .toList();
+  }
+
 }

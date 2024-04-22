@@ -10,13 +10,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import liquibase.util.StringUtil;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.Status;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.folio.inventory.support.JsonHelper;
 
 class ItemRepresentation {
   JsonObject toJson(MultipleRecords<Item> wrappedItems) {
@@ -131,7 +131,7 @@ class ItemRepresentation {
     includeIfPresent(representation, Item.ITEM_IDENTIFIER_KEY, item.getItemIdentifier());
     includeIfPresent(representation,Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
     representation.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
-    putNotNullValues(representation, Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
+    JsonHelper.putNotNullValues(representation, Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
     representation.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
     representation.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineIdentifier());
     includeReferenceIfPresent(representation, "materialType",
@@ -262,49 +262,5 @@ class ItemRepresentation {
         representation.put(propertyName, value);
       }
     }
-  }
-
-  private JsonObject handleNullNestedFields(JsonObject itemObject) {
-    var keysToRemove = new ArrayList<String>();
-    for (var key : itemObject.fieldNames()) {
-      var value = itemObject.getValue(key);
-      if (value == null) {
-        keysToRemove.add(key);
-      } else if (value instanceof String && StringUtil.isEmpty((String) value)) {
-        keysToRemove.add(key);
-      } else if (value instanceof JsonObject) {
-        handleNullNestedFields((JsonObject) value);
-      }
-    }
-
-    keysToRemove.forEach(itemObject::remove);
-    return itemObject;
-  }
-
-  private void putNotNullValues(JsonObject representation, String field, Object obj) {
-    if (obj != null) {
-      if (obj instanceof Collection<?>) {
-        representation.put(field, new JsonArray(toNotNullList((Collection<?>) obj)));
-      } else {
-        JsonObject json = JsonObject.mapFrom(obj);
-        handleNullNestedFields(json);
-        representation.put(field, json);
-      }
-    }
-  }
-
-  private List<Iterable<?>> toNotNullList(Collection<?> collection) {
-    return collection.stream()
-      .filter(item -> item != null)
-      .map(item -> {
-        if (item instanceof Collection<?>) {
-          return toNotNullList((Collection<?>) item);
-        } else {
-          var jsonItem = JsonObject.mapFrom(item);
-          handleNullNestedFields(jsonItem);
-          return jsonItem;
-        }
-      })
-      .toList();
   }
 }
