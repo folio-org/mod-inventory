@@ -26,11 +26,11 @@ public class ItemRepresentationTest {
   }
 
   @Test
-  public void jsonWithoutNullElectronicAccessValues() {
+  public void jsonWithoutNullOrEmptyValues() {
     var testValue = "https://test.com";
     var item = new Item(UUID.randomUUID().toString(), null, null,
       new Status(ItemStatusName.AVAILABLE), null, null, null);
-    var electronicAccess = new ElectronicAccess(testValue, null, null, null, null);
+    var electronicAccess = new ElectronicAccess(testValue, "", null, null, null);
     item.withElectronicAccess(List.of(electronicAccess));
     var json = new ItemRepresentation()
       .toJson(item, null, new JsonObject().put("contributors", new JsonArray()), null, null, null, null, null, null);

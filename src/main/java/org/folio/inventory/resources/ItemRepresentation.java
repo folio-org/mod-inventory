@@ -294,7 +294,7 @@ class ItemRepresentation {
     }
   }
 
-  private List toNotNullList(Collection<?> collection) {
+  private List<Iterable<?>> toNotNullList(Collection<?> collection) {
     return collection.stream()
       .map(item -> {
         if (item instanceof Collection<?>) {
