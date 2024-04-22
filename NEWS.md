@@ -1,3 +1,7 @@
+## 20.2.2 2024-04-22
+* [MODINV-1009](https://folio-org.atlassian.net/browse/MODINV-1009) Circulation History in Item record removed when Item is marked Missing/Long missing/ Unavailable
+* [MODINV-1012](https://folio-org.atlassian.net/browse/MODINV-1012) Invalid values (as it is) created in JSON when value is not matching accepted options provided in Instance field mapping for Nature of Content term
+
 ## 20.2.1 2024-04-12
 * [MODINV-1001](https://folio-org.atlassian.net/browse/MODINV-1001) Fix sorting for Items on Instance details page
 * [MODINV-999](https://folio-org.atlassian.net/browse/MODINV-999)"PMSystem" displayed as source in "quickmarc" view when record was created by "Non-matches" action of job profile 
