@@ -9,7 +9,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import liquibase.util.StringUtil;
 import org.folio.inventory.common.domain.MultipleRecords;
@@ -296,6 +295,7 @@ class ItemRepresentation {
 
   private List<Iterable<?>> toNotNullList(Collection<?> collection) {
     return collection.stream()
+      .filter(item -> item != null)
       .map(item -> {
         if (item instanceof Collection<?>) {
           return toNotNullList((Collection<?>) item);
@@ -307,5 +307,4 @@ class ItemRepresentation {
       })
       .toList();
   }
-
 }

@@ -8,6 +8,7 @@ import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,7 +38,9 @@ public class ItemRepresentationTest {
       .toJson(item, null, new JsonObject().put("contributors", new JsonArray()), null, null, null, null, null, null);
     var electronicAccessObject = json.getJsonArray(electronicAccessKey);
 
-    item.withElectronicAccess(List.of());
+    var nullableList = new ArrayList<ElectronicAccess>();
+    nullableList.add(null);
+    item.withElectronicAccess(nullableList);
     var nullElectronicAccessJson = new ItemRepresentation()
       .toJson(item, null, new JsonObject().put("contributors", new JsonArray()), null, null, null, null, null, null);
     var emptyElectronicAccessObject = nullElectronicAccessJson.getJsonArray(electronicAccessKey);
