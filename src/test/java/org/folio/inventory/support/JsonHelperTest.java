@@ -1,16 +1,21 @@
 package org.folio.inventory.support;
 
-import static org.folio.inventory.support.JsonHelper.includeIfPresent;
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
-
 import io.vertx.core.json.JsonObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnitRunner;
+
+import java.util.ArrayList;
+
+import static org.folio.inventory.support.JsonHelper.includeIfPresent;
+import static org.folio.inventory.support.JsonHelper.putNotNullValues;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 @RunWith(MockitoJUnitRunner.class)
 public class JsonHelperTest {
@@ -42,5 +47,31 @@ public class JsonHelperTest {
   public void shouldNotIncludeIfValueIsNull() {
     includeIfPresent(representation, "key", null);
     verifyZeroInteractions(representation);
+  }
+
+  @Test
+  public void shouldNotIncludeNullOeEmptyValues() {
+    var nutNullString = "notNull";
+    var key = "key";
+    var rootKey = "root";
+    var arrayKey = "array";
+    var value = new JsonObject();
+    var nestedValue = new JsonObject();
+    var list = new ArrayList<JsonObject>();
+
+    nestedValue.put(nutNullString, nutNullString);
+    nestedValue.put("null", null);
+    nestedValue.put("empty", "");
+    value.put(key, nestedValue);
+    list.add(nestedValue);
+    list.add(null);
+    putNotNullValues(representation, rootKey, value);
+    putNotNullValues(representation, arrayKey, list);
+
+    var objResult = representation.getJsonObject(rootKey).getJsonObject(key);
+    var listResult = representation.getJsonArray(arrayKey);
+    assertThat(objResult.size(), is(1));
+    assertThat(objResult.getValue(nutNullString), is(nutNullString));
+    assertThat(listResult.size(), is(1));
   }
 }

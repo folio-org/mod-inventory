@@ -1,12 +1,15 @@
+## 20.2.3 2024-04-25
+* [MODINV-1022](https://folio-org.atlassian.net/browse/MODINV-1022) Circulation History in Item record removed when Item is marked Missing/Long missing/ Unavailable
+
 ## 20.2.2 2024-04-22
 * [MODINV-1009](https://folio-org.atlassian.net/browse/MODINV-1009) Circulation History in Item record removed when Item is marked Missing/Long missing/ Unavailable
 * [MODINV-1012](https://folio-org.atlassian.net/browse/MODINV-1012) Invalid values (as it is) created in JSON when value is not matching accepted options provided in Instance field mapping for Nature of Content term
 
 ## 20.2.1 2024-04-12
 * [MODINV-1001](https://folio-org.atlassian.net/browse/MODINV-1001) Fix sorting for Items on Instance details page
-* [MODINV-999](https://folio-org.atlassian.net/browse/MODINV-999)"PMSystem" displayed as source in "quickmarc" view when record was created by "Non-matches" action of job profile 
-* [MODINV-1003](https://folio-org.atlassian.net/browse/MODINV-1003) The result table is not displayed in the file details log 
-* [MODINV-997](https://folio-org.atlassian.net/browse/MODINV-997) Keep order of MARC fields while Creating/Deriving/Editing MARC records 
+* [MODINV-999](https://folio-org.atlassian.net/browse/MODINV-999)"PMSystem" displayed as source in "quickmarc" view when record was created by "Non-matches" action of job profile
+* [MODINV-1003](https://folio-org.atlassian.net/browse/MODINV-1003) The result table is not displayed in the file details log
+* [MODINV-997](https://folio-org.atlassian.net/browse/MODINV-997) Keep order of MARC fields while Creating/Deriving/Editing MARC records
 
 ## 20.2.0 2023-03-20
 * Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))
@@ -47,6 +50,7 @@
 * Add subscription on DI_SRS_MARC_BIB_RECORD_UPDATED event about marc-bib update [MODSOURMAN-1106](https://folio-org.atlassian.net/browse/MODSOURMAN-1106)
 * Consortial: Local HRID gets added as 035 when instance is shared [MODINV-918](https://folio-org.atlassian.net/browse/MODINV-918)
 * Consortial: non-MARC data not saved when local source = MARC instance is promoted [MODINV-960](https://folio-org.atlassian.net/browse/MODINV-960)
+* Keep order of MARC fields while Creating/Deriving/Editing MARC records [MODSOURMAN-1137](https://folio-org.atlassian.net/browse/MODSOURMAN-1137)
 
 ## 20.1.0 2023-10-13
 * Update status when user attempts to update shared auth record from member tenant ([MODDATAIMP-926](https://issues.folio.org/browse/MODDATAIMP-926))
