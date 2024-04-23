@@ -47,6 +47,13 @@ public class JsonHelper {
     return new JsonObject(readFile(is));
   }
 
+  /**
+   * Update JsonObject representation with the given property name and only not null values.
+   *
+   * @param representation The JsonObject representation to update.
+   * @param propertyName   The name of the property to set.
+   * @param obj            The value to set the property with.
+   */
   public static void putNotNullValues(JsonObject representation, String propertyName, Object obj) {
     if (obj != null && isNotBlank(propertyName)) {
       if (obj instanceof Collection<?>) {
