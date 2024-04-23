@@ -1,9 +1,10 @@
 package org.folio.inventory.support;
 
 import static java.lang.Integer.parseInt;
+import static java.lang.Long.*;
 import static java.lang.String.format;
 import static java.lang.System.getProperty;
-import static java.util.Optional.ofNullable;
+import static java.util.Objects.isNull;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
@@ -15,7 +16,6 @@ import static org.folio.kafka.KafkaTopicNameHelper.createSubscriptionDefinition;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
 import io.vertx.core.http.HttpClient;
@@ -47,7 +47,7 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
 
   @Override
   public void stop(Promise<Void> stopPromise) {
-    List<Future<Void>> stopFutures = consumerWrappers.stream()
+    var stopFutures = consumerWrappers.stream()
       .map(KafkaConsumerWrapper::stop)
       .toList();
 
@@ -70,15 +70,8 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
     return kafkaConsumerWrapper;
   }
 
-  protected JsonObject getConfig() {
-    return ofNullable(config).orElseGet(() -> {
-      config = vertx.getOrCreateContext().config();
-      return config;
-    });
-  }
-
   protected KafkaConfig getKafkaConfig() {
-    return ofNullable(kafkaConfig).orElseGet(() -> {
+    if (isNull(kafkaConfig)) {
       kafkaConfig = KafkaConfig.builder()
         .envId(getConfig().getString(KAFKA_ENV))
         .kafkaHost(getConfig().getString(KAFKA_HOST))
@@ -88,35 +81,34 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
         .maxRequestSize(parseInt(getConfig().getString(KAFKA_MAX_REQUEST_SIZE)))
         .build();
       getLogger().info("kafkaConfig: {}", kafkaConfig);
-      return kafkaConfig;
-    });
+    }
+    return kafkaConfig;
   }
 
   protected HttpClient getHttpClient() {
-    return ofNullable(httpClient).orElseGet(() -> {
+    if (isNull(httpClient)) {
       httpClient = vertx.createHttpClient();
-      return httpClient;
-    });
+    }
+    return httpClient;
   }
 
   protected Storage getStorage() {
-    return ofNullable(storage).orElseGet(() -> {
+    if (isNull(storage)) {
       storage = Storage.basedUpon(getConfig(), vertx.createHttpClient());
-      return storage;
-    });
+    }
+    return storage;
   }
 
   protected MappingMetadataCache getMappingMetadataCache() {
-    return ofNullable(mappingMetadataCache).orElseGet(() -> {
-      var mappingMetadataExpirationTime = getCacheEnvVariable(getConfig(), METADATA_EXPIRATION_TIME);
-      mappingMetadataCache = new MappingMetadataCache(vertx, getHttpClient(),
-        Long.parseLong(mappingMetadataExpirationTime));
-      return mappingMetadataCache;
-    });
+    if (isNull(mappingMetadataCache)) {
+      var mappingMetadataExpirationTime = getCacheEnvVariable(METADATA_EXPIRATION_TIME);
+      mappingMetadataCache = new MappingMetadataCache(vertx, getHttpClient(), parseLong(mappingMetadataExpirationTime));
+    }
+    return mappingMetadataCache;
   }
 
-  protected String getCacheEnvVariable(JsonObject config, String variableName) {
-    var cacheExpirationTime = config.getString(variableName);
+  protected String getCacheEnvVariable(String variableName) {
+    var cacheExpirationTime = getConfig().getString(variableName);
     if (isBlank(cacheExpirationTime)) {
       cacheExpirationTime = CACHE_EXPIRATION_DEFAULT;
     }
@@ -125,6 +117,13 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
 
   protected int getMaxDistributionNumber() {
     return getConsumerProperty(MAX_DISTRIBUTION_NUMBER_TEMPLATE, MAX_DISTRIBUTION_NUMBER_DEFAULT);
+  }
+
+  private JsonObject getConfig() {
+    if (isNull(config)) {
+      config = vertx.getOrCreateContext().config();
+    }
+    return config;
   }
 
   private SubscriptionDefinition getSubscriptionDefinition(String envId, String eventType) {

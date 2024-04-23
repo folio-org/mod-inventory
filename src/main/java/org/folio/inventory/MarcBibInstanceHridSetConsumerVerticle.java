@@ -15,9 +15,9 @@ import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.support.KafkaConsumerVerticle;
 
-public class MarcHridSetConsumerVerticle extends KafkaConsumerVerticle {
+public class MarcBibInstanceHridSetConsumerVerticle extends KafkaConsumerVerticle {
 
-  private static final Logger LOGGER = LogManager.getLogger(MarcHridSetConsumerVerticle.class);
+  private static final Logger LOGGER = LogManager.getLogger(MarcBibInstanceHridSetConsumerVerticle.class);
 
   @Override
   public void start(Promise<Void> startPromise) {
