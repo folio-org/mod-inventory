@@ -108,7 +108,7 @@ public class Launcher {
     CompletableFuture<String> future6 = new CompletableFuture<>();
     vertxAssistant.deployVerticle(DataImportConsumerVerticle.class.getName(),
       consumerVerticlesConfig, dataImportConsumerVerticleNumber, future1);
-    vertxAssistant.deployVerticle(MarcHridSetConsumerVerticle.class.getName(),
+    vertxAssistant.deployVerticle(MarcBibInstanceHridSetConsumerVerticle.class.getName(),
       consumerVerticlesConfig, instanceHridSetConsumerVerticleNumber, future2);
     vertxAssistant.deployVerticle(QuickMarcConsumerVerticle.class.getName(),
       consumerVerticlesConfig, quickMarcConsumerVerticleNumber, future3);
