@@ -11,6 +11,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
@@ -90,7 +91,7 @@ public class JsonHelper {
 
   private static List<Iterable<?>> toNotNullList(Collection<?> collection) {
     return collection.stream()
-      .filter(item -> item != null)
+      .filter(Objects::nonNull)
       .map(item -> {
         if (item instanceof Collection<?>) {
           return toNotNullList((Collection<?>) item);
