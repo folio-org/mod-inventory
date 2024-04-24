@@ -25,7 +25,7 @@ public class Launcher {
   private static final String QUICK_MARC_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG = "inventory.kafka.QuickMarcConsumerVerticle.instancesNumber";
   private static final String MARC_BIB_UPDATE_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG = "inventory.kafka.MarcBibUpdateConsumerVerticle.instancesNumber";
   private static final String CONSORTIUM_INSTANCE_SHARING_CONSUMER_VERTICLE_NUMBER_CONFIG = "inventory.kafka.ConsortiumInstanceSharingConsumerVerticle.instancesNumber";
-  private static final String INSTANCE_INGEST_VERTICLE_NUMBER_CONFIG = "inventory.kafka.InstanceIngestConsumerVerticle.instancesNumber";
+  private static final String INSTANCE_INGRESS_VERTICLE_NUMBER_CONFIG = "inventory.kafka.InstanceIngressConsumerVerticle.instancesNumber";
   private static final VertxAssistant vertxAssistant = new VertxAssistant();
 
   private static String inventoryModuleDeploymentId;
@@ -34,7 +34,7 @@ public class Launcher {
   private static String quickMarcConsumerVerticleDeploymentId;
   private static String marcBibUpdateConsumerVerticleDeploymentId;
   private static String consortiumInstanceSharingVerticleDeploymentId;
-  private static String instanceIngestConsumerVerticleDeploymentId;
+  private static String instanceIngressConsumerVerticleDeploymentId;
 
   public static void main(String[] args)
     throws InterruptedException, ExecutionException, TimeoutException {
@@ -98,7 +98,7 @@ public class Launcher {
     int quickMarcConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(QUICK_MARC_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "1"));
     int marcBibUpdateConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(MARC_BIB_UPDATE_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "3"));
     int consortiumInstanceSharingVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(CONSORTIUM_INSTANCE_SHARING_CONSUMER_VERTICLE_NUMBER_CONFIG, "3"));
-    int instanceIngestConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(INSTANCE_INGEST_VERTICLE_NUMBER_CONFIG, "3"));
+    int instanceIngressConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(INSTANCE_INGRESS_VERTICLE_NUMBER_CONFIG, "3"));
 
     CompletableFuture<String> future1 = new CompletableFuture<>();
     CompletableFuture<String> future2 = new CompletableFuture<>();
@@ -116,15 +116,15 @@ public class Launcher {
       consumerVerticlesConfig, marcBibUpdateConsumerVerticleNumber, future4);
     vertxAssistant.deployVerticle(ConsortiumInstanceSharingConsumerVerticle.class.getName(),
       consumerVerticlesConfig, consortiumInstanceSharingVerticleNumber, future5);
-    vertxAssistant.deployVerticle(InstanceIngestConsumerVerticle.class.getName(),
-      consumerVerticlesConfig, instanceIngestConsumerVerticleNumber, future6);
+    vertxAssistant.deployVerticle(InstanceIngressConsumerVerticle.class.getName(),
+      consumerVerticlesConfig, instanceIngressConsumerVerticleNumber, future6);
 
     consumerVerticleDeploymentId = future1.get(20, TimeUnit.SECONDS);
     marcInstHridSetConsumerVerticleDeploymentId = future2.get(20, TimeUnit.SECONDS);
     quickMarcConsumerVerticleDeploymentId = future3.get(20, TimeUnit.SECONDS);
     marcBibUpdateConsumerVerticleDeploymentId = future4.get(20, TimeUnit.SECONDS);
     consortiumInstanceSharingVerticleDeploymentId = future5.get(20, TimeUnit.SECONDS);
-    instanceIngestConsumerVerticleDeploymentId = future6.get(20, TimeUnit.SECONDS);
+    instanceIngressConsumerVerticleDeploymentId = future6.get(20, TimeUnit.SECONDS);
   }
 
   private static void stop() {
@@ -140,7 +140,7 @@ public class Launcher {
       .thenCompose(v -> vertxAssistant.undeployVerticle(quickMarcConsumerVerticleDeploymentId))
       .thenCompose(v -> vertxAssistant.undeployVerticle(marcBibUpdateConsumerVerticleDeploymentId))
       .thenCompose(v -> vertxAssistant.undeployVerticle(consortiumInstanceSharingVerticleDeploymentId))
-      .thenCompose(v -> vertxAssistant.undeployVerticle(instanceIngestConsumerVerticleDeploymentId))
+      .thenCompose(v -> vertxAssistant.undeployVerticle(instanceIngressConsumerVerticleDeploymentId))
       .thenAccept(v -> vertxAssistant.stop(stopped));
 
     stopped.thenAccept(v -> log.info("Server Stopped"));
