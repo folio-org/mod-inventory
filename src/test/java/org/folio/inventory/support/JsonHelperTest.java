@@ -1,5 +1,6 @@
 package org.folio.inventory.support;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -55,9 +56,13 @@ public class JsonHelperTest {
     var key = "key";
     var rootKey = "root";
     var arrayKey = "array";
+    var jsonArrayKey = "jsonArray";
+    var arrayListKey = "arrayList";
     var value = new JsonObject();
     var nestedValue = new JsonObject();
     var list = new ArrayList<JsonObject>();
+    var arrayList = new ArrayList<JsonArray>();
+    var jsonArray = new JsonArray();
 
     nestedValue.put(nutNullString, nutNullString);
     nestedValue.put("null", null);
@@ -65,13 +70,23 @@ public class JsonHelperTest {
     value.put(key, nestedValue);
     list.add(nestedValue);
     list.add(null);
+    arrayList.add(JsonArray.of(nestedValue));
+    jsonArray.add(nestedValue);
     putNotNullValues(representation, rootKey, value);
     putNotNullValues(representation, arrayKey, list);
+    putNotNullValues(representation, arrayListKey, arrayList);
+    putNotNullValues(representation, jsonArrayKey, jsonArray);
 
     var objResult = representation.getJsonObject(rootKey).getJsonObject(key);
     var listResult = representation.getJsonArray(arrayKey);
+    var arrayListResult = representation.getJsonArray(arrayListKey).getJsonArray(0).getJsonObject(0);
+    var jsonArrayResult = representation.getJsonArray(jsonArrayKey).getJsonObject(0);
     assertThat(objResult.size(), is(1));
     assertThat(objResult.getValue(nutNullString), is(nutNullString));
+    assertThat(arrayListResult.size(), is(1));
+    assertThat(arrayListResult.getValue(nutNullString), is(nutNullString));
+    assertThat(jsonArrayResult.size(), is(1));
+    assertThat(jsonArrayResult.getValue(nutNullString), is(nutNullString));
     assertThat(listResult.size(), is(1));
   }
 }
