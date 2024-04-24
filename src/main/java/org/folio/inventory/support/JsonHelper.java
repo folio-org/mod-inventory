@@ -56,10 +56,10 @@ public class JsonHelper {
    */
   public static void putNotNullValues(JsonObject representation, String propertyName, Object obj) {
     if (obj != null && isNotBlank(propertyName)) {
-      if (obj instanceof Collection<?>) {
-        representation.put(propertyName, new JsonArray(toNotNullList((Collection<?>) obj)));
-      } else if (obj instanceof JsonArray) {
-        representation.put(propertyName, toNotNullList(((JsonArray) obj).getList()));
+      if (obj instanceof Collection<?> collection) {
+        representation.put(propertyName, new JsonArray(toNotNullList(collection)));
+      } else if (obj instanceof JsonArray array) {
+        representation.put(propertyName, toNotNullList(array.getList()));
       } else {
         JsonObject json = JsonObject.mapFrom(obj);
         handleNullNestedFields(json);
@@ -87,10 +87,10 @@ public class JsonHelper {
       var value = itemObject.getValue(key);
       if (value == null) {
         keysToRemove.add(key);
-      } else if (value instanceof String && StringUtil.isEmpty((String) value)) {
+      } else if (value instanceof String str && StringUtil.isEmpty(str)) {
         keysToRemove.add(key);
-      } else if (value instanceof JsonObject) {
-        handleNullNestedFields((JsonObject) value);
+      } else if (value instanceof JsonObject object) {
+        handleNullNestedFields(object);
       }
     }
 
@@ -102,10 +102,10 @@ public class JsonHelper {
     return collection.stream()
       .filter(Objects::nonNull)
       .map(item -> {
-        if (item instanceof Collection<?>) {
-          return toNotNullList((Collection<?>) item);
-        } else if (item instanceof JsonArray) {
-          return toNotNullList(((JsonArray) item).getList());
+        if (item instanceof Collection<?> iterable) {
+          return toNotNullList(iterable);
+        } else if (item instanceof JsonArray array) {
+          return toNotNullList(array.getList());
         } else {
           var jsonItem = JsonObject.mapFrom(item);
           handleNullNestedFields(jsonItem);
