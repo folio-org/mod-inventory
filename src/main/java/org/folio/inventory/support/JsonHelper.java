@@ -58,6 +58,8 @@ public class JsonHelper {
     if (obj != null && isNotBlank(propertyName)) {
       if (obj instanceof Collection<?>) {
         representation.put(propertyName, new JsonArray(toNotNullList((Collection<?>) obj)));
+      } else if (obj instanceof JsonArray) {
+        representation.put(propertyName, toNotNullList(((JsonArray) obj).getList()));
       } else {
         JsonObject json = JsonObject.mapFrom(obj);
         handleNullNestedFields(json);
@@ -102,6 +104,8 @@ public class JsonHelper {
       .map(item -> {
         if (item instanceof Collection<?>) {
           return toNotNullList((Collection<?>) item);
+        } else if (item instanceof JsonArray) {
+          return toNotNullList(((JsonArray) item).getList());
         } else {
           var jsonItem = JsonObject.mapFrom(item);
           handleNullNestedFields(jsonItem);
@@ -110,5 +114,4 @@ public class JsonHelper {
       })
       .toList();
   }
-
 }
