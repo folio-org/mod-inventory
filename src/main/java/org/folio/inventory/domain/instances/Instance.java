@@ -4,6 +4,10 @@ import static org.folio.inventory.domain.instances.PublicationPeriod.publication
 import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodToJson;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,7 +15,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,14 +24,9 @@ import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.support.JsonArrayHelper;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-
 public class Instance {
   // JSON property names
+  public static final String ID_KEY = "id";
   public static final String VERSION_KEY = "_version";
   public static final String HRID_KEY = "hrid";
   public static final String MATCH_KEY_KEY = "matchKey";
@@ -146,7 +144,7 @@ public class Instance {
   public static Instance fromJson(JsonObject instanceJson) {
 
     return new Instance(
-      instanceJson.getString("id"),
+      instanceJson.getString(ID_KEY),
       instanceJson.getString(VERSION_KEY),
       instanceJson.getString("hrid"),
       instanceJson.getString(SOURCE_KEY),
@@ -197,7 +195,7 @@ public class Instance {
   public JsonObject getJsonForStorage() {
     JsonObject json = new JsonObject();
     //TODO: Review if this shouldn't be defaulting here
-    json.put("id", getId() != null
+    json.put(ID_KEY, getId() != null
       ? getId()
       : UUID.randomUUID().toString());
     putIfNotNull(json, VERSION_KEY, version);
@@ -248,7 +246,7 @@ public class Instance {
   public JsonObject getJsonForResponse(WebContext context) {
     JsonObject json = new JsonObject();
 
-    json.put("id", getId());
+    json.put(ID_KEY, getId());
     putIfNotNull(json, VERSION_KEY, version);
     json.put("hrid", getHrid());
     json.put(SOURCE_KEY, getSource());

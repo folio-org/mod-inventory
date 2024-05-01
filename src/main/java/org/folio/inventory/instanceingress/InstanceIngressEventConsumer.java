@@ -71,7 +71,7 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
   private InstanceIngressEventHandler getInstanceIngressEventHandler(InstanceIngressEvent.EventType eventType,
                                                                      Context context) {
     if (eventType == CREATE_INSTANCE) {
-      return new InstanceIngressCreateEventHandler(context);
+      return new InstanceIngressCreateEventHandler(context, null, null, null);
     } else if (eventType == UPDATE_INSTANCE) {
       return new InstanceIngressUpdateEventHandler(context);
     } else {
