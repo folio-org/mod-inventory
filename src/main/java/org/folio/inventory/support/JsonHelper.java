@@ -87,8 +87,6 @@ public class JsonHelper {
       var value = itemObject.getValue(key);
       if (value == null) {
         keysToRemove.add(key);
-      } else if (value instanceof String str && StringUtil.isEmpty(str)) {
-        keysToRemove.add(key);
       } else if (value instanceof JsonObject object) {
         handleNullNestedFields(object);
       }
