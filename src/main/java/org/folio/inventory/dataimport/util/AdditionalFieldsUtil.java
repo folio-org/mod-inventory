@@ -82,8 +82,7 @@ public final class AdditionalFieldsUtil {
   private static final String OCLC = "OCoLC";
   private static final ObjectMapper objectMapper = new ObjectMapper();
   public static final String FIELDS = "fields";
-  private static final String OCLC_PATTERN = "\\(OCoLC\\)(tfe|ocm|ocn)?0*(\\d+)";
-  private static final String OCoLC = String.format("(%s)", OCLC);
+  private static final String OCLC_PATTERN = "\\((" + OCLC + ")\\)((ocm|ocn)?0*|([a-zA-Z]+)0*)(\\d+\\w*)";
 
   static {
     // this function is executed when creating a new item to be saved in the cache.
@@ -287,20 +286,30 @@ public final class AdditionalFieldsUtil {
     Pattern pattern = Pattern.compile(OCLC_PATTERN);
 
     for (Subfield subfield : subFields) {
-      Matcher matcher = pattern.matcher(subfield.getData());
-      if (matcher.find()) {
-        String prefix = matcher.group(1);
-        String numericPart = matcher.group(2);
+      String data = subfield.getData();
+      var code = subfield.getCode();
+      Matcher matcher = pattern.matcher(data);
 
-        if ("ocm".equals(prefix) || "ocn".equals(prefix)) {
-          processedSet.add(subfield.getCode() + "&" + OCoLC + numericPart);
-        } else if (prefix != null) {
-          processedSet.add(subfield.getCode() + "&" + OCoLC + prefix + numericPart);
+      if (matcher.find()) {
+        String oclcTag = matcher.group(1); // "OCoLC"
+        String numericAndTrailing = matcher.group(5); // Numeric part and any characters that follow
+        String prefix = matcher.group(2); // Entire prefix including letters and potentially leading zeros
+
+        if (prefix != null && (prefix.startsWith("ocm") || prefix.startsWith("ocn"))) {
+          // If "ocm" or "ocn", strip entirely from the prefix
+          processedSet.add(code + "&(" + oclcTag + ")" + numericAndTrailing);
         } else {
-          processedSet.add(subfield.getCode() + "&" + OCoLC + numericPart);
+          // For other cases, strip leading zeros only from the numeric part
+          numericAndTrailing = numericAndTrailing.replaceFirst("^0+", "");
+          if (prefix != null) {
+            prefix = prefix.replaceAll("\\d+", ""); // Safely remove digits from the prefix if not null
+          }
+          // Add back any other prefix that might have been included like "tfe"
+          processedSet.add(code + "&(" + oclcTag + ")" + (prefix != null ? prefix : "") + numericAndTrailing);
         }
       } else {
-        processedSet.add(subfield.getCode() + "&" + subfield.getData());
+        // If it does not match, add the data as is
+        processedSet.add(code + "&" + data);
       }
     }
     return processedSet;

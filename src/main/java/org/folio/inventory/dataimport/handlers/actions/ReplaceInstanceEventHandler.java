@@ -17,6 +17,7 @@ import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
+import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.exceptions.NotFoundException;
@@ -193,6 +194,14 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         String marcBibAsJson = payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value());
         org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(marcBibAsJson, org.folio.rest.jaxrs.model.Record.class);
         Instance mappedInstance = Instance.fromJson(instanceAsJson);
+        List<String> invalidUUIDsErrors = ValidationUtil.validateUUIDs(mappedInstance);
+        if (!invalidUUIDsErrors.isEmpty()) {
+          String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", invalidUUIDsErrors,
+            jobExecutionId, recordId, chunkId);
+          LOGGER.warn(msg);
+          return Future.failedFuture(msg);
+        }
+
         return updateInstanceAndRetryIfOlExists(mappedInstance, instanceCollection, dataImportEventPayload)
           .compose(updatedInstance -> getPrecedingSucceedingTitlesHelper().getExistingPrecedingSucceedingTitles(mappedInstance, context))
           .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()

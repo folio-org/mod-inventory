@@ -3,6 +3,8 @@
 * The sorting for Items on Instance details page is not worked [MODINV-1001](https://folio-org.atlassian.net/browse/MODINV-1001)
 * "PMSystem" displayed as source in "quickmarc" view when record was created by "Non-matches" action of job profile [MODSOURCE-608](https://folio-org.atlassian.net/browse/MODSOURCE-608)
 * The result table is not displayed in the file details log [MODINV-1003](https://folio-org.atlassian.net/browse/MODINV-1003)
+* Invalid values (as it is) created in JSON when value is not matching accepted options provided in Instance field mapping for Nature of Content term [MODINV-1012](https://folio-org.atlassian.net/browse/MODINV-1012)
+* Remove null values from electronicAccess object before returning item and instance [MODINV-1006](https://folio-org.atlassian.net/browse/MODINV-1006)
 
 ## 20.2.0 2023-03-20
 * Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))

@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.folio.inventory.support.JsonHelper;
 
 public class Instance {
   // JSON property names
@@ -269,7 +270,7 @@ public class Instance {
     putIfNotNull(json, PUBLICATION_KEY, getPublication());
     putIfNotNull(json, PUBLICATION_FREQUENCY_KEY, getPublicationFrequency());
     putIfNotNull(json, PUBLICATION_RANGE_KEY, getPublicationRange());
-    putIfNotNull(json, ELECTRONIC_ACCESS_KEY, getElectronicAccess());
+    JsonHelper.putNotNullValues(json, ELECTRONIC_ACCESS_KEY, getElectronicAccess());
     putIfNotNull(json, INSTANCE_TYPE_ID_KEY, getInstanceTypeId());
     putIfNotNull(json, INSTANCE_FORMAT_IDS_KEY, getInstanceFormatIds());
     putIfNotNull(json, PHYSICAL_DESCRIPTIONS_KEY, getPhysicalDescriptions());
