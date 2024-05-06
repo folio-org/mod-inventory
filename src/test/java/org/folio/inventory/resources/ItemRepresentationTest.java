@@ -46,7 +46,7 @@ public class ItemRepresentationTest {
     var emptyElectronicAccessObject = nullElectronicAccessJson.getJsonArray(electronicAccessKey);
 
     assertThat(electronicAccessObject.size(), is(1));
-    assertThat(electronicAccessObject.getJsonObject(0).fieldNames().size(), is(1));
+    assertThat(electronicAccessObject.getJsonObject(0).fieldNames().size(), is(2));
     assertThat(electronicAccessObject.getJsonObject(0).getValue("uri"), is(testValue));
     assertThat(emptyElectronicAccessObject, is(new JsonArray()));
   }
