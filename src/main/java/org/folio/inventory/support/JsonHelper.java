@@ -2,7 +2,6 @@ package org.folio.inventory.support;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import liquibase.util.StringUtil;
 
 import java.io.BufferedReader;
 import java.io.IOException;
