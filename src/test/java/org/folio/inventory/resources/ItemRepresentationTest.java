@@ -27,7 +27,7 @@ public class ItemRepresentationTest {
   }
 
   @Test
-  public void jsonWithoutNullOrEmptyValues() {
+  public void jsonWithoutNullValuesOnly() {
     var testValue = "https://test.com";
     var electronicAccessKey = "electronicAccess";
     var item = new Item(UUID.randomUUID().toString(), null, null,
