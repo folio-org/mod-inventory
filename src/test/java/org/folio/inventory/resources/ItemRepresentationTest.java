@@ -27,7 +27,7 @@ public class ItemRepresentationTest {
   }
 
   @Test
-  public void jsonWithoutNullOrEmptyValues() {
+  public void jsonWithoutNullValuesOnly() {
     var testValue = "https://test.com";
     var electronicAccessKey = "electronicAccess";
     var item = new Item(UUID.randomUUID().toString(), null, null,
@@ -46,7 +46,7 @@ public class ItemRepresentationTest {
     var emptyElectronicAccessObject = nullElectronicAccessJson.getJsonArray(electronicAccessKey);
 
     assertThat(electronicAccessObject.size(), is(1));
-    assertThat(electronicAccessObject.getJsonObject(0).fieldNames().size(), is(1));
+    assertThat(electronicAccessObject.getJsonObject(0).fieldNames().size(), is(2));
     assertThat(electronicAccessObject.getJsonObject(0).getValue("uri"), is(testValue));
     assertThat(emptyElectronicAccessObject, is(new JsonArray()));
   }
