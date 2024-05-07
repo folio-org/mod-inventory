@@ -1,3 +1,6 @@
+## 20.1.12 2024-05-07
+* [MODINV-1019](https://folio-org.atlassian.net/browse/MODINV-1019) Allow matching by POL/VRN when Order is in any status
+
 ## 20.1.11 2024-04-19
 * [MODDICORE-402](https://folio-org.atlassian.net/browse/MODDICORE-402) Update data-import-processing-core to v4.1.5
 
