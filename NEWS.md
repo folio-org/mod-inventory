@@ -1,3 +1,6 @@
+## 20.2.4 2024-05-09
+* [MODINV-1024](https://folio-org.atlassian.net/browse/MODINV-1024) Fix error while updating Instances and Items with electronic access without URI field populated.
+
 ## 20.2.3 2024-04-25
 * [MODINV-1022](https://folio-org.atlassian.net/browse/MODINV-1022) Circulation History in Item record removed when Item is marked Missing/Long missing/ Unavailable
 
