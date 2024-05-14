@@ -129,7 +129,7 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
         .withMappingParams(Json.encode(mappingParameters))
         .withMappingRules(mappingRules.encode())))));
 
-    MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, vertx.createHttpClient(), 3600);
+    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, vertx.createHttpClient(), 3600);
     marcHoldingsRecordHridSetKafkaHandler =
       new MarcHoldingsRecordHridSetKafkaHandler(new HoldingsUpdateDelegate(mockedStorage, holdingsCollectionService), mappingMetadataCache);
 

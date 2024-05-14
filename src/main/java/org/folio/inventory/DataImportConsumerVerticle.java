@@ -122,9 +122,8 @@ public class DataImportConsumerVerticle extends AbstractVerticle {
     String mappingMetadataExpirationTime = getCacheEnvVariable(config, "inventory.mapping-metadata-cache.expiration.time.seconds");
 
     ProfileSnapshotCache profileSnapshotCache = new ProfileSnapshotCache(vertx, client, Long.parseLong(profileSnapshotExpirationTime));
-    MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
     ConsortiumDataCache consortiumDataCache = new ConsortiumDataCache(vertx, client);
-
+    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
     DataImportKafkaHandler dataImportKafkaHandler = new DataImportKafkaHandler(
       vertx, storage, client, profileSnapshotCache, kafkaConfig, mappingMetadataCache, consortiumDataCache);
 
