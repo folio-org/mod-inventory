@@ -29,7 +29,7 @@ import org.folio.inventory.support.http.client.OkapiHttpClient;
 public class MappingMetadataCache {
 
   private static final Logger LOGGER = LogManager.getLogger();
-
+  private static MappingMetadataCache instance = null;
   private final AsyncCache<String, Optional<MappingMetadataDto>> cache;
   private final HttpClient httpClient;
 
@@ -105,6 +105,13 @@ public class MappingMetadataCache {
           return CompletableFuture.failedFuture(new CacheLoadingException(message));
         }
       });
+  }
+
+  public static synchronized MappingMetadataCache getInstance(Vertx vertx, HttpClient httpClient, long cacheExpirationTime) {
+    if (instance == null) {
+      instance = new MappingMetadataCache(vertx, httpClient, cacheExpirationTime);
+    }
+    return instance;
   }
 
 }

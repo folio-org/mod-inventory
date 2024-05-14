@@ -64,7 +64,7 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
     HoldingsUpdateDelegate holdingsRecordUpdateDelegate = new HoldingsUpdateDelegate(storage, holdingsCollectionService);
 
     String mappingMetadataExpirationTime = getCacheEnvVariable(config, "inventory.mapping-metadata-cache.expiration.time.seconds");
-    MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
+    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
 
     MarcBibInstanceHridSetKafkaHandler marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(instanceUpdateDelegate, mappingMetadataCache);
     MarcHoldingsRecordHridSetKafkaHandler marcHoldingsRecordHridSetKafkaHandler = new MarcHoldingsRecordHridSetKafkaHandler(holdingsRecordUpdateDelegate, mappingMetadataCache);
