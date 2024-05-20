@@ -26,7 +26,6 @@ import org.folio.inventory.support.JsonArrayHelper;
 
 public class Instance {
   // JSON property names
-  public static final String ID_KEY = "id";
   public static final String VERSION_KEY = "_version";
   public static final String HRID_KEY = "hrid";
   public static final String MATCH_KEY_KEY = "matchKey";
@@ -144,7 +143,7 @@ public class Instance {
   public static Instance fromJson(JsonObject instanceJson) {
 
     return new Instance(
-      instanceJson.getString(ID_KEY),
+      instanceJson.getString("id"),
       instanceJson.getString(VERSION_KEY),
       instanceJson.getString("hrid"),
       instanceJson.getString(SOURCE_KEY),
@@ -195,7 +194,7 @@ public class Instance {
   public JsonObject getJsonForStorage() {
     JsonObject json = new JsonObject();
     //TODO: Review if this shouldn't be defaulting here
-    json.put(ID_KEY, getId() != null
+    json.put("id", getId() != null
       ? getId()
       : UUID.randomUUID().toString());
     putIfNotNull(json, VERSION_KEY, version);
@@ -246,7 +245,7 @@ public class Instance {
   public JsonObject getJsonForResponse(WebContext context) {
     JsonObject json = new JsonObject();
 
-    json.put(ID_KEY, getId());
+    json.put("id", getId());
     putIfNotNull(json, VERSION_KEY, version);
     json.put("hrid", getHrid());
     json.put(SOURCE_KEY, getSource());
