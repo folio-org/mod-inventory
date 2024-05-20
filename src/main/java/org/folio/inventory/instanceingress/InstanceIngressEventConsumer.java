@@ -14,7 +14,9 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+
 import java.util.HashMap;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -22,6 +24,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.dataimport.handlers.actions.AbstractInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.instanceingress.handler.CreateInstanceIngressEventHandler;
@@ -36,21 +39,25 @@ import org.folio.rest.util.OkapiConnectionParams;
 public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(InstanceIngressEventConsumer.class);
+  public static final String CACHE_KEY = InstanceIngressEventConsumer.class.getSimpleName();
 
   private final Vertx vertx;
   private final Storage storage;
   private final HttpClient client;
   private final MappingMetadataCache mappingMetadataCache;
+  private final ProfileSnapshotCache profileSnapshotCache;
   private CreateInstanceIngressEventHandler createInstanceEventHandler;
 
   public InstanceIngressEventConsumer(Vertx vertx,
                                       Storage storage,
                                       HttpClient client,
-                                      MappingMetadataCache mappingMetadataCache) {
+                                      MappingMetadataCache mappingMetadataCache,
+                                      ProfileSnapshotCache profileSnapshotCache) {
     this.vertx = vertx;
     this.storage = storage;
     this.client = client;
     this.mappingMetadataCache = mappingMetadataCache;
+    this.profileSnapshotCache = profileSnapshotCache;
   }
 
   @Override
@@ -94,9 +101,11 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
     diPayload.setTenant(context.getToken());
     diPayload.setToken(context.getTenantId());
     diPayload.setOkapiUrl(context.getOkapiLocation());
-    diPayload.setJobExecutionId(InstanceIngressEventConsumer.class.getSimpleName());
+    diPayload.setJobExecutionId(CACHE_KEY);
     diPayload.setContext(new HashMap<>());
     diPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), payload.getSourceRecordObject());
+    var profileSnapshotWrapper = profileSnapshotCache.get(CACHE_KEY, context).result().orElseThrow(() -> new EventProcessingException("No ProfileSnapshot available for " + CACHE_KEY));
+    diPayload.setCurrentNode(profileSnapshotWrapper);
     return diPayload;
   }
 
