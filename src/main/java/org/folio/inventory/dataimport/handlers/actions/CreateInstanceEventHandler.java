@@ -27,6 +27,8 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.InstanceIngressEvent;
+import org.folio.rest.jaxrs.model.InstanceIngressPayload;
 import org.folio.rest.jaxrs.model.Record;
 
 import java.util.HashMap;
@@ -75,7 +77,9 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
-      dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
+      if (!isInstanceIngressEvent(dataImportEventPayload)) {
+        dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
+      }
 
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || payloadContext.isEmpty()
@@ -184,11 +188,18 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       instanceAsJson = instanceAsJson.getJsonObject(INSTANCE_PATH);
     }
     instanceAsJson.put("id", instanceId);
-    instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
-    instanceAsJson.remove(HRID_KEY);
+    boolean isInstanceIngressEvent = isInstanceIngressEvent(dataImportEventPayload);
+    instanceAsJson.put(SOURCE_KEY, isInstanceIngressEvent ? InstanceIngressPayload.SourceType.BIBFRAME.value() : MARC_FORMAT);
+    if (!isInstanceIngressEvent) {
+      instanceAsJson.remove(HRID_KEY);
+    }
 
     LOGGER.debug("Creating instance with id: {} by jobExecutionId: {}", instanceId, jobExecutionId);
     return instanceAsJson;
+  }
+
+  private boolean isInstanceIngressEvent(DataImportEventPayload dataImportEventPayload) {
+    return InstanceIngressEvent.EventType.CREATE_INSTANCE.value().equals(dataImportEventPayload.getEventType());
   }
 
   @Override
