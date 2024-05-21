@@ -51,6 +51,7 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.reorderMarcRecordFields;
 import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.domain.instances.Instance.DISCOVERY_SUPPRESS_KEY;
@@ -193,6 +194,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         }
         String marcBibAsJson = payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value());
         org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(marcBibAsJson, org.folio.rest.jaxrs.model.Record.class);
+        var sourceContent = targetRecord.getParsedRecord().getContent().toString();
         Instance mappedInstance = Instance.fromJson(instanceAsJson);
         List<String> invalidUUIDsErrors = ValidationUtil.validateUUIDs(mappedInstance);
         if (!invalidUUIDsErrors.isEmpty()) {
@@ -218,6 +220,11 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           .compose(instance -> {
             if (instanceToUpdate.getSource().equals(FOLIO.getValue())) {
               executeFieldsManipulation(instance, targetRecord);
+
+              var targetContent = targetRecord.getParsedRecord().getContent().toString();
+              var content = reorderMarcRecordFields(sourceContent, targetContent);
+              targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(content));
+
               return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection, tenantId);
             }
             if (instanceToUpdate.getSource().equals(MARC.getValue())) {
@@ -227,6 +234,11 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
               JsonObject jsonInstance = new JsonObject(instance.getJsonForStorage().encode());
 
               setSuppressFormDiscovery(targetRecord, jsonInstance.getBoolean(DISCOVERY_SUPPRESS_KEY, false));
+
+              var targetContent = targetRecord.getParsedRecord().getContent().toString();
+              var content = reorderMarcRecordFields(sourceContent, targetContent);
+              targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(content));
+              
               return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, targetRecord.getMatchedId(), tenantId);
             }
             return Future.succeededFuture(instance);
