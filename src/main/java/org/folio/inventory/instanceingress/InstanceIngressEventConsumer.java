@@ -39,7 +39,7 @@ import org.folio.rest.util.OkapiConnectionParams;
 public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(InstanceIngressEventConsumer.class);
-  public static final String CACHE_KEY = InstanceIngressEventConsumer.class.getSimpleName();
+  public static final String CACHE_KEY = "INSTANCE_INGRESS";
 
   private final Vertx vertx;
   private final Storage storage;
@@ -104,6 +104,8 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
     diPayload.setJobExecutionId(CACHE_KEY);
     diPayload.setContext(new HashMap<>());
     diPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), payload.getSourceRecordObject());
+    diPayload.getContext().put("acceptInstanceId", "true");
+    // Q: who and how creates a profile?
     var profileSnapshotWrapper = profileSnapshotCache.get(CACHE_KEY, context).result().orElseThrow(() -> new EventProcessingException("No ProfileSnapshot available for " + CACHE_KEY));
     diPayload.setCurrentNode(profileSnapshotWrapper);
     return diPayload;
