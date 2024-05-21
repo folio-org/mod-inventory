@@ -1,5 +1,9 @@
 package org.folio.inventory.dataimport.util;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.lang3.tuple.Pair;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -9,6 +13,23 @@ import io.vertx.core.Context;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ForkJoinPool;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -64,6 +85,8 @@ public final class AdditionalFieldsUtil {
   private static final char INDICATOR = 'f';
   public static final char SUBFIELD_I = 'i';
   private static final String HR_ID_FIELD = "hrid";
+  public static final String FIELDS = "fields";
+  private static final ObjectMapper objectMapper = new ObjectMapper();
   private static final CacheLoader<String, org.marc4j.marc.Record> parsedRecordContentCacheLoader;
   private static final LoadingCache<String, org.marc4j.marc.Record> parsedRecordContentCache;
 
@@ -640,5 +663,101 @@ public final class AdditionalFieldsUtil {
       AdditionalFieldsUtil.remove035WithActualHrId(recordInstancePair.getKey(), hrid);
     }
     AdditionalFieldsUtil.removeField(recordInstancePair.getKey(), TAG_003);
+  }
+
+  /**
+   * Take field values from system modified record content while preserving incoming record content`s field order.
+   * Put system fields (001, 005) first, regardless of incoming record fields order.
+   *
+   * @param sourceOrderContent content with incoming record fields order
+   * @param systemOrderContent system modified record content with reordered fields
+   * @return MARC record parsed content with desired fields order
+   */
+  public static String reorderMarcRecordFields(String sourceOrderContent, String systemOrderContent) {
+    try {
+      var parsedContent = objectMapper.readTree(systemOrderContent);
+      var fieldsArrayNode = (ArrayNode) parsedContent.path(FIELDS);
+
+      var nodes = toNodeList(fieldsArrayNode);
+      var sourceOrderTags = getSourceFields(sourceOrderContent);
+      var reorderedFields = objectMapper.createArrayNode();
+
+      var node001 = removeAndGetNodeByTag(nodes, TAG_001);
+      if (node001 != null && !node001.isEmpty()) {
+        reorderedFields.add(node001);
+      }
+
+      var node005 = removeAndGetNodeByTag(nodes, TAG_005);
+      if (node005 != null && !node005.isEmpty()) {
+        reorderedFields.add(node005);
+      }
+
+      for (String tag : sourceOrderTags) {
+        var node = removeAndGetNodeByTag(nodes, tag);
+        if (node != null && !node.isEmpty()) {
+          reorderedFields.add(node);
+        }
+      }
+
+      reorderedFields.addAll(nodes);
+
+      ((ObjectNode) parsedContent).set(FIELDS, reorderedFields);
+      return parsedContent.toString();
+    } catch (Exception e) {
+      LOGGER.error("An error occurred while reordering Marc record fields: {}", e.getMessage(), e);
+      return systemOrderContent;
+    }
+  }
+
+  private static List<JsonNode> toNodeList(ArrayNode fieldsArrayNode) {
+    var nodes = new LinkedList<JsonNode>();
+    for (var node : fieldsArrayNode) {
+      nodes.add(node);
+    }
+    return nodes;
+  }
+
+  private static JsonNode removeAndGetNodeByTag(List<JsonNode> nodes, String tag) {
+    for (int i = 0; i < nodes.size(); i++) {
+      var nodeTag = getTagFromNode(nodes.get(i));
+      if (nodeTag.equals(tag)) {
+        return nodes.remove(i);
+      }
+    }
+    return null;
+  }
+
+  private static String getTagFromNode(JsonNode node) {
+    return node.fieldNames().next();
+  }
+
+  private static List<String> getSourceFields(String source) {
+    var sourceFields = new ArrayList<String>();
+    var remainingFields = new ArrayList<String>();
+    var has001 = false;
+    try {
+      var sourceJson = objectMapper.readTree(source);
+      var fieldsNode = sourceJson.get(FIELDS);
+
+      for (JsonNode fieldNode : fieldsNode) {
+        var tag = getTagFromNode(fieldNode);
+        if (tag.equals(TAG_001)) {
+          sourceFields.add(0, tag);
+          has001 = true;
+        } else if (tag.equals(TAG_005)) {
+          if (!has001) {
+            sourceFields.add(0, tag);
+          } else {
+            sourceFields.add(1, tag);
+          }
+        } else {
+          remainingFields.add(tag);
+        }
+      }
+      sourceFields.addAll(remainingFields);
+    } catch (Exception e) {
+      LOGGER.error("An error occurred while parsing source JSON: {}", e.getMessage(), e);
+    }
+    return sourceFields;
   }
 }

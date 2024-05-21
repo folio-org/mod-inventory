@@ -633,4 +633,24 @@ public class AdditionalFieldsUtilTest {
     // then
     Assert.assertEquals(expectedParsedContent, parsedRecord.getContent());
   }
+
+  @Test
+  public void shouldReorderMarcRecordFields() throws IOException, MarcException {
+    var systemReorderedRecordContent = readFileFromPath(PARSED_RECORD);
+    var userOrderRecordContent = readFileFromPath(REORDERED_PARSED_RECORD);
+    var expectedOrderRecord = readFileFromPath(REORDERING_RESULT_RECORD);
+
+    var actualOrderRecord = AdditionalFieldsUtil.reorderMarcRecordFields(userOrderRecordContent, systemReorderedRecordContent);
+
+    assertNotNull(actualOrderRecord);
+    assertEquals(formatContent(expectedOrderRecord), formatContent(actualOrderRecord));
+  }
+
+  private static String readFileFromPath(String path) throws IOException {
+    return new String(FileUtils.readFileToByteArray(new File(path)));
+  }
+
+  private String formatContent(String content) {
+    return content.replaceAll("\\s", "");
+  }
 }

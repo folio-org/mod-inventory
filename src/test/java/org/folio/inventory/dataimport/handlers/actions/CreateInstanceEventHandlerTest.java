@@ -105,7 +105,513 @@ import static org.mockito.Mockito.when;
 
 public class CreateInstanceEventHandlerTest {
 
-  private static final String PARSED_CONTENT = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"003\":\"in001\"},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"titleValue\"}]}},{\"336\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}]}},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}}]}";
+  private static final String PARSED_CONTENT = """
+    {
+      "id": "c56b70ce-4ef6-47ef-8bc3-c470bafa0b8c",
+      "externalIdsHolder": {
+        "instanceId": "b9a5f035-de63-4e2c-92c2-07240c89b817"
+      },
+      "recordType": "MARC_BIB",
+      "parsedRecord": {
+        "id": "c9db5d7a-e1d4-11e8-9f32-f2801f1b9fd1",
+        "content": {
+          "fields": [
+            {
+              "066": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "c": "$1"
+                  },
+                  {
+                    "c": "(3"
+                  }
+                ]
+              }
+            },
+            {
+              "001": "393893"
+            },
+            {
+              "005": "20141107001016.0"
+            },
+            {
+              "006": "c bcdefghijklmn o "
+            },
+            {
+              "007": "sa bcdefghijkl"
+            },
+            {
+              "008": "abcdefghijklmnopqr bcdefghijklmn o stuvw"
+            },
+            {
+              "010": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "  2001000234"
+                  }
+                ]
+              }
+            },
+            {
+              "035": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "(OCoLC)63611770"
+                  }
+                ]
+              }
+            },
+            {
+              "035": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "393893"
+                  }
+                ]
+              }
+            },
+            {
+              "040": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "c": "UPB"
+                  },
+                  {
+                    "d": "UPB"
+                  },
+                  {
+                    "d": "NIC"
+                  },
+                  {
+                    "d": "NIC"
+                  }
+                ]
+              }
+            },
+            {
+              "041": {
+                "ind1": "0",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "latitager"
+                  },
+                  {
+                    "g": "ger"
+                  }
+                ]
+              }
+            },
+            {
+              "045": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "v6v9"
+                  }
+                ]
+              }
+            },
+            {
+              "047": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "cn"
+                  },
+                  {
+                    "a": "ct"
+                  },
+                  {
+                    "a": "co"
+                  },
+                  {
+                    "a": "df"
+                  },
+                  {
+                    "a": "dv"
+                  },
+                  {
+                    "a": "ft"
+                  },
+                  {
+                    "a": "fg"
+                  },
+                  {
+                    "a": "ms"
+                  },
+                  {
+                    "a": "mi"
+                  },
+                  {
+                    "a": "nc"
+                  },
+                  {
+                    "a": "op"
+                  },
+                  {
+                    "a": "ov"
+                  },
+                  {
+                    "a": "rq"
+                  },
+                  {
+                    "a": "sn"
+                  },
+                  {
+                    "a": "su"
+                  },
+                  {
+                    "a": "sy"
+                  },
+                  {
+                    "a": "vr"
+                  },
+                  {
+                    "a": "zz"
+                  }
+                ]
+              }
+            },
+            {
+              "050": {
+                "ind1": "0",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "M3"
+                  },
+                  {
+                    "b": ".M896"
+                  }
+                ]
+              }
+            },
+            {
+              "100": {
+                "ind1": "/",
+                "ind2": "/",
+                "subfields": [
+                  {
+                    "a": "Mozart, Wolfgang Amadeus,"
+                  },
+                  {
+                    "d": "1756-1791."
+                  },
+                  {
+                    "0": "12345"
+                  },
+                  {
+                    "9": "b9a5f035-de63-4e2c-92c2-07240c88b817"
+                  }
+                ]
+              }
+            },
+            {
+              "240": {
+                "ind1": "1",
+                "ind2": "0",
+                "subfields": [
+                  {
+                    "a": "Works"
+                  }
+                ]
+              }
+            },
+            {
+              "245": {
+                "ind1": "1",
+                "ind2": "0",
+                "subfields": [
+                  {
+                    "a": "Neue Ausgabe samtlicher Werke,"
+                  },
+                  {
+                    "b": "in Verbindung mit den Mozartstadten, Augsburg, Salzburg und Wien."
+                  },
+                  {
+                    "c": "Hrsg. von der Internationalen Stiftung Mozarteum, Salzburg."
+                  }
+                ]
+              }
+            },
+            {
+              "246": {
+                "ind1": "3",
+                "ind2": "3",
+                "subfields": [
+                  {
+                    "a": "Neue Mozart-Ausgabe"
+                  }
+                ]
+              }
+            },
+            {
+              "260": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "Kassel,"
+                  },
+                  {
+                    "b": "Barenreiter,"
+                  },
+                  {
+                    "c": "c1955-"
+                  }
+                ]
+              }
+            },
+            {
+              "300": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "v."
+                  },
+                  {
+                    "b": "facsims."
+                  },
+                  {
+                    "c": "33 cm."
+                  }
+                ]
+              }
+            },
+            {
+              "505": {
+                "ind1": "0",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "Ser. I. Geistliche Gesangswerke -- Ser. II. Opern -- Ser. III. Lieder, mehrstimmige Gesange, Kanons -- Ser. IV. Orchesterwerke -- Ser. V. Konzerte -- Ser. VI. Kirchensonaten -- Ser. VII. Ensemblemusik fur grossere Solobesetzungen -- Ser. VIII. Kammermusik -- Ser. IX. Klaviermusik -- Ser. X. Supplement."
+                  }
+                ]
+              }
+            },
+            {
+              "590": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "Purchase price: $325.00, 1980 August."
+                  }
+                ]
+              }
+            },
+            {
+              "650": {
+                "ind1": " ",
+                "ind2": "0",
+                "subfields": [
+                  {
+                    "a": "Vocal music"
+                  }
+                ]
+              }
+            },
+            {
+              "650": {
+                "ind1": " ",
+                "ind2": "0",
+                "subfields": [
+                  {
+                    "a": "Instrumental music"
+                  }
+                ]
+              }
+            },
+            {
+              "650": {
+                "ind1": " ",
+                "ind2": "7",
+                "subfields": [
+                  {
+                    "a": "Instrumental music"
+                  },
+                  {
+                    "2": "fast"
+                  },
+                  {
+                    "0": "(OCoLC)fst00974414"
+                  }
+                ]
+              }
+            },
+            {
+              "650": {
+                "ind1": " ",
+                "ind2": "7",
+                "subfields": [
+                  {
+                    "a": "Vocal music"
+                  },
+                  {
+                    "2": "fast"
+                  },
+                  {
+                    "0": "(OCoLC)fst01168379"
+                  }
+                ]
+              }
+            },
+            {
+              "880": {
+                "ind1": "0",
+                "ind2": "0",
+                "subfields": [
+                  {
+                    "6": "245-01/$1"
+                  },
+                  {
+                    "a": "abcde /"
+                  },
+                  {
+                    "c": "fghij"
+                  }
+                ]
+              }
+            },
+            {
+              "902": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "pfnd"
+                  },
+                  {
+                    "b": "Austin Music"
+                  }
+                ]
+              }
+            },
+            {
+              "905": {
+                "ind1": " ",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "19980728120000.0"
+                  }
+                ]
+              }
+            },
+            {
+              "948": {
+                "ind1": "1",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "20100622"
+                  },
+                  {
+                    "b": "s"
+                  },
+                  {
+                    "d": "lap11"
+                  },
+                  {
+                    "e": "lts"
+                  },
+                  {
+                    "x": "ToAddCatStat"
+                  }
+                ]
+              }
+            },
+            {
+              "948": {
+                "ind1": "0",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "20110818"
+                  },
+                  {
+                    "b": "r"
+                  },
+                  {
+                    "d": "np55"
+                  },
+                  {
+                    "e": "lts"
+                  }
+                ]
+              }
+            },
+            {
+              "948": {
+                "ind1": "2",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "20130128"
+                  },
+                  {
+                    "b": "m"
+                  },
+                  {
+                    "d": "bmt1"
+                  },
+                  {
+                    "e": "lts"
+                  }
+                ]
+              }
+            },
+            {
+              "948": {
+                "ind1": "2",
+                "ind2": " ",
+                "subfields": [
+                  {
+                    "a": "20141106"
+                  },
+                  {
+                    "b": "m"
+                  },
+                  {
+                    "d": "batch"
+                  },
+                  {
+                    "e": "lts"
+                  },
+                  {
+                    "x": "addfast"
+                  }
+                ]
+              }
+            }
+          ],
+          "leader": "01750ccm a2200421   4500"
+        }
+      },
+      "additionalInfo": {
+        "suppressDiscovery": false
+      },
+      "recordState": "ACTUAL",
+      "metadata": {
+        "updatedDate": "2020-07-16T15:13:36.879+03:00",
+        "updatedByUserId": "38d3a441-c100-5e8d-bd12-71bde492b723"
+      }
+    }
+    """;
   private static final String PARSED_CONTENT_999ffi = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"titleValue\"}]}},{\"336\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}]}},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}}]}";
   private static final String PARSED_CONTENT_WITH_005 = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"005\":\"20141107001016.0\"},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"titleValue\"}]}},{\"336\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}]}},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}}]}";
   private static final String PARSED_CONTENT_WITH_999fi = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"003\":\"in001\"},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"titleValue\"}]}},{\"336\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}]}},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}} , {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } }]}";
