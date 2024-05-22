@@ -265,6 +265,15 @@ public class AdditionalFieldsUtilTest {
   }
 
   @Test
+  public void isFieldsFillingNeededTrueIfExternalHolderInstanceHridMissing() {
+    String instanceId = UUID.randomUUID().toString();
+    String instanceHrId = UUID.randomUUID().toString();
+    Record record = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
+    Instance instance = new Instance(instanceId, "0", instanceHrId, "", "", "");
+    Assert.assertTrue(AdditionalFieldsUtil.isFieldsFillingNeeded(record, instance));
+  }
+
+  @Test
   public void shouldAddFieldToMarcRecordInNumericalOrder() throws IOException {
     // given
     String instanceHrId = UUID.randomUUID().toString();
