@@ -40,8 +40,7 @@ public class MarcBibUpdateConsumerVerticle extends AbstractVerticle {
     Storage storage = Storage.basedUpon(config, client);
     InstanceUpdateDelegate instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
 
-    var mappingMetadataExpirationTime = getCacheEnvVariable(config, METADATA_EXPIRATION_TIME);
-    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
+    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, client, config);
 
     MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertx,
       getMaxDistributionNumber(), kafkaConfig, instanceUpdateDelegate, mappingMetadataCache);
@@ -93,14 +92,6 @@ public class MarcBibUpdateConsumerVerticle extends AbstractVerticle {
       .build();
     LOGGER.info("kafkaConfig: {}", kafkaConfig);
     return kafkaConfig;
-  }
-
-  private String getCacheEnvVariable(JsonObject config, String variableName) {
-    String cacheExpirationTime = config.getString(variableName);
-    if (StringUtils.isBlank(cacheExpirationTime)) {
-      cacheExpirationTime = "3600";
-    }
-    return cacheExpirationTime;
   }
 
   public static String formatSubscriptionPattern(String env, String eventType) {

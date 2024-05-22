@@ -6,8 +6,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import lombok.SneakyThrows;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,6 +34,8 @@ public class MappingMetadataCache {
   private static MappingMetadataCache instance = null;
   private final AsyncCache<String, Optional<MappingMetadataDto>> cache;
   private final HttpClient httpClient;
+  private static final String METADATA_EXPIRATION_TIME = "inventory.mapping-metadata-cache.expiration.time.seconds";
+
 
   public MappingMetadataCache(Vertx vertx, HttpClient httpClient, long cacheExpirationTime) {
     this.httpClient = httpClient;
@@ -107,11 +111,18 @@ public class MappingMetadataCache {
       });
   }
 
-  public static synchronized MappingMetadataCache getInstance(Vertx vertx, HttpClient httpClient, long cacheExpirationTime) {
+  public static synchronized MappingMetadataCache getInstance(Vertx vertx, HttpClient httpClient, JsonObject config) {
     if (instance == null) {
-      instance = new MappingMetadataCache(vertx, httpClient, cacheExpirationTime);
+      instance = new MappingMetadataCache(vertx, httpClient, Long.parseLong(getCacheEnvVariable(config, METADATA_EXPIRATION_TIME)));
     }
     return instance;
   }
 
+  private static String getCacheEnvVariable(JsonObject config, String variableName) {
+    String cacheExpirationTime = config.getString(variableName);
+    if (StringUtils.isBlank(cacheExpirationTime)) {
+      cacheExpirationTime = "3600";
+    }
+    return cacheExpirationTime;
+  }
 }

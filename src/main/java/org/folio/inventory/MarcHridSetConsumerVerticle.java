@@ -63,8 +63,7 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
     InstanceUpdateDelegate instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
     HoldingsUpdateDelegate holdingsRecordUpdateDelegate = new HoldingsUpdateDelegate(storage, holdingsCollectionService);
 
-    String mappingMetadataExpirationTime = getCacheEnvVariable(config, "inventory.mapping-metadata-cache.expiration.time.seconds");
-    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, client, Long.parseLong(mappingMetadataExpirationTime));
+    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, client, config);
 
     MarcBibInstanceHridSetKafkaHandler marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(instanceUpdateDelegate, mappingMetadataCache);
     MarcHoldingsRecordHridSetKafkaHandler marcHoldingsRecordHridSetKafkaHandler = new MarcHoldingsRecordHridSetKafkaHandler(holdingsRecordUpdateDelegate, mappingMetadataCache);
@@ -100,13 +99,5 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
       .globalLoadSensor(GLOBAL_LOAD_SENSOR)
       .subscriptionDefinition(subscriptionDefinition)
       .build();
-  }
-
-  private String getCacheEnvVariable(JsonObject config, String variableName) {
-    String cacheExpirationTime = config.getString(variableName);
-    if (StringUtils.isBlank(cacheExpirationTime)) {
-      cacheExpirationTime = "3600";
-    }
-    return cacheExpirationTime;
   }
 }
