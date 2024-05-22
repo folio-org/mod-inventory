@@ -4,8 +4,10 @@ import static java.util.Objects.isNull;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.kafka.KafkaHeaderUtils.kafkaHeadersToMap;
+import static org.folio.processing.events.services.publisher.KafkaEventPublisher.RECORD_ID_HEADER;
 import static org.folio.rest.jaxrs.model.InstanceIngressEvent.EventType.CREATE_INSTANCE;
 import static org.folio.rest.jaxrs.model.InstanceIngressEvent.EventType.UPDATE_INSTANCE;
+import static org.folio.rest.jaxrs.model.Record.RecordType.MARC_BIB;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -16,6 +18,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,7 +36,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.InstanceIngressEvent;
-import org.folio.rest.jaxrs.model.InstanceIngressPayload;
+import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.util.OkapiConnectionParams;
 
 public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, String> {
@@ -67,27 +70,26 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
     var event = Json.decodeValue(consumerRecord.value(), InstanceIngressEvent.class);
     LOGGER.info("Instance ingress event has been received with event type: {}", event.getEventType());
     return Future.succeededFuture(event.getEventPayload())
-      .compose(eventPayload -> processPayload(eventPayload, event.getEventType(), context)
+      .compose(eventPayload -> processEvent(event, context)
         .map(ar -> consumerRecord.key()), th -> {
         LOGGER.error("Update record state was failed while handle event, {}", th.getMessage());
         return Future.failedFuture(th.getMessage());
       });
   }
 
-  private Future<InstanceIngressEvent.EventType> processPayload(InstanceIngressPayload eventPayload,
-                                                                InstanceIngressEvent.EventType eventType,
-                                                                Context context) {
+  private Future<InstanceIngressEvent.EventType> processEvent(InstanceIngressEvent event,
+                                                              Context context) {
     try {
       Promise<InstanceIngressEvent.EventType> promise = Promise.promise();
-      var handler = getInstanceIngressEventHandler(eventType).handle(toDataImportPayload(eventPayload, eventType, context));
-      handler.whenComplete((res, ex) -> {
-        if (ex != null) {
-          promise.fail(ex);
-        } else {
-          promise.complete(eventType);
-        }
-      });
-
+      toDataImportPayload(event, context)
+        .thenCompose(di -> getInstanceIngressEventHandler(event.getEventType()).handle(di)
+          .whenComplete((res, ex) -> {
+            if (ex != null) {
+              promise.fail(ex);
+            } else {
+              promise.complete(event.getEventType());
+            }
+          }));
       return promise.future();
     } catch (Exception e) {
       LOGGER.warn("Error during processPayload: ", e);
@@ -95,20 +97,41 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
     }
   }
 
-  private DataImportEventPayload toDataImportPayload(InstanceIngressPayload payload, InstanceIngressEvent.EventType eventType, Context context) {
+  private CompletableFuture<DataImportEventPayload> toDataImportPayload(InstanceIngressEvent event, Context context) {
+    CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     var diPayload = new DataImportEventPayload();
-    diPayload.setEventType(eventType.value());
+    diPayload.setEventType(event.getEventType().value());
     diPayload.setTenant(context.getTenantId());
     diPayload.setToken(context.getToken());
     diPayload.setOkapiUrl(context.getOkapiLocation());
     diPayload.setJobExecutionId(CACHE_KEY);
     diPayload.setContext(new HashMap<>());
-    diPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), payload.getSourceRecordObject());
+    diPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), toMarcBibRecord(event));
+    // Q: do we need it?
     diPayload.getContext().put("acceptInstanceId", "true");
+    diPayload.getContext().put(RECORD_ID_HEADER, event.getEventPayload().getSourceRecordIdentifier());
     // Q: who and how creates a profile?
-    var profileSnapshotWrapper = profileSnapshotCache.get(CACHE_KEY, context).result().orElseThrow(() -> new EventProcessingException("No ProfileSnapshot available for " + CACHE_KEY));
-    diPayload.setCurrentNode(profileSnapshotWrapper);
-    return diPayload;
+    profileSnapshotCache.get(CACHE_KEY, context).onComplete(ar -> {
+      if (ar.succeeded()) {
+        ar.result().ifPresent(diPayload::setCurrentNode);
+        future.complete(diPayload);
+      } else {
+        LOGGER.error("Exception during loading profileSnapshot", ar.cause());
+        future.completeExceptionally(ar.cause());
+      }
+    });
+    return future;
+  }
+
+  private String toMarcBibRecord(InstanceIngressEvent event) {
+    var record = new org.folio.rest.jaxrs.model.Record()
+      .withId(event.getId())
+      .withRecordType(MARC_BIB)
+      .withParsedRecord(new ParsedRecord()
+        .withId(event.getEventPayload().getSourceRecordIdentifier())
+        .withContent(event.getEventPayload().getSourceRecordObject())
+      );
+    return Json.encode(record);
   }
 
   private AbstractInstanceEventHandler getInstanceIngressEventHandler(InstanceIngressEvent.EventType eventType) {
