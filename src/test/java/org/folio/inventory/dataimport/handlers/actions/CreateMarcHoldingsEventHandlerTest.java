@@ -155,7 +155,7 @@ public class CreateMarcHoldingsEventHandlerTest {
   public void setUp() throws IOException {
     MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
-    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, vertx.createHttpClient(), 3600);
+    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, vertx.createHttpClient(), new JsonObject());
     createMarcHoldingsEventHandler = new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, holdingsIdStorageService, holdingsCollectionService);
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     instanceId = String.valueOf(UUID.randomUUID());
