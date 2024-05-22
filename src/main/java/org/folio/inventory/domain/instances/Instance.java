@@ -4,10 +4,6 @@ import static org.folio.inventory.domain.instances.PublicationPeriod.publication
 import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodToJson;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -15,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -23,6 +20,12 @@ import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.support.JsonArrayHelper;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 public class Instance {
   // JSON property names
