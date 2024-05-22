@@ -98,8 +98,8 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
   private DataImportEventPayload toDataImportPayload(InstanceIngressPayload payload, InstanceIngressEvent.EventType eventType, Context context) {
     var diPayload = new DataImportEventPayload();
     diPayload.setEventType(eventType.value());
-    diPayload.setTenant(context.getToken());
-    diPayload.setToken(context.getTenantId());
+    diPayload.setTenant(context.getTenantId());
+    diPayload.setToken(context.getToken());
     diPayload.setOkapiUrl(context.getOkapiLocation());
     diPayload.setJobExecutionId(CACHE_KEY);
     diPayload.setContext(new HashMap<>());

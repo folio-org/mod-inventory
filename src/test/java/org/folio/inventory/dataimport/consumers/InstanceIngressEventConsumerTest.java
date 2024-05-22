@@ -1,5 +1,18 @@
 package org.folio.inventory.dataimport.consumers;
 
+import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
+import static org.folio.inventory.instanceingress.InstanceIngressEventConsumer.CACHE_KEY;
+import static org.mockito.AdditionalMatchers.not;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.google.common.collect.Lists;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
@@ -8,40 +21,44 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import io.vertx.kafka.client.producer.KafkaHeader;
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Consumer;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import org.folio.MappingMetadataDto;
+import org.folio.MappingProfile;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
-import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.instanceingress.InstanceIngressEventConsumer;
+import org.folio.inventory.resources.TenantApi;
+import org.folio.inventory.rest.impl.PgPoolContainer;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.KafkaConfig;
+import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
-import org.folio.rest.jaxrs.model.*;
-import org.folio.rest.jaxrs.model.Record;
-import org.junit.*;
+import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.InstanceIngressEvent;
+import org.folio.rest.jaxrs.model.InstanceIngressPayload;
+import org.folio.rest.jaxrs.model.MappingDetail;
+import org.folio.rest.jaxrs.model.MappingRule;
+import org.folio.rest.jaxrs.model.MarcBibUpdate;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.function.Consumer;
-
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
-import static org.folio.inventory.instanceingress.InstanceIngressEventConsumer.CACHE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.AdditionalMatchers.not;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
 
 @RunWith(VertxUnitRunner.class)
 public class InstanceIngressEventConsumerTest {
@@ -71,9 +88,21 @@ public class InstanceIngressEventConsumerTest {
   private Instance existingInstance;
   private InstanceIngressEventConsumer instanceIngressEventConsumer;
   private AutoCloseable mocks;
+  private MappingProfile mappingProfile = new MappingProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Prelim item from MARC")
+    .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+    .withExistingRecordType(EntityType.INSTANCE)
+    .withMappingDetails(new MappingDetail()
+      .withMappingFields(Lists.newArrayList(
+        new MappingRule().withPath("instance.instanceTypeId").withValue("\"instanceTypeIdExpression\"").withEnabled("true"),
+        new MappingRule().withPath("instance.title").withValue("\"titleExpression\"").withEnabled("true"))));
 
   @BeforeClass
   public static void beforeClass() {
+    if (!PgPoolContainer.isRunning()) {
+      PgPoolContainer.create();
+    }
     cluster = provisionWith(defaultClusterConfig());
     cluster.start();
     String[] hostAndPort = cluster.getBrokerList().split(":");
@@ -87,6 +116,9 @@ public class InstanceIngressEventConsumerTest {
 
   @AfterClass
   public static void tearDownClass(TestContext context) {
+    if (PgPoolContainer.isRunning()) {
+      PgPoolContainer.stop();
+    }
     Async async = context.async();
     vertx.close(ar -> {
       cluster.stop();
@@ -96,6 +128,10 @@ public class InstanceIngressEventConsumerTest {
 
   @Before
   public void setUp() throws IOException {
+    PgPoolContainer.setEmbeddedPostgresOptions();
+    TenantApi tenantApi = new TenantApi();
+    tenantApi.initializeSchemaForTenant(TENANT_ID);
+
     JsonObject mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
     record = TestUtil.readFileFromPath(RECORD_PATH);
@@ -122,13 +158,17 @@ public class InstanceIngressEventConsumerTest {
       return null;
     }).when(mockedInstanceCollection).update(any(Instance.class), any(), any());
 
-    when(mappingMetadataCache.getByRecordType(anyString(), any(Context.class), anyString()))
+    when(mappingMetadataCache.get(eq(CACHE_KEY), any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
         .withMappingRules(mappingRules.encode())
         .withMappingParams(Json.encode(new MappingParameters())))));
 
-    when(profileSnapshotCache.get(anyString(), any(Context.class))).thenReturn(Future.succeededFuture(Optional.of(profileSnapshotWrapper)));
-    when(profileSnapshotWrapper.getChildSnapshotWrappers()).thenReturn(List.of(profileSnapshotWrapper));
+    var parentProfileSnapshotWrapper = new ProfileSnapshotWrapper();
+    parentProfileSnapshotWrapper.setChildSnapshotWrappers(List.of(profileSnapshotWrapper));
+    when(profileSnapshotWrapper.getContentType()).thenReturn(ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE);
+    when(profileSnapshotWrapper.getContent()).thenReturn(JsonObject.mapFrom(mappingProfile).getMap());
+    when(profileSnapshotWrapper.getProfileId()).thenReturn(mappingProfile.getId());
+    when(profileSnapshotCache.get(anyString(), any(Context.class))).thenReturn(Future.succeededFuture(Optional.of(parentProfileSnapshotWrapper)));
 
     instanceIngressEventConsumer = new InstanceIngressEventConsumer(vertx, mockedStorage, vertx.createHttpClient(), mappingMetadataCache, profileSnapshotCache);
   }
@@ -142,6 +182,7 @@ public class InstanceIngressEventConsumerTest {
   public void shouldReturnSucceededFutureWithObtainedRecordKey(TestContext context) {
     // given
     var async = context.async();
+
     var payload = new InstanceIngressPayload()
       .withSourceType(InstanceIngressPayload.SourceType.BIBFRAME)
       .withSourceRecordIdentifier(UUID.randomUUID().toString())
@@ -154,6 +195,10 @@ public class InstanceIngressEventConsumerTest {
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
+    when(kafkaRecord.headers()).thenReturn(List.of(
+        KafkaHeader.header(XOkapiHeaders.TENANT.toLowerCase(), TENANT_ID)
+      )
+    );
 
     // when
     Future<String> future = instanceIngressEventConsumer.handle(kafkaRecord);
@@ -162,10 +207,9 @@ public class InstanceIngressEventConsumerTest {
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
       context.assertEquals(expectedKafkaRecordKey, ar.result());
+      verify(mappingMetadataCache, times(1)).get(eq(CACHE_KEY), any(Context.class));
       async.complete();
     });
-
-   // verify(mappingMetadataCache, times(1)).get(eq(CACHE_KEY), any(Context.class));
   }
 
 

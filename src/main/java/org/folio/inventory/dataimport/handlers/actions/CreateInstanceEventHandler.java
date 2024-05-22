@@ -91,8 +91,9 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
-        LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
-        return CompletableFuture.failedFuture(new EventProcessingException(format(ACTION_HAS_NO_MAPPING_MSG, jobExecutionId, recordId)));
+        var message = format(ACTION_HAS_NO_MAPPING_MSG, jobExecutionId, recordId);
+        LOGGER.error(message);
+        return CompletableFuture.failedFuture(new EventProcessingException(message));
       }
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
