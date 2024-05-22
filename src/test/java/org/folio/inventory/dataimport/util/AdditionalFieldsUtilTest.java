@@ -268,9 +268,9 @@ public class AdditionalFieldsUtilTest {
   public void isFieldsFillingNeededTrueIfExternalHolderInstanceHridMissing() {
     String instanceId = UUID.randomUUID().toString();
     String instanceHrId = UUID.randomUUID().toString();
-    Record record = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
+    Record srcRecord = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
     Instance instance = new Instance(instanceId, "0", instanceHrId, "", "", "");
-    Assert.assertTrue(AdditionalFieldsUtil.isFieldsFillingNeeded(record, instance));
+    Assert.assertTrue(AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance));
   }
 
   @Test
