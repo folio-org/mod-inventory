@@ -42,7 +42,7 @@ import org.folio.rest.util.OkapiConnectionParams;
 public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(InstanceIngressEventConsumer.class);
-  public static final String CACHE_KEY = "INSTANCE_INGRESS";
+  public static final String DEFAULT_CREATE_INSTANCE_AND_SRS_MARC_BIB_JOB_PROFILE_ID = "e34d7b92-9b83-11eb-a8b3-0242ac130003";
 
   private final Vertx vertx;
   private final Storage storage;
@@ -104,14 +104,14 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
     diPayload.setTenant(context.getTenantId());
     diPayload.setToken(context.getToken());
     diPayload.setOkapiUrl(context.getOkapiLocation());
-    diPayload.setJobExecutionId(CACHE_KEY);
+    diPayload.setJobExecutionId(InstanceIngressEventConsumer.class.getSimpleName());
     diPayload.setContext(new HashMap<>());
     diPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), toMarcBibRecord(event));
     // Q: do we need it?
     diPayload.getContext().put("acceptInstanceId", "true");
     diPayload.getContext().put(RECORD_ID_HEADER, event.getEventPayload().getSourceRecordIdentifier());
     // Q: who and how creates a profile?
-    profileSnapshotCache.get(CACHE_KEY, context).onComplete(ar -> {
+    profileSnapshotCache.get(DEFAULT_CREATE_INSTANCE_AND_SRS_MARC_BIB_JOB_PROFILE_ID, context).onComplete(ar -> {
       if (ar.succeeded()) {
         ar.result().ifPresent(diPayload::setCurrentNode);
         future.complete(diPayload);
