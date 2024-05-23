@@ -63,7 +63,7 @@ public class MarcHridSetConsumerVerticle extends AbstractVerticle {
     InstanceUpdateDelegate instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
     HoldingsUpdateDelegate holdingsRecordUpdateDelegate = new HoldingsUpdateDelegate(storage, holdingsCollectionService);
 
-    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, client, config);
+    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, client);
 
     MarcBibInstanceHridSetKafkaHandler marcBibInstanceHridSetKafkaHandler = new MarcBibInstanceHridSetKafkaHandler(instanceUpdateDelegate, mappingMetadataCache);
     MarcHoldingsRecordHridSetKafkaHandler marcHoldingsRecordHridSetKafkaHandler = new MarcHoldingsRecordHridSetKafkaHandler(holdingsRecordUpdateDelegate, mappingMetadataCache);

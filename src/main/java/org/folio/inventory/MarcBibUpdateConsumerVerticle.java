@@ -40,7 +40,7 @@ public class MarcBibUpdateConsumerVerticle extends AbstractVerticle {
     Storage storage = Storage.basedUpon(config, client);
     InstanceUpdateDelegate instanceUpdateDelegate = new InstanceUpdateDelegate(storage);
 
-    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, client, config);
+    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, client);
 
     MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertx,
       getMaxDistributionNumber(), kafkaConfig, instanceUpdateDelegate, mappingMetadataCache);

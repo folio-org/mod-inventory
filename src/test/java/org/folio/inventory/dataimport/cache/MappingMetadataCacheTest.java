@@ -38,7 +38,7 @@ public class MappingMetadataCacheTest {
   private final Vertx vertx = Vertx.vertx();
 
   private final MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx,
-    vertx.createHttpClient(), new JsonObject());
+    vertx.createHttpClient());
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(

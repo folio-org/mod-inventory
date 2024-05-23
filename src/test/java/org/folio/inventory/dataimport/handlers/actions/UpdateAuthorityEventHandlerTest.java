@@ -116,7 +116,7 @@ public class UpdateAuthorityEventHandlerTest {
   public void setUp() throws IOException {
     MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
-    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, vertx.createHttpClient(), new JsonObject());
+    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, vertx.createHttpClient());
     eventHandler = new UpdateAuthorityEventHandler(storage, mappingMetadataCache, publisher);
     JsonObject mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
