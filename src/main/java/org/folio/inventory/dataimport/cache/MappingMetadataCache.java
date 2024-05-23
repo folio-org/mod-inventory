@@ -111,9 +111,9 @@ public class MappingMetadataCache {
       });
   }
 
-  public static synchronized MappingMetadataCache getInstance(Vertx vertx, HttpClient httpClient, JsonObject config) {
+  public static synchronized MappingMetadataCache getInstance(Vertx vertx, HttpClient httpClient) {
     if (instance == null) {
-      instance = new MappingMetadataCache(vertx, httpClient, Long.parseLong(getCacheEnvVariable(config, METADATA_EXPIRATION_TIME)));
+      instance = new MappingMetadataCache(vertx, httpClient, Long.parseLong(getCacheEnvVariable(vertx.getOrCreateContext().config(), METADATA_EXPIRATION_TIME)));
     }
     return instance;
   }
