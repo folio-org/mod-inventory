@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Ids holder for updating ownership of the items",
+  "type": "object",
+  "properties": {
+    "toHoldingsRecordId": {
+      "description": "Id of the holding to which the items are updating ownership.",
+      "$ref": "uuid.json"
+    },
+    "itemIds": {
+      "description": "Ids of the items to update ownership.",
+      "type": "array",
+      "items": {
+        "$ref": "uuid.json"
+      }
+    },
+    "targetTenantId": {
+      "description": "Id of the tenant to update ownership.",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "toHoldingsRecordId",
+    "itemIds",
+    "targetTenantId"
+  ]
+}

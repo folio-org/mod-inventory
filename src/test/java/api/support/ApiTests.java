@@ -18,6 +18,7 @@ import api.support.http.ResourceClient;
 public abstract class ApiTests {
   private static boolean runningOnOwn;
   protected static OkapiHttpClient okapiClient;
+  protected static OkapiHttpClient consortiumOkapiClient;
   protected final ResourceClient holdingsStorageClient;
   protected final ResourceClient itemsStorageClient;
   protected final ResourceClient itemsClient;
@@ -31,6 +32,7 @@ public abstract class ApiTests {
   protected final ResourceClient instanceRelationshipClient;
   protected final ResourceClient requestStorageClient;
   protected final ResourceClient sourceRecordStorageClient;
+  protected final ResourceClient consortiumHoldingsStorageClient;
 
   protected final InstanceRelationshipTypeFixture instanceRelationshipTypeFixture;
   protected final MarkItemFixture markItemFixture;
@@ -51,6 +53,8 @@ public abstract class ApiTests {
     sourceRecordStorageClient = ResourceClient.forSourceRecordStorage(okapiClient);
     instanceRelationshipTypeFixture = new InstanceRelationshipTypeFixture(okapiClient);
     markItemFixture = new MarkItemFixture(okapiClient);
+
+    consortiumHoldingsStorageClient = ResourceClient.forHoldingsStorage(consortiumOkapiClient);
   }
 
   @BeforeClass
@@ -67,6 +71,7 @@ public abstract class ApiTests {
     }
 
     okapiClient = ApiTestSuite.createOkapiHttpClient();
+    consortiumOkapiClient = ApiTestSuite.createOkapiHttpClient(ApiTestSuite.CONSORTIA_TENANT_ID);
   }
 
   @AfterClass

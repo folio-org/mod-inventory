@@ -537,6 +537,32 @@
       ]
     },
     {
+      "id": "inventory-update-ownership",
+      "version": "0.1",
+      "handlers": [
+        {
+          "methods": ["POST"],
+          "pathPattern": "/inventory/items/update-ownership",
+          "permissionsRequired": ["inventory.items.update-ownership.item.post"],
+          "modulePermissions": [
+            "inventory-storage.items.item.put",
+            "inventory-storage.items.collection.get",
+            "inventory-storage.holdings.item.get"
+          ]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/inventory/holdings/update-ownership",
+          "permissionsRequired": ["inventory.holdings.update-ownership.item.post"],
+          "modulePermissions": [
+            "inventory-storage.holdings.item.put",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.instances.item.get"
+          ]
+        }
+      ]
+    },
+    {
       "id": "_tenant",
       "version": "1.2",
       "interfaceType": "system",
@@ -706,6 +732,11 @@
       "displayName": "Inventory - mark an item as unknown",
       "description": "Mark an item as unknown"
     },
+    {
+      "permissionName": "inventory.items.update-ownership.item.post",
+      "displayName": "Inventory - update an item ownership",
+      "description": "Update an item ownership"
+    },
 
     {
       "permissionName": "inventory.holdings.move.item.post",
@@ -741,6 +772,11 @@
       "permissionName": "inventory.holdings.item.put",
       "displayName": "Inventory - modify holdings",
       "description": "Modify individual instance"
+    },
+    {
+      "permissionName": "inventory.holdings.update-ownership.item.post",
+      "displayName": "Inventory - update holdings ownership",
+      "description": "Update holdings record ownership"
     },
     {
       "permissionName": "inventory.instances.item.get",
@@ -803,7 +839,9 @@
         "inventory.items.item.mark-in-process-non-requestable.post",
         "inventory.items.item.mark-missing.post",
         "inventory.items.move.item.post",
-        "inventory.holdings.move.item.post"
+        "inventory.holdings.move.item.post",
+        "inventory.items.update-ownership.item.post",
+        "inventory.holdings.update-ownership.item.post"
       ]
     },
     {
