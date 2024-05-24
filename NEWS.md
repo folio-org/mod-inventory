@@ -1,5 +1,21 @@
 ## 20.2.5 2024-05-24
-* Don't group fields with same tags together ([MODINV-1026](https://issues.folio.org/browse/MODINV-1026))
+* [MODINV-1026](https://folio-org.atlassian.net/browse/MODINV-1026) Don't group fields with same tags together
+
+## 20.2.4 2024-05-09
+* [MODINV-1024](https://folio-org.atlassian.net/browse/MODINV-1024) Fix error while updating Instances and Items with electronic access without URI field populated.
+
+## 20.2.3 2024-04-25
+* [MODINV-1022](https://folio-org.atlassian.net/browse/MODINV-1022) Circulation History in Item record removed when Item is marked Missing/Long missing/ Unavailable
+
+## 20.2.2 2024-04-22
+* [MODINV-1009](https://folio-org.atlassian.net/browse/MODINV-1009) Circulation History in Item record removed when Item is marked Missing/Long missing/ Unavailable
+* [MODINV-1012](https://folio-org.atlassian.net/browse/MODINV-1012) Invalid values (as it is) created in JSON when value is not matching accepted options provided in Instance field mapping for Nature of Content term
+
+## 20.2.1 2024-04-12
+* [MODINV-1001](https://folio-org.atlassian.net/browse/MODINV-1001) Fix sorting for Items on Instance details page
+* [MODINV-999](https://folio-org.atlassian.net/browse/MODINV-999)"PMSystem" displayed as source in "quickmarc" view when record was created by "Non-matches" action of job profile
+* [MODINV-1003](https://folio-org.atlassian.net/browse/MODINV-1003) The result table is not displayed in the file details log
+* [MODINV-997](https://folio-org.atlassian.net/browse/MODINV-997) Keep order of MARC fields while Creating/Deriving/Editing MARC records
 
 ## 20.2.0 2023-03-20
 * Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))

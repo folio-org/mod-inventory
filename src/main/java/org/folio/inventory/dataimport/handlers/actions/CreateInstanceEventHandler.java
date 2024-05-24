@@ -15,6 +15,7 @@ import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.services.OrderHelperService;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
+import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
@@ -41,8 +42,7 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.*;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
@@ -93,6 +93,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Record targetRecord = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
+      var sourceContent = targetRecord.getParsedRecord().getContent().toString();
 
       if (!Boolean.parseBoolean(payloadContext.get("acceptInstanceId")) && AdditionalFieldsUtil.getValue(targetRecord, TAG_999, SUBFIELD_I).isPresent()) {
         LOGGER.error(INSTANCE_CREATION_999_ERROR_MESSAGE);
@@ -118,19 +119,33 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
             .compose(v -> {
               InstanceCollection instanceCollection = storage.getInstanceCollection(context);
               JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, instanceId, jobExecutionId);
-              List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
-              if (!errors.isEmpty()) {
-                String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
+              List<String> requiredFieldsErrors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
+              if (!requiredFieldsErrors.isEmpty()) {
+                String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", requiredFieldsErrors,
                   jobExecutionId, recordId, chunkId);
                 LOGGER.warn(msg);
                 return Future.failedFuture(msg);
               }
 
               Instance mappedInstance = Instance.fromJson(instanceAsJson);
+
+              List<String> invalidUUIDsErrors = ValidationUtil.validateUUIDs(mappedInstance);
+              if (!invalidUUIDsErrors.isEmpty()) {
+                String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", invalidUUIDsErrors,
+                  jobExecutionId, recordId, chunkId);
+                LOGGER.warn(msg);
+                return Future.failedFuture(msg);
+              }
+
               return addInstance(mappedInstance, instanceCollection)
                 .compose(createdInstance -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
                 .compose(createdInstance -> executeFieldsManipulation(createdInstance, targetRecord))
-                .compose(createdInstance -> saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection, dataImportEventPayload.getTenant()));
+                .compose(createdInstance -> {
+                  var targetContent = targetRecord.getParsedRecord().getContent().toString();
+                  var content = reorderMarcRecordFields(sourceContent, targetContent);
+                  targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(content));
+                  return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection, dataImportEventPayload.getTenant());
+                });
             })
             .onSuccess(ar -> {
               dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));

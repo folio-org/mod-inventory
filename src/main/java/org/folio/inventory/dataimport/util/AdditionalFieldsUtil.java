@@ -1,10 +1,14 @@
 package org.folio.inventory.dataimport.util;
 
+import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.apache.commons.lang3.tuple.Pair;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -21,17 +25,13 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.domain.instances.Instance;
@@ -51,44 +51,28 @@ import org.marc4j.marc.MarcFactory;
 import org.marc4j.marc.Subfield;
 import org.marc4j.marc.VariableField;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.ForkJoinPool;
-
-import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
-import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-
 /**
  * Util to work with additional fields
  */
 public final class AdditionalFieldsUtil {
 
-  private static final Logger LOGGER = LogManager.getLogger();
   public static final DateTimeFormatter dateTime005Formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss.S");
   public static final String TAG_005 = "005";
   public static final String TAG_999 = "999";
   public static final String TAG_001 = "001";
+  public static final char SUBFIELD_I = 'i';
+  public static final String FIELDS = "fields";
+  private static final Logger LOGGER = LogManager.getLogger();
   private static final String TAG_003 = "003";
   private static final String TAG_035 = "035";
   private static final char TAG_035_SUB = 'a';
   private static final char TAG_035_IND = ' ';
   private static final String ANY_STRING = "*";
   private static final char INDICATOR = 'f';
-  public static final char SUBFIELD_I = 'i';
   private static final String HR_ID_FIELD = "hrid";
-  public static final String FIELDS = "fields";
-  private static final ObjectMapper objectMapper = new ObjectMapper();
   private static final CacheLoader<String, org.marc4j.marc.Record> parsedRecordContentCacheLoader;
   private static final LoadingCache<String, org.marc4j.marc.Record> parsedRecordContentCache;
+  private static final ObjectMapper objectMapper = new ObjectMapper();
 
   static {
     // this function is executed when creating a new item to be saved in the cache.
@@ -132,11 +116,6 @@ public final class AdditionalFieldsUtil {
   private AdditionalFieldsUtil() {
   }
 
-  @FunctionalInterface
-  public interface AddControlledFieldToMarcRecordFunction {
-    void apply(String field, String value, org.marc4j.marc.Record marcRecord);
-  }
-
   public static CacheStats getCacheStats() {
     return parsedRecordContentCache.stats();
   }
@@ -144,16 +123,17 @@ public final class AdditionalFieldsUtil {
   /**
    * Adds field if it does not exist and a subfield with a value to that field
    *
-   * @param recordForUpdate   record that needs to be updated
-   * @param field    field that should contain new subfield
-   * @param subfield new subfield to add
-   * @param value    value of the subfield to add
+   * @param recordForUpdate record that needs to be updated
+   * @param field           field that should contain new subfield
+   * @param subfield        new subfield to add
+   * @param value           value of the subfield to add
    * @return true if succeeded, false otherwise
    */
   public static boolean addFieldToMarcRecord(Record recordForUpdate, String field, char subfield, String value) {
     boolean result = false;
     try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
-      if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null && recordForUpdate.getParsedRecord().getContent() != null) {
+      if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null
+          && recordForUpdate.getParsedRecord().getContent() != null) {
         MarcWriter streamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
         MarcJsonWriter jsonWriter = new MarcJsonWriter(os);
         MarcFactory factory = MarcFactory.newInstance();
@@ -162,8 +142,8 @@ public final class AdditionalFieldsUtil {
           VariableField variableField = getSingleFieldByIndicators(marcRecord.getVariableFields(field));
           DataField dataField;
           if (variableField != null
-            && ((DataField) variableField).getIndicator1() == INDICATOR
-            && ((DataField) variableField).getIndicator2() == INDICATOR
+              && ((DataField) variableField).getIndicator1() == INDICATOR
+              && ((DataField) variableField).getIndicator2() == INDICATOR
           ) {
             dataField = (DataField) variableField;
             marcRecord.removeVariableField(variableField);
@@ -194,7 +174,7 @@ public final class AdditionalFieldsUtil {
   /**
    * Updates field 005 for case when this field is not protected.
    *
-   * @param recordForUpdate            record to update
+   * @param recordForUpdate   record to update
    * @param mappingParameters mapping parameters
    */
   public static void updateLatestTransactionDate(Record recordForUpdate, MappingParameters mappingParameters) {
@@ -213,15 +193,16 @@ public final class AdditionalFieldsUtil {
    * Adds new controlled field to marc record
    *
    * @param recordForUpdate record that needs to be updated
-   * @param field  tag of controlled field
-   * @param value  value of the field to add
+   * @param field           tag of controlled field
+   * @param value           value of the field to add
    * @return true if succeeded, false otherwise
    */
   public static boolean addControlledFieldToMarcRecord(Record recordForUpdate, String field, String value,
                                                        AddControlledFieldToMarcRecordFunction addFieldFunc) {
     boolean result = false;
     try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
-      if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null && recordForUpdate.getParsedRecord().getContent() != null) {
+      if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null
+          && recordForUpdate.getParsedRecord().getContent() != null) {
         MarcWriter streamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
         MarcJsonWriter jsonWriter = new MarcJsonWriter(os);
 
@@ -251,8 +232,9 @@ public final class AdditionalFieldsUtil {
     marcRecord.addVariableField(dataField);
   }
 
-  public static void replaceOrAddControlledFieldInMarcRecord(String field, String value, org.marc4j.marc.Record marcRecord) {
-    var currentField =  (ControlField) marcRecord.getVariableField(field);
+  public static void replaceOrAddControlledFieldInMarcRecord(String field, String value,
+                                                             org.marc4j.marc.Record marcRecord) {
+    var currentField = (ControlField) marcRecord.getVariableField(field);
     var newControlField = MarcFactory.newInstance().newControlField(field, value);
     if (currentField != null) {
       marcRecord.getControlFields().set(marcRecord.getControlFields().indexOf(currentField), newControlField);
@@ -292,7 +274,7 @@ public final class AdditionalFieldsUtil {
    * Read value from controlled field in marc record
    *
    * @param srcRecord marc record
-   * @param tag    tag to read
+   * @param tag       tag to read
    * @return value from field
    */
   public static String getValueFromControlledField(Record srcRecord, String tag) {
@@ -308,131 +290,35 @@ public final class AdditionalFieldsUtil {
         }
       }
     } catch (Exception e) {
-      LOGGER.warn("getValueFromControlledField:: Failed to read controlled field {} from record {}", tag, srcRecord.getId(), e);
+      LOGGER.warn("getValueFromControlledField:: Failed to read controlled field {} from record {}", tag,
+        srcRecord.getId(), e);
       return null;
     }
     return null;
   }
 
   public static Optional<String> getValue(Record srcRecord, String tag, char subfield) {
-      return Optional.ofNullable(computeMarcRecord(srcRecord))
-        .stream()
-        .flatMap(marcRecord -> marcRecord.getVariableFields(tag).stream())
-        .flatMap(field -> getFieldValue(field, subfield).stream())
-        .findFirst();
-  }
-
-  private static Optional<String> getFieldValue(VariableField field, char subfield) {
-    if (field instanceof DataField dataField) {
-      return dataField.getSubfields(subfield).stream().findFirst().map(Subfield::getData);
-    } else if (field instanceof ControlField controlField) {
-      return Optional.ofNullable(controlField.getData());
-    } else {
-      return Optional.empty();
-    }
-  }
-
-  private static MarcReader buildMarcReader(Record srcRecord) {
-    String content = normalizeContent(srcRecord.getParsedRecord());
-    return new MarcJsonReader(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
-  }
-
-  private static VariableField getSingleFieldByIndicators(List<VariableField> list) {
-    if (CollectionUtils.isEmpty(list)) {
-      return null;
-    }
-    return list.stream()
-      .filter(f -> ((DataField) f).getIndicator1() == INDICATOR && ((DataField) f).getIndicator2() == INDICATOR)
-      .findFirst()
-      .orElse(null);
-  }
-
-  /**
-   * Checks whether field 005 needs to be updated or this field is protected.
-   *
-   * @param srcRecord            record to check
-   * @param mappingParameters mapping parameters
-   * @return true for case when field 005 have to updated
-   */
-  private static boolean isField005NeedToUpdate(Record srcRecord, MappingParameters mappingParameters) {
-    boolean needToUpdate = true;
-    List<MarcFieldProtectionSetting> fieldProtectionSettings = mappingParameters.getMarcFieldProtectionSettings();
-    if (CollectionUtils.isNotEmpty(fieldProtectionSettings)) {
-      MarcReader reader = new MarcJsonReader(new ByteArrayInputStream(srcRecord.getParsedRecord().getContent().toString().getBytes()));
-      if (reader.hasNext()) {
-        org.marc4j.marc.Record marcRecord = reader.next();
-        List<VariableField> variableFields = marcRecord.getVariableFields(TAG_005);
-        if(!variableFields.isEmpty()) {
-          VariableField field = variableFields.get(0);
-          needToUpdate = isNotProtected(fieldProtectionSettings, (ControlField) field);
-        }
-      }
-    }
-    return needToUpdate;
-  }
-
-  /**
-   * Checks is the control field is protected or not.
-   *
-   * @param fieldProtectionSettings List of MarcFieldProtectionSettings
-   * @param field                   Control field that is being checked
-   * @return true for case when control field isn't protected
-   */
-  private static boolean isNotProtected(List<MarcFieldProtectionSetting> fieldProtectionSettings, ControlField field) {
-    return fieldProtectionSettings.stream()
-      .filter(setting -> setting.getField().equals(ANY_STRING) || setting.getField().equals(field.getTag()))
-      .noneMatch(setting -> setting.getData().equals(ANY_STRING) || setting.getData().equals(field.getData()));
-  }
-
-  private static org.marc4j.marc.Record computeMarcRecord(Record srcRecord) {
-    if (srcRecord != null && srcRecord.getParsedRecord() != null && isNotBlank(srcRecord.getParsedRecord().getContent().toString())) {
-      try {
-        var content = normalizeContent(srcRecord.getParsedRecord().getContent());
-        return parsedRecordContentCache.get(content);
-      } catch (Exception e) {
-        LOGGER.warn("computeMarcRecord:: Error during the transformation to marc record", e);
-        try {
-          MarcReader reader = buildMarcReader(srcRecord);
-          if (reader.hasNext()) {
-            return reader.next();
-          }
-        } catch (Exception ex) {
-          LOGGER.warn("computeMarcRecord:: Error during the building of MarcReader", ex);
-        }
-        return null;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Normalize parsed record content of {@link ParsedRecord} is type {@link String}
-   *
-   * @param parsedRecord parsed record
-   * @return parsed record normalized content
-   */
-  private static String normalizeContent(ParsedRecord parsedRecord) {
-    Object content = parsedRecord.getContent();
-    return (content instanceof String contentStr ? new JsonObject(contentStr) : JsonObject.mapFrom(content)).encode();
-  }
-
-  private static String normalizeContent(Object content) {
-    return content instanceof String contentStr ? contentStr : Json.encode(content);
+    return Optional.ofNullable(computeMarcRecord(srcRecord))
+      .stream()
+      .flatMap(marcRecord -> marcRecord.getVariableFields(tag).stream())
+      .flatMap(field -> getFieldValue(field, subfield).stream())
+      .findFirst();
   }
 
   /**
    * Remove field from marc record
    *
-   * @param recordForUpdate    record that needs to be updated
-   * @param fieldName tag of the field
-   * @param subfield  subfield of the field
-   * @param value     value of the field
+   * @param recordForUpdate record that needs to be updated
+   * @param fieldName       tag of the field
+   * @param subfield        subfield of the field
+   * @param value           value of the field
    * @return true if succeeded, false otherwise
    */
   public static boolean removeField(Record recordForUpdate, String fieldName, char subfield, String value) {
     boolean isFieldRemoveSucceed = false;
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-      if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null && recordForUpdate.getParsedRecord().getContent() != null) {
+      if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null
+          && recordForUpdate.getParsedRecord().getContent() != null) {
         MarcWriter marcStreamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
         MarcJsonWriter marcJsonWriter = new MarcJsonWriter(baos);
         org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
@@ -462,55 +348,11 @@ public final class AdditionalFieldsUtil {
     return isFieldRemoveSucceed;
   }
 
-  private static boolean removeFieldByNameAndValue(org.marc4j.marc.Record marcRecord, String fieldName, char subfield, String value) {
-    boolean isFieldFound = false;
-    List<VariableField> variableFields = marcRecord.getVariableFields(fieldName);
-    for (VariableField variableField : variableFields) {
-      if (isFieldContainsValue(variableField, subfield, value)) {
-        marcRecord.removeVariableField(variableField);
-        isFieldFound = true;
-        break;
-      }
-    }
-    return isFieldFound;
-  }
-
-  private static boolean removeFirstFoundFieldByName(org.marc4j.marc.Record marcRecord, String fieldName) {
-    boolean isFieldFound = false;
-    VariableField variableField = marcRecord.getVariableField(fieldName);
-    if (variableField != null) {
-      marcRecord.removeVariableField(variableField);
-      isFieldFound = true;
-    }
-    return isFieldFound;
-  }
-
-  /**
-   * Checks if the field contains a certain value in the selected subfield
-   *
-   * @param field    from MARC BIB record
-   * @param subfield subfield of the field
-   * @param value    value of the field
-   * @return true if contains, false otherwise
-   */
-  private static boolean isFieldContainsValue(VariableField field, char subfield, String value) {
-    boolean isContains = false;
-    if (field instanceof DataField) {
-      for (Subfield sub : ((DataField) field).getSubfields(subfield)) {
-        if (isNotEmpty(sub.getData()) && sub.getData().contains(value.trim())) {
-          isContains = true;
-          break;
-        }
-      }
-    }
-    return isContains;
-  }
-
   /**
    * remove field from marc record
    *
    * @param recordForUpdate record that needs to be updated
-   * @param field  tag of the field
+   * @param field           tag of the field
    * @return true if succeeded, false otherwise
    */
   public static boolean removeField(Record recordForUpdate, String field) {
@@ -520,8 +362,8 @@ public final class AdditionalFieldsUtil {
   /**
    * Check if record should be filled with specific fields.
    *
-   * @param srcRecord   - source record.
-   * @param instance - instance.
+   * @param srcRecord - source record.
+   * @param instance  - instance.
    * @return - true if filling needed.
    */
   public static boolean isFieldsFillingNeeded(Record srcRecord, Instance instance) {
@@ -530,22 +372,20 @@ public final class AdditionalFieldsUtil {
       externalIdsHolder.getInstanceId(), externalIdsHolder.getInstanceHrid());
   }
 
-  private static boolean isValidIdAndHrid(String id, String hrid, String externalId, String externalHrid) {
-    return (isNotEmpty(externalId) && isNotEmpty(externalHrid)) && (id.equals(externalId) && !hrid.equals(externalHrid));
-  }
-
   /**
    * Adds new data field to marc record
    *
    * @param recordForUpdate record that needs to be updated
-   * @param tag    tag of data field
-   * @param value  value of the field to add
+   * @param tag             tag of data field
+   * @param value           value of the field to add
    * @return true if succeeded, false otherwise
    */
-  public static boolean addDataFieldToMarcRecord(Record recordForUpdate, String tag, char ind1, char ind2, char subfield, String value) {
+  public static boolean addDataFieldToMarcRecord(Record recordForUpdate, String tag, char ind1, char ind2,
+                                                 char subfield, String value) {
     boolean result = false;
     try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
-      if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null && recordForUpdate.getParsedRecord().getContent() != null) {
+      if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null
+          && recordForUpdate.getParsedRecord().getContent() != null) {
         MarcWriter streamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
         MarcJsonWriter jsonWriter = new MarcJsonWriter(os);
         MarcFactory factory = MarcFactory.newInstance();
@@ -572,18 +412,6 @@ public final class AdditionalFieldsUtil {
     return result;
   }
 
-  private static void addDataFieldInNumericalOrder(DataField field, org.marc4j.marc.Record marcRecord) {
-    String tag = field.getTag();
-    List<DataField> dataFields = marcRecord.getDataFields();
-    for (int i = 0; i < dataFields.size(); i++) {
-      if (dataFields.get(i).getTag().compareTo(tag) > 0) {
-        marcRecord.getDataFields().add(i, field);
-        return;
-      }
-    }
-    marcRecord.addVariableField(field);
-  }
-
   public static String mergeFieldsFor035(String valueFrom003, String valueFrom001) {
     if (isBlank(valueFrom003)) {
       return valueFrom001;
@@ -595,8 +423,8 @@ public final class AdditionalFieldsUtil {
    * Check if data field with the same value exist
    *
    * @param recordForUpdate record that needs to be updated
-   * @param tag    tag of data field
-   * @param value  value of the field to add
+   * @param tag             tag of data field
+   * @param value           value of the field to add
    * @return true if exist
    */
   public static boolean isFieldExist(Record recordForUpdate, String tag, char subfield, String value) {
@@ -611,8 +439,8 @@ public final class AdditionalFieldsUtil {
               }
             }
           } else if (field instanceof ControlField controlField
-            && isNotEmpty(controlField.getData())
-            && ((ControlField) field).getData().equals(value.trim())) {
+                     && isNotEmpty(controlField.getData())
+                     && ((ControlField) field).getData().equals(value.trim())) {
             return true;
           }
         }
@@ -622,10 +450,6 @@ public final class AdditionalFieldsUtil {
       return false;
     }
     return false;
-  }
-
-  private static String getRecordId(Record srcRecord) {
-    return srcRecord != null ? srcRecord.getId() : "";
   }
 
   public static void remove035FieldWhenRecordContainsHrId(Record srcRecord) {
@@ -649,15 +473,18 @@ public final class AdditionalFieldsUtil {
     String valueFrom001 = AdditionalFieldsUtil.getValueFromControlledField(recordInstancePair.getKey(), TAG_001);
     if (!StringUtils.equals(hrid, valueFrom001)) {
       if (StringUtils.isNotEmpty(valueFrom001)) {
-        String originalHrIdPrefix = AdditionalFieldsUtil.getValueFromControlledField(recordInstancePair.getKey(), TAG_003);
+        String originalHrIdPrefix =
+          AdditionalFieldsUtil.getValueFromControlledField(recordInstancePair.getKey(), TAG_003);
         String originalHrId = AdditionalFieldsUtil.mergeFieldsFor035(originalHrIdPrefix, valueFrom001);
         if (!AdditionalFieldsUtil.isFieldExist(recordInstancePair.getKey(), TAG_035, TAG_035_SUB, originalHrId)) {
-          AdditionalFieldsUtil.addDataFieldToMarcRecord(recordInstancePair.getKey(), TAG_035, TAG_035_IND, TAG_035_IND, TAG_035_SUB, originalHrId);
+          AdditionalFieldsUtil.addDataFieldToMarcRecord(recordInstancePair.getKey(), TAG_035, TAG_035_IND, TAG_035_IND,
+            TAG_035_SUB, originalHrId);
         }
       }
       AdditionalFieldsUtil.removeField(recordInstancePair.getKey(), TAG_001);
       if (StringUtils.isNotEmpty(hrid)) {
-        AdditionalFieldsUtil.addControlledFieldToMarcRecord(recordInstancePair.getKey(), TAG_001, hrid, AdditionalFieldsUtil::addControlledFieldToMarcRecord);
+        AdditionalFieldsUtil.addControlledFieldToMarcRecord(recordInstancePair.getKey(), TAG_001, hrid,
+          AdditionalFieldsUtil::addControlledFieldToMarcRecord);
       }
     } else {
       AdditionalFieldsUtil.remove035WithActualHrId(recordInstancePair.getKey(), hrid);
@@ -707,6 +534,172 @@ public final class AdditionalFieldsUtil {
       LOGGER.error("An error occurred while reordering Marc record fields: {}", e.getMessage(), e);
       return systemOrderContent;
     }
+  }
+
+  private static Optional<String> getFieldValue(VariableField field, char subfield) {
+    if (field instanceof DataField dataField) {
+      return dataField.getSubfields(subfield).stream().findFirst().map(Subfield::getData);
+    } else if (field instanceof ControlField controlField) {
+      return Optional.ofNullable(controlField.getData());
+    } else {
+      return Optional.empty();
+    }
+  }
+
+  private static MarcReader buildMarcReader(Record srcRecord) {
+    String content = normalizeContent(srcRecord.getParsedRecord());
+    return new MarcJsonReader(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
+  }
+
+  private static VariableField getSingleFieldByIndicators(List<VariableField> list) {
+    if (CollectionUtils.isEmpty(list)) {
+      return null;
+    }
+    return list.stream()
+      .filter(f -> ((DataField) f).getIndicator1() == INDICATOR && ((DataField) f).getIndicator2() == INDICATOR)
+      .findFirst()
+      .orElse(null);
+  }
+
+  /**
+   * Checks whether field 005 needs to be updated or this field is protected.
+   *
+   * @param srcRecord         record to check
+   * @param mappingParameters mapping parameters
+   * @return true for case when field 005 have to updated
+   */
+  private static boolean isField005NeedToUpdate(Record srcRecord, MappingParameters mappingParameters) {
+    boolean needToUpdate = true;
+    List<MarcFieldProtectionSetting> fieldProtectionSettings = mappingParameters.getMarcFieldProtectionSettings();
+    if (CollectionUtils.isNotEmpty(fieldProtectionSettings)) {
+      MarcReader reader =
+        new MarcJsonReader(new ByteArrayInputStream(srcRecord.getParsedRecord().getContent().toString().getBytes()));
+      if (reader.hasNext()) {
+        org.marc4j.marc.Record marcRecord = reader.next();
+        List<VariableField> variableFields = marcRecord.getVariableFields(TAG_005);
+        if (!variableFields.isEmpty()) {
+          VariableField field = variableFields.get(0);
+          needToUpdate = isNotProtected(fieldProtectionSettings, (ControlField) field);
+        }
+      }
+    }
+    return needToUpdate;
+  }
+
+  /**
+   * Checks is the control field is protected or not.
+   *
+   * @param fieldProtectionSettings List of MarcFieldProtectionSettings
+   * @param field                   Control field that is being checked
+   * @return true for case when control field isn't protected
+   */
+  private static boolean isNotProtected(List<MarcFieldProtectionSetting> fieldProtectionSettings, ControlField field) {
+    return fieldProtectionSettings.stream()
+      .filter(setting -> setting.getField().equals(ANY_STRING) || setting.getField().equals(field.getTag()))
+      .noneMatch(setting -> setting.getData().equals(ANY_STRING) || setting.getData().equals(field.getData()));
+  }
+
+  private static org.marc4j.marc.Record computeMarcRecord(Record srcRecord) {
+    if (srcRecord != null && srcRecord.getParsedRecord() != null && isNotBlank(
+      srcRecord.getParsedRecord().getContent().toString())) {
+      try {
+        var content = normalizeContent(srcRecord.getParsedRecord().getContent());
+        return parsedRecordContentCache.get(content);
+      } catch (Exception e) {
+        LOGGER.warn("computeMarcRecord:: Error during the transformation to marc record", e);
+        try {
+          MarcReader reader = buildMarcReader(srcRecord);
+          if (reader.hasNext()) {
+            return reader.next();
+          }
+        } catch (Exception ex) {
+          LOGGER.warn("computeMarcRecord:: Error during the building of MarcReader", ex);
+        }
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Normalize parsed record content of {@link ParsedRecord} is type {@link String}
+   *
+   * @param parsedRecord parsed record
+   * @return parsed record normalized content
+   */
+  private static String normalizeContent(ParsedRecord parsedRecord) {
+    Object content = parsedRecord.getContent();
+    return (content instanceof String contentStr ? new JsonObject(contentStr) : JsonObject.mapFrom(content)).encode();
+  }
+
+  private static String normalizeContent(Object content) {
+    return content instanceof String contentStr ? contentStr : Json.encode(content);
+  }
+
+  private static boolean removeFieldByNameAndValue(org.marc4j.marc.Record marcRecord, String fieldName, char subfield,
+                                                   String value) {
+    boolean isFieldFound = false;
+    List<VariableField> variableFields = marcRecord.getVariableFields(fieldName);
+    for (VariableField variableField : variableFields) {
+      if (isFieldContainsValue(variableField, subfield, value)) {
+        marcRecord.removeVariableField(variableField);
+        isFieldFound = true;
+        break;
+      }
+    }
+    return isFieldFound;
+  }
+
+  private static boolean removeFirstFoundFieldByName(org.marc4j.marc.Record marcRecord, String fieldName) {
+    boolean isFieldFound = false;
+    VariableField variableField = marcRecord.getVariableField(fieldName);
+    if (variableField != null) {
+      marcRecord.removeVariableField(variableField);
+      isFieldFound = true;
+    }
+    return isFieldFound;
+  }
+
+  /**
+   * Checks if the field contains a certain value in the selected subfield
+   *
+   * @param field    from MARC BIB record
+   * @param subfield subfield of the field
+   * @param value    value of the field
+   * @return true if contains, false otherwise
+   */
+  private static boolean isFieldContainsValue(VariableField field, char subfield, String value) {
+    boolean isContains = false;
+    if (field instanceof DataField) {
+      for (Subfield sub : ((DataField) field).getSubfields(subfield)) {
+        if (isNotEmpty(sub.getData()) && sub.getData().contains(value.trim())) {
+          isContains = true;
+          break;
+        }
+      }
+    }
+    return isContains;
+  }
+
+  private static boolean isValidIdAndHrid(String id, String hrid, String externalId, String externalHrid) {
+    return (isNotEmpty(externalId) && isNotEmpty(externalHrid)) && (id.equals(externalId) && !hrid.equals(
+      externalHrid));
+  }
+
+  private static void addDataFieldInNumericalOrder(DataField field, org.marc4j.marc.Record marcRecord) {
+    String tag = field.getTag();
+    List<DataField> dataFields = marcRecord.getDataFields();
+    for (int i = 0; i < dataFields.size(); i++) {
+      if (dataFields.get(i).getTag().compareTo(tag) > 0) {
+        marcRecord.getDataFields().add(i, field);
+        return;
+      }
+    }
+    marcRecord.addVariableField(field);
+  }
+
+  private static String getRecordId(Record srcRecord) {
+    return srcRecord != null ? srcRecord.getId() : "";
   }
 
   private static List<JsonNode> toNodeList(ArrayNode fieldsArrayNode) {
@@ -759,5 +752,10 @@ public final class AdditionalFieldsUtil {
       LOGGER.error("An error occurred while parsing source JSON: {}", e.getMessage(), e);
     }
     return sourceFields;
+  }
+
+  @FunctionalInterface
+  public interface AddControlledFieldToMarcRecordFunction {
+    void apply(String field, String value, org.marc4j.marc.Record marcRecord);
   }
 }
