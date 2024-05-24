@@ -1,3 +1,6 @@
+## 20.2.5 2024-05-24
+* Don't group fields with same tags together ([MODINV-1026](https://issues.folio.org/browse/MODINV-1026))
+
 ## 20.2.0 2023-03-20
 * Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))
 * Set instance record as deleted ([MODINV-883](https://issues.folio.org/browse/MODINV-883))
