@@ -19,10 +19,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   }
 
   private void updateHoldingsOwnership(RoutingContext routingContext) {
-
+    // should be implemented in MODINV-1031
   }
 
   private void updateItemsOwnership(RoutingContext routingContext) {
-
+    // should be implemented in MODINV-1031
   }
 }

@@ -53,6 +53,12 @@ public class ApiRoot {
     return new URL(String.format("%s/holdings/move", inventory()));
   }
 
+  public static URL updateItemsOwnership()
+    throws MalformedURLException {
+
+    return new URL(String.format("%s/items/update-ownership", inventory()));
+  }
+
   public static URL updateHoldingsRecordsOwnership()
     throws MalformedURLException {
 

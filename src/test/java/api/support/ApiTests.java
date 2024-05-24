@@ -32,6 +32,7 @@ public abstract class ApiTests {
   protected final ResourceClient instanceRelationshipClient;
   protected final ResourceClient requestStorageClient;
   protected final ResourceClient sourceRecordStorageClient;
+  protected final ResourceClient consortiumItemsClient;
   protected final ResourceClient consortiumHoldingsStorageClient;
 
   protected final InstanceRelationshipTypeFixture instanceRelationshipTypeFixture;
@@ -55,6 +56,7 @@ public abstract class ApiTests {
     markItemFixture = new MarkItemFixture(okapiClient);
 
     consortiumHoldingsStorageClient = ResourceClient.forHoldingsStorage(consortiumOkapiClient);
+    consortiumItemsClient = ResourceClient.forHoldingsStorage(consortiumOkapiClient);
   }
 
   @BeforeClass

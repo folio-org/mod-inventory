@@ -73,13 +73,13 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response sourceTenantHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1);
     Response targetTenantHoldingsRecord1 = consortiumHoldingsStorageClient.getById(createHoldingsRecord1);
 
-    Assert.assertEquals(sourceTenantHoldingsRecord1.getStatusCode(), HttpStatus.SC_NOT_FOUND);
+    Assert.assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
     Assert.assertEquals(instanceId.toString(), targetTenantHoldingsRecord1.getJson().getString(INSTANCE_ID));
 
     Response sourceTenantHoldingsRecord2 = holdingsStorageClient.getById(createHoldingsRecord1);
     Response targetTenantHoldingsRecord2 = consortiumHoldingsStorageClient.getById(createHoldingsRecord1);
 
-    Assert.assertEquals(sourceTenantHoldingsRecord2.getStatusCode(), HttpStatus.SC_NOT_FOUND);
+    Assert.assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.getStatusCode());
     Assert.assertEquals(instanceId.toString(), targetTenantHoldingsRecord2.getJson().getString(INSTANCE_ID));
   }
 
@@ -114,11 +114,11 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response sourceTenantHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1);
     Response targetTenantHoldingsRecord1 = consortiumHoldingsStorageClient.getById(createHoldingsRecord1);
 
-    Assert.assertEquals(sourceTenantHoldingsRecord1.getStatusCode(), HttpStatus.SC_NOT_FOUND);
+    Assert.assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
     assertThat(instanceId.toString(), equalTo(targetTenantHoldingsRecord1.getJson().getString(INSTANCE_ID)));
 
     Response targetTenantHoldingsRecord2 = consortiumHoldingsStorageClient.getById(createHoldingsRecord1);
-    Assert.assertEquals(targetTenantHoldingsRecord2.getStatusCode(), HttpStatus.SC_NOT_FOUND);
+    Assert.assertEquals(HttpStatus.SC_NOT_FOUND, targetTenantHoldingsRecord2.getStatusCode());
   }
 
   @Test
@@ -225,14 +225,14 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response sourceTenantHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1);
     Response targetTenantHoldingsRecord1 = consortiumHoldingsStorageClient.getById(createHoldingsRecord1);
 
-    Assert.assertEquals(sourceTenantHoldingsRecord1.getStatusCode(), HttpStatus.SC_NOT_FOUND);
+    Assert.assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
     Assert.assertEquals(instanceId.toString(), targetTenantHoldingsRecord1.getJson().getString(INSTANCE_ID));
 
     Response sourceTenantHoldingsRecord2 = holdingsStorageClient.getById(createHoldingsRecord1);
     Response targetTenantHoldingsRecord2 = consortiumHoldingsStorageClient.getById(createHoldingsRecord1);
 
     Assert.assertEquals(instanceId.toString(), sourceTenantHoldingsRecord2.getJson().getString(INSTANCE_ID));
-    Assert.assertEquals(targetTenantHoldingsRecord2.getStatusCode(), HttpStatus.SC_NOT_FOUND);
+    Assert.assertEquals(HttpStatus.SC_NOT_FOUND, targetTenantHoldingsRecord2.getStatusCode());
   }
 
   @Test
@@ -267,13 +267,13 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response sourceTenantHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1);
     Response targetTenantHoldingsRecord1 = consortiumHoldingsStorageClient.getById(createHoldingsRecord1);
 
-    Assert.assertEquals(sourceTenantHoldingsRecord1.getStatusCode(), HttpStatus.SC_NOT_FOUND);
+    Assert.assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
     Assert.assertEquals(instanceId.toString(), targetTenantHoldingsRecord1.getJson().getString(INSTANCE_ID));
 
     Response sourceTenantHoldingsRecord2 = holdingsStorageClient.getById(createHoldingsRecord1);
     Response targetTenantHoldingsRecord2 = consortiumHoldingsStorageClient.getById(createHoldingsRecord1);
 
-    Assert.assertEquals(sourceTenantHoldingsRecord2.getStatusCode(), HttpStatus.SC_NOT_FOUND);
+    Assert.assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.getStatusCode());
     Assert.assertEquals(instanceId.toString(), targetTenantHoldingsRecord2.getJson().getString(INSTANCE_ID));
   }
 
