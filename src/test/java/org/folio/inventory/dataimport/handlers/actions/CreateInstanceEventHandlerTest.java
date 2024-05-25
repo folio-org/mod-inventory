@@ -46,6 +46,7 @@ import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ParsedRecord;
@@ -423,6 +424,7 @@ public class CreateInstanceEventHandlerTest {
     String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
     String instanceId = "957985c6-97e3-4038-b0e7-343ecd0b8120";
     String title = "titleValue";
+    String instanceHrid = "in00000000028";
     RecordToEntity recordToInstance = RecordToEntity.builder().recordId(recordId).entityId(instanceId).build();
 
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
@@ -437,8 +439,24 @@ public class CreateInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     HashMap<String, String> context = new HashMap<>();
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_999ffi));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_999ffi))
+      .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
     record.setId(recordId);
+
+    doAnswer(invocationOnMock -> {
+      Instance instanceRecord = invocationOnMock.getArgument(0);
+      JsonObject instanceJson = instanceRecord.getJsonForStorage();
+      instanceJson.put("hrid", instanceHrid);
+      Instance instanceRecordToSubstitute = Instance.fromJson(instanceJson);
+
+      instanceRecordToSubstitute.setPrecedingTitles(instanceRecord.getPrecedingTitles());
+      instanceRecordToSubstitute.setSucceedingTitles(instanceRecord.getSucceedingTitles());
+      instanceRecordToSubstitute.setNotes(instanceRecord.getNotes());
+
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(instanceRecordToSubstitute));
+      return null;
+    }).when(instanceRecordCollection).add(any(), any(Consumer.class), any(Consumer.class));
 
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
@@ -465,6 +483,8 @@ public class CreateInstanceEventHandlerTest {
     String actualInstanceId = createdInstance.getString("id");
     assertNotNull(actualInstanceId);
     assertEquals(instanceId, actualInstanceId);
+    assertNotNull(createdInstance.getString("hrid"));
+    assertEquals(instanceHrid, createdInstance.getString("hrid"));
     assertEquals(title, createdInstance.getString("title"));
     assertEquals(instanceTypeId, createdInstance.getString("instanceTypeId"));
     assertEquals("MARC", createdInstance.getString("source"));
