@@ -682,8 +682,7 @@ public final class AdditionalFieldsUtil {
   }
 
   private static boolean isValidIdAndHrid(String id, String hrid, String externalId, String externalHrid) {
-    return (isNotEmpty(externalId) && isNotEmpty(externalHrid)) && (id.equals(externalId) && !hrid.equals(
-      externalHrid));
+    return (isNotEmpty(externalId)) && (id.equals(externalId) && !hrid.equals(externalHrid));
   }
 
   private static void addDataFieldInNumericalOrder(DataField field, org.marc4j.marc.Record marcRecord) {
