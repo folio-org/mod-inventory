@@ -24,7 +24,7 @@ import static org.folio.ActionProfile.Action.DELETE;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 
 public class DeleteAuthorityEventHandler implements EventHandler {
   private static final Logger LOGGER = LogManager.getLogger(DeleteAuthorityEventHandler.class);

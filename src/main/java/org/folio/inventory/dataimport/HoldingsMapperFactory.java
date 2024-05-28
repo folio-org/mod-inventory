@@ -8,6 +8,7 @@ import org.folio.processing.mapping.mapper.mappers.MapperFactory;
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.writer.Writer;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.ProfileType;
 
 import java.util.LinkedHashMap;
 
@@ -24,7 +25,7 @@ public class HoldingsMapperFactory implements MapperFactory {
   public boolean isEligiblePayload(DataImportEventPayload eventPayload) {
     LinkedHashMap<String, String> map = (LinkedHashMap<String, String>) eventPayload.getCurrentNode().getContent();
     String existingRecordType = map.get(EXISTING_RECORD_TYPE);
-    return (ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE.equals(eventPayload.getCurrentNode().getContentType()))
+    return (ProfileType.MAPPING_PROFILE.equals(eventPayload.getCurrentNode().getContentType()))
       && (existingRecordType.equals(ActionProfile.FolioRecord.HOLDINGS.value()));
   }
 }
