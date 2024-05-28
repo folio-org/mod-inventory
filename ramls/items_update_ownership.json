@@ -4,7 +4,7 @@
   "type": "object",
   "properties": {
     "toHoldingsRecordId": {
-      "description": "Id of the holding to which the items are updating ownership.",
+      "description": "Id of the Holdings Record, ownership of Items linked to this Holdings Record will be changed.",
       "$ref": "uuid.json"
     },
     "itemIds": {
@@ -15,7 +15,7 @@
       }
     },
     "targetTenantId": {
-      "description": "Id of the tenant to update ownership.",
+      "description": "Target tenant Id, where selected Items will be created.",
       "type": "string"
     }
   },

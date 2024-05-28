@@ -4,7 +4,7 @@
   "type": "object",
   "properties": {
     "toInstanceId": {
-      "description": "Id of the instance which contains holdings to update ownership.",
+      "description": "Id of the shared Instance, ownership of Holdings linked to this Instance will be changed.",
       "$ref": "uuid.json"
     },
     "holdingsRecordIds": {
@@ -15,7 +15,7 @@
       }
     },
     "targetTenantId": {
-      "description": "Id of the tenant to update ownership.",
+      "description": "Target tenant Id, where selected Holdings will be created.",
       "type": "string"
     }
   },

@@ -538,14 +538,15 @@
     },
     {
       "id": "inventory-update-ownership",
-      "version": "0.1",
+      "version": "1.0",
       "handlers": [
         {
           "methods": ["POST"],
           "pathPattern": "/inventory/items/update-ownership",
           "permissionsRequired": ["inventory.items.update-ownership.item.post"],
           "modulePermissions": [
-            "inventory-storage.items.item.put",
+            "inventory-storage.items.item.post",
+            "inventory-storage.items.item.delete",
             "inventory-storage.items.collection.get",
             "inventory-storage.holdings.item.get"
           ]
@@ -555,8 +556,12 @@
           "pathPattern": "/inventory/holdings/update-ownership",
           "permissionsRequired": ["inventory.holdings.update-ownership.item.post"],
           "modulePermissions": [
-            "inventory-storage.holdings.item.put",
+            "inventory-storage.holdings.item.post",
+            "inventory-storage.holdings.item.delete",
             "inventory-storage.holdings.collection.get",
+            "inventory-storage.items.item.post",
+            "inventory-storage.items.item.delete",
+            "inventory-storage.items.collection.get",
             "inventory-storage.instances.item.get"
           ]
         }
