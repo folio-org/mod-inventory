@@ -312,7 +312,6 @@ public class Items extends AbstractInventoryResource {
     CollectionResourceClient locationsClient;
 
     try {
-      log.info("respondWithManyItems:: creating http clients");
       OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
       holdingsClient = createHoldingsClient(okapiClient, context);
       instancesClient = createInstancesClient(okapiClient, context);
@@ -322,7 +321,7 @@ public class Items extends AbstractInventoryResource {
     }
     catch (MalformedURLException e) {
       invalidOkapiUrlResponse(routingContext, context);
-      log.info("respondWithManyItems:: error while creating http clients", e);
+
       return;
     }
 
@@ -356,8 +355,6 @@ public class Items extends AbstractInventoryResource {
       final List<JsonObject> holdings = JsonArrayHelper.toList(
         holdingsResponse.getJson().getJsonArray("holdingsRecords"));
 
-      log.info("respondWithManyItems:: collecting instanceIds");
-
       List<String> instanceIds = holdings.stream()
         .map(holding -> holding.getString(INSTANCE_ID_PROPERTY))
         .filter(Objects::nonNull)
@@ -380,20 +377,14 @@ public class Items extends AbstractInventoryResource {
               instancesResponse.getBody()));
         }
 
-        log.info("respondWithManyItems:: instanceIds size: {}", instanceIds.size());
-
         final List<JsonObject> instances = JsonArrayHelper.toList(
           instancesResponse.getJson().getJsonArray("instances"));
-
-        log.info("respondWithManyItems:: collecting materialTypeIds");
 
         List<String> materialTypeIds = wrappedItems.records.stream()
           .map(Item::getMaterialTypeId)
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
-
-        log.info("respondWithManyItems:: materialTypeIds size: {}", materialTypeIds.size());
 
         materialTypeIds.forEach(id -> {
           CompletableFuture<Response> newFuture = new CompletableFuture<>();
@@ -404,17 +395,12 @@ public class Items extends AbstractInventoryResource {
           materialTypesClient.get(id, newFuture::complete);
         });
 
-        log.info("respondWithManyItems:: collecting permanentLoanTypeIds");
-
         List<String> permanentLoanTypeIds = wrappedItems.records.stream()
           .map(Item::getPermanentLoanTypeId)
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
 
-        log.info("respondWithManyItems:: permanentLoanTypeIds size: {}", permanentLoanTypeIds.size());
-
-        log.info("respondWithManyItems:: collecting temporaryLoanTypeIds");
         List<String> temporaryLoanTypeIds = wrappedItems.records.stream()
           .map(Item::getTemporaryLoanTypeId)
           .filter(Objects::nonNull)
@@ -433,27 +419,17 @@ public class Items extends AbstractInventoryResource {
             loanTypesClient.get(id, newFuture::complete);
           });
 
-        log.info("respondWithManyItems:: collecting effectiveLocationIds");
-
         List<String> effectiveLocationIds = wrappedItems.records.stream()
           .map(Item::getEffectiveLocationId)
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
 
-        log.info("respondWithManyItems:: effectiveLocationIds size: {}", effectiveLocationIds.size());
-
-        log.info("respondWithManyItems:: collecting permanentLocationIds");
-
         List<String> permanentLocationIds = wrappedItems.records.stream()
           .map(Item::getPermanentLocationId)
           .filter(Objects::nonNull)
           .distinct()
           .collect(Collectors.toList());
-
-        log.info("respondWithManyItems:: permanentLocationIds size: {}", permanentLocationIds.size());
-
-        log.info("respondWithManyItems: collecting temporaryLocationIds");
 
         List<String> temporaryLocationIds = wrappedItems.records.stream()
           .map(Item::getTemporaryLocationId)
@@ -473,8 +449,6 @@ public class Items extends AbstractInventoryResource {
             locationsClient.get(id, newFuture::complete);
           });
 
-        log.info("respondWithManyItems:: temporaryLocationIds size: {}", temporaryLocationIds.size());
-
         CompletableFuture<Response> boundWithPartsFuture =
           getBoundWithPartsForMultipleItemsFuture(wrappedItems, routingContext);
 
@@ -487,44 +461,26 @@ public class Items extends AbstractInventoryResource {
 
           try {
 
-            log.info("respondWithManyItems:: trying to fetch materialTypes");
-
             Map<String, JsonObject> foundMaterialTypes
               = allMaterialTypeFutures.stream()
               .map(CompletableFuture::join)
-              .peek(r -> log.info("Fetch material type -> response code '{}'", r.getStatusCode()))
               .filter(response -> response.getStatusCode() == 200)
               .map(Response::getJson)
-              .peek(r -> log.info("Successfully fetch material type with id '{}'", r.getString("id")))
               .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
-
-            log.info("respondWithManyItems:: foundMaterialTypes size: {}", foundMaterialTypes.size());
-
-            log.info("respondWithManyItems:: trying to fetch loanTypes");
 
             Map<String, JsonObject> foundLoanTypes
               = allLoanTypeFutures.stream()
               .map(CompletableFuture::join)
-              .peek(r -> log.info("Fetch loan type -> response code '{}'", r.getStatusCode()))
               .filter(response -> response.getStatusCode() == 200)
               .map(Response::getJson)
-              .peek(r -> log.info("Successfully fetch loan type with id '{}'", r.getString("id")))
               .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
-
-            log.info("respondWithManyItems:: foundLoanTypes size: {}", foundLoanTypes.size());
-
-            log.info("respondWithManyItems:: trying to fetch locations");
 
             Map<String, JsonObject> foundLocations
               = allLocationsFutures.stream()
               .map(CompletableFuture::join)
-              .peek(r -> log.info("Fetch location -> response code '{}'", r.getStatusCode()))
               .filter(response -> response.getStatusCode() == 200)
               .map(Response::getJson)
-              .peek(r -> log.info("Successfully fetch locations with id '{}'", r.getString("id")))
               .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
-
-            log.info("respondWithManyItems:: foundLocations size: {}", foundLocations.size());
 
             setBoundWithFlagsOnItems(wrappedItems, boundWithPartsFuture);
 
@@ -1104,7 +1060,7 @@ public class Items extends AbstractInventoryResource {
 
   private void setBoundWithFlagsOnItems(MultipleRecords<Item> wrappedItems,
                                         CompletableFuture<Response> boundWithPartsFuture) {
-    log.info("setBoundWithFlagsOnItems:: trying to set withIsBoundWith");
+
     Response response = boundWithPartsFuture.join();
     if (response != null && response.hasBody() && response.getStatusCode()==200) {
       JsonArray boundWithParts = response.getJson().getJsonArray(BOUND_WITH_PARTS_COLLECTION);
