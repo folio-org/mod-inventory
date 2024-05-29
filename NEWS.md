@@ -1,3 +1,6 @@
+## 20.2.6 2024-05-29
+* [MODDATAIMP-1052](https://folio-org.atlassian.net/browse/MODDATAIMP-1052) Fix editing shared Instance via quickMARC from Member tenant
+
 ## 20.2.5 2024-05-24
 * [MODINV-1026](https://folio-org.atlassian.net/browse/MODINV-1026) Don't group fields with same tags together
 
