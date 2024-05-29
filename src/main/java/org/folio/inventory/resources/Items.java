@@ -342,7 +342,7 @@ public class Items extends AbstractInventoryResource {
 
     String holdingsQuery = multipleRecordsCqlQuery(holdingsIds);
 
-    holdingsClient.getMany(holdingsQuery, holdingsIds.size(), 0,
+    holdingsClient.retrieveMany(holdingsQuery, holdingsIds.size(), 0,
       holdingsFetched::complete);
 
     holdingsFetched.thenAccept(holdingsResponse -> {
@@ -369,7 +369,7 @@ public class Items extends AbstractInventoryResource {
 
       String instancesQuery = multipleRecordsCqlQuery(instanceIds);
 
-      instancesClient.getMany(instancesQuery, instanceIds.size(), 0,
+      instancesClient.retrieveMany(instancesQuery, instanceIds.size(), 0,
         instancesFetched::complete);
 
       instancesFetched.thenAccept(instancesResponse -> {
