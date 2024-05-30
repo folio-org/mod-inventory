@@ -61,7 +61,7 @@ import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOL
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.MARC;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 
 
 public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { // NOSONAR

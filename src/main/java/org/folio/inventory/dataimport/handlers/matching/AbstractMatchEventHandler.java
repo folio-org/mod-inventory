@@ -26,7 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.extractMatchProfile;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
 
 public abstract class AbstractMatchEventHandler implements EventHandler {
   private static final Logger LOGGER = LogManager.getLogger(AbstractMatchEventHandler.class);

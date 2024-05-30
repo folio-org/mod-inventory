@@ -18,6 +18,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.publisher.KafkaEventPublisher;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.ProfileType;
 
 import static java.lang.String.format;
 import static org.folio.ActionProfile.Action.UPDATE;
@@ -25,7 +26,7 @@ import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED;
 import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 
 public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
@@ -73,7 +74,7 @@ public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   }
 
   @Override
-  protected ProfileSnapshotWrapper.ContentType profileContentType() {
+  protected ProfileType profileContentType() {
     return MAPPING_PROFILE;
   }
 

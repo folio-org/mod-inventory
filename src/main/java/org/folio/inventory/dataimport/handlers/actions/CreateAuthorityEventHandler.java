@@ -7,7 +7,7 @@ import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -21,7 +21,7 @@ import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.exception.DuplicateEventException;
-import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.ProfileType;
 
 public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
 
@@ -86,7 +86,7 @@ public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
   }
 
   @Override
-  protected ProfileSnapshotWrapper.ContentType profileContentType() {
+  protected ProfileType profileContentType() {
     return ACTION_PROFILE;
   }
 
