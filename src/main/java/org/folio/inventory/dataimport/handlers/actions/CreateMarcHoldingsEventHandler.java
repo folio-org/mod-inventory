@@ -12,7 +12,7 @@ import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlin
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.getControlFieldValue;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 
 import java.util.HashMap;
 import java.util.UUID;

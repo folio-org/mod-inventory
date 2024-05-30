@@ -46,7 +46,7 @@ import static java.lang.String.format;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.folio.processing.value.Value.ValueType.MISSING;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
 
 public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 

@@ -23,9 +23,9 @@ import static org.folio.inventory.dataimport.handlers.matching.loaders.AbstractL
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ReactTo.MATCH;
+import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
+import static org.folio.rest.jaxrs.model.ReactToType.MATCH;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
