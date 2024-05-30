@@ -3,11 +3,12 @@ package org.folio.inventory.instanceingress;
 import static java.util.Objects.isNull;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
-import static org.folio.kafka.KafkaHeaderUtils.kafkaHeadersToMap;
 import static org.folio.processing.events.services.publisher.KafkaEventPublisher.RECORD_ID_HEADER;
 import static org.folio.rest.jaxrs.model.InstanceIngressEvent.EventType.CREATE_INSTANCE;
 import static org.folio.rest.jaxrs.model.InstanceIngressEvent.EventType.UPDATE_INSTANCE;
 import static org.folio.rest.jaxrs.model.Record.RecordType.MARC_BIB;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -16,10 +17,9 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
-
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -34,10 +34,10 @@ import org.folio.inventory.instanceingress.handler.CreateInstanceIngressEventHan
 import org.folio.inventory.services.InstanceIdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
+import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.InstanceIngressEvent;
 import org.folio.rest.jaxrs.model.ParsedRecord;
-import org.folio.rest.util.OkapiConnectionParams;
 
 public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, String> {
 
@@ -65,9 +65,10 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
 
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> consumerRecord) {
-    var params = new OkapiConnectionParams(kafkaHeadersToMap(consumerRecord.headers()), vertx);
-    var context = constructContext(params.getTenantId(), params.getToken(), params.getOkapiUrl());
+    Map<String, String> kafkaHeaders = KafkaHeaderUtils.kafkaHeadersToMap(consumerRecord.headers());
     var event = Json.decodeValue(consumerRecord.value(), InstanceIngressEvent.class);
+    var context = constructContext(event.getEventMetadata().getTenantId(),
+      kafkaHeaders.get(OKAPI_TOKEN_HEADER), kafkaHeaders.get(OKAPI_URL_HEADER));
     LOGGER.info("Instance ingress event has been received with event type: {}", event.getEventType());
     return Future.succeededFuture(event.getEventPayload())
       .compose(eventPayload -> processEvent(event, context)

@@ -51,6 +51,7 @@ import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.EventMetadata;
 import org.folio.rest.jaxrs.model.InstanceIngressEvent;
 import org.folio.rest.jaxrs.model.InstanceIngressPayload;
 import org.folio.rest.jaxrs.model.MappingDetail;
@@ -183,13 +184,13 @@ public class InstanceIngressEventConsumerTest {
     var event = new InstanceIngressEvent()
       .withId(UUID.randomUUID().toString())
       .withEventType(InstanceIngressEvent.EventType.CREATE_INSTANCE)
-      .withEventPayload(payload);
+      .withEventPayload(payload)
+      .withEventMetadata(new EventMetadata().withTenantId(TENANT_ID));
 
     var expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
     when(kafkaRecord.headers()).thenReturn(List.of(
-        KafkaHeader.header(XOkapiHeaders.TENANT.toLowerCase(), TENANT_ID),
         KafkaHeader.header(XOkapiHeaders.URL.toLowerCase(), mockServer.baseUrl())
       )
     );

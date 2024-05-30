@@ -111,7 +111,10 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       Future<RecordToEntity> recordToInstanceFuture = idStorageService.store(targetRecord.getId(), getInstanceId(targetRecord), dataImportEventPayload.getTenant());
       recordToInstanceFuture.onSuccess(res -> {
           String instanceId = res.getEntityId();
-          getMappingMetadataCache().get(jobExecutionId, context)
+          var mappingMetadataFuture = isInstanceIngressEvent(dataImportEventPayload)
+            ? getMappingMetadataCache().getByRecordType(jobExecutionId, context, "marc-bib")
+            : getMappingMetadataCache().get(jobExecutionId, context);
+          mappingMetadataFuture
             .compose(parametersOptional -> parametersOptional
               .map(mappingMetadata -> {
                 MappingParameters mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
