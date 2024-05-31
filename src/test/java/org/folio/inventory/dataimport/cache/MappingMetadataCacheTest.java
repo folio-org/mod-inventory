@@ -1,17 +1,7 @@
 package org.folio.inventory.dataimport.cache;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-
-import java.util.Optional;
-import java.util.UUID;
-
-import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
-import org.folio.MappingMetadataDto;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
@@ -19,20 +9,27 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
-
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import java.util.Optional;
+import java.util.UUID;
+import org.folio.MappingMetadataDto;
+import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 @RunWith(VertxUnitRunner.class)
 public class MappingMetadataCacheTest {
 
   private static final String TENANT_ID = "diku";
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
-  private static final String MARC_BIB_RECORD_TYPE = "marc-bib";
 
   private final Vertx vertx = Vertx.vertx();
   private final MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx,
