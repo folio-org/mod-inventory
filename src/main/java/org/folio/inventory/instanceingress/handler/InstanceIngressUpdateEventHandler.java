@@ -1,17 +1,13 @@
 package org.folio.inventory.instanceingress.handler;
 
 import java.util.concurrent.CompletableFuture;
-import org.folio.inventory.common.Context;
-import org.folio.rest.jaxrs.model.InstanceIngressPayload;
+import org.folio.rest.jaxrs.model.InstanceIngressEvent;
 
 public class InstanceIngressUpdateEventHandler implements InstanceIngressEventHandler {
 
-  public InstanceIngressUpdateEventHandler(Context context) {
-
-  }
-
   @Override
-  public CompletableFuture<InstanceIngressPayload> handle(InstanceIngressPayload payload) {
+  public CompletableFuture<InstanceIngressEvent> handle(InstanceIngressEvent instanceIngressEvent) {
+    // to be implemented in MODINV-1008
     return null;
   }
 }

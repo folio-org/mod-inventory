@@ -5,14 +5,16 @@ import static org.codehaus.plexus.util.StringUtils.isNotEmpty;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_PATH;
+import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
+import static org.folio.inventory.domain.instances.Instance.ID;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import java.util.HashMap;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -32,9 +34,6 @@ import org.folio.processing.mapping.defaultmapper.RecordMapper;
 import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.client.SourceStorageRecordsClient;
-
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
 import org.folio.rest.client.SourceStorageSnapshotsClient;
 import org.folio.rest.jaxrs.model.AdditionalInfo;
 import org.folio.rest.jaxrs.model.EntityType;
@@ -46,11 +45,7 @@ import org.folio.rest.jaxrs.model.Snapshot;
 public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);
   protected static final String MARC_FORMAT = "MARC";
-  protected static final String MARC_BIB_RECORD_FORMAT = "MARC_BIB";
-  protected static final String INSTANCE_PATH = "instance";
-  protected static final List<String> requiredFields = Arrays.asList("source", "title", "instanceTypeId");
-  private static final String ID_FIELD = "id";
-  private static final boolean IS_HRID_FILLING_NEEDED_FOR_INSTANCE = true;
+  public static final boolean IS_HRID_FILLING_NEEDED_FOR_INSTANCE = true;
 
   protected final Storage storage;
   @Getter
@@ -230,7 +225,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   private void executeHrIdManipulation(Record srcRecord, JsonObject externalEntity) {
-    var externalId = externalEntity.getString(ID_FIELD);
+    var externalId = externalEntity.getString(ID);
     var externalHrId = extractHridForInstance(externalEntity);
     var externalIdsHolder = srcRecord.getExternalIdsHolder();
     setExternalIdsForInstance(externalIdsHolder, externalId, externalHrId);

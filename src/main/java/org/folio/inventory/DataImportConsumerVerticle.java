@@ -78,13 +78,9 @@ public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
   @Override
   public void start(Promise<Void> startPromise) {
     EventManager.registerKafkaEventPublisher(getKafkaConfig(), vertx, getMaxDistributionNumber());
-
-    var profileSnapshotExpirationTime = getCacheEnvVariable("inventory.profile-snapshot-cache.expiration.time.seconds");
-
-    var profileSnapshotCache = new ProfileSnapshotCache(vertx, getHttpClient(), Long.parseLong(profileSnapshotExpirationTime));
     var consortiumDataCache = new ConsortiumDataCache(vertx, getHttpClient());
 
-    var dataImportKafkaHandler = new DataImportKafkaHandler(vertx, getStorage(), getHttpClient(), profileSnapshotCache,
+    var dataImportKafkaHandler = new DataImportKafkaHandler(vertx, getStorage(), getHttpClient(), getProfileSnapshotCache(),
       getKafkaConfig(), getMappingMetadataCache(), consortiumDataCache);
 
     var futures = EVENT_TYPES.stream()
