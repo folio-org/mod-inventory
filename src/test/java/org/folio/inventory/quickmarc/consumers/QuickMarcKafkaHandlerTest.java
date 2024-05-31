@@ -7,6 +7,8 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -229,8 +231,8 @@ public class QuickMarcKafkaHandlerTest {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
-    payload.put("RECORD_TYPE", "MARC_BIB");
-    payload.put("MARC_BIB", Json.encode(bibRecord));
+    payload.put("RECORD_TYPE", MARC_BIB_RECORD_FORMAT);
+    payload.put(MARC_BIB_RECORD_FORMAT, Json.encode(bibRecord));
     payload.put("MAPPING_RULES", bibMappingRules.encode());
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
     payload.put("PARSED_RECORD_DTO", Json.encode(new ParsedRecordDto()
@@ -422,7 +424,7 @@ public class QuickMarcKafkaHandlerTest {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
-    payload.put("RECORD_TYPE", "MARC_BIB");
+    payload.put("RECORD_TYPE", MARC_BIB_RECORD_FORMAT);
     payload.put("MAPPING_RULES", bibMappingRules.encode());
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
 

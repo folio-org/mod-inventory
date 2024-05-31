@@ -33,7 +33,6 @@ public class MappingMetadataCacheTest {
 
   private static final String TENANT_ID = "diku";
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
-  private static final String MARC_BIB_RECORD_TYPE = "marc-bib";
 
   private final Vertx vertx = Vertx.vertx();
 
