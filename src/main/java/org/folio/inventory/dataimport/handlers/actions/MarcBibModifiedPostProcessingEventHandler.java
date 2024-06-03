@@ -35,7 +35,7 @@ import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_REA
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.getTenant;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 
 public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
 

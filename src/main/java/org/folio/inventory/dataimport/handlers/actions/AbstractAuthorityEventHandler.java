@@ -5,8 +5,8 @@ import static java.lang.String.format;
 
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MAPPING_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -36,7 +36,7 @@ import org.folio.processing.mapping.defaultmapper.RecordMapper;
 import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.EntityType;
-import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.ProfileType;
 import org.folio.rest.jaxrs.model.Record;
 
 public abstract class AbstractAuthorityEventHandler implements EventHandler {
@@ -118,7 +118,7 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
 
   protected abstract ActionProfile.FolioRecord targetRecordType();
 
-  protected abstract ProfileSnapshotWrapper.ContentType profileContentType();
+  protected abstract ProfileType profileContentType();
 
   protected abstract void publishEvent(DataImportEventPayload payload);
 
