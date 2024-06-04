@@ -63,7 +63,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   private static final String INSTANCE_CREATION_999_ERROR_MESSAGE = "A new Instance was not created because the incoming record already contained a 999ff$s or 999ff$i field";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
-  private final IdStorageService idStorageService;
+  protected final IdStorageService idStorageService;
   private final OrderHelperService orderHelperService;
 
   public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
@@ -226,7 +226,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     }
   }
 
-  private Future<Instance> addInstance(Instance instance, InstanceCollection instanceCollection) {
+  protected Future<Instance> addInstance(Instance instance, InstanceCollection instanceCollection) {
     Promise<Instance> promise = Promise.promise();
     instanceCollection.add(instance, success -> promise.complete(success.getResult()),
       failure -> {

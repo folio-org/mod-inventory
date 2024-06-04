@@ -232,7 +232,7 @@ public class CreateInstanceEventHandlerTest {
       new PrecedingSucceedingTitlesHelper(context -> mockedClient), MappingMetadataCache.getInstance(vertx,
       httpClient), instanceIdStorageService, orderHelperService, httpClient));
 
-    doReturn(sourceStorageClient).when(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any());
+    doReturn(sourceStorageClient).when(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), any());
     doAnswer(invocationOnMock -> {
       Instance instanceRecord = invocationOnMock.getArgument(0);
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -318,7 +318,7 @@ public class CreateInstanceEventHandlerTest {
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(0).getString("instanceNoteTypeId"), notNullValue());
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
-    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), argThat(tenantId -> tenantId.equals(TENANT_ID)));
+    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(TENANT_ID)));
   }
 
   @Test

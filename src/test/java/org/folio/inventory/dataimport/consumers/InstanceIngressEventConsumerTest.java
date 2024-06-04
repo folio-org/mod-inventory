@@ -96,7 +96,7 @@ public class InstanceIngressEventConsumerTest {
 
     var vertx = Vertx.vertx();
     var httpClient = vertx.createHttpClient();
-    instanceIngressEventConsumer = new InstanceIngressEventConsumer(storage, httpClient, new MappingMetadataCache(vertx, httpClient, 3600));
+    instanceIngressEventConsumer = new InstanceIngressEventConsumer(vertx, storage, httpClient, new MappingMetadataCache(vertx, httpClient, 3600));
   }
 
   @Test

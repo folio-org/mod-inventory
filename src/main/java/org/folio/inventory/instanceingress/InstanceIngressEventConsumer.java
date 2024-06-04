@@ -8,6 +8,7 @@ import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.ext.web.client.WebClient;
@@ -15,11 +16,14 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
+import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.instanceingress.handler.CreateInstanceIngressEventHandler;
 import org.folio.inventory.instanceingress.handler.InstanceIngressEventHandler;
 import org.folio.inventory.instanceingress.handler.InstanceIngressUpdateEventHandler;
+import org.folio.inventory.services.InstanceIdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
@@ -29,13 +33,16 @@ import org.folio.rest.jaxrs.model.InstanceIngressEvent;
 public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(InstanceIngressEventConsumer.class);
+  private final Vertx vertx;
   private final Storage storage;
   private final HttpClient client;
   private final MappingMetadataCache mappingMetadataCache;
 
-  public InstanceIngressEventConsumer(Storage storage,
+  public InstanceIngressEventConsumer(Vertx vertx,
+                                      Storage storage,
                                       HttpClient client,
                                       MappingMetadataCache mappingMetadataCache) {
+    this.vertx = vertx;
     this.storage = storage;
     this.client = client;
     this.mappingMetadataCache = mappingMetadataCache;
@@ -76,7 +83,9 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
 
   private InstanceIngressEventHandler getInstanceIngressEventHandler(InstanceIngressEvent.EventType eventType, Context context) {
     if (eventType == CREATE_INSTANCE) {
-      return new CreateInstanceIngressEventHandler(new PrecedingSucceedingTitlesHelper(WebClient.wrap(client)), mappingMetadataCache, client, context, storage);
+      var precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
+      var idStorageService = new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)));
+      return new CreateInstanceIngressEventHandler(precedingSucceedingTitlesHelper, mappingMetadataCache, idStorageService, client, context, storage);
     } else if (eventType == UPDATE_INSTANCE) {
       return new InstanceIngressUpdateEventHandler();
     } else {

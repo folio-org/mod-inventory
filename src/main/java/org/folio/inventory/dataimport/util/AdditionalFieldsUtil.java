@@ -69,11 +69,12 @@ public final class AdditionalFieldsUtil {
   public static final String TAG_001 = "001";
   private static final String TAG_003 = "003";
   public static final String TAG_035 = "035";
-  public static final char TAG_035_SUB = 'a';
+  public static final char SUBFIELD_A = 'a';
+  public static final char SUBFIELD_B = 'b';
+  public static final char SUBFIELD_I = 'i';
   private static final char TAG_035_IND = ' ';
   private static final String ANY_STRING = "*";
   private static final char INDICATOR = 'f';
-  public static final char SUBFIELD_I = 'i';
   private static final String HR_ID_FIELD = "hrid";
   private static final CacheLoader<String, org.marc4j.marc.Record> parsedRecordContentCacheLoader;
   private static final LoadingCache<String, org.marc4j.marc.Record> parsedRecordContentCache;
@@ -263,15 +264,15 @@ public final class AdditionalFieldsUtil {
     if (StringUtils.isNotEmpty(valueFrom001)) {
       String valueFrom003 = getValueFromControlledField(srcRecord, TAG_003);
       String new035Value = mergeFieldsFor035(valueFrom003, valueFrom001);
-      if (!isFieldExist(srcRecord, TAG_035, TAG_035_SUB, new035Value)) {
-        addDataFieldToMarcRecord(srcRecord, TAG_035, TAG_035_IND, TAG_035_IND, TAG_035_SUB, new035Value);
+      if (!isFieldExist(srcRecord, TAG_035, SUBFIELD_A, new035Value)) {
+        addDataFieldToMarcRecord(srcRecord, TAG_035, TAG_035_IND, TAG_035_IND, SUBFIELD_A, new035Value);
       }
     }
     removeField(srcRecord, TAG_003);
   }
 
   public static void normalize035(Record srsRecord) {
-    List<Subfield> subfields = get035SubfieldOclcValues(srsRecord, TAG_035, TAG_035_SUB);
+    List<Subfield> subfields = get035SubfieldOclcValues(srsRecord, TAG_035, SUBFIELD_A);
     if (!subfields.isEmpty()) {
       Set<String> normalized035Subfields = formatOclc(subfields);
 
@@ -739,7 +740,7 @@ public final class AdditionalFieldsUtil {
   }
 
   public static void remove035WithActualHrId(Record srcRecord, String actualHrId) {
-    removeField(srcRecord, TAG_035, TAG_035_SUB, actualHrId);
+    removeField(srcRecord, TAG_035, SUBFIELD_A, actualHrId);
   }
 
   /**
@@ -754,8 +755,10 @@ public final class AdditionalFieldsUtil {
       if (StringUtils.isNotEmpty(valueFrom001)) {
         String originalHrIdPrefix = AdditionalFieldsUtil.getValueFromControlledField(recordInstancePair.getKey(), TAG_003);
         String originalHrId = AdditionalFieldsUtil.mergeFieldsFor035(originalHrIdPrefix, valueFrom001);
-        if (!AdditionalFieldsUtil.isFieldExist(recordInstancePair.getKey(), TAG_035, TAG_035_SUB, originalHrId)) {
-          AdditionalFieldsUtil.addDataFieldToMarcRecord(recordInstancePair.getKey(), TAG_035, TAG_035_IND, TAG_035_IND, TAG_035_SUB, originalHrId);
+        if (!AdditionalFieldsUtil.isFieldExist(recordInstancePair.getKey(), TAG_035,
+          SUBFIELD_A, originalHrId)) {
+          AdditionalFieldsUtil.addDataFieldToMarcRecord(recordInstancePair.getKey(), TAG_035, TAG_035_IND, TAG_035_IND,
+            SUBFIELD_A, originalHrId);
         }
       }
       AdditionalFieldsUtil.removeField(recordInstancePair.getKey(), TAG_001);

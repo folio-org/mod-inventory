@@ -254,7 +254,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       .withStatus(Snapshot.Status.COMMITTED)
       .withProcessingStartedDate(new Date());
 
-    return postSnapshotInSrsAndHandleResponse(dataImportEventPayload, snapshot, tenantId);
+    return postSnapshotInSrsAndHandleResponse(dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getToken(), snapshot, tenantId);
   }
 
   @Override
@@ -357,7 +357,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   }
 
   private Future<Record> getRecordByInstanceId(DataImportEventPayload dataImportEventPayload, String instanceId, String tenantId) {
-    SourceStorageRecordsClient client = getSourceStorageRecordsClient(dataImportEventPayload, tenantId);
+    SourceStorageRecordsClient client = getSourceStorageRecordsClient(dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getToken(), tenantId);
     return client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE).compose(resp -> {
       if (resp.statusCode() != 200) {
         LOGGER.warn(format("Failed to retrieve MARC record by instance id: '%s', status code: %s",
