@@ -17,8 +17,7 @@ public class InstanceIngressConsumerVerticle extends KafkaConsumerVerticle {
   public void start(Promise<Void> startPromise) {
     var instanceIngressEventHandler = new InstanceIngressEventConsumer(vertx, getStorage(), getHttpClient(), getMappingMetadataCache());
 
-    //q remove namespace from a topic?
-    var consumerWrapper = createConsumer(INSTANCE_INGRESS_TOPIC);
+    var consumerWrapper = createConsumer(INSTANCE_INGRESS_TOPIC, false);
 
     consumerWrapper.start(instanceIngressEventHandler, constructModuleName())
       .onFailure(startPromise::fail)

@@ -3,6 +3,7 @@ package org.folio.inventory.support;
 import static java.lang.Integer.parseInt;
 import static java.lang.Long.*;
 import static java.lang.String.format;
+import static java.lang.String.join;
 import static java.lang.System.getProperty;
 import static java.util.Objects.isNull;
 import static org.apache.commons.lang.StringUtils.isBlank;
@@ -12,7 +13,6 @@ import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL;
-import static org.folio.kafka.KafkaTopicNameHelper.createSubscriptionDefinition;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 
 import io.vertx.core.AbstractVerticle;
@@ -29,6 +29,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.kafka.GlobalLoadSensor;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaConsumerWrapper;
+import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SubscriptionDefinition;
 import org.folio.okapi.common.GenericCompositeFuture;
 
@@ -61,13 +62,17 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
   protected abstract Logger getLogger();
 
   protected KafkaConsumerWrapper<String, String> createConsumer(String eventType) {
+    return createConsumer(eventType, true);
+  }
+
+  protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, boolean namespacedTopic) {
     var kafkaConsumerWrapper = KafkaConsumerWrapper.<String, String>builder()
       .context(context)
       .vertx(vertx)
       .kafkaConfig(getKafkaConfig())
       .loadLimit(getLoadLimit())
       .globalLoadSensor(new GlobalLoadSensor())
-      .subscriptionDefinition(getSubscriptionDefinition(getKafkaConfig().getEnvId(), eventType))
+      .subscriptionDefinition(getSubscriptionDefinition(getKafkaConfig().getEnvId(), eventType, namespacedTopic))
       .build();
     consumerWrappers.add(kafkaConsumerWrapper);
     return kafkaConsumerWrapper;
@@ -137,8 +142,21 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
     return config;
   }
 
-  private SubscriptionDefinition getSubscriptionDefinition(String envId, String eventType) {
-    return createSubscriptionDefinition(envId, getDefaultNameSpace(), eventType);
+  private SubscriptionDefinition getSubscriptionDefinition(String envId, String eventType, boolean namespacedTopic) {
+    return namespacedTopic
+      ? KafkaTopicNameHelper.createSubscriptionDefinition(envId, getDefaultNameSpace(), eventType)
+      : createSubscriptionDefinition(envId, eventType);
+  }
+
+  private SubscriptionDefinition createSubscriptionDefinition(String env, String eventType) {
+    return SubscriptionDefinition.builder()
+      .eventType(eventType)
+      .subscriptionPattern(formatSubscriptionPattern(env, eventType))
+      .build();
+  }
+
+  private String formatSubscriptionPattern(String env, String eventType) {
+    return join("\\.", env, "\\w{1,}", eventType);
   }
 
   private int getLoadLimit() {
