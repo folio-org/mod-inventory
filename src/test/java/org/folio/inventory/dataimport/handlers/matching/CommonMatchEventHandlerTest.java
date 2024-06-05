@@ -13,6 +13,7 @@ import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.ReactToType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,8 +38,8 @@ import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_AUTHORITY;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.MATCH_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -86,7 +87,7 @@ public class CommonMatchEventHandlerTest {
       .withExistingRecordType(INSTANCE);
 
     ProfileSnapshotWrapper instanceMatchProfileWrapper = new ProfileSnapshotWrapper()
-      .withReactTo(ProfileSnapshotWrapper.ReactTo.MATCH)
+      .withReactTo(ReactToType.MATCH)
       .withContentType(MATCH_PROFILE)
       .withContent(JsonObject.mapFrom(instanceMatchProfile).getMap());
 
@@ -117,7 +118,7 @@ public class CommonMatchEventHandlerTest {
       .withExistingRecordType(HOLDINGS);
 
     ProfileSnapshotWrapper instanceMatchProfileWrapper = new ProfileSnapshotWrapper()
-      .withReactTo(ProfileSnapshotWrapper.ReactTo.MATCH)
+      .withReactTo(ReactToType.MATCH)
       .withContentType(MATCH_PROFILE)
       .withContent(JsonObject.mapFrom(instanceMatchProfile).getMap());
 
@@ -148,7 +149,7 @@ public class CommonMatchEventHandlerTest {
       .withExistingRecordType(ITEM);
 
     ProfileSnapshotWrapper instanceMatchProfileWrapper = new ProfileSnapshotWrapper()
-      .withReactTo(ProfileSnapshotWrapper.ReactTo.MATCH)
+      .withReactTo(ReactToType.MATCH)
       .withContentType(MATCH_PROFILE)
       .withContent(JsonObject.mapFrom(instanceMatchProfile).getMap());
 
@@ -180,7 +181,7 @@ public class CommonMatchEventHandlerTest {
       .withExistingRecordType(MARC_BIBLIOGRAPHIC);
 
     ProfileSnapshotWrapper instanceMatchProfileWrapper = new ProfileSnapshotWrapper()
-      .withReactTo(ProfileSnapshotWrapper.ReactTo.MATCH)
+      .withReactTo(ReactToType.MATCH)
       .withContentType(MATCH_PROFILE)
       .withContent(JsonObject.mapFrom(instanceMatchProfile).getMap());
 
@@ -215,7 +216,7 @@ public class CommonMatchEventHandlerTest {
       .withExistingRecordType(INSTANCE);
 
     ProfileSnapshotWrapper instanceMatchProfileWrapper = new ProfileSnapshotWrapper()
-      .withReactTo(ProfileSnapshotWrapper.ReactTo.MATCH)
+      .withReactTo(ReactToType.MATCH)
       .withContentType(MATCH_PROFILE)
       .withContent(JsonObject.mapFrom(instanceMatchProfile).getMap());
 
@@ -276,7 +277,7 @@ public class CommonMatchEventHandlerTest {
       .withExistingRecordType(HOLDINGS);
 
     ProfileSnapshotWrapper holdingsMatchProfileWrapper = new ProfileSnapshotWrapper()
-      .withReactTo(ProfileSnapshotWrapper.ReactTo.MATCH)
+      .withReactTo(ReactToType.MATCH)
       .withContentType(MATCH_PROFILE)
       .withContent(JsonObject.mapFrom(holdingsMatchProfile).getMap());
 

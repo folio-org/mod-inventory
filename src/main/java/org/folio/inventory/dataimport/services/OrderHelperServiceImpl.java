@@ -12,6 +12,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.ProfileType;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -60,7 +61,7 @@ public class OrderHelperServiceImpl implements OrderHelperService {
     List<ProfileSnapshotWrapper> actionProfiles = profileSnapshotWrapper
       .getChildSnapshotWrappers()
       .stream()
-      .filter(e -> e.getContentType() == ProfileSnapshotWrapper.ContentType.ACTION_PROFILE)
+      .filter(e -> e.getContentType() == ProfileType.ACTION_PROFILE)
       .collect(Collectors.toList());
 
     if (!actionProfiles.isEmpty() && checkIfOrderActionProfileExists(actionProfiles) && checkIfCurrentProfileIsTheLastOne(eventPayload, actionProfiles)) {

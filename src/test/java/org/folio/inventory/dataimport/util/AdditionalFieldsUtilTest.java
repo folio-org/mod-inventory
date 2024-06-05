@@ -17,6 +17,7 @@ import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.isFieldEx
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.removeField;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -250,18 +251,38 @@ public class AdditionalFieldsUtilTest {
   public void isFieldsFillingNeededTrue() {
     String instanceId = UUID.randomUUID().toString();
     String instanceHrId = UUID.randomUUID().toString();
-    Record record = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId).withInstanceHrid(UUID.randomUUID().toString()));
+    Record srcRecord = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId).withInstanceHrid(UUID.randomUUID().toString()));
     Instance instance = new Instance(instanceId, "0", instanceHrId, "", "", "");
-    Assert.assertTrue(AdditionalFieldsUtil.isFieldsFillingNeeded(record, instance));
+    Assert.assertTrue(AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance));
+
+    srcRecord.getExternalIdsHolder().setInstanceHrid(null);
+    Assert.assertTrue(AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance));
   }
 
   @Test
   public void isFieldsFillingNeededFalse() {
     String instanceId = UUID.randomUUID().toString();
     String instanceHrId = UUID.randomUUID().toString();
-    Record record = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId).withInstanceHrid(instanceHrId));
+    Record srcRecord = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId).withInstanceHrid(instanceHrId));
     Instance instance = new Instance(instanceId, "0", instanceHrId, "", "", "");
-    Assert.assertFalse(AdditionalFieldsUtil.isFieldsFillingNeeded(record, instance));
+    assertFalse(AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance));
+
+    srcRecord.getExternalIdsHolder().withInstanceId(instanceId);
+    instance = new Instance(UUID.randomUUID().toString(), "0", instanceHrId, "", "", "");
+    assertFalse(AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance));
+
+    srcRecord.getExternalIdsHolder().withInstanceId(null).withInstanceHrid(null);
+    instance = new Instance(UUID.randomUUID().toString(), "0", instanceHrId, "", "", "");
+    assertFalse(AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance));
+  }
+
+  @Test(expected = Exception.class)
+  public void isFieldsFillingNeededForExternalHolderInstanceShouldThrowException() {
+    String instanceId = UUID.randomUUID().toString();
+    String instanceHrId = UUID.randomUUID().toString();
+    Record srcRecord = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId).withInstanceHrid(instanceHrId));
+    Instance instance = new Instance(null, "0", instanceHrId, "", "", "");
+    AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance);
   }
 
   @Test
@@ -804,14 +825,14 @@ public class AdditionalFieldsUtilTest {
 
   @Test
   public void shouldReorderMarcRecordFields() throws IOException, MarcException {
-    var reorderedRecordContent = readFileFromPath(PARSED_RECORD);
-    var sourceRecordContent = readFileFromPath(REORDERED_PARSED_RECORD);
-    var reorderingResultRecord = readFileFromPath(REORDERING_RESULT_RECORD);
+    var systemReorderedRecordContent = readFileFromPath(PARSED_RECORD);
+    var userOrderRecordContent = readFileFromPath(REORDERED_PARSED_RECORD);
+    var expectedOrderRecord = readFileFromPath(REORDERING_RESULT_RECORD);
 
-    var resultContent = AdditionalFieldsUtil.reorderMarcRecordFields(sourceRecordContent, reorderedRecordContent);
+    var actualOrderRecord = AdditionalFieldsUtil.reorderMarcRecordFields(userOrderRecordContent, systemReorderedRecordContent);
 
-    assertNotNull(resultContent);
-    assertEquals(formatContent(resultContent), formatContent(reorderingResultRecord));
+    assertNotNull(actualOrderRecord);
+    assertEquals(formatContent(expectedOrderRecord), formatContent(actualOrderRecord));
   }
 
   private static String readFileFromPath(String path) throws IOException {
