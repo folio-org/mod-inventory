@@ -1,9 +1,9 @@
 package org.folio.inventory.dataimport.util;
 
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_A;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_001;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_035;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_035_SUB;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addControlledFieldToMarcRecord;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addDataFieldToMarcRecord;
@@ -483,7 +483,7 @@ public class AdditionalFieldsUtilTest {
       .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
 
     // when
-    var subfields = get035SubfieldOclcValues(record, TAG_035, SUBFIELD_A).stream().map(Subfield::getData).toList();
+    var subfields = get035SubfieldOclcValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData).toList();
     // then
     Assert.assertEquals(expectedSubfields.size(), subfields.size());
     Assert.assertEquals(expectedSubfields.get(0), subfields.get(0));
@@ -504,7 +504,7 @@ public class AdditionalFieldsUtilTest {
       .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
 
     // when
-    var subfields = get035SubfieldOclcValues(record, TAG_035, SUBFIELD_A).stream().map(Subfield::getData).toList();
+    var subfields = get035SubfieldOclcValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData).toList();
     // then
     Assert.assertEquals(0, subfields.size());
   }

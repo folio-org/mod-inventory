@@ -8,6 +8,6 @@ public class InstanceIngressUpdateEventHandler implements InstanceIngressEventHa
   @Override
   public CompletableFuture<InstanceIngressEvent> handle(InstanceIngressEvent instanceIngressEvent) {
     // to be implemented in MODINV-1008
-    return null;
+    return CompletableFuture.failedFuture(new UnsupportedOperationException());
   }
 }
