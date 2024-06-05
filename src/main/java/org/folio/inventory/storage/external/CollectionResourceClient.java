@@ -69,6 +69,25 @@ public class CollectionResourceClient {
   }
 
   /**
+   * Run the query using some limit and offset.
+   *
+   * @param cqlQuery the query without percent (url) encoding
+   */
+  public void retrieveMany(
+    String cqlQuery,
+    Integer pageLimit,
+    Integer pageOffset,
+    Consumer<Response> responseHandler) {
+    var body = new JsonObject()
+      .put("query", cqlQuery)
+      .put("limit", pageLimit)
+      .put("offset", pageOffset);
+    var url = collectionRoot + "/retrieve";
+    client.post(url, body)
+      .thenAccept(responseHandler);
+  }
+
+  /**
    * Runs the query while setting limit to maximum and offset to zero to get all records.
    *
    * @param cqlQuery the query without percent (url) encoding

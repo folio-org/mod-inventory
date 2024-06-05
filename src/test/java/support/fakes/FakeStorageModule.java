@@ -82,6 +82,7 @@ class FakeStorageModule extends AbstractVerticle {
     router.route(pathTree).handler(this::emulateFailureIfNeeded);
     router.route(pathTree).handler(this::checkTokenHeader);
 
+    router.post(rootPath + "/retrieve").handler(this::retrieveMany);
     router.post(rootPath).handler(this::checkRequiredProperties);
     router.post(rootPath).handler(this::checkUniqueProperties);
     router.post(rootPath + "/emulate-failure").handler(this::emulateFailure);
@@ -242,6 +243,37 @@ class FakeStorageModule extends AbstractVerticle {
     Integer limit = context.getIntegerParameter("limit", 10);
     Integer offset = context.getIntegerParameter("offset", 0);
     String query = context.getStringParameter("query", null);
+
+    System.out.printf("Handling %s%n", routingContext.request().uri());
+
+    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
+
+    List<JsonObject> filteredItems = new FakeCQLToJSONInterpreter(false)
+      .execute(resourcesForTenant.values(), query);
+
+    List<JsonObject> pagedItems = filteredItems.stream()
+      .skip(offset)
+      .limit(limit)
+      .collect(Collectors.toList());
+
+    JsonObject result = new JsonObject();
+
+    result.put(collectionPropertyName, new JsonArray(pagedItems));
+    result.put("totalRecords", filteredItems.size());
+
+    System.out.printf("Found %s resources: %s%n", recordTypeName,
+      result.encodePrettily());
+
+    JsonResponse.success(routingContext.response(), result);
+  }
+
+  private void retrieveMany(RoutingContext routingContext) {
+    WebContext context = new WebContext(routingContext);
+    var requestBody = routingContext.getBodyAsJson();
+
+    var limit = requestBody.getInteger("limit");
+    var offset = requestBody.getInteger("offset");
+    var query = requestBody.getString("query");;
 
     System.out.printf("Handling %s%n", routingContext.request().uri());
 

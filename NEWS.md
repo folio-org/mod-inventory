@@ -8,6 +8,7 @@
 * 422 Unprocessable Content Error while updating  Instances and Items with electronic access without URI field populated. [MODINV-1024](https://folio-org.atlassian.net/browse/MODINV-1024)
 * Error appears when edit via quickMARC MARC Instance shared from Member tenant [MODDATAIMP-1052](https://folio-org.atlassian.net/browse/MODDATAIMP-1052)
 * Fix mod-inventory OOM issue [MODINV-1023](https://folio-org.atlassian.net/browse/MODINV-1023)
+* Replace GET with POST request for fetching instances and holdings on /items endpoint to omit 414 error [MODINV-943](https://folio-org.atlassian.net/browse/MODINV-943)
 
 ## 20.2.0 2023-03-20
 * Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))
