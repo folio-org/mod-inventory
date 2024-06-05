@@ -56,7 +56,7 @@ public abstract class ApiTests {
     markItemFixture = new MarkItemFixture(okapiClient);
 
     consortiumHoldingsStorageClient = ResourceClient.forHoldingsStorage(consortiumOkapiClient);
-    consortiumItemsClient = ResourceClient.forHoldingsStorage(consortiumOkapiClient);
+    consortiumItemsClient = ResourceClient.forItemsStorage(consortiumOkapiClient);
   }
 
   @BeforeClass
