@@ -1,5 +1,6 @@
 package api;
 
+import static api.ApiTestSuite.createConsortiumTenant;
 import static api.support.InstanceSamples.nod;
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static io.vertx.core.json.JsonObject.mapFrom;
@@ -34,8 +35,6 @@ import support.fakes.EndpointFailureDescriptor;
 
 public class InstanceRelationshipsTest extends ApiTests {
   private static final String PARENT_INSTANCES = "parentInstances";
-  private static final String CENTRAL_TENANT_ID_FIELD = "centralTenantId";
-  private static final String CONSORTIUM_ID_FIELD = "consortiumId";
 
   @After
   public void disableFailureEmulationAndClearConsortia() throws Exception {
@@ -490,7 +489,7 @@ public class InstanceRelationshipsTest extends ApiTests {
   public void cannotLinkLocalInstanceToSharedInstance() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
     UUID parentId = UUID.randomUUID();
 
-    initConsortiumTenant();
+    createConsortiumTenant();
 
     final JsonObject parentRelationship = createParentRelationship(parentId.toString(),
       instanceRelationshipTypeFixture.boundWith().getId());
@@ -503,8 +502,8 @@ public class InstanceRelationshipsTest extends ApiTests {
   }
 
   @Test
-  public void canCreateInstanceWithParentInstancesWhenConsortiaEnabled() {
-    initConsortiumTenant();
+  public void canCreateInstanceWithParentInstancesWhenConsortiaEnabled() throws MalformedURLException {
+    createConsortiumTenant();
 
     final IndividualResource parentInstance = instancesClient.create(nod(UUID.randomUUID()));
 
@@ -516,16 +515,6 @@ public class InstanceRelationshipsTest extends ApiTests {
 
     assertThat(createdInstance.getJson().getJsonArray(PARENT_INSTANCES).getJsonObject(0),
       is(parentRelationship));
-  }
-
-  private void initConsortiumTenant() {
-    String expectedConsortiumId = UUID.randomUUID().toString();
-
-    JsonObject userTenantsCollection = new JsonObject()
-      .put(CENTRAL_TENANT_ID_FIELD, ApiTestSuite.CONSORTIA_TENANT_ID)
-      .put(CONSORTIUM_ID_FIELD, expectedConsortiumId);
-
-    userTenantsClient.create(userTenantsCollection);
   }
 
   private JsonObject createParentRelationship(String superInstanceId, String relationshipType) {

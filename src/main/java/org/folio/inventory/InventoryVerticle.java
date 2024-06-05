@@ -19,6 +19,7 @@ import org.folio.inventory.resources.Items;
 import org.folio.inventory.resources.ItemsByHoldingsRecordId;
 import org.folio.inventory.resources.MoveApi;
 import org.folio.inventory.resources.TenantApi;
+import org.folio.inventory.resources.UpdateOwnershipApi;
 import org.folio.inventory.storage.Storage;
 
 import io.vertx.core.AbstractVerticle;
@@ -69,6 +70,7 @@ public class InventoryVerticle extends AbstractVerticle {
     new ItemsByHoldingsRecordId(storage, client).register(router);
     new InventoryConfigApi().register(router);
     new TenantApi().register(router);
+    new UpdateOwnershipApi(storage, client).register(router);
 
     Handler<AsyncResult<HttpServer>> onHttpServerStart = result -> {
       if (result.succeeded()) {
