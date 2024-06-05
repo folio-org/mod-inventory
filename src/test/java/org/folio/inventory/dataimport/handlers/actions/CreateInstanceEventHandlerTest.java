@@ -229,8 +229,8 @@ public class CreateInstanceEventHandlerTest {
     Vertx vertx = Vertx.vertx();
     HttpClient httpClient = vertx.createHttpClient();
     createInstanceEventHandler = spy(new CreateInstanceEventHandler(storage,
-      new PrecedingSucceedingTitlesHelper(context -> mockedClient), new MappingMetadataCache(vertx,
-      httpClient, 3600), instanceIdStorageService, orderHelperService, httpClient));
+      new PrecedingSucceedingTitlesHelper(context -> mockedClient), MappingMetadataCache.getInstance(vertx,
+      httpClient), instanceIdStorageService, orderHelperService, httpClient));
 
     doReturn(sourceStorageClient).when(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any());
     doAnswer(invocationOnMock -> {

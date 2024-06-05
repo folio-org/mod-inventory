@@ -15,7 +15,7 @@ import support.fakes.processors.RecordPreProcessor;
 public class FakeStorageModuleBuilder {
   private final String rootPath;
   private final String collectionPropertyName;
-  private final String tenantId;
+  private final List<String> tenants;
   private final Collection<String> requiredProperties;
   private final Collection<String> uniqueProperties;
   private final Map<String, Supplier<Object>> defaultProperties;
@@ -24,14 +24,14 @@ public class FakeStorageModuleBuilder {
   private final List<RecordPreProcessor> recordPreProcessors;
 
   FakeStorageModuleBuilder() {
-    this(null, null, ApiTestSuite.TENANT_ID, new ArrayList<>(), true, "",
+    this(null, null, List.of(ApiTestSuite.TENANT_ID, ApiTestSuite.CONSORTIA_TENANT_ID), new ArrayList<>(), true, "",
       new ArrayList<>(), new HashMap<>(), Collections.emptyList());
   }
 
   private FakeStorageModuleBuilder(
     String rootPath,
     String collectionPropertyName,
-    String tenantId,
+    List<String> tenants,
     Collection<String> requiredProperties,
     boolean hasCollectionDelete,
     String recordName,
@@ -41,7 +41,7 @@ public class FakeStorageModuleBuilder {
 
     this.rootPath = rootPath;
     this.collectionPropertyName = collectionPropertyName;
-    this.tenantId = tenantId;
+    this.tenants = tenants;
     this.requiredProperties = requiredProperties;
     this.hasCollectionDelete = hasCollectionDelete;
     this.recordName = recordName;
@@ -51,7 +51,7 @@ public class FakeStorageModuleBuilder {
   }
 
   public FakeStorageModule create() {
-    return new FakeStorageModule(rootPath, collectionPropertyName, tenantId,
+    return new FakeStorageModule(rootPath, collectionPropertyName, tenants,
       requiredProperties, hasCollectionDelete, recordName, uniqueProperties,
       defaultProperties, recordPreProcessors);
   }
@@ -64,7 +64,7 @@ public class FakeStorageModuleBuilder {
     return new FakeStorageModuleBuilder(
       rootPath,
       newCollectionPropertyName,
-      this.tenantId,
+      this.tenants,
       this.requiredProperties,
       this.hasCollectionDelete,
       this.recordName,
@@ -77,7 +77,7 @@ public class FakeStorageModuleBuilder {
     return new FakeStorageModuleBuilder(
       this.rootPath,
       collectionPropertyName,
-      this.tenantId,
+      this.tenants,
       this.requiredProperties,
       this.hasCollectionDelete,
       this.recordName,
@@ -90,7 +90,7 @@ public class FakeStorageModuleBuilder {
     return new FakeStorageModuleBuilder(
       this.rootPath,
       this.collectionPropertyName,
-      this.tenantId,
+      this.tenants,
       this.requiredProperties,
       this.hasCollectionDelete,
       recordName,
@@ -105,7 +105,7 @@ public class FakeStorageModuleBuilder {
     return new FakeStorageModuleBuilder(
       this.rootPath,
       this.collectionPropertyName,
-      this.tenantId,
+      this.tenants,
       requiredProperties,
       this.hasCollectionDelete,
       this.recordName,
@@ -126,7 +126,7 @@ public class FakeStorageModuleBuilder {
     return new FakeStorageModuleBuilder(
       this.rootPath,
       this.collectionPropertyName,
-      this.tenantId,
+      this.tenants,
       this.requiredProperties,
       this.hasCollectionDelete,
       this.recordName,
@@ -139,7 +139,7 @@ public class FakeStorageModuleBuilder {
     return new FakeStorageModuleBuilder(
       this.rootPath,
       this.collectionPropertyName,
-      this.tenantId,
+      this.tenants,
       this.requiredProperties,
       this.hasCollectionDelete,
       this.recordName,

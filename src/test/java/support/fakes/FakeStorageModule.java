@@ -47,7 +47,7 @@ class FakeStorageModule extends AbstractVerticle {
   FakeStorageModule(
     String rootPath,
     String collectionPropertyName,
-    String tenantId,
+    List<String> tenants,
     Collection<String> requiredProperties,
     boolean hasCollectionDelete,
     String recordTypeName,
@@ -69,7 +69,7 @@ class FakeStorageModule extends AbstractVerticle {
     this.defaultProperties = defaultPropertiesWithId;
 
     storedResourcesByTenant = new HashMap<>();
-    storedResourcesByTenant.put(tenantId, new HashMap<>());
+    tenants.forEach(tenant -> storedResourcesByTenant.put(tenant, new HashMap<>()));
     this.recordPreProcessors = recordPreProcessors;
   }
 
