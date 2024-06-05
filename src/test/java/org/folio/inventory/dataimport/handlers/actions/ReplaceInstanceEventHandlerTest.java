@@ -255,8 +255,8 @@ public class ReplaceInstanceEventHandlerTest {
     precedingSucceedingTitlesHelper = spy(new PrecedingSucceedingTitlesHelper(ctxt -> mockedClient));
 
     Vertx vertx = Vertx.vertx();
-    replaceInstanceEventHandler = spy(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, new MappingMetadataCache(vertx,
-      vertx.createHttpClient(), 3600), vertx.createHttpClient(), consortiumServiceImpl));
+    replaceInstanceEventHandler = spy(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, MappingMetadataCache.getInstance(vertx,
+      vertx.createHttpClient()), vertx.createHttpClient(), consortiumServiceImpl));
 
     var recordUUID = UUID.randomUUID().toString();
     HttpResponse<Buffer> recordHttpResponse = buildHttpResponseWithBuffer(BufferImpl.buffer(String.format(EXISTING_SRS_CONTENT, recordUUID, recordUUID, 0)), HttpStatus.SC_OK);
