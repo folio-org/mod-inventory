@@ -1,7 +1,6 @@
 package org.folio.inventory.support;
 
 import static java.lang.Integer.parseInt;
-import static java.lang.Long.*;
 import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.lang.System.getProperty;
@@ -39,15 +38,13 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
   private static final String MAX_DISTRIBUTION_NUMBER_TEMPLATE = "inventory.kafka.%s.maxDistributionNumber";
   private static final String MAX_DISTRIBUTION_NUMBER_DEFAULT = "100";
   private static final String CACHE_EXPIRATION_DEFAULT = "3600";
-  private static final String METADATA_EXPIRATION_TIME = "inventory.mapping-metadata-cache.expiration.time.seconds";
   private static final String PROFILE_SNAPSHOT_CACHE_EXPIRATION_TIME = "inventory.profile-snapshot-cache.expiration.time.seconds";
   private final List<KafkaConsumerWrapper<String, String>> consumerWrappers = new ArrayList<>();
+  private ProfileSnapshotCache profileSnapshotCache;
   private KafkaConfig kafkaConfig;
   private JsonObject config;
   private HttpClient httpClient;
   private Storage storage;
-  private MappingMetadataCache mappingMetadataCache;
-  private ProfileSnapshotCache profileSnapshotCache;
 
   @Override
   public void stop(Promise<Void> stopPromise) {
@@ -108,11 +105,7 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
   }
 
   protected MappingMetadataCache getMappingMetadataCache() {
-    if (isNull(mappingMetadataCache)) {
-      var mappingMetadataExpirationTime = getCacheEnvVariable(METADATA_EXPIRATION_TIME);
-      mappingMetadataCache = new MappingMetadataCache(vertx, getHttpClient(), parseLong(mappingMetadataExpirationTime));
-    }
-    return mappingMetadataCache;
+    return MappingMetadataCache.getInstance(vertx, getHttpClient());
   }
 
   protected ProfileSnapshotCache getProfileSnapshotCache() {

@@ -38,7 +38,6 @@ import java.util.function.Consumer;
 
 import static org.folio.Record.RecordType.MARC_BIB;
 import static org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler.JOB_EXECUTION_ID_KEY;
-import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -111,7 +110,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
-    payload.put(MARC_BIB_RECORD_FORMAT, Json.encode(record));
+    payload.put("MARC_BIB", Json.encode(record));
     payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
@@ -155,7 +154,7 @@ public class MarcBibInstanceHridSetKafkaHandlerTest {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
-    payload.put(MARC_BIB_RECORD_FORMAT, Json.encode(record));
+    payload.put("MARC_BIB", Json.encode(record));
     payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
     payload.put("CURRENT_RETRY_NUMBER", "1");
 

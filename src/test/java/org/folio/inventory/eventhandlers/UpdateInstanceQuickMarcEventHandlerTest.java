@@ -1,6 +1,5 @@
 package org.folio.inventory.eventhandlers;
 
-import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -108,8 +107,8 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
   @Test
   public void shouldProcessEvent() {
     HashMap<String, String> eventPayload = new HashMap<>();
-    eventPayload.put("RECORD_TYPE", MARC_BIB_RECORD_FORMAT);
-    eventPayload.put(MARC_BIB_RECORD_FORMAT, record.encode());
+    eventPayload.put("RECORD_TYPE", "MARC_BIB");
+    eventPayload.put("MARC_BIB", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
     eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
@@ -142,8 +141,8 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
   @Test
   public void shouldCompleteExceptionallyOnOLNumberExceeded() {
     HashMap<String, String> eventPayload = new HashMap<>();
-    eventPayload.put("RECORD_TYPE", MARC_BIB_RECORD_FORMAT);
-    eventPayload.put(MARC_BIB_RECORD_FORMAT, record.encode());
+    eventPayload.put("RECORD_TYPE", "MARC_BIB");
+    eventPayload.put("MARC_BIB", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
     eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
@@ -166,8 +165,8 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     record.getParsedRecord().withContent(PARSED_CONTENT_WITH_PRECEDING_SUCCEEDING_TITLES);
 
     HashMap<String, String> eventPayload = new HashMap<>();
-    eventPayload.put("RECORD_TYPE", MARC_BIB_RECORD_FORMAT);
-    eventPayload.put(MARC_BIB_RECORD_FORMAT, Json.encode(record));
+    eventPayload.put("RECORD_TYPE", "MARC_BIB");
+    eventPayload.put("MARC_BIB", Json.encode(record));
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
     eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
@@ -192,8 +191,8 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
   @Test
   public void shouldCompleteExceptionally_whenRecordIsEmpty() {
     HashMap<String, String> eventPayload = new HashMap<>();
-    eventPayload.put("RECORD_TYPE", MARC_BIB_RECORD_FORMAT);
-    eventPayload.put(MARC_BIB_RECORD_FORMAT, "");
+    eventPayload.put("RECORD_TYPE", "MARC_BIB");
+    eventPayload.put("MARC_BIB", "");
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 
@@ -212,8 +211,8 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     }).when(instanceRecordCollection).update(any(), any(), any());
 
     HashMap<String, String> eventPayload = new HashMap<>();
-    eventPayload.put("RECORD_TYPE", MARC_BIB_RECORD_FORMAT);
-    eventPayload.put(MARC_BIB_RECORD_FORMAT, record.encode());
+    eventPayload.put("RECORD_TYPE", "MARC_BIB");
+    eventPayload.put("MARC_BIB", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 

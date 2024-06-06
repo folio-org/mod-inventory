@@ -5,7 +5,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import java.util.Optional;
 import java.util.UUID;
 
-import io.vertx.core.json.JsonObject;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.MappingMetadataDto;
@@ -33,6 +32,7 @@ public class MappingMetadataCacheTest {
 
   private static final String TENANT_ID = "diku";
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
+  private static final String MARC_BIB_RECORD_TYPE = "marc-bib";
 
   private final Vertx vertx = Vertx.vertx();
 
