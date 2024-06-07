@@ -87,7 +87,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
   private CreateInstanceIngressEventHandler handler;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     doReturn("tenant").when(context).getTenantId();
     doReturn("okapiUrl").when(context).getOkapiLocation();
     doReturn("token").when(context).getToken();
