@@ -20,11 +20,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
 import static org.folio.inventory.consortium.util.RestDataImportHelper.FIELD_JOB_EXECUTIONS;
 import static org.folio.inventory.consortium.util.RestDataImportHelper.STATUS_COMMITTED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -63,7 +63,7 @@ public class RestDataImportHelperTest {
       .put(FIELD_JOB_EXECUTIONS, new JsonArray().add(new JsonObject().put("id", expectedJobExecutionId)));
 
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(HttpStatus.HTTP_CREATED, BufferImpl.buffer(responseBody.encode()));
+      buildHttpResponseWithBuffer(BufferImpl.buffer(responseBody.encode()), HttpStatus.HTTP_CREATED);
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     doAnswer(invocation -> {
@@ -88,7 +88,7 @@ public class RestDataImportHelperTest {
     String expectedJobExecutionId = UUID.randomUUID().toString();
     Map<String, String> kafkaHeaders = new HashMap<>();
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(HttpStatus.HTTP_INTERNAL_SERVER_ERROR, null);
+      buildHttpResponseWithBuffer(HttpStatus.HTTP_INTERNAL_SERVER_ERROR, "Ok");
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     doAnswer(invocation -> {
@@ -115,7 +115,7 @@ public class RestDataImportHelperTest {
     JsonObject responseBody = new JsonObject().put("jobExecutions", new JsonArray().add(""));
 
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(HttpStatus.HTTP_CREATED, BufferImpl.buffer(responseBody.encode()));
+      buildHttpResponseWithBuffer(BufferImpl.buffer(responseBody.encode()), HttpStatus.HTTP_CREATED);
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     doAnswer(invocation -> {
@@ -140,7 +140,7 @@ public class RestDataImportHelperTest {
     String expectedJobExecutionId = UUID.randomUUID().toString();
     Map<String, String> kafkaHeaders = new HashMap<>();
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(HttpStatus.HTTP_CREATED, BufferImpl.buffer("{\"jobExecutions\":[]}"));
+      buildHttpResponseWithBuffer(BufferImpl.buffer("{\"jobExecutions\":[]}"), HttpStatus.HTTP_CREATED);
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     doAnswer(invocation -> {
@@ -166,7 +166,7 @@ public class RestDataImportHelperTest {
     String expectedJobExecutionId = UUID.randomUUID().toString();
 
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, null);
+      buildHttpResponseWithBuffer(HttpStatus.HTTP_OK);
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     doAnswer(invocation -> {
@@ -191,7 +191,7 @@ public class RestDataImportHelperTest {
     String expectedJobExecutionId = UUID.randomUUID().toString();
 
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(HttpStatus.HTTP_INTERNAL_SERVER_ERROR, null);
+      buildHttpResponseWithBuffer(HttpStatus.HTTP_INTERNAL_SERVER_ERROR, "Ok");
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     doAnswer(invocation -> {
@@ -217,7 +217,7 @@ public class RestDataImportHelperTest {
     String expectedJobExecutionId = UUID.randomUUID().toString();
 
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(HttpStatus.HTTP_NO_CONTENT, null);
+      buildHttpResponseWithBuffer(HttpStatus.HTTP_NO_CONTENT);
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     RawRecordsDto rawRecordsDto = new RawRecordsDto()
@@ -252,7 +252,7 @@ public class RestDataImportHelperTest {
     String expectedJobExecutionId = UUID.randomUUID().toString();
 
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, BufferImpl.buffer("{\"status\":\"" + STATUS_COMMITTED + "\"}"));
+      buildHttpResponseWithBuffer(BufferImpl.buffer("{\"status\":\"" + STATUS_COMMITTED + "\"}"), HttpStatus.HTTP_OK);
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     doAnswer(invocation -> {
@@ -277,7 +277,7 @@ public class RestDataImportHelperTest {
     String expectedJobExecutionId = UUID.randomUUID().toString();
 
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, null);
+      buildHttpResponseWithBuffer(HttpStatus.HTTP_OK);
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     doAnswer(invocation -> {
@@ -303,7 +303,7 @@ public class RestDataImportHelperTest {
     String expectedJobExecutionId = UUID.randomUUID().toString();
 
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(HttpStatus.HTTP_INTERNAL_SERVER_ERROR, null);
+      buildHttpResponseWithBuffer(HttpStatus.HTTP_INTERNAL_SERVER_ERROR, "Ok");
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     doAnswer(invocation -> {
@@ -322,15 +322,4 @@ public class RestDataImportHelperTest {
       });
   }
 
-  public static HttpResponseImpl<Buffer> buildHttpResponseWithBuffer(HttpStatus httpStatus, Buffer buffer) {
-    return new HttpResponseImpl(
-      null,
-      httpStatus.toInt(),
-      "Ok",
-      null,
-      null,
-      null,
-      buffer,
-      new ArrayList<String>());
-  }
 }

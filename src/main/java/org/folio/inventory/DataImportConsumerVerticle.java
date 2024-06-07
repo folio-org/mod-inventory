@@ -83,11 +83,10 @@ public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
       getKafkaConfig(), getMappingMetadataCache(), consortiumDataCache);
 
     var futures = EVENT_TYPES.stream()
-      .map(eventType -> {
-        var consumerWrapper = super.createConsumer(eventType.value());
-        return consumerWrapper.start(dataImportKafkaHandler, ConsumerWrapperUtil.constructModuleName())
-          .map(consumerWrapper);
-      })
+      .map(type -> super.createConsumer(type.value()))
+      .map(consumerWrapper -> consumerWrapper.start(dataImportKafkaHandler, ConsumerWrapperUtil.constructModuleName())
+        .map(consumerWrapper)
+      )
       .toList();
 
     GenericCompositeFuture.all(futures)

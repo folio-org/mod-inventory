@@ -89,6 +89,7 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
+import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.ACTION_HAS_NO_MAPPING_MSG;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.MARC_BIB_RECORD_CREATED;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
@@ -1309,8 +1310,4 @@ public class ReplaceInstanceEventHandlerTest {
     }).when(instanceRecordCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
   }
 
-  private static HttpResponseImpl<Buffer> buildHttpResponseWithBuffer(Buffer buffer, int httpStatus) {
-    return new HttpResponseImpl<>(null, httpStatus, "",
-      null, null, null, buffer, null);
-  }
 }

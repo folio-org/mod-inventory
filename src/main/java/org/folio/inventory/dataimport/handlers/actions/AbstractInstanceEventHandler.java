@@ -9,12 +9,11 @@ import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_PATH
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
 import static org.folio.inventory.domain.instances.Instance.ID;
 
+import java.util.HashMap;
+
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import java.util.HashMap;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -34,6 +33,9 @@ import org.folio.processing.mapping.defaultmapper.RecordMapper;
 import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.client.SourceStorageRecordsClient;
+
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import org.folio.rest.client.SourceStorageSnapshotsClient;
 import org.folio.rest.jaxrs.model.AdditionalInfo;
 import org.folio.rest.jaxrs.model.EntityType;
@@ -45,7 +47,7 @@ import org.folio.rest.jaxrs.model.Snapshot;
 public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);
   protected static final String MARC_FORMAT = "MARC";
-  public static final boolean IS_HRID_FILLING_NEEDED_FOR_INSTANCE = true;
+  private static final boolean IS_HRID_FILLING_NEEDED_FOR_INSTANCE = true;
 
   protected final Storage storage;
   @Getter
