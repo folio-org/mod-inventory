@@ -6,8 +6,8 @@ import io.vertx.core.json.JsonObject;
 
 import java.util.UUID;
 
-import static api.ApiTestSuite.TENANT_ID;
 import static org.folio.inventory.resources.MoveApi.HOLDINGS_RECORD_IDS;
+import static org.folio.inventory.resources.MoveApi.TARGET_TENANT_ID;
 import static org.folio.inventory.resources.MoveApi.TO_INSTANCE_ID;
 
 public class HoldingsRecordUpdateOwnershipRequestBuilder extends AbstractBuilder {
@@ -27,7 +27,7 @@ public class HoldingsRecordUpdateOwnershipRequestBuilder extends AbstractBuilder
 
     includeWhenPresent(holdingsRecordUpdateOwnershipRequest, TO_INSTANCE_ID, toInstanceId);
     includeWhenPresent(holdingsRecordUpdateOwnershipRequest, HOLDINGS_RECORD_IDS, holdingsRecordsIds);
-    includeWhenPresent(holdingsRecordUpdateOwnershipRequest, TENANT_ID, tenantId);
+    includeWhenPresent(holdingsRecordUpdateOwnershipRequest, TARGET_TENANT_ID, tenantId);
 
     return holdingsRecordUpdateOwnershipRequest;
   }

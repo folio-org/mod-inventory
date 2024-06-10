@@ -74,6 +74,7 @@ public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
   public static final String TENANT_ID = "test_tenant";
   public static final String CONSORTIA_TENANT_ID = "consortium";
+  public static final String COLLEGE_TENANT_ID = "college";
   public static final UUID ID_FOR_FAILURE = UUID.fromString("fa45a95b-38a3-430b-8f34-548ca005a176");
   public static final UUID ID_FOR_OPTIMISTIC_LOCKING_FAILURE = UUID.fromString("40900409-0409-4444-8888-409000000409");
 

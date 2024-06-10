@@ -44,6 +44,7 @@ public class MoveApi extends AbstractInventoryResource {
   public static final String TO_INSTANCE_ID = "toInstanceId";
   public static final String ITEM_IDS = "itemIds";
   public static final String HOLDINGS_RECORD_IDS = "holdingsRecordIds";
+  public static final String TARGET_TENANT_ID = "targetTenantId";
   public static final String ITEM_STORAGE = "/item-storage/items";
   public static final String ITEMS_PROPERTY = "items";
   public static final String HOLDINGS_RECORDS_PROPERTY = "holdingsRecords";

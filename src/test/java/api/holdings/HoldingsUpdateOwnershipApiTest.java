@@ -35,7 +35,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
-@Ignore
+//@Ignore
 @RunWith(JUnitParamsRunner.class)
 public class HoldingsUpdateOwnershipApiTest extends ApiTests {
   private static final String INSTANCE_ID = "instanceId";
@@ -62,7 +62,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     final UUID createHoldingsRecord2 = createHoldingForInstance(instanceId);
 
     JsonObject holdingsRecordUpdateOwnershipRequestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
-      new JsonArray(List.of(createHoldingsRecord1.toString(), createHoldingsRecord2.toString())), ApiTestSuite.CONSORTIA_TENANT_ID).create();
+      new JsonArray(List.of(createHoldingsRecord1.toString(), createHoldingsRecord2.toString())), ApiTestSuite.COLLEGE_TENANT_ID).create();
 
     Response postHoldingsUpdateOwnershipResponse = updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
@@ -97,7 +97,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Assert.assertNotEquals(createHoldingsRecord1, createHoldingsRecord2);
 
     JsonObject holdingsRecordUpdateOwnershipRequestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
-      new JsonArray(List.of(createHoldingsRecord1.toString(), createHoldingsRecord2.toString())), ApiTestSuite.CONSORTIA_TENANT_ID).create();
+      new JsonArray(List.of(createHoldingsRecord1.toString(), createHoldingsRecord2.toString())), ApiTestSuite.COLLEGE_TENANT_ID).create();
 
     Response postHoldingsUpdateOwnershipResponse = updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
@@ -125,7 +125,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
   public void cannotUpdateHoldingsRecordsOwnershipToUnspecifiedInstance()
     throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
     JsonObject holdingsRecordUpdateOwnershipWithoutToInstanceId = new HoldingsRecordUpdateOwnershipRequestBuilder(null,
-      new JsonArray(List.of(UUID.randomUUID())), ApiTestSuite.CONSORTIA_TENANT_ID).create();
+      new JsonArray(List.of(UUID.randomUUID())), ApiTestSuite.COLLEGE_TENANT_ID).create();
 
     Response postHoldingsUpdateOwnershipResponse = updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipWithoutToInstanceId);
 
@@ -149,7 +149,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
 
     assertThat(postHoldingsUpdateOwnershipResponse, hasValidationError(
-      "tenantId is a required field", "toInstanceId", null
+      "targetTenantId is a required field", "targetTenantId", null
     ));
   }
 
@@ -157,7 +157,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
   public void cannotUpdateUnspecifiedHoldingsRecordsOwnership()
     throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     JsonObject holdingsRecordUpdateOwnershipWithoutHoldingsRecordIds = new HoldingsRecordUpdateOwnershipRequestBuilder(UUID.randomUUID(),
-      new JsonArray(), ApiTestSuite.CONSORTIA_TENANT_ID).create();
+      new JsonArray(), ApiTestSuite.COLLEGE_TENANT_ID).create();
 
     Response postHoldingsUpdateOwnershipResponse = updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipWithoutHoldingsRecordIds);
 
@@ -165,7 +165,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
 
     assertThat(postHoldingsUpdateOwnershipResponse, hasValidationError(
-      "Holdings record ids aren't specified", "holdingsRecordIds", null
+      "holdingsRecordIds is a required field", "holdingsRecordIds", null
     ));
   }
 
@@ -185,7 +185,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     final UUID createHoldingsRecord1 = createHoldingForInstance(instanceId);
 
     JsonObject holdingsRecordUpdateOwnershipWithoutHoldingsRecordIds = new HoldingsRecordUpdateOwnershipRequestBuilder(invalidInstanceId,
-      new JsonArray(List.of(createHoldingsRecord1)), ApiTestSuite.CONSORTIA_TENANT_ID).create();
+      new JsonArray(List.of(createHoldingsRecord1)), ApiTestSuite.COLLEGE_TENANT_ID).create();
 
     Response postHoldingsUpdateOwnershipResponse = updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipWithoutHoldingsRecordIds);
 
@@ -194,6 +194,30 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     assertThat(postHoldingsUpdateOwnershipResponse.getBody(), containsString("errors"));
     assertThat(postHoldingsUpdateOwnershipResponse.getBody(), containsString(invalidInstanceId.toString()));
+  }
+
+  @Test
+  public void cannotUpdateHoldingsRecordOwnershipOfNonSharedInstance()
+    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+    createConsortiumTenant();
+
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+
+    InstanceApiClient.createInstance(okapiClient, instance);
+
+    final UUID createHoldingsRecord1 = createHoldingForInstance(instanceId);
+    final UUID createHoldingsRecord2 = createHoldingForInstance(instanceId);
+
+    JsonObject holdingsRecordUpdateOwnershipRequestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
+      new JsonArray(List.of(createHoldingsRecord1.toString(), createHoldingsRecord2.toString())), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response postHoldingsUpdateOwnershipResponse = updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
+
+    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(422));
+    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+
+    assertThat(postHoldingsUpdateOwnershipResponse.getBody(), containsString(String.format("Instance with id: %s is not shared", instanceId)));
   }
 
   @Test
@@ -208,7 +232,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     final UUID createHoldingsRecord2 = createHoldingForInstance(ID_FOR_FAILURE, instanceId);
 
     JsonObject holdingsRecordUpdateOwnershipRequestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
-      new JsonArray(List.of(createHoldingsRecord1.toString(), createHoldingsRecord2.toString())), ApiTestSuite.CONSORTIA_TENANT_ID).create();
+      new JsonArray(List.of(createHoldingsRecord1.toString(), createHoldingsRecord2.toString())), ApiTestSuite.COLLEGE_TENANT_ID).create();
 
     Response postHoldingsUpdateOwnershipResponse = updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
@@ -256,7 +280,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
       .getId();
 
     JsonObject holdingsRecordUpdateOwnershipRequestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
-      new JsonArray(List.of(createHoldingsRecord1.toString(), createHoldingsRecord2.toString())), ApiTestSuite.CONSORTIA_TENANT_ID).create();
+      new JsonArray(List.of(createHoldingsRecord1.toString(), createHoldingsRecord2.toString())), ApiTestSuite.COLLEGE_TENANT_ID).create();
 
     Response postHoldingsUpdateOwnershipResponse = updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
