@@ -14,7 +14,7 @@ import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECO
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.Record.RecordType.MARC_BIB;
-import static org.folio.rest.jaxrs.model.Snapshot.Status.PROCESSING_IN_PROGRESS;
+import static org.folio.rest.jaxrs.model.Snapshot.Status.PROCESSING_FINISHED;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -117,7 +117,7 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
                                                               Record targetRecord,
                                                               InstanceIngressEvent event,
                                                               String instanceId) {
-    return postSnapshotInSrsAndHandleResponse(event.getId())
+    return postSnapshotInSrsAndHandleResponse(targetRecord.getId())
       .compose(snapshot -> {
         try {
           LOGGER.info("Manipulating fields of a Record from InstanceIngressEvent with id '{}'", event.getId());
@@ -125,9 +125,9 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
           AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
           AdditionalFieldsUtil.move001To035(targetRecord);
           AdditionalFieldsUtil.normalize035(targetRecord);
-          if (event.getEventPayload().getAdditionalProperties().containsKey(
-            LINKED_DATA_ID)) {AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, TAG_035, TAG_035_SUB,
-            LD + event.getEventPayload().getAdditionalProperties().get(LINKED_DATA_ID));
+          if (event.getEventPayload().getAdditionalProperties().containsKey(LINKED_DATA_ID)) {
+            AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, TAG_035, TAG_035_SUB,
+              LD + event.getEventPayload().getAdditionalProperties().get(LINKED_DATA_ID));
           }
 
           LOGGER.info("Mapping a Record from InstanceIngressEvent with id '{}' into an Instance", event.getId());
@@ -207,7 +207,7 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
   private Future<Instance> executeFieldsManipulation(Instance instance, Record srcRecord,
                                                      Map<String, Object> eventProperties) {
     if (eventProperties.containsKey(LINKED_DATA_ID)) {
-      AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, TAG_999, SUBFIELD_L, (String) eventProperties.get(LINKED_DATA_ID));
+      AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, TAG_999, SUBFIELD_L, String.valueOf(eventProperties.get(LINKED_DATA_ID)));
     }
     return super.executeFieldsManipulation(instance, srcRecord);
   }
@@ -238,7 +238,7 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
     var snapshot = new Snapshot()
       .withJobExecutionId(id)
       .withProcessingStartedDate(new Date())
-      .withStatus(PROCESSING_IN_PROGRESS);
+      .withStatus(PROCESSING_FINISHED);
     return super.postSnapshotInSrsAndHandleResponse(context.getOkapiLocation(),
       context.getToken(), snapshot, context.getTenantId());
   }
