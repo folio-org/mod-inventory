@@ -6,11 +6,11 @@ import static io.vertx.core.buffer.impl.BufferImpl.buffer;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_B;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_L;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
-import static org.folio.rest.jaxrs.model.InstanceIngressPayload.SourceType.BIBFRAME;
+import static org.folio.rest.jaxrs.model.InstanceIngressPayload.SourceType.LINKED_DATA;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -119,7 +119,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       .withId(UUID.randomUUID().toString())
       .withEventPayload(new InstanceIngressPayload()
         .withSourceRecordObject("{}")
-        .withSourceType(BIBFRAME)
+        .withSourceType(LINKED_DATA)
       );
     var expectedMessage = "idStorageService failure";
     doReturn(failedFuture(expectedMessage)).when(idStorageService).store(anyString(), anyString(), anyString());
@@ -139,7 +139,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       .withId(UUID.randomUUID().toString())
       .withEventPayload(new InstanceIngressPayload()
         .withSourceRecordObject("{}")
-        .withSourceType(BIBFRAME)
+        .withSourceType(LINKED_DATA)
       );
     doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
     doReturn(succeededFuture(Optional.empty())).when(mappingMetadataCache)
@@ -161,7 +161,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       .withId(UUID.randomUUID().toString())
       .withEventPayload(new InstanceIngressPayload()
         .withSourceRecordObject("{}")
-        .withSourceType(BIBFRAME)
+        .withSourceType(LINKED_DATA)
       );
     doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
     var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
@@ -190,7 +190,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       .withId(UUID.randomUUID().toString())
       .withEventPayload(new InstanceIngressPayload()
         .withSourceRecordObject("{}")
-        .withSourceType(BIBFRAME)
+        .withSourceType(LINKED_DATA)
       );
     doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
     var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
@@ -221,7 +221,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       .withId(UUID.randomUUID().toString())
       .withEventPayload(new InstanceIngressPayload()
         .withSourceRecordObject(TestUtil.readFileFromPath(BIB_RECORD_PATH))
-        .withSourceType(BIBFRAME)
+        .withSourceType(LINKED_DATA)
       );
     doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
     var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
@@ -255,7 +255,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       .withId(UUID.randomUUID().toString())
       .withEventPayload(new InstanceIngressPayload()
         .withSourceRecordObject(TestUtil.readFileFromPath(BIB_RECORD_PATH))
-        .withSourceType(BIBFRAME)
+        .withSourceType(LINKED_DATA)
       );
     doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
     var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
@@ -289,7 +289,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       .withId(UUID.randomUUID().toString())
       .withEventPayload(new InstanceIngressPayload()
         .withSourceRecordObject(TestUtil.readFileFromPath(BIB_RECORD_PATH))
-        .withSourceType(BIBFRAME)
+        .withSourceType(LINKED_DATA)
       );
     doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
     var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
@@ -323,14 +323,14 @@ public class CreateInstanceIngressEventHandlerUnitTest {
   @Test
   public void shouldReturnSucceededFuture_ifProcessFinishedCorrectly() throws IOException, ExecutionException, InterruptedException {
     // given
-    var bibframeId = "someBibframeId";
+    var linkedDataIdId = "someLinkedDataIdId";
     var event = new InstanceIngressEvent()
       .withId(UUID.randomUUID().toString())
       .withEventPayload(new InstanceIngressPayload()
         .withSourceRecordObject(TestUtil.readFileFromPath(BIB_RECORD_PATH))
-        .withSourceType(BIBFRAME)
+        .withSourceType(LINKED_DATA)
         .withSourceRecordIdentifier(UUID.randomUUID().toString())
-        .withAdditionalProperty("bibframeId", bibframeId)
+        .withAdditionalProperty("linkedDataId", linkedDataIdId)
       );
     doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
     var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
@@ -359,17 +359,17 @@ public class CreateInstanceIngressEventHandlerUnitTest {
 
     var instance = future.get();
     assertThat(instance.getId()).isEqualTo(event.getEventPayload().getSourceRecordIdentifier());
-    assertThat(instance.getSource()).isEqualTo("BIBFRAME");
-    assertThat(instance.getIdentifiers().stream().anyMatch(i -> i.value.equals("(bibframe) " + bibframeId))).isTrue();
+    assertThat(instance.getSource()).isEqualTo("LINKED_DATA");
+    assertThat(instance.getIdentifiers().stream().anyMatch(i -> i.value.equals("(ld) " + linkedDataIdId))).isTrue();
 
     var recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
     var recordSentToSRS = recordCaptor.getValue();
     assertThat(recordSentToSRS.getId()).isNotNull();
     assertThat(recordSentToSRS.getId()).isNotEqualTo(event.getEventPayload().getSourceRecordIdentifier());
-    assertThat(recordSentToSRS.getId()).doesNotContain(bibframeId);
+    assertThat(recordSentToSRS.getId()).doesNotContain(linkedDataIdId);
     assertThat(recordSentToSRS.getRecordType()).isEqualTo(Record.RecordType.MARC_BIB);
-    assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, SUBFIELD_B)).hasValue(bibframeId);
     assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, SUBFIELD_I)).hasValue(instance.getId());
+    assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, SUBFIELD_L)).hasValue(linkedDataIdId);
   }
 }

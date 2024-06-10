@@ -13,7 +13,7 @@
     },
     "sourceType": {
       "type": "string",
-      "enum": ["BIBFRAME", "MARC", "FOLIO"],
+      "enum": ["FOLIO", "LINKED_DATA", "MARC"],
       "description": "Source type"
     }
   },
