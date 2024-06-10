@@ -14,15 +14,17 @@ import org.folio.inventory.support.KafkaConsumerVerticle;
 public class QuickMarcConsumerVerticle extends KafkaConsumerVerticle {
 
   private static final Logger LOGGER = LogManager.getLogger(QuickMarcConsumerVerticle.class);
+  private static final String LOAD_LIMIT_PROPERTY = "QuickMarcConsumer";
+  private static final String MAX_DISTRIBUTION_PROPERTY = "QuickMarcConsumerVerticle";
 
   @Override
   public void start(Promise<Void> startPromise) {
     var precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(getHttpClient()));
     var holdingsCollectionService = new HoldingsCollectionService();
-    var handler = new QuickMarcKafkaHandler(vertx, getStorage(), getMaxDistributionNumber(),
+    var handler = new QuickMarcKafkaHandler(vertx, getStorage(), getMaxDistributionNumber(MAX_DISTRIBUTION_PROPERTY),
         getKafkaConfig(), precedingSucceedingTitlesHelper, holdingsCollectionService);
 
-    var consumer = createConsumer(QMEventTypes.QM_SRS_MARC_RECORD_UPDATED.name());
+    var consumer = createConsumer(QMEventTypes.QM_SRS_MARC_RECORD_UPDATED.name(), LOAD_LIMIT_PROPERTY);
 
     consumer.start(handler, ConsumerWrapperUtil.constructModuleName())
       .map(consumer)

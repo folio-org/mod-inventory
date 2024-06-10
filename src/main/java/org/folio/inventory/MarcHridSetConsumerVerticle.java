@@ -15,14 +15,15 @@ import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.support.KafkaConsumerVerticle;
 
-public class MarcBibInstanceHridSetConsumerVerticle extends KafkaConsumerVerticle {
+public class MarcHridSetConsumerVerticle extends KafkaConsumerVerticle {
 
-  private static final Logger LOGGER = LogManager.getLogger(MarcBibInstanceHridSetConsumerVerticle.class);
+  private static final Logger LOGGER = LogManager.getLogger(MarcHridSetConsumerVerticle.class);
+  private static final String BASE_PROPERTY = "MarcBibInstanceHridSetConsumer";
 
   @Override
   public void start(Promise<Void> startPromise) {
-    var marcBibConsumerWrapper = createConsumer(DI_SRS_MARC_BIB_INSTANCE_HRID_SET.value());
-    var marcHoldingsConsumerWrapper = createConsumer(DI_SRS_MARC_HOLDINGS_HOLDING_HRID_SET.value());
+    var marcBibConsumerWrapper = createConsumer(DI_SRS_MARC_BIB_INSTANCE_HRID_SET.value(), BASE_PROPERTY);
+    var marcHoldingsConsumerWrapper = createConsumer(DI_SRS_MARC_HOLDINGS_HOLDING_HRID_SET.value(), BASE_PROPERTY);
 
     var holdingsCollectionService = new HoldingsCollectionService();
     var instanceUpdateDelegate = new InstanceUpdateDelegate(getStorage());

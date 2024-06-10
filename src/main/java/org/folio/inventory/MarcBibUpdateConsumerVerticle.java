@@ -12,15 +12,16 @@ import org.folio.inventory.support.KafkaConsumerVerticle;
 public class MarcBibUpdateConsumerVerticle extends KafkaConsumerVerticle {
   private static final Logger LOGGER = LogManager.getLogger(MarcBibUpdateConsumerVerticle.class);
   private static final String SRS_MARC_BIB_EVENT = "srs.marc-bib";
+  private static final String BASE_PROPERTY = "MarcBibUpdateConsumer";
 
   @Override
   public void start(Promise<Void> startPromise) {
     var instanceUpdateDelegate = new InstanceUpdateDelegate(getStorage());
 
-    var marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertx,
-      getMaxDistributionNumber(), getKafkaConfig(), instanceUpdateDelegate, getMappingMetadataCache());
+    var marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertx, getMaxDistributionNumber(BASE_PROPERTY),
+      getKafkaConfig(), instanceUpdateDelegate, getMappingMetadataCache());
 
-    var marcBibUpdateConsumerWrapper = createConsumer(SRS_MARC_BIB_EVENT);
+    var marcBibUpdateConsumerWrapper = createConsumer(SRS_MARC_BIB_EVENT, BASE_PROPERTY);
 
     marcBibUpdateConsumerWrapper.start(marcBibUpdateKafkaHandler, constructModuleName())
       .onFailure(startPromise::fail)

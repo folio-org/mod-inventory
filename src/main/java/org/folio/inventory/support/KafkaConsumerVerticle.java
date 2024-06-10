@@ -16,7 +16,6 @@ import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
-import io.vertx.core.Verticle;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import java.util.ArrayList;
@@ -58,16 +57,16 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
 
   protected abstract Logger getLogger();
 
-  protected KafkaConsumerWrapper<String, String> createConsumer(String eventType) {
-    return createConsumer(eventType, true);
+  protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, String loadLimitPropertyKey) {
+    return createConsumer(eventType, loadLimitPropertyKey, true);
   }
 
-  protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, boolean namespacedTopic) {
+  protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, String loadLimitPropertyKey, boolean namespacedTopic) {
     var kafkaConsumerWrapper = KafkaConsumerWrapper.<String, String>builder()
       .context(context)
       .vertx(vertx)
       .kafkaConfig(getKafkaConfig())
-      .loadLimit(getLoadLimit())
+      .loadLimit(getLoadLimit(loadLimitPropertyKey))
       .globalLoadSensor(new GlobalLoadSensor())
       .subscriptionDefinition(getSubscriptionDefinition(getKafkaConfig().getEnvId(), eventType, namespacedTopic))
       .build();
@@ -124,8 +123,8 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
     return cacheExpirationTime;
   }
 
-  protected int getMaxDistributionNumber() {
-    return getConsumerProperty(MAX_DISTRIBUTION_NUMBER_TEMPLATE, MAX_DISTRIBUTION_NUMBER_DEFAULT);
+  protected int getMaxDistributionNumber(String property) {
+    return getConsumerProperty(MAX_DISTRIBUTION_NUMBER_TEMPLATE, property, MAX_DISTRIBUTION_NUMBER_DEFAULT);
   }
 
   private JsonObject getConfig() {
@@ -152,14 +151,12 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
     return join("\\.", env, "\\w{1,}", eventType);
   }
 
-  private int getLoadLimit() {
-    return getConsumerProperty(LOAD_LIMIT_TEMPLATE, LOAD_LIMIT_DEFAULT);
+  private int getLoadLimit(String propertyKey) {
+    return getConsumerProperty(LOAD_LIMIT_TEMPLATE, propertyKey, LOAD_LIMIT_DEFAULT);
   }
 
-  private int getConsumerProperty(String nameTemplate, String defaultValue) {
-    var consumerClassName = getClass().getSimpleName();
-    var cleanConsumerName = consumerClassName.substring(0, consumerClassName.indexOf(Verticle.class.getSimpleName()));
-    return parseInt(getProperty(format(nameTemplate, cleanConsumerName), defaultValue));
+  private int getConsumerProperty(String nameTemplate, String propertyKey, String defaultValue) {
+    return parseInt(getProperty(format(nameTemplate, propertyKey), defaultValue));
   }
 
 }

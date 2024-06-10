@@ -73,17 +73,19 @@ public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
     DI_SRS_MARC_HOLDINGS_RECORD_NOT_MATCHED,
     DI_PENDING_ORDER_CREATED
   );
+  private static final String LOAD_LIMIT_PROPERTY = "DataImportConsumer";
+  private static final String MAX_DISTRIBUTION_PROPERTY = "DataImportConsumerVerticle";
 
   @Override
   public void start(Promise<Void> startPromise) {
-    EventManager.registerKafkaEventPublisher(getKafkaConfig(), vertx, getMaxDistributionNumber());
+    EventManager.registerKafkaEventPublisher(getKafkaConfig(), vertx, getMaxDistributionNumber(MAX_DISTRIBUTION_PROPERTY));
     var consortiumDataCache = new ConsortiumDataCache(vertx, getHttpClient());
 
     var dataImportKafkaHandler = new DataImportKafkaHandler(vertx, getStorage(), getHttpClient(), getProfileSnapshotCache(),
       getKafkaConfig(), getMappingMetadataCache(), consortiumDataCache);
 
     var futures = EVENT_TYPES.stream()
-      .map(type -> super.createConsumer(type.value()))
+      .map(type -> super.createConsumer(type.value(), LOAD_LIMIT_PROPERTY))
       .map(consumerWrapper -> consumerWrapper.start(dataImportKafkaHandler, ConsumerWrapperUtil.constructModuleName())
         .map(consumerWrapper)
       )
