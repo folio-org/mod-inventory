@@ -7,8 +7,8 @@ import io.vertx.core.json.JsonObject;
 import java.util.UUID;
 
 import static org.folio.inventory.resources.MoveApi.HOLDINGS_RECORD_IDS;
-import static org.folio.inventory.resources.MoveApi.TARGET_TENANT_ID;
 import static org.folio.inventory.resources.MoveApi.TO_INSTANCE_ID;
+import static org.folio.inventory.support.MoveApiUtil.TARGET_TENANT_ID;
 
 public class HoldingsRecordUpdateOwnershipRequestBuilder extends AbstractBuilder {
 

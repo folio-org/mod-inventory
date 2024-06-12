@@ -24,7 +24,7 @@ public class FakeStorageModuleBuilder {
   private final List<RecordPreProcessor> recordPreProcessors;
 
   FakeStorageModuleBuilder() {
-    this(null, null, List.of(ApiTestSuite.TENANT_ID, ApiTestSuite.CONSORTIA_TENANT_ID), new ArrayList<>(), true, "",
+    this(null, null, List.of(ApiTestSuite.TENANT_ID, ApiTestSuite.CONSORTIA_TENANT_ID, ApiTestSuite.COLLEGE_TENANT_ID), new ArrayList<>(), true, "",
       new ArrayList<>(), new HashMap<>(), Collections.emptyList());
   }
 
