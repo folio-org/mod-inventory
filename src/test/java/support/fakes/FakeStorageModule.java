@@ -325,6 +325,7 @@ class FakeStorageModule extends AbstractVerticle {
     var id = routingContext.request().getParam("id");
     var resourcesForTenant = getResourcesForTenant(new WebContext(routingContext));
     if (resourcesForTenant.containsKey(id)) {
+      resourcesForTenant.get(id).getJsonObject("additionalInfo").put("suppressDiscovery", true);
       JsonResponse.success(routingContext.response(), new JsonObject());
     } else {
       ClientErrorResponse.notFound(routingContext.response());
