@@ -12,12 +12,16 @@ import org.folio.HoldingsUpdateOwnership;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.consortium.services.ConsortiumService;
+import org.folio.inventory.domain.AsynchronousCollection;
 import org.folio.inventory.domain.HoldingsRecordCollection;
+import org.folio.inventory.domain.items.Item;
+import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.exceptions.BadRequestException;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
+import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.MoveApiUtil;
 
 import java.lang.invoke.MethodHandles;
@@ -31,6 +35,8 @@ import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.MoveApiUtil.createHoldingsRecordsFetchClient;
 import static org.folio.inventory.support.MoveApiUtil.createHoldingsStorageClient;
 import static org.folio.inventory.support.MoveApiUtil.createHttpClient;
+import static org.folio.inventory.support.MoveApiUtil.createItemStorageClient;
+import static org.folio.inventory.support.MoveApiUtil.createItemsFetchClient;
 import static org.folio.inventory.support.MoveApiUtil.respond;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 import static org.folio.inventory.validation.UpdateOwnershipValidator.updateOwnershipHasRequiredFields;
@@ -50,12 +56,12 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   @Override
   public void register(Router router) {
     router.post("/inventory/items/update-ownership")
-      .handler(this::updateItemsOwnership);
+      .handler(this::processUpdateItemsOwnership);
     router.post("/inventory/holdings/update-ownership")
-      .handler(this::updateHoldingsOwnership);
+      .handler(this::processUpdateHoldingsOwnership);
   }
 
-  private void updateHoldingsOwnership(RoutingContext routingContext) {
+  private void processUpdateHoldingsOwnership(RoutingContext routingContext) {
     try {
       final var context = new WebContext(routingContext);
       final var updateOwnershipRequest = routingContext.body().asJsonObject();
@@ -79,7 +85,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
               .thenCompose(instance -> {
                 if (instance != null) {
                   if (instance.getSource().equals(CONSORTIUM_MARC.getValue()) || instance.getSource().equals(CONSORTIUM_FOLIO.getValue())) {
-                    return updateOwnershipOfHoldingsRecords(holdingsUpdateOwnership, routingContext, context);
+                    Context targetTenantContext = constructContext(holdingsUpdateOwnership.getTargetTenantId(), context.getToken(), context.getOkapiLocation());
+                    return updateOwnershipOfHoldingsRecords(holdingsUpdateOwnership, routingContext, context, targetTenantContext);
                   } else {
                     String instanceNotSharedErrorMessage = String.format(INSTANCE_NOT_SHARED, holdingsUpdateOwnership.getToInstanceId());
                     LOGGER.warn("updateHoldingsOwnership:: " + instanceNotSharedErrorMessage);
@@ -94,7 +101,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           }
           String notInConsortiaErrorMessage = String.format(TENANT_NOT_IN_CONSORTIA, context.getTenantId());
           LOGGER.warn("updateHoldingsOwnership:: " + notInConsortiaErrorMessage, context);
-          return CompletableFuture.failedFuture(new BadRequestException(notInConsortiaErrorMessage)); // NEED TEST
+          return CompletableFuture.failedFuture(new BadRequestException(notInConsortiaErrorMessage));
         })
         .thenAccept(updateHoldingsRecords -> respond(routingContext, holdingsUpdateOwnership.getHoldingsRecordIds(), updateHoldingsRecords))
         .exceptionally(throwable -> {
@@ -109,15 +116,13 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     }
   }
 
-  private void updateItemsOwnership(RoutingContext routingContext) {
-    // should be implemented in MODINV-1031
+  private void processUpdateItemsOwnership(RoutingContext routingContext) {
+    // should be implemented in MODINV-955
   }
 
   private CompletableFuture<List<String>> updateOwnershipOfHoldingsRecords(HoldingsUpdateOwnership holdingsUpdateOwnership, RoutingContext routingContext,
-                                                                           WebContext context) {
+                                                                           WebContext context, Context targetTenantContext) {
     try {
-      Context targetTenantContext = constructContext(holdingsUpdateOwnership.getTargetTenantId(), context.getToken(), context.getOkapiLocation());
-
       CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(createHttpClient(client, routingContext, context),
         context);
       MultipleRecordsFetchClient holdingsRecordFetchClient = createHoldingsRecordsFetchClient(holdingsStorageClient);
@@ -126,20 +131,58 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       HoldingsRecordCollection targetTenantHoldingsRecordCollection = storage.getHoldingsRecordCollection(targetTenantContext);
 
       return holdingsRecordFetchClient.find(holdingsUpdateOwnership.getHoldingsRecordIds(), MoveApiUtil::fetchByIdCql)
-        .thenCompose(jsons ->
-          createHoldings(jsons, holdingsUpdateOwnership.getToInstanceId(), targetTenantHoldingsRecordCollection)
-            .thenCompose(createdHoldings -> {
-              List<String> createdHoldingsIds = createdHoldings.stream().map(HoldingsRecord::getId).toList();
-              return deleteHoldings(createdHoldingsIds, sourceTenantHoldingsRecordCollection);
-            }));
+        .thenCompose(jsons -> createHoldings(jsons, holdingsUpdateOwnership.getToInstanceId(), targetTenantHoldingsRecordCollection))
+        .thenApply(createdHoldings -> createdHoldings.stream().map(HoldingsRecord::getId).toList())
+        .thenCompose(createdHoldingsIds ->
+          transferAttachedItems(createdHoldingsIds, routingContext, context, targetTenantContext)
+            .thenCompose(items -> deleteCollectionItems(createdHoldingsIds, sourceTenantHoldingsRecordCollection)));
     } catch (Exception e) {
+      LOGGER.warn("updateOwnershipOfHoldingsRecords:: Error during update ownership of holdings {}, to tenant: {}",
+        holdingsUpdateOwnership.getHoldingsRecordIds(), holdingsUpdateOwnership.getTargetTenantId(), e);
       return CompletableFuture.failedFuture(e);
     }
+  }
+
+  private CompletableFuture<List<String>> transferAttachedItems(List<String> holdingsRecordIds, RoutingContext routingContext,
+                                                              WebContext context, Context targetTenantContext) {
+    try {
+      CollectionResourceClient itemsStorageClient = createItemStorageClient(createHttpClient(client, routingContext, context), context);
+      MultipleRecordsFetchClient itemsFetchClient = createItemsFetchClient(itemsStorageClient);
+
+      ItemCollection sourceTenantItemCollection = storage.getItemCollection(context);
+      ItemCollection targetTenantItemCollection = storage.getItemCollection(targetTenantContext);
+
+      return itemsFetchClient.find(holdingsRecordIds, MoveApiUtil::fetchByHoldingsRecordIdCql)
+        .thenCompose(jsons -> createItems(jsons, targetTenantItemCollection))
+        .thenApply(items -> items.stream().map(Item::getId).toList())
+        .thenCompose(itemIds -> deleteCollectionItems(itemIds, sourceTenantItemCollection));
+    } catch (Exception e) {
+      LOGGER.warn("transferAttachedItems:: Error during transfer attached items for holdings {}, to tenant: {}",
+        holdingsRecordIds, targetTenantContext.getTenantId(), e);
+      return CompletableFuture.failedFuture(e);
+    }
+  }
+
+  private CompletableFuture<List<Item>> createItems(List<JsonObject> jsons, ItemCollection itemCollection) {
+    List<Item> itemRecordsToUpdateOwnership = jsons.stream()
+      .map(ItemUtil::fromStoredItemRepresentation)
+      .toList();
+
+    List<CompletableFuture<Item>> createFutures = itemRecordsToUpdateOwnership.stream()
+      .map(itemCollection::add)
+      .toList();
+
+    return CompletableFuture.allOf(createFutures.toArray(new CompletableFuture[0]))
+      .handle((vVoid, throwable) -> createFutures.stream()
+        .filter(future -> !future.isCompletedExceptionally())
+        .map(CompletableFuture::join)
+        .toList());
   }
 
   private CompletableFuture<List<HoldingsRecord>> createHoldings(List<JsonObject> jsons, String instanceId,
                                                                  HoldingsRecordCollection holdingsRecordCollection) {
     List<HoldingsRecord> holdingsRecordsToUpdateOwnership = jsons.stream()
+      .peek(MoveApiUtil::removeExtraRedundantFields)
       .map(json -> json.mapTo(HoldingsRecord.class))
       .filter(holdingsRecord -> holdingsRecord.getInstanceId().equals(instanceId))
       .toList();
@@ -155,11 +198,11 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         .toList());
   }
 
-  private CompletableFuture<List<String>> deleteHoldings(List<String> holdingsRecordIds, HoldingsRecordCollection holdingsRecordCollection) {
-    List<CompletableFuture<String>> deleteFutures = holdingsRecordIds.stream()
-      .map(holdingsRecordId -> {
+  private CompletableFuture<List<String>> deleteCollectionItems(List<String> collectionItemIds, AsynchronousCollection<?> collection) {
+    List<CompletableFuture<String>> deleteFutures = collectionItemIds.stream()
+      .map(collectionItemId -> {
         Promise<String> promise = Promise.promise();
-        holdingsRecordCollection.delete(holdingsRecordId, success -> promise.complete(holdingsRecordId), failure -> promise.fail(failure.getReason()));
+        collection.delete(collectionItemId, success -> promise.complete(collectionItemId), failure -> promise.fail(failure.getReason()));
         return promise.future().toCompletionStage().toCompletableFuture();
       }).toList();
 
