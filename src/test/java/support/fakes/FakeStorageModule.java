@@ -82,6 +82,8 @@ class FakeStorageModule extends AbstractVerticle {
     router.route(pathTree).handler(this::emulateFailureIfNeeded);
     router.route(pathTree).handler(this::checkTokenHeader);
 
+    router.put(rootPath + "/:id/suppress-from-discovery").handler(this::successSuppressFromDiscovery);
+
     router.post(rootPath + "/retrieve").handler(this::retrieveMany);
     router.post(rootPath).handler(this::checkRequiredProperties);
     router.post(rootPath).handler(this::checkUniqueProperties);
@@ -317,6 +319,16 @@ class FakeStorageModule extends AbstractVerticle {
     }
 
     SuccessResponse.noContent(routingContext.response());
+  }
+
+  private void successSuppressFromDiscovery(RoutingContext routingContext) {
+    var id = routingContext.request().getParam("id");
+    var resourcesForTenant = getResourcesForTenant(new WebContext(routingContext));
+    if (resourcesForTenant.containsKey(id)) {
+      JsonResponse.success(routingContext.response(), new JsonObject());
+    } else {
+      ClientErrorResponse.notFound(routingContext.response());
+    }
   }
 
   private void delete(RoutingContext routingContext) {

@@ -20,6 +20,7 @@ public abstract class ApiTests {
   protected static OkapiHttpClient okapiClient;
   protected static OkapiHttpClient consortiumOkapiClient;
   protected final ResourceClient holdingsStorageClient;
+  protected final ResourceClient holdingsSourceStorageClient;
   protected final ResourceClient itemsStorageClient;
   protected final ResourceClient itemsClient;
   protected final ResourceClient instancesClient;
@@ -40,6 +41,7 @@ public abstract class ApiTests {
 
   public ApiTests() {
     holdingsStorageClient = ResourceClient.forHoldingsStorage(okapiClient);
+    holdingsSourceStorageClient = ResourceClient.forHoldingSourceRecord(okapiClient);
     itemsStorageClient = ResourceClient.forItemsStorage(okapiClient);
     itemsClient = ResourceClient.forItems(okapiClient);
     instancesClient = ResourceClient.forInstances(okapiClient);

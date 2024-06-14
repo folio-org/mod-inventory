@@ -13,6 +13,7 @@ import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
@@ -147,7 +148,7 @@ public class Holdings {
                               RoutingContext rContext, WebContext wContext) {
     holdingsRecordCollection.update(holdingsRecord,
       v -> {
-        if (holdingsRecord.getDiscoverySuppress()) {
+        if (Optional.ofNullable(holdingsRecord.getDiscoverySuppress()).orElse(false)) {
           recordsSourceCollection.findById(holdingsRecord.getSourceId()).thenAccept(source ->
           {
             if (MARC.equals(source.getName())) {

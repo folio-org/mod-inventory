@@ -19,6 +19,7 @@ import java.util.concurrent.TimeoutException;
 import api.support.ApiRoot;
 import api.support.ApiTests;
 import api.support.builders.HoldingRequestBuilder;
+import api.support.builders.SourceRecordRequestBuilder;
 import api.support.fixtures.InstanceRequestExamples;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonArray;
@@ -73,6 +74,33 @@ public class HoldingsApiExamples extends ApiTests {
 
     assertThat(updatedHoldings.getString("id"), is(newHoldings.getString("id")));
     assertThat(updatedHoldings.getString("permanentLocationId"), is("fcd64ce1-6995-48f0-840e-89ffa2288371"));
+  }
+
+  @Test
+  public void canSuppressFromDiscoveryOnUpdateForMarcRecord() throws Exception {
+    var instanceId = instancesClient.create(InstanceRequestExamples.smallAngryPlanet()).getId();
+    var newHoldings = holdingsStorageClient.create(new HoldingRequestBuilder()
+        .forInstance(instanceId)
+        .withMarcSource())
+      .getJson();
+
+    holdingsSourceStorageClient.create(new HoldingRequestBuilder().createMarcHoldingsSource());
+    sourceRecordStorageClient.create(new SourceRecordRequestBuilder(newHoldings.getString("id"), true));
+    var updateHoldingsRequest = newHoldings.copy()
+      .put("discoverySuppress", true);
+
+    var putResponse = updateHoldings(updateHoldingsRequest);
+
+    assertThat(putResponse.getStatusCode(), is(NO_CONTENT.code()));
+
+    var getResponse = holdingsStorageClient.getById(getId(newHoldings));
+
+    assertThat(getResponse.getStatusCode(), is(OK.code()));
+
+    var updatedHoldings = getResponse.getJson();
+
+    assertThat(updatedHoldings.getString("id"), is(newHoldings.getString("id")));
+    assertThat(updatedHoldings.getBoolean("discoverySuppress"), is(Boolean.TRUE));
   }
 
   @Test
