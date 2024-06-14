@@ -9,10 +9,10 @@ public class SourceRecordRequestBuilder extends AbstractBuilder {
   private final String recordType;
   private final JsonObject additionalInfo;
 
-  public SourceRecordRequestBuilder(String id, boolean discoverySuppress) {
+  public SourceRecordRequestBuilder(String id) {
     this.id = id;
     this.recordType = MARC_TYPE;
-    this.additionalInfo = new JsonObject().put("suppressDiscovery", discoverySuppress);
+    this.additionalInfo = new JsonObject().put("suppressDiscovery", false);
   }
 
   @Override

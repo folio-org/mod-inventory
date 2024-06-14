@@ -85,7 +85,7 @@ public class HoldingsApiExamples extends ApiTests {
       .getJson();
 
     holdingsSourceStorageClient.create(new HoldingRequestBuilder().createMarcHoldingsSource());
-    sourceRecordStorageClient.create(new SourceRecordRequestBuilder(newHoldings.getString("id"), true));
+    sourceRecordStorageClient.create(new SourceRecordRequestBuilder(newHoldings.getString("id")));
     var updateHoldingsRequest = newHoldings.copy()
       .put("discoverySuppress", true);
 
@@ -94,13 +94,46 @@ public class HoldingsApiExamples extends ApiTests {
     assertThat(putResponse.getStatusCode(), is(NO_CONTENT.code()));
 
     var getResponse = holdingsStorageClient.getById(getId(newHoldings));
+    var getRecordResponse = sourceRecordStorageClient.getById(UUID.fromString(newHoldings.getString(("id"))));
 
+    assertThat(getResponse.getStatusCode(), is(OK.code()));
     assertThat(getResponse.getStatusCode(), is(OK.code()));
 
     var updatedHoldings = getResponse.getJson();
+    var updatedRecord = getRecordResponse.getJson();
 
     assertThat(updatedHoldings.getString("id"), is(newHoldings.getString("id")));
     assertThat(updatedHoldings.getBoolean("discoverySuppress"), is(Boolean.TRUE));
+    assertThat(updatedRecord.getJsonObject("additionalInfo").getBoolean("suppressDiscovery"), is(Boolean.TRUE));
+  }
+
+  @Test
+  public void cannotSuppressFromDiscoveryForSourceOnUpdateForFolioRecord() throws Exception {
+    var instanceId = instancesClient.create(InstanceRequestExamples.smallAngryPlanet()).getId();
+    var newHoldings = holdingsStorageClient.create(new HoldingRequestBuilder().forInstance(instanceId))
+      .getJson();
+
+    holdingsSourceStorageClient.create(new HoldingRequestBuilder().createFolioHoldingsSource());
+    sourceRecordStorageClient.create(new SourceRecordRequestBuilder(newHoldings.getString("id")));
+    var updateHoldingsRequest = newHoldings.copy()
+      .put("discoverySuppress", true);
+
+    var putResponse = updateHoldings(updateHoldingsRequest);
+
+    assertThat(putResponse.getStatusCode(), is(NO_CONTENT.code()));
+
+    var getResponse = holdingsStorageClient.getById(getId(newHoldings));
+    var getRecordResponse = sourceRecordStorageClient.getById(UUID.fromString(newHoldings.getString(("id"))));
+
+    assertThat(getResponse.getStatusCode(), is(OK.code()));
+    assertThat(getResponse.getStatusCode(), is(OK.code()));
+
+    var updatedHoldings = getResponse.getJson();
+    var updatedRecord = getRecordResponse.getJson();
+
+    assertThat(updatedHoldings.getString("id"), is(newHoldings.getString("id")));
+    assertThat(updatedHoldings.getBoolean("discoverySuppress"), is(Boolean.TRUE));
+    assertThat(updatedRecord.getJsonObject("additionalInfo").getBoolean("suppressDiscovery"), is(Boolean.FALSE));
   }
 
   @Test
