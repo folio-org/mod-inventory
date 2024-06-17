@@ -6,7 +6,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import static org.folio.inventory.support.CompletableFutures.failedFuture;
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
-import static org.folio.inventory.support.http.server.ServerErrorResponse.*;
+import static org.folio.inventory.support.http.server.ServerErrorResponse.internalError;
 import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
 
 import java.lang.invoke.MethodHandles;
