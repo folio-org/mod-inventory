@@ -31,7 +31,6 @@ import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.processing.exceptions.EventProcessingException;
-import org.folio.rest.jaxrs.model.EventMetadata;
 import org.folio.rest.jaxrs.model.InstanceIngressEvent;
 
 public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, String> {
@@ -69,8 +68,7 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
 
   private static String getTenantId(InstanceIngressEvent event,
                                     Map<String, String> kafkaHeaders) {
-    return Optional.ofNullable(event.getEventMetadata())
-      .map(EventMetadata::getTenantId)
+    return Optional.ofNullable(event.getTenant())
       .orElseGet(() -> kafkaHeaders.get(OKAPI_TENANT_HEADER));
   }
 

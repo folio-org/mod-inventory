@@ -155,35 +155,6 @@ public class CreateInstanceIngressEventHandlerUnitTest {
   }
 
   @Test
-  public void shouldReturnFailedFuture_ifSourceStorageSnapshotsClientReturnsError() throws IOException {
-    // given
-    var event = new InstanceIngressEvent()
-      .withId(UUID.randomUUID().toString())
-      .withEventPayload(new InstanceIngressPayload()
-        .withSourceRecordObject("{}")
-        .withSourceType(LINKED_DATA)
-      );
-    doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
-    var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
-    doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
-      .withMappingRules(mappingRules.encode())
-      .withMappingParams(Json.encode(new MappingParameters())))))
-      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
-    var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
-    doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
-
-    var expectedMessage = "Failed to create snapshot in SRS, snapshot id: ";
-
-    // when
-    var future = handler.handle(event);
-
-    // then
-    var exception = Assert.assertThrows(ExecutionException.class, future::get);
-    assertThat(exception.getCause().getMessage()).startsWith(expectedMessage);
-  }
-
-  @Test
   public void shouldReturnFailedFuture_ifInstanceValidationFails() throws IOException {
     // given
     var event = new InstanceIngressEvent()
@@ -271,7 +242,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       sucessHandler.accept(new Success<>(i.getArgument(0)));
       return null;
     }).when(instanceCollection).add(any(), any(), any());
-    var expectedMessage = "Some failure";
+    var expectedMessage = "CreatePrecedingSucceedingTitles failure";
     doReturn(failedFuture(expectedMessage)).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
 
     // when
@@ -280,6 +251,42 @@ public class CreateInstanceIngressEventHandlerUnitTest {
     // then
     var exception = Assert.assertThrows(ExecutionException.class, future::get);
     assertThat(exception.getCause().getMessage()).isEqualTo(expectedMessage);
+  }
+
+  @Test
+  public void shouldReturnFailedFuture_ifSourceStorageSnapshotsClientReturnsError() throws IOException {
+    // given
+    var event = new InstanceIngressEvent()
+      .withId(UUID.randomUUID().toString())
+      .withEventPayload(new InstanceIngressPayload()
+        .withSourceRecordObject(TestUtil.readFileFromPath(BIB_RECORD_PATH))
+        .withSourceType(LINKED_DATA)
+      );
+    doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
+    var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
+    doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
+      .withMappingRules(mappingRules.encode())
+      .withMappingParams(Json.encode(new MappingParameters())))))
+      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doAnswer(i -> {
+      Consumer<Success<Instance>> sucessHandler = i.getArgument(1);
+      sucessHandler.accept(new Success<>(i.getArgument(0)));
+      return null;
+    }).when(instanceCollection).add(any(), any(), any());
+    doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
+    doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
+
+    var expectedMessage = "Failed to create snapshot in SRS, snapshot id: ";
+
+    // when
+    var future = handler.handle(event);
+
+    // then
+    var exception = Assert.assertThrows(ExecutionException.class, future::get);
+    assertThat(exception.getCause().getMessage()).startsWith(expectedMessage);
   }
 
   @Test

@@ -14,15 +14,11 @@
       "enum": ["CREATE_INSTANCE", "UPDATE_INSTANCE"],
       "description": "Instance ingress event type"
     },
-    "eventMetadata": {
+    "InstanceIngressEventMetadata": {
       "description": "Event metadata",
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "tenantId": {
-          "description": "Tenant id",
-          "type": "string"
-        },
         "eventTTL": {
           "description": "Time-to-live (TTL) for event in minutes",
           "type": "integer"
@@ -69,7 +65,6 @@
         }
       },
       "required": [
-        "tenantId",
         "eventTTL",
         "publishedBy"
       ]
@@ -78,15 +73,24 @@
       "type": "object",
       "description": "An instance source record container",
       "$ref": "instance-ingress-payload.json"
+    },
+    "tenant": {
+      "description": "Tenant id",
+      "type": "string"
+    },
+    "ts": {
+      "description": "Message timestamp",
+      "type": "string",
+      "format": "date-time"
     }
   },
   "excludedFromEqualsAndHashCode": [
     "eventMetadata",
-    "eventPayload"
+    "tenant",
+    "ts"
   ],
   "required": [
     "id",
-    "eventType",
-    "eventMetadata"
+    "eventType"
   ]
 }

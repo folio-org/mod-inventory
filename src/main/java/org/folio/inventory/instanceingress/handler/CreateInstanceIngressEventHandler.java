@@ -117,32 +117,29 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
                                                               Record targetRecord,
                                                               InstanceIngressEvent event,
                                                               String instanceId) {
-    return postSnapshotInSrsAndHandleResponse(targetRecord.getId())
-      .compose(snapshot -> {
-        try {
-          LOGGER.info("Manipulating fields of a Record from InstanceIngressEvent with id '{}'", event.getId());
-          var mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
-          AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
-          AdditionalFieldsUtil.move001To035(targetRecord);
-          AdditionalFieldsUtil.normalize035(targetRecord);
-          if (event.getEventPayload().getAdditionalProperties().containsKey(LINKED_DATA_ID)) {
-            AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, TAG_035, TAG_035_SUB,
-              LD + event.getEventPayload().getAdditionalProperties().get(LINKED_DATA_ID));
-          }
-
-          LOGGER.info("Mapping a Record from InstanceIngressEvent with id '{}' into an Instance", event.getId());
-          var parsedRecord = new JsonObject((String) targetRecord.getParsedRecord().getContent());
-          RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_BIB_RECORD_FORMAT);
-          var instance = recordMapper.mapRecord(parsedRecord, mappingParameters, new JsonObject(mappingMetadata.getMappingRules()));
-          instance.setId(instanceId);
-          instance.setSource(event.getEventPayload().getSourceType().value());
-          LOGGER.info("Mapped Instance from InstanceIngressEvent with id '{}': {}", event.getId(), instance);
-          return Future.succeededFuture(instance);
-        } catch (Exception e) {
-          LOGGER.warn("Error during preparing and executing mapping:", e);
-          return Future.failedFuture(e);
+    try {
+      LOGGER.info("Manipulating fields of a Record from InstanceIngressEvent with id '{}'", event.getId());
+      var mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
+      AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
+      AdditionalFieldsUtil.move001To035(targetRecord);
+      AdditionalFieldsUtil.normalize035(targetRecord);
+        if (event.getEventPayload().getAdditionalProperties().containsKey(LINKED_DATA_ID)) {
+          AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, TAG_035, TAG_035_SUB,
+            LD + event.getEventPayload().getAdditionalProperties().get(LINKED_DATA_ID));
         }
-      });
+
+        LOGGER.info("Mapping a Record from InstanceIngressEvent with id '{}' into an Instance", event.getId());
+        var parsedRecord = new JsonObject((String) targetRecord.getParsedRecord().getContent());
+        RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_BIB_RECORD_FORMAT);
+        var instance = recordMapper.mapRecord(parsedRecord, mappingParameters, new JsonObject(mappingMetadata.getMappingRules()));
+        instance.setId(instanceId);
+        instance.setSource(event.getEventPayload().getSourceType().value());
+        LOGGER.info("Mapped Instance from InstanceIngressEvent with id '{}': {}", event.getId(), instance);
+        return Future.succeededFuture(instance);
+    } catch (Exception e) {
+      LOGGER.warn("Error during preparing and executing mapping:", e);
+      return Future.failedFuture(e);
+    }
   }
 
   private Record constructMarcBibRecord(InstanceIngressPayload eventPayload) {
@@ -215,21 +212,29 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
   private Future<Instance> saveRecordInSrsAndHandleResponse(InstanceIngressEvent event, Record srcRecord, Instance instance) {
     LOGGER.info("Saving record in SRS and handling a response for an Instance with id '{}':", instance.getId());
     Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId())
-      .postSourceStorageRecords(srcRecord)
-      .onComplete(ar -> {
-        var result = ar.result();
-        if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
-          LOGGER.info("Created MARC record in SRS with id: '{}', instanceId: '{}', from tenant: {}",
-            srcRecord.getId(), instance.getId(), context.getTenantId());
-          promise.complete(instance);
-        } else {
-          String msg = format("Failed to create MARC record in SRS, instanceId: '%s', status code: %s, Record: %s",
-            instance.getId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
-          LOGGER.warn(msg);
-          super.deleteInstance(instance.getId(), event.getId(), instanceCollection);
-          promise.fail(msg);
-        }
+    postSnapshotInSrsAndHandleResponse(srcRecord.getSnapshotId())
+      .onFailure(promise::fail)
+      .compose(snapshot -> {
+        getSourceStorageRecordsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId())
+          .postSourceStorageRecords(srcRecord)
+          .onComplete(ar -> {
+            var result = ar.result();
+            if (ar.succeeded() &&
+              result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
+              LOGGER.info("Created MARC record in SRS with id: '{}', instanceId: '{}', from tenant: {}",
+                srcRecord.getId(), instance.getId(), context.getTenantId());
+              promise.complete(instance);
+            } else {
+              String msg = format(
+                "Failed to create MARC record in SRS, instanceId: '%s', status code: %s, Record: %s",
+                instance.getId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
+              LOGGER.warn(msg);
+              super.deleteInstance(instance.getId(), event.getId(),
+                instanceCollection);
+              promise.fail(msg);
+            }
+          });
+        return promise.future();
       });
     return promise.future();
   }
