@@ -131,6 +131,9 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                                                                            List<NotUpdatedEntity> notUpdatedEntities, RoutingContext routingContext,
                                                                            WebContext context, Context targetTenantContext) {
     try {
+      LOGGER.info("updateOwnershipOfHoldingsRecords:: Updating ownership of holdingsRecord: {}, to tenant: {}",
+        holdingsUpdateOwnership.getHoldingsRecordIds(), targetTenantContext.getTenantId());
+
       CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(createHttpClient(client, routingContext, context),
         context);
       MultipleRecordsFetchClient holdingsRecordFetchClient = createHoldingsRecordsFetchClient(holdingsStorageClient);
@@ -140,10 +143,12 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
       return holdingsRecordFetchClient.find(holdingsUpdateOwnership.getHoldingsRecordIds(), MoveApiUtil::fetchByIdCql)
         .thenCompose(jsons -> {
+          LOGGER.info("updateOwnershipOfHoldingsRecords:: Founded holdings to update ownership: {}", jsons);
           processNotFoundedInstances(holdingsUpdateOwnership.getHoldingsRecordIds(), notUpdatedEntities, context, jsons);
           return createHoldings(jsons, notUpdatedEntities, holdingsUpdateOwnership.getToInstanceId(), targetTenantHoldingsRecordCollection);
         })
         .thenCompose(createdHoldings -> {
+          LOGGER.info("updateOwnershipOfHoldingsRecords:: Created holdings: {}, for tenant: {}", createdHoldings, targetTenantContext.getTenantId());
           List<String> createdHoldingsIds = createdHoldings.stream().map(HoldingsRecord::getId).toList();
 
           return transferAttachedItems(createdHoldingsIds, notUpdatedEntities, routingContext, context, targetTenantContext)
@@ -160,6 +165,9 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private CompletableFuture<List<String>> transferAttachedItems(List<String> holdingsRecordIds, List<NotUpdatedEntity> notUpdatedEntities,
                                                                 RoutingContext routingContext, WebContext context, Context targetTenantContext) {
     try {
+      LOGGER.info("transferAttachedItems:: Transfer items of holdingsRecordIds: {}, to tenant: {}",
+        holdingsRecordIds, targetTenantContext.getTenantId());
+
       CollectionResourceClient itemsStorageClient = createItemStorageClient(createHttpClient(client, routingContext, context), context);
       MultipleRecordsFetchClient itemsFetchClient = createItemsFetchClient(itemsStorageClient);
 
@@ -167,8 +175,14 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       ItemCollection targetTenantItemCollection = storage.getItemCollection(targetTenantContext);
 
       return itemsFetchClient.find(holdingsRecordIds, MoveApiUtil::fetchByHoldingsRecordIdCql)
-        .thenCompose(jsons -> createItems(jsons, notUpdatedEntities, targetTenantItemCollection))
-        .thenCompose(items -> deleteItems(items, notUpdatedEntities, sourceTenantItemCollection));
+        .thenCompose(jsons -> {
+          LOGGER.info("transferAttachedItems:: Found items to transfer: {}", jsons);
+          return createItems(jsons, notUpdatedEntities, targetTenantItemCollection);
+        })
+        .thenCompose(items -> {
+          LOGGER.info("transferAttachedItems:: Created items: {}", items);
+          return deleteItems(items, notUpdatedEntities, sourceTenantItemCollection);
+        });
     } catch (Exception e) {
       LOGGER.warn("transferAttachedItems:: Error during transfer attached items for holdings {}, to tenant: {}",
         holdingsRecordIds, targetTenantContext.getTenantId(), e);
