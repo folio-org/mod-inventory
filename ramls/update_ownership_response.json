@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Holder for errors during holdings/item update ownership",
+  "type": "object",
+  "properties": {
+    "notUpdatedEntities": {
+      "description": "Items/holdings errors",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "entityId": {
+            "$ref": "uuid.json"
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "Error message"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -447,7 +447,7 @@
                 <path>${basedir}/ramls/mappingMetadataDto.json</path>
                 <path>${basedir}/ramls/holdings_update_ownership.json</path>
                 <path>${basedir}/ramls/items_update_ownership.json</path>
-                <path>${basedir}/ramls/move_response.json</path>
+                <path>${basedir}/ramls/update_ownership_response.json</path>
               </sourcePaths>
               <targetPackage>org.folio</targetPackage>
               <generateBuilders>true</generateBuilders>

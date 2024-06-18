@@ -6,6 +6,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
 import org.apache.commons.collections4.ListUtils;
+import org.folio.NotUpdatedEntity;
+import org.folio.UpdateOwnershipResponse;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CqlQuery;
@@ -101,4 +103,8 @@ public final class MoveApiUtil {
     }
   }
 
+  public static void respond(RoutingContext routingContext, List<NotUpdatedEntity> notUpdatedEntities) {
+    HttpServerResponse response = routingContext.response();
+    success(response, JsonObject.mapFrom(new UpdateOwnershipResponse().withNotUpdatedEntities(notUpdatedEntities)));
+  }
 }
