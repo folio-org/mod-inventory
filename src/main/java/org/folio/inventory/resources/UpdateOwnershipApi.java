@@ -185,6 +185,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .map(item ->
         itemCollection.add(item)
           .exceptionally(e -> {
+            LOGGER.warn("createHoldings:: Error during creating item with id: {} for holdingsRecord with id: {}", item.getId(), item.getHoldingId(), e);
             notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(item.getHoldingId()).withErrorMessage(e.getMessage()));
             throw new CompletionException(e);
           }))
@@ -209,6 +210,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .map(holdingRecord ->
         holdingsRecordCollection.add(holdingRecord)
           .exceptionally(e -> {
+            LOGGER.warn("createHoldings:: Error during creating holdingsRecord with id: {}", holdingRecord.getId(), e);
             notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(holdingRecord.getId()).withErrorMessage(e.getMessage()));
             throw new CompletionException(e);
           }))
@@ -228,6 +230,9 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         Promise<String> promise = Promise.promise();
         holdingsRecordCollection.delete(holdingsRecord.getId(), success -> promise.complete(holdingsRecord.getId()),
           failure -> {
+            LOGGER.warn("deleteHoldings:: Error during deleting holdingsRecord with id: {}, status code: {}, reason: {}",
+              holdingsRecord.getId(), failure.getStatusCode(), failure.getReason());
+
             notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(holdingsRecord.getId()).withErrorMessage(failure.getReason()));
             promise.fail(failure.getReason());
           });
@@ -247,6 +252,9 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         Promise<String> promise = Promise.promise();
         itemCollection.delete(item.getId(), success -> promise.complete(item.getId()),
           failure -> {
+            LOGGER.warn("deleteItems:: Error during deleting item with id: {} for holdingsRecord with id {}, status code: {}, reason: {}",
+              item.getId(), item.getHoldingId(), failure.getStatusCode(), failure.getReason());
+
             notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(item.getHoldingId()).withErrorMessage(failure.getReason()));
             promise.fail(failure.getReason());
           });
@@ -263,8 +271,11 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private void processNotFoundedInstances(List<String> holdingsRecordIds, List<NotUpdatedEntity> notUpdatedEntities, WebContext context, List<JsonObject> jsons) {
     List<String> foundedIds = jsons.stream().map(json -> json.getString("id")).toList();
     List<String> notFoundedIds = ListUtils.subtract(holdingsRecordIds, foundedIds);
-    notFoundedIds.forEach(id ->
-      notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(id).withErrorMessage(String.format(INSTANCE_NOT_FOUND, id, context.getTenantId()))));
+    notFoundedIds.forEach(id -> {
+      String errorMessage = String.format(INSTANCE_NOT_FOUND, id, context.getTenantId());
+      LOGGER.warn("processNotFoundedInstances:: " + errorMessage);
+      notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(id).withErrorMessage(errorMessage));
+    });
   }
 
   private List<HoldingsRecord> getHoldingsToDelete(List<NotUpdatedEntity> notUpdatedEntities, List<HoldingsRecord> createdHoldings) {
