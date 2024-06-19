@@ -9,6 +9,7 @@
 * Error appears when edit via quickMARC MARC Instance shared from Member tenant [MODDATAIMP-1052](https://folio-org.atlassian.net/browse/MODDATAIMP-1052)
 * Fix mod-inventory OOM issue [MODINV-1023](https://folio-org.atlassian.net/browse/MODINV-1023)
 * Replace GET with POST request for fetching instances and holdings on /items endpoint to omit 414 error [MODINV-943](https://folio-org.atlassian.net/browse/MODINV-943)
+* Call suppress-on-discovery for source record on holding update if discoverySuppress is true [MODINV-977](https://folio-org.atlassian.net/browse/MODINV-977)
 * Requires `holdings-storage 2.0 3.0 4.0 5.0 6.0 7.0`
 
 ## 20.2.0 2023-03-20

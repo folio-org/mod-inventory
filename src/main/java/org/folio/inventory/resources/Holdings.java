@@ -1,19 +1,23 @@
 package org.folio.inventory.resources;
 
 import static io.netty.util.internal.StringUtil.COMMA;
+import static java.lang.String.format;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
 import static org.folio.inventory.support.CompletableFutures.failedFuture;
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
+import static org.folio.inventory.support.http.server.ServerErrorResponse.internalError;
 import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
 
 import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -24,14 +28,17 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.folio.HoldingsRecord;
+import org.folio.HttpStatus;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
 import org.folio.inventory.domain.HoldingsRecordCollection;
+import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.server.FailureResponseConsumer;
+import org.folio.rest.client.SourceStorageRecordsClient;
 
 public class Holdings {
 
@@ -41,6 +48,11 @@ public class Holdings {
   private static final String HOLDINGS_NOT_FOUND_ERROR_MSG = "Holdings not found";
   private static final String BLOCKED_FIELDS_UPDATED_ERROR_MSG = "Holdings is controlled by MARC record, "
     + "these fields are blocked and can not be updated: ";
+  private static final String SUPPRESS_FROM_DISCOVERY_ERROR_MSG = "Suppress from discovery wasn't changed for SRS record" +
+    ". Holdings id:'%s', status code: '%s'";
+
+  private static final String MARC = "MARC";
+  public static final String HOLDING_ID_TYPE = "HOLDINGS";
 
   private static final String INVENTORY_PATH = "/inventory";
   private static final String HOLDINGS_PATH = INVENTORY_PATH + "/holdings";
@@ -48,11 +60,13 @@ public class Holdings {
   private static final String ID_FIELD = "id";
   private static final String MARC_SOURCE_ID = "036ee84a-6afd-4c3c-9ad3-4a12ab875f59";
 
+  private final HttpClient client;
   private final Storage storage;
   private final InventoryConfiguration config;
 
-  public Holdings(final Storage storage) {
+  public Holdings(final Storage storage, final HttpClient client) {
     this.storage = storage;
+    this.client = client;
     this.config = new InventoryConfigurationImpl();
   }
 
@@ -67,13 +81,14 @@ public class Holdings {
       var holdingsRequest = rContext.getBodyAsJson();
       var updatedHoldings = holdingsRequest.mapTo(HoldingsRecord.class);
       var holdingsRecordCollection = storage.getHoldingsRecordCollection(wContext);
+      var holdingRecordSourceCollection = storage.getHoldingsRecordsSourceCollection(wContext);
 
       completedFuture(updatedHoldings)
         .thenCompose(holdingsRecord -> holdingsRecordCollection.findById(rContext.request().getParam(ID_FIELD)))
         .thenCompose(this::refuseWhenHoldingsNotFound)
         .thenCompose(existingHoldings -> refuseWhenBlockedFieldsChanged(existingHoldings, updatedHoldings))
         .thenCompose(existingHoldings -> refuseWhenHridChanged(existingHoldings, updatedHoldings))
-        .thenAccept(existingHoldings -> updateHoldings(updatedHoldings, holdingsRecordCollection, rContext))
+        .thenAccept(existingHoldings -> updateHoldings(updatedHoldings, holdingsRecordCollection, holdingRecordSourceCollection, rContext, wContext))
         .exceptionally(throwable -> {
           LOGGER.error(throwable);
           handleFailure(throwable, rContext);
@@ -129,11 +144,41 @@ public class Holdings {
     return ObjectUtils.notEqual(existingBlockedFields, updatedBlockedFields);
   }
 
-  private void updateHoldings(HoldingsRecord holdingsRecord, HoldingsRecordCollection holdingsRecordCollection,
-                              RoutingContext rContext) {
+  private void updateHoldings(HoldingsRecord holdingsRecord, HoldingsRecordCollection holdingsRecordCollection, HoldingsRecordsSourceCollection recordsSourceCollection,
+                              RoutingContext rContext, WebContext wContext) {
     holdingsRecordCollection.update(holdingsRecord,
-      voidSuccess -> noContent(rContext.response()),
+      v -> {
+        if (Optional.ofNullable(holdingsRecord.getDiscoverySuppress()).orElse(false)) {
+          recordsSourceCollection.findById(holdingsRecord.getSourceId()).thenAccept(source ->
+          {
+            if (MARC.equals(source.getName())) {
+              updateSuppressFromDiscoveryFlag(wContext, rContext,holdingsRecord);
+            } else noContent(rContext.response());
+          });
+        } else noContent(rContext.response());
+      },
       FailureResponseConsumer.serverError(rContext.response())
     );
   }
+
+  private void updateSuppressFromDiscoveryFlag(WebContext wContext, RoutingContext rContext, HoldingsRecord updatedHoldings) {
+    try {
+      new SourceStorageRecordsClient(wContext.getOkapiLocation(), wContext.getTenantId(), wContext.getToken(), client)
+        .putSourceStorageRecordsSuppressFromDiscoveryById(updatedHoldings.getId(), HOLDING_ID_TYPE, updatedHoldings.getDiscoverySuppress(), httpClientResponse -> {
+          if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_OK.toInt()) {
+            LOGGER.info(format("Suppress from discovery flag was updated for record in SRS. Holding id: %s",
+              updatedHoldings.getId()));
+            noContent(rContext.response());
+          } else {
+            var errMsg = format(SUPPRESS_FROM_DISCOVERY_ERROR_MSG, updatedHoldings.getId(), httpClientResponse.result().statusCode());
+            LOGGER.error(errMsg);
+            internalError(rContext.response(), errMsg);
+          }
+        });
+    } catch (Exception e) {
+      LOGGER.error("Error during updating suppress from discovery flag for record in SRS", e);
+      handleFailure(e, rContext);
+    }
+  }
+
 }

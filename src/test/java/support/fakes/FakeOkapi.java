@@ -41,6 +41,7 @@ public class FakeOkapi extends AbstractVerticle {
     registerFakePubSubModule(router);
     registerFakeRequestsModule(router);
     registerFakeSourceRecordStorage(router);
+    registerFakeHoldingSourcesModule(router);
 
     server.requestHandler(router)
       .listen(PORT_TO_USE, result -> {
@@ -137,6 +138,14 @@ public class FakeOkapi extends AbstractVerticle {
       .withCollectionPropertyName("holdingsRecords")
       .withRequiredProperties("instanceId", "permanentLocationId")
       .create().register(router);
+  }
+
+  private void registerFakeHoldingSourcesModule(Router router) {
+      new FakeStorageModuleBuilder()
+        .withRecordName("Holding record sources")
+        .withRootPath("/holdings-sources")
+        .withCollectionPropertyName("holdingsRecordsSources")
+        .create().register(router);
   }
 
   private void registerFakeAuthorityStorageModule(Router router) {
