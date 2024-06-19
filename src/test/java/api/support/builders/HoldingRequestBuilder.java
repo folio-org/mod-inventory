@@ -101,6 +101,18 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       this.administrativeNotes);
   }
 
+  public JsonObject createFolioHoldingsSource() {
+    return new JsonObject()
+      .put("id", FOLIO_SOURCE_HOLDINGS_ID)
+      .put("name", "FOLIO");
+  }
+
+  public JsonObject createMarcHoldingsSource() {
+    return new JsonObject()
+      .put("id", MARC_SOURCE_HOLDINGS_ID)
+      .put("name", "MARC");
+  }
+
   public HoldingRequestBuilder permanentlyInMainLibrary() {
     return withPermanentLocation(UUID.fromString(ApiTestSuite.getMainLibraryLocation()));
   }

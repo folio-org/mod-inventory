@@ -138,6 +138,11 @@ public class ResourceClient {
       "source record storage", "records");
   }
 
+  public static ResourceClient forHoldingSourceRecord(OkapiHttpClient okapiClient) {
+    return new ResourceClient(okapiClient, StorageInterfaceUrls::holdingRecordSourcesUrl,
+      "holdings source record", "holdingsRecordsSources");
+  }
+
   public static ResourceClient forBoundWithPartsStorage (OkapiHttpClient okapiClient) {
     return new ResourceClient( okapiClient, StorageInterfaceUrls::boundWithPartsUrl,
       "bound-with parts storage", "boundWithParts");

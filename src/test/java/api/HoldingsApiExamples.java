@@ -1,8 +1,9 @@
 package api;
 
+import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
-import static io.netty.handler.codec.http.HttpResponseStatus.NO_CONTENT;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
+import static io.netty.handler.codec.http.HttpResponseStatus.NO_CONTENT;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -19,6 +20,7 @@ import java.util.concurrent.TimeoutException;
 import api.support.ApiRoot;
 import api.support.ApiTests;
 import api.support.builders.HoldingRequestBuilder;
+import api.support.builders.SourceRecordRequestBuilder;
 import api.support.fixtures.InstanceRequestExamples;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonArray;
@@ -73,6 +75,85 @@ public class HoldingsApiExamples extends ApiTests {
 
     assertThat(updatedHoldings.getString("id"), is(newHoldings.getString("id")));
     assertThat(updatedHoldings.getString("permanentLocationId"), is("fcd64ce1-6995-48f0-840e-89ffa2288371"));
+  }
+
+  @Test
+  public void canSuppressFromDiscoveryOnUpdateForMarcRecord() throws Exception {
+    var instanceId = instancesClient.create(InstanceRequestExamples.smallAngryPlanet()).getId();
+    var newHoldings = holdingsStorageClient.create(new HoldingRequestBuilder()
+        .forInstance(instanceId)
+        .withMarcSource())
+      .getJson();
+
+    holdingsSourceStorageClient.create(new HoldingRequestBuilder().createMarcHoldingsSource());
+    sourceRecordStorageClient.create(new SourceRecordRequestBuilder(newHoldings.getString("id")));
+    var updateHoldingsRequest = newHoldings.copy()
+      .put("discoverySuppress", true);
+
+    var putResponse = updateHoldings(updateHoldingsRequest);
+
+    assertThat(putResponse.getStatusCode(), is(NO_CONTENT.code()));
+
+    var getResponse = holdingsStorageClient.getById(getId(newHoldings));
+    var getRecordResponse = sourceRecordStorageClient.getById(UUID.fromString(newHoldings.getString(("id"))));
+
+    assertThat(getResponse.getStatusCode(), is(OK.code()));
+    assertThat(getRecordResponse.getStatusCode(), is(OK.code()));
+
+    var updatedHoldings = getResponse.getJson();
+    var updatedRecord = getRecordResponse.getJson();
+
+    assertThat(updatedHoldings.getString("id"), is(newHoldings.getString("id")));
+    assertThat(updatedHoldings.getBoolean("discoverySuppress"), is(Boolean.TRUE));
+    assertThat(updatedRecord.getJsonObject("additionalInfo").getBoolean("suppressDiscovery"), is(Boolean.TRUE));
+  }
+
+  @Test
+  public void cannotSuppressFromDiscoveryForSourceOnUpdateForFolioRecord() throws Exception {
+    var instanceId = instancesClient.create(InstanceRequestExamples.smallAngryPlanet()).getId();
+    var newHoldings = holdingsStorageClient.create(new HoldingRequestBuilder().forInstance(instanceId))
+      .getJson();
+
+    holdingsSourceStorageClient.create(new HoldingRequestBuilder().createFolioHoldingsSource());
+    sourceRecordStorageClient.create(new SourceRecordRequestBuilder(newHoldings.getString("id")));
+    var updateHoldingsRequest = newHoldings.copy()
+      .put("discoverySuppress", true);
+
+    var putResponse = updateHoldings(updateHoldingsRequest);
+
+    assertThat(putResponse.getStatusCode(), is(NO_CONTENT.code()));
+
+    var getResponse = holdingsStorageClient.getById(getId(newHoldings));
+    var getRecordResponse = sourceRecordStorageClient.getById(UUID.fromString(newHoldings.getString(("id"))));
+
+    assertThat(getResponse.getStatusCode(), is(OK.code()));
+    assertThat(getRecordResponse.getStatusCode(), is(OK.code()));
+
+    var updatedHoldings = getResponse.getJson();
+    var updatedRecord = getRecordResponse.getJson();
+
+    assertThat(updatedHoldings.getString("id"), is(newHoldings.getString("id")));
+    assertThat(updatedHoldings.getBoolean("discoverySuppress"), is(Boolean.TRUE));
+    assertThat(updatedRecord.getJsonObject("additionalInfo").getBoolean("suppressDiscovery"), is(Boolean.FALSE));
+  }
+
+  @Test
+  public void cannotSuppressFromDiscoveryForSourceOnUpdateIfThatDoesNotExist() throws Exception {
+    var instanceId = instancesClient.create(InstanceRequestExamples.smallAngryPlanet()).getId();
+    var newHoldings = holdingsStorageClient.create(new HoldingRequestBuilder()
+        .forInstance(instanceId)
+        .withMarcSource())
+      .getJson();
+
+    holdingsSourceStorageClient.create(new HoldingRequestBuilder().createMarcHoldingsSource());
+
+    var updateHoldingsRequest = newHoldings.copy()
+      .put("discoverySuppress", true);
+
+    var putResponse = updateHoldings(updateHoldingsRequest);
+
+    assertThat(putResponse.getStatusCode(), is(INTERNAL_SERVER_ERROR.code()));
+    assertThat(putResponse.getBody().contains(NOT_FOUND.codeAsText()),is(true));
   }
 
   @Test
