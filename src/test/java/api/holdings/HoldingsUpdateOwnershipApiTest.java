@@ -86,12 +86,14 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     Assert.assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.getStatusCode());
     Assert.assertEquals(instanceId.toString(), targetTenantHoldingsRecord2.getJson().getString(INSTANCE_ID));
+    Assert.assertNull(targetTenantHoldingsRecord2.getJson().getString("hrid"));
   }
 
   @Test
   public void canUpdateHoldingsOwnershipWithRelatedItemsToDifferentTenant() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
     UUID instanceId = UUID.randomUUID();
     JsonObject instance = smallAngryPlanet(instanceId);
+    String itemHrId = "it0000001";
 
     InstanceApiClient.createInstance(okapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
     InstanceApiClient.createInstance(consortiumOkapiClient, instance.put("source", FOLIO.getValue()));
@@ -108,6 +110,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     final var secondItem = itemsClient.create(
       new ItemRequestBuilder()
         .forHolding(createHoldingsRecord2)
+        .withHrid(itemHrId)
         .withBarcode("645398607546")
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
@@ -145,6 +148,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceTenantItem2.getStatusCode()));
     assertThat(targetTenantItem2.getJson().getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
+    Assert.assertNotEquals(targetTenantItem2.getJson().getString("hrid"), itemHrId);
   }
 
   @Test
@@ -298,7 +302,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     assertThat(notFoundIds.size(), is(1));
     assertThat(notFoundIds.getJsonObject(0).getString("entityId"), equalTo(createHoldingsRecord2.toString()));
-    assertThat(notFoundIds.getJsonObject(0).getString("errorMessage"), containsString("not found on tenant"));
+    assertThat(notFoundIds.getJsonObject(0).getString("errorMessage"),
+      equalTo(String.format("HoldingsRecord with id: %s not found on tenant: %s", createHoldingsRecord2, ApiTestSuite.TENANT_ID)));
 
     Response sourceTenantHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1);
     Response targetTenantHoldingsRecord1 = collegeHoldingsStorageClient.getById(createHoldingsRecord1);
@@ -570,7 +575,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
   }
 
   private UUID createHoldingForInstance(UUID instanceId) {
-    return holdingsStorageClient.create(new HoldingRequestBuilder().forInstance(instanceId))
+    return holdingsStorageClient.create(new HoldingRequestBuilder().withHrId("hol0000001").forInstance(instanceId))
       .getId();
   }
 }

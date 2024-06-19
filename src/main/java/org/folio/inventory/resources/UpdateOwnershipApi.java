@@ -49,7 +49,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   public static final String INSTANCE_NOT_SHARED = "Instance with id: %s is not shared";
   public static final String INSTANCE_NOT_FOUND_AT_SOURCE_TENANT = "Instance with id: %s not found at source tenant, tenant: %s";
   public static final String TENANT_NOT_IN_CONSORTIA = "%s tenant is not in consortia";
-  public static final String INSTANCE_NOT_FOUND = "Instance with id: %s not found on tenant: %s";
+  public static final String HOLDINGS_NOT_FOUND = "HoldingsRecord with id: %s not found on tenant: %s";
 
   private final ConsortiumService consortiumService;
 
@@ -110,7 +110,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           LOGGER.warn("updateHoldingsOwnership:: " + notInConsortiaErrorMessage, context);
           return CompletableFuture.failedFuture(new BadRequestException(notInConsortiaErrorMessage));
         })
-        .thenAccept(updateHoldingsRecords -> respond(routingContext, notUpdatedEntities))
+        .thenAccept(v -> respond(routingContext, notUpdatedEntities))
         .exceptionally(throwable -> {
           LOGGER.warn("updateHoldingsOwnership:: Error during update ownership of holdings {}, to tenant: {}",
             holdingsUpdateOwnership.getHoldingsRecordIds(), holdingsUpdateOwnership.getTargetTenantId(), throwable);
@@ -145,15 +145,18 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         .thenCompose(jsons -> {
           LOGGER.info("updateOwnershipOfHoldingsRecords:: Founded holdings to update ownership: {}", jsons);
           processNotFoundedInstances(holdingsUpdateOwnership.getHoldingsRecordIds(), notUpdatedEntities, context, jsons);
-          return createHoldings(jsons, notUpdatedEntities, holdingsUpdateOwnership.getToInstanceId(), targetTenantHoldingsRecordCollection);
-        })
-        .thenCompose(createdHoldings -> {
-          LOGGER.info("updateOwnershipOfHoldingsRecords:: Created holdings: {}, for tenant: {}", createdHoldings, targetTenantContext.getTenantId());
-          List<String> createdHoldingsIds = createdHoldings.stream().map(HoldingsRecord::getId).toList();
+          if (!jsons.isEmpty()) {
+            return createHoldings(jsons, notUpdatedEntities, holdingsUpdateOwnership.getToInstanceId(), targetTenantHoldingsRecordCollection)
+              .thenCompose(createdHoldings -> {
+                LOGGER.info("updateOwnershipOfHoldingsRecords:: Created holdings: {}, for tenant: {}", createdHoldings, targetTenantContext.getTenantId());
+                List<String> createdHoldingsIds = createdHoldings.stream().map(HoldingsRecord::getId).toList();
 
-          return transferAttachedItems(createdHoldingsIds, notUpdatedEntities, routingContext, context, targetTenantContext)
-            .thenCompose(itemIds ->
-              deleteHoldings(getHoldingsToDelete(notUpdatedEntities, createdHoldings), notUpdatedEntities, sourceTenantHoldingsRecordCollection));
+                return transferAttachedItems(createdHoldingsIds, notUpdatedEntities, routingContext, context, targetTenantContext)
+                  .thenCompose(itemIds ->
+                    deleteHoldings(getHoldingsToDelete(notUpdatedEntities, createdHoldings), notUpdatedEntities, sourceTenantHoldingsRecordCollection));
+              });
+          }
+          return CompletableFuture.completedFuture(new ArrayList<>());
         });
     } catch (Exception e) {
       LOGGER.warn("updateOwnershipOfHoldingsRecords:: Error during update ownership of holdings {}, to tenant: {}",
@@ -177,11 +180,11 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       return itemsFetchClient.find(holdingsRecordIds, MoveApiUtil::fetchByHoldingsRecordIdCql)
         .thenCompose(jsons -> {
           LOGGER.info("transferAttachedItems:: Found items to transfer: {}", jsons);
-          return createItems(jsons, notUpdatedEntities, targetTenantItemCollection);
-        })
-        .thenCompose(items -> {
-          LOGGER.info("transferAttachedItems:: Created items: {}", items);
-          return deleteItems(items, notUpdatedEntities, sourceTenantItemCollection);
+          if (!jsons.isEmpty()) {
+            return createItems(jsons, notUpdatedEntities, targetTenantItemCollection)
+              .thenCompose(items -> deleteItems(items, notUpdatedEntities, sourceTenantItemCollection));
+          }
+          return CompletableFuture.completedFuture(new ArrayList<>());
         });
     } catch (Exception e) {
       LOGGER.warn("transferAttachedItems:: Error during transfer attached items for holdings {}, to tenant: {}",
@@ -192,7 +195,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
   private CompletableFuture<List<Item>> createItems(List<JsonObject> jsons, List<NotUpdatedEntity> notUpdatedEntities, ItemCollection itemCollection) {
     List<Item> itemRecordsToUpdateOwnership = jsons.stream()
-      .map(ItemUtil::fromStoredItemRepresentation)
+      .map(json -> ItemUtil.fromStoredItemRepresentation(json).withHrid(null))
       .toList();
 
     List<CompletableFuture<Item>> createFutures = itemRecordsToUpdateOwnership.stream()
@@ -216,7 +219,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                                                                  HoldingsRecordCollection holdingsRecordCollection) {
     List<HoldingsRecord> holdingsRecordsToUpdateOwnership = jsons.stream()
       .peek(MoveApiUtil::removeExtraRedundantFields)
-      .map(json -> json.mapTo(HoldingsRecord.class))
+      .map(json -> json.mapTo(HoldingsRecord.class).withHrid(null))
       .filter(holdingsRecord -> holdingsRecord.getInstanceId().equals(instanceId))
       .toList();
 
@@ -286,7 +289,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     List<String> foundedIds = jsons.stream().map(json -> json.getString("id")).toList();
     List<String> notFoundedIds = ListUtils.subtract(holdingsRecordIds, foundedIds);
     notFoundedIds.forEach(id -> {
-      String errorMessage = String.format(INSTANCE_NOT_FOUND, id, context.getTenantId());
+      String errorMessage = String.format(HOLDINGS_NOT_FOUND, id, context.getTenantId());
       LOGGER.warn("processNotFoundedInstances:: " + errorMessage);
       notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(id).withErrorMessage(errorMessage));
     });
