@@ -448,6 +448,7 @@
                 <path>${basedir}/ramls/holdings_update_ownership.json</path>
                 <path>${basedir}/ramls/items_update_ownership.json</path>
                 <path>${basedir}/ramls/update_ownership_response.json</path>
+                <path>${basedir}/ramls/instance-ingress-event.json</path>
               </sourcePaths>
               <targetPackage>org.folio</targetPackage>
               <generateBuilders>true</generateBuilders>

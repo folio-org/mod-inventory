@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "An instance source record container",
+  "type": "object",
+  "properties": {
+    "sourceRecordIdentifier": {
+      "type": "string",
+      "description": "The source record identifier"
+    },
+    "sourceRecordObject": {
+      "type": "string",
+      "description": "The source record JSON object"
+    },
+    "sourceType": {
+      "type": "string",
+      "enum": ["FOLIO", "LINKED_DATA", "MARC"],
+      "description": "Source type"
+    }
+  },
+  "additionalProperties": true,
+  "required": [
+    "sourceRecordObject",
+    "sourceType"
+  ]
+}

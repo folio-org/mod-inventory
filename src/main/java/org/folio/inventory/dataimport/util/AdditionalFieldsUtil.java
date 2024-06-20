@@ -74,6 +74,7 @@ public final class AdditionalFieldsUtil {
   private static final String ANY_STRING = "*";
   private static final char INDICATOR = 'f';
   public static final char SUBFIELD_I = 'i';
+  public static final char SUBFIELD_L = 'l';
   private static final String HR_ID_FIELD = "hrid";
   private static final CacheLoader<String, org.marc4j.marc.Record> parsedRecordContentCacheLoader;
   private static final LoadingCache<String, org.marc4j.marc.Record> parsedRecordContentCache;
