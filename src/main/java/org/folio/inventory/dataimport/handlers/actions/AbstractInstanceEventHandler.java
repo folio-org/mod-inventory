@@ -5,10 +5,11 @@ import static org.codehaus.plexus.util.StringUtils.isNotEmpty;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_PATH;
+import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
+import static org.folio.inventory.domain.instances.Instance.ID;
 
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -46,10 +47,6 @@ import org.folio.rest.jaxrs.model.Snapshot;
 public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);
   protected static final String MARC_FORMAT = "MARC";
-  protected static final String MARC_BIB_RECORD_FORMAT = "MARC_BIB";
-  protected static final String INSTANCE_PATH = "instance";
-  protected static final List<String> requiredFields = Arrays.asList("source", "title", "instanceTypeId");
-  private static final String ID_FIELD = "id";
   private static final boolean IS_HRID_FILLING_NEEDED_FOR_INSTANCE = true;
 
   protected final Storage storage;
@@ -97,7 +94,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected Future<Instance> saveRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record srcRecord,
                                                             Instance instance, InstanceCollection instanceCollection, String tenantId) {
     Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload, tenantId).postSourceStorageRecords(srcRecord)
+    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId).postSourceStorageRecords(srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
@@ -120,7 +117,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected Future<Instance> putRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record srcRecord,
                                                              Instance instance, String matchedId, String tenantId) {
     Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload, tenantId).putSourceStorageRecordsGenerationById(matchedId ,srcRecord)
+    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId).putSourceStorageRecordsGenerationById(matchedId ,srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_OK.toInt()) {
@@ -139,9 +136,9 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     return promise.future();
   }
 
-  protected Future<Snapshot> postSnapshotInSrsAndHandleResponse(DataImportEventPayload payload, Snapshot snapshot, String tenantId) {
+  protected Future<Snapshot> postSnapshotInSrsAndHandleResponse(String okapiUrl, String token, Snapshot snapshot, String tenantId) {
     Promise<Snapshot> promise = Promise.promise();
-    getSourceStorageSnapshotsClient(payload, tenantId).postSourceStorageSnapshots(snapshot)
+    getSourceStorageSnapshotsClient(okapiUrl, token, tenantId).postSourceStorageSnapshots(snapshot)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
@@ -189,7 +186,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     }
   }
 
-  private void deleteInstance(String id, String jobExecutionId, InstanceCollection instanceCollection) {
+  protected void deleteInstance(String id, String jobExecutionId, InstanceCollection instanceCollection) {
     Promise<Void> promise = Promise.promise();
     instanceCollection.delete(id, success -> {
         LOGGER.info("deleteInstance:: Instance was deleted by id: '{}', jobExecutionId: '{}'", id, jobExecutionId);
@@ -203,12 +200,12 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     promise.future();
   }
 
-  public SourceStorageRecordsClient getSourceStorageRecordsClient(DataImportEventPayload payload, String tenantId) {
-    return new SourceStorageRecordsClient(payload.getOkapiUrl(), tenantId, payload.getToken(), getHttpClient());
+  public SourceStorageRecordsClient getSourceStorageRecordsClient(String okapiUrl, String token, String tenantId) {
+    return new SourceStorageRecordsClient(okapiUrl, tenantId, token, getHttpClient());
   }
 
-  public SourceStorageSnapshotsClient getSourceStorageSnapshotsClient(DataImportEventPayload payload, String tenantId) {
-    return new SourceStorageSnapshotsClient(payload.getOkapiUrl(), tenantId, payload.getToken(), getHttpClient());
+  public SourceStorageSnapshotsClient getSourceStorageSnapshotsClient(String okapiUrl, String token, String tenantId) {
+    return new SourceStorageSnapshotsClient(okapiUrl, tenantId, token, getHttpClient());
   }
 
   private Record encodeParsedRecordContent(Record srcRecord) {
@@ -230,7 +227,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   private void executeHrIdManipulation(Record srcRecord, JsonObject externalEntity) {
-    var externalId = externalEntity.getString(ID_FIELD);
+    var externalId = externalEntity.getString(ID);
     var externalHrId = extractHridForInstance(externalEntity);
     var externalIdsHolder = srcRecord.getExternalIdsHolder();
     setExternalIdsForInstance(externalIdsHolder, externalId, externalHrId);

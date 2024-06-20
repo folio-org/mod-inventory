@@ -2,6 +2,7 @@ package org.folio.inventory.dataimport.consumers;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
@@ -37,7 +38,6 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
 
   private static final Logger LOGGER = LogManager.getLogger(MarcBibInstanceHridSetKafkaHandler.class);
   private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'";
-  private static final String MARC_KEY = "MARC_BIB";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
@@ -69,14 +69,14 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
       String jobExecutionId = eventPayload.get(JOB_EXECUTION_ID_HEADER);
       LOGGER.info("Event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", event.getEventType(), recordId, jobExecutionId, chunkId);
 
-      if (isEmpty(eventPayload.get(MARC_KEY))) {
+      if (isEmpty(eventPayload.get(MARC_BIB_RECORD_FORMAT))) {
         String message = format("Event payload does not contain required data to update Instance with event type: '%s', recordId: '%s' by jobExecution: '%s' and chunkId: '%s'", event.getEventType(), recordId, jobExecutionId, chunkId);
         LOGGER.error(message);
         return Future.failedFuture(message);
       }
 
       Context context = EventHandlingUtil.constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
-      Record marcRecord = new JsonObject(eventPayload.get(MARC_KEY)).mapTo(Record.class);
+      Record marcRecord = new JsonObject(eventPayload.get(MARC_BIB_RECORD_FORMAT)).mapTo(Record.class);
 
       mappingMetadataCache.get(jobExecutionId, context)
         .map(metadataOptional -> metadataOptional.orElseThrow(() ->

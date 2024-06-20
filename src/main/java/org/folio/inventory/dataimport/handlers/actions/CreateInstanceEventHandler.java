@@ -45,7 +45,10 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.*;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
+import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_PATH;
+import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_REQUIRED_FIELDS;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
+import static org.folio.inventory.domain.instances.Instance.ID;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 
@@ -59,7 +62,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   private static final String INSTANCE_CREATION_999_ERROR_MESSAGE = "A new Instance was not created because the incoming record already contained a 999ff$s or 999ff$i field";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
-  private final IdStorageService idStorageService;
+  protected final IdStorageService idStorageService;
   private final OrderHelperService orderHelperService;
 
   public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
@@ -120,7 +123,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
             .compose(v -> {
               InstanceCollection instanceCollection = storage.getInstanceCollection(context);
               JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, instanceId, jobExecutionId);
-              List<String> requiredFieldsErrors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
+              List<String> requiredFieldsErrors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, INSTANCE_REQUIRED_FIELDS);
               if (!requiredFieldsErrors.isEmpty()) {
                 String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", requiredFieldsErrors,
                   jobExecutionId, recordId, chunkId);
@@ -173,7 +176,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     return future;
   }
 
-  private String getInstanceId(Record record) {
+  protected String getInstanceId(Record record) {
     String subfield999ffi = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
     return isEmpty(subfield999ffi) ? UUID.randomUUID().toString() : subfield999ffi;
   }
@@ -183,7 +186,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     if (instanceAsJson.getJsonObject(INSTANCE_PATH) != null) {
       instanceAsJson = instanceAsJson.getJsonObject(INSTANCE_PATH);
     }
-    instanceAsJson.put("id", instanceId);
+    instanceAsJson.put(ID, instanceId);
     instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
     instanceAsJson.remove(HRID_KEY);
 
@@ -222,7 +225,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     }
   }
 
-  private Future<Instance> addInstance(Instance instance, InstanceCollection instanceCollection) {
+  protected Future<Instance> addInstance(Instance instance, InstanceCollection instanceCollection) {
     Promise<Instance> promise = Promise.promise();
     instanceCollection.add(instance, success -> promise.complete(success.getResult()),
       failure -> {
