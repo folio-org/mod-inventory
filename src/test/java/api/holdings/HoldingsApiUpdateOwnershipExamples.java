@@ -42,7 +42,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
 @RunWith(JUnitParamsRunner.class)
-public class HoldingsUpdateOwnershipApiTest extends ApiTests {
+public class HoldingsApiUpdateOwnershipExamples extends ApiTests {
   private static final String INSTANCE_ID = "instanceId";
 
   @Before
