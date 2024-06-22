@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import api.holdings.HoldingsUpdateOwnershipApiTest;
 import org.folio.inventory.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.consortium.util.ConsortiumUtil;
@@ -68,7 +69,8 @@ import support.fakes.FakeOkapi;
   BoundWithTests.class,
   TenantApiTest.class,
   AdminApiTest.class,
-  InventoryConfigApiTest.class
+  InventoryConfigApiTest.class,
+  HoldingsUpdateOwnershipApiTest.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
