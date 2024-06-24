@@ -168,8 +168,9 @@ public class MoveApi extends AbstractInventoryResource {
   }
 
   private List<HoldingsRecord> updateInstanceIdForHoldings(String toInstanceId, List<JsonObject> jsons) {
+    jsons.forEach(MoveApiUtil::removeExtraRedundantFields);
+
     return jsons.stream()
-      .peek(MoveApiUtil::removeExtraRedundantFields)
       .map(json -> json.mapTo(HoldingsRecord.class))
       .map(holding -> holding.withInstanceId(toInstanceId))
       .collect(toList());

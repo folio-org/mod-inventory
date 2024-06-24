@@ -18,7 +18,7 @@ public final class UpdateOwnershipValidator {
     List<String> requiredFields = Arrays.stream(updateOwnershipClass.getDeclaredFields()).map(Field::getName).toList();
     for (String field: requiredFields) {
       var value = updateOwnershipRequest.getValue(field);
-      if (value == null || (value instanceof JsonArray && ((JsonArray) value).isEmpty())) {
+      if (value == null || (value instanceof JsonArray jsonArray && jsonArray.isEmpty())) {
         return Optional.of(new ValidationError(field + " is a required field", field, null));
       }
     }
