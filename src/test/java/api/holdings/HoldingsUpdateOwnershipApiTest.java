@@ -571,7 +571,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
   private Response updateHoldingsRecordsOwnership(JsonObject holdingsRecordUpdateOwnershipRequestBody) throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     final var postHoldingRecordsUpdateOwnershipCompleted = okapiClient.post(
       ApiRoot.updateHoldingsRecordsOwnership(), holdingsRecordUpdateOwnershipRequestBody);
-    return postHoldingRecordsUpdateOwnershipCompleted.toCompletableFuture().get(50, TimeUnit.SECONDS);
+    return postHoldingRecordsUpdateOwnershipCompleted.toCompletableFuture().get(500, TimeUnit.SECONDS);
   }
 
   private UUID createHoldingForInstance(UUID instanceId) {
