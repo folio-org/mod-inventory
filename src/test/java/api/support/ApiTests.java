@@ -19,6 +19,7 @@ public abstract class ApiTests {
   private static boolean runningOnOwn;
   protected static OkapiHttpClient okapiClient;
   protected static OkapiHttpClient consortiumOkapiClient;
+  protected static OkapiHttpClient collegeOkapiClient;
   protected final ResourceClient holdingsStorageClient;
   protected final ResourceClient holdingsSourceStorageClient;
   protected final ResourceClient itemsStorageClient;
@@ -35,6 +36,8 @@ public abstract class ApiTests {
   protected final ResourceClient sourceRecordStorageClient;
   protected final ResourceClient consortiumItemsClient;
   protected final ResourceClient consortiumHoldingsStorageClient;
+  protected final ResourceClient collegeItemsClient;
+  protected final ResourceClient collegeHoldingsStorageClient;
 
   protected final InstanceRelationshipTypeFixture instanceRelationshipTypeFixture;
   protected final MarkItemFixture markItemFixture;
@@ -59,6 +62,9 @@ public abstract class ApiTests {
 
     consortiumHoldingsStorageClient = ResourceClient.forHoldingsStorage(consortiumOkapiClient);
     consortiumItemsClient = ResourceClient.forItemsStorage(consortiumOkapiClient);
+
+    collegeHoldingsStorageClient = ResourceClient.forHoldingsStorage(collegeOkapiClient);
+    collegeItemsClient = ResourceClient.forItemsStorage(collegeOkapiClient);
   }
 
   @BeforeClass
@@ -76,6 +82,7 @@ public abstract class ApiTests {
 
     okapiClient = ApiTestSuite.createOkapiHttpClient();
     consortiumOkapiClient = ApiTestSuite.createOkapiHttpClient(ApiTestSuite.CONSORTIA_TENANT_ID);
+    collegeOkapiClient = ApiTestSuite.createOkapiHttpClient(ApiTestSuite.COLLEGE_TENANT_ID);
   }
 
   @AfterClass

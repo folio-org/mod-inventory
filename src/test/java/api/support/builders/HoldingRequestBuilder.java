@@ -20,6 +20,7 @@ public class HoldingRequestBuilder extends AbstractBuilder {
   private final String callNumberTypeId;
   private final UUID sourceId;
   private final List<String> administrativeNotes;
+  private final String hrId;
 
   public HoldingRequestBuilder() {
     this(
@@ -31,6 +32,7 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       null,
       null,
       FOLIO_SOURCE_HOLDINGS_ID,
+      null,
       null);
   }
 
@@ -43,7 +45,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
     String callNumberPrefix,
     String callNumberTypeId,
     UUID sourceId,
-    List<String> administrativeNotes) {
+    List<String> administrativeNotes,
+    String hrId) {
 
     this.instanceId = instanceId;
     this.permanentLocationId = permanentLocationId;
@@ -54,6 +57,7 @@ public class HoldingRequestBuilder extends AbstractBuilder {
     this.callNumberTypeId = callNumberTypeId;
     this.sourceId = sourceId;
     this.administrativeNotes = administrativeNotes;
+    this.hrId = hrId;
   }
 
   @Override
@@ -72,6 +76,7 @@ public class HoldingRequestBuilder extends AbstractBuilder {
     holding.put("callNumberSuffix", callNumberSuffix);
     holding.put("callNumberTypeId", callNumberTypeId);
     holding.put("sourceId", sourceId);
+    holding.put("hrid", hrId);
     return holding;
   }
 
@@ -85,7 +90,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       this.callNumberPrefix,
       this.callNumberTypeId,
       this.sourceId,
-      this.administrativeNotes);
+      this.administrativeNotes,
+      this.hrId);
   }
 
   private HoldingRequestBuilder withTemporaryLocation(UUID temporaryLocationId) {
@@ -98,7 +104,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       this.callNumberPrefix,
       this.callNumberTypeId,
       this.sourceId,
-      this.administrativeNotes);
+      this.administrativeNotes,
+      this.hrId);
   }
 
   public JsonObject createFolioHoldingsSource() {
@@ -135,7 +142,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       this.callNumberPrefix,
       this.callNumberTypeId,
       this.sourceId,
-      this.administrativeNotes);
+      this.administrativeNotes,
+      this.hrId);
   }
 
   public HoldingRequestBuilder withCallNumber(String callNumber) {
@@ -148,7 +156,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       this.callNumberPrefix,
       this.callNumberTypeId,
       this.sourceId,
-      this.administrativeNotes);
+      this.administrativeNotes,
+      this.hrId);
   }
 
   public HoldingRequestBuilder withCallNumberSuffix(String suffix) {
@@ -161,7 +170,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       this.callNumberPrefix,
       this.callNumberTypeId,
       this.sourceId,
-      this.administrativeNotes);
+      this.administrativeNotes,
+      this.hrId);
   }
 
   public HoldingRequestBuilder withCallNumberPrefix(String prefix) {
@@ -174,7 +184,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       prefix,
       this.callNumberTypeId,
       this.sourceId,
-      this.administrativeNotes);
+      this.administrativeNotes,
+      this.hrId);
   }
 
   public HoldingRequestBuilder withCallNumberTypeId(String callNumberTypeId) {
@@ -187,7 +198,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       this.callNumberPrefix,
       callNumberTypeId,
       this.sourceId,
-      this.administrativeNotes);
+      this.administrativeNotes,
+      this.hrId);
   }
 
   public HoldingRequestBuilder withMarcSource() {
@@ -200,7 +212,8 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       this.callNumberPrefix,
       this.callNumberTypeId,
       MARC_SOURCE_HOLDINGS_ID,
-      this.administrativeNotes);
+      this.administrativeNotes,
+      this.hrId);
   }
 
   public HoldingRequestBuilder withAdministrativeNotes(List<String> administrativeNotes) {
@@ -213,6 +226,21 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       this.callNumberPrefix,
       this.callNumberTypeId,
       this.sourceId,
-      administrativeNotes);
+      administrativeNotes,
+      this.hrId);
+  }
+
+  public HoldingRequestBuilder withHrId(String hrId) {
+    return new HoldingRequestBuilder(
+      this.instanceId,
+      this.permanentLocationId,
+      this.temporaryLocationId,
+      this.callNumber,
+      this.callNumberSuffix,
+      this.callNumberPrefix,
+      this.callNumberTypeId,
+      this.sourceId,
+      this.administrativeNotes,
+      hrId);
   }
 }
