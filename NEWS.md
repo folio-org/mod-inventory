@@ -1,3 +1,6 @@
+## 20.2.7 2024-06-26
+* [MODDATAIMP-1046](https://folio-org.atlassian.net/browse/MODDATAIMP-1046) Reorder only 00X fields while preserving system order for all other
+
 ## 20.2.6 2024-05-29
 * [MODDATAIMP-1052](https://folio-org.atlassian.net/browse/MODDATAIMP-1052) Fix editing shared Instance via quickMARC from Member tenant
 
