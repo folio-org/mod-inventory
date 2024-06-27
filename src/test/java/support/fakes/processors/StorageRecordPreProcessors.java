@@ -43,13 +43,13 @@ public final class StorageRecordPreProcessors {
   }
 
   public static CompletableFuture<JsonObject> setEffectiveLocationForItem(
-    @SuppressWarnings("unused") JsonObject oldItem, JsonObject newItem) {
+    @SuppressWarnings("unused") String tenant, JsonObject oldItem, JsonObject newItem) {
 
     CompletableFuture<JsonObject> holdings = completedFuture(new JsonObject());
     if (StringUtils.isBlank(newItem.getString(TEMPORARY_LOCATION_PROPERTY))
       && StringUtils.isBlank(newItem.getString(PERMANENT_LOCATION_PROPERTY))) {
 
-      holdings = findHoldingForItem(newItem);
+      holdings = findHoldingForItem(tenant, newItem);
     }
 
     return holdings.thenApply(holdingsRecord ->
@@ -63,7 +63,7 @@ public final class StorageRecordPreProcessors {
   }
 
   public static CompletableFuture<JsonObject> setEffectiveCallNumberComponents(
-    @SuppressWarnings("unused") JsonObject oldItem, JsonObject newItem) {
+    @SuppressWarnings("unused") String tenant, JsonObject oldItem, JsonObject newItem) {
 
     CompletableFuture<JsonObject> holdings = completedFuture(new JsonObject());
     boolean shouldRetrieveHoldings = CALL_NUMBER_PROPERTIES.stream()
@@ -71,7 +71,7 @@ public final class StorageRecordPreProcessors {
       .anyMatch(property -> StringUtils.isBlank(newItem.getString(property)));
 
     if (shouldRetrieveHoldings) {
-      holdings = findHoldingForItem(newItem);
+      holdings = findHoldingForItem(tenant, newItem);
     }
 
     return holdings.thenApply(holding -> {
@@ -95,7 +95,7 @@ public final class StorageRecordPreProcessors {
   }
 
   public static CompletableFuture<JsonObject> setEffectiveShelvingOrder(
-    @SuppressWarnings("unused") JsonObject oldItem, JsonObject newItem) {
+    @SuppressWarnings("unused") String tenant, JsonObject oldItem, JsonObject newItem) {
 
     final var effectiveCallNumberComponents
       = newItem.getJsonObject(EFFECTIVE_CALL_NUMBER_COMPONENTS);
@@ -105,14 +105,14 @@ public final class StorageRecordPreProcessors {
   }
 
   public static CompletableFuture<JsonObject> setStatusDateProcessor(
-    JsonObject oldItem, JsonObject newItem) {
+    String tenant, JsonObject oldItem, JsonObject newItem) {
 
     // Create case
     if (oldItem == null) {
       return completedFuture(newItem);
     }
 
-    return findHoldingForItem(newItem).thenApply(holding -> {
+    return findHoldingForItem(tenant, newItem).thenApply(holding -> {
       final String oldStatus = getNestedProperty(oldItem, "status", "name");
       final String newStatus = getNestedProperty(newItem, "status", "name");
 
@@ -132,13 +132,13 @@ public final class StorageRecordPreProcessors {
     });
   }
 
-  private static CompletableFuture<JsonObject> getHoldingById(String id) {
+  private static CompletableFuture<JsonObject> getHoldingById(String tenant, String id) {
     if (StringUtils.isBlank(id)) {
       return completedFuture(new JsonObject());
     }
 
     try {
-      return ApiTestSuite.createOkapiHttpClient().get(
+      return ApiTestSuite.createOkapiHttpClient(tenant).get(
         StorageInterfaceUrls.holdingStorageUrl("?query=id=" + id))
         .thenApply(
           response -> response.getJson().getJsonArray("holdingsRecords").getJsonObject(0))
@@ -151,7 +151,7 @@ public final class StorageRecordPreProcessors {
   public static RecordPreProcessor setHridProcessor(
     String hridPrefix) {
 
-    return (oldEntity, newEntity) -> {
+    return (tenant, oldEntity, newEntity) -> {
       if (StringUtils.isBlank(newEntity.getString("hrid"))) {
         String hridToSet = hridPrefix + hridSequence.getAndIncrement();
 
@@ -162,9 +162,9 @@ public final class StorageRecordPreProcessors {
     };
   }
 
-  private static CompletableFuture<JsonObject> findHoldingForItem(JsonObject item) {
+  private static CompletableFuture<JsonObject> findHoldingForItem(String tenant, JsonObject item) {
     final String holdingsId = item.getString(HOLDINGS_RECORD_PROPERTY_NAME);
 
-    return getHoldingById(holdingsId);
+    return getHoldingById(tenant, holdingsId);
   }
 }
