@@ -132,7 +132,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                                                                            List<NotUpdatedEntity> notUpdatedEntities, RoutingContext routingContext,
                                                                            WebContext context, Context targetTenantContext) {
     try {
-      LOGGER.info("updateOwnershipOfHoldingsRecords:: Updating ownership of holdingsRecord: {}, to tenant: {}",
+      LOGGER.debug("updateOwnershipOfHoldingsRecords:: Updating ownership of holdingsRecord: {}, to tenant: {}",
         holdingsUpdateOwnership.getHoldingsRecordIds(), targetTenantContext.getTenantId());
 
       CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(createHttpClient(client, routingContext, context),
@@ -144,12 +144,12 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
       return holdingsRecordFetchClient.find(holdingsUpdateOwnership.getHoldingsRecordIds(), MoveApiUtil::fetchByIdCql)
         .thenCompose(jsons -> {
-          LOGGER.info("updateOwnershipOfHoldingsRecords:: Found holdings to update ownership: {}", jsons);
-          processNotFoundInstances(holdingsUpdateOwnership.getHoldingsRecordIds(), notUpdatedEntities, context, jsons);
+          LOGGER.debug("updateOwnershipOfHoldingsRecords:: Found holdings to update ownership: {}", jsons);
+          processNotFoundHoldings(holdingsUpdateOwnership.getHoldingsRecordIds(), notUpdatedEntities, context, jsons);
           if (!jsons.isEmpty()) {
             return createHoldings(jsons, notUpdatedEntities, holdingsUpdateOwnership.getToInstanceId(), targetTenantHoldingsRecordCollection)
               .thenCompose(createdHoldings -> {
-                LOGGER.info("updateOwnershipOfHoldingsRecords:: Created holdings: {}, for tenant: {}", createdHoldings, targetTenantContext.getTenantId());
+                LOGGER.debug("updateOwnershipOfHoldingsRecords:: Created holdings: {}, for tenant: {}", createdHoldings, targetTenantContext.getTenantId());
 
                 return transferAttachedItems(createdHoldings, notUpdatedEntities, routingContext, context, targetTenantContext)
                   .thenCompose(itemIds ->
@@ -170,9 +170,9 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     List<String> sourceHoldingsRecordsIds = new ArrayList<>();
 
     try {
-      sourceHoldingsRecordsIds = holdingsRecordsWrappers.stream().map(UpdateOwnershipHoldingsRecordWrapper::sourceId).toList();
+      sourceHoldingsRecordsIds = holdingsRecordsWrappers.stream().map(UpdateOwnershipHoldingsRecordWrapper::sourceHoldingsRecordId).toList();
 
-      LOGGER.info("transferAttachedItems:: Transfer items of holdingsRecordIds: {}, to tenant: {}",
+      LOGGER.debug("transferAttachedItems:: Transfer items of holdingsRecordIds: {}, to tenant: {}",
         sourceHoldingsRecordsIds, targetTenantContext.getTenantId());
 
       CollectionResourceClient itemsStorageClient = createItemStorageClient(createHttpClient(client, routingContext, context), context);
@@ -183,7 +183,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
       return itemsFetchClient.find(sourceHoldingsRecordsIds, MoveApiUtil::fetchByHoldingsRecordIdCql)
         .thenCompose(jsons -> {
-          LOGGER.info("transferAttachedItems:: Found items to transfer: {}", jsons);
+          LOGGER.debug("transferAttachedItems:: Found items to transfer: {}", jsons);
           if (!jsons.isEmpty()) {
             return createItems(jsons, holdingsRecordsWrappers, notUpdatedEntities, targetTenantItemCollection)
               .thenCompose(items -> deleteItems(items, notUpdatedEntities, sourceTenantItemCollection));
@@ -199,9 +199,11 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
   private CompletableFuture<List<UpdateOwnershipItemWrapper>> createItems(List<JsonObject> jsons, List<UpdateOwnershipHoldingsRecordWrapper> holdingsRecordsWrappers,
                                                                          List<NotUpdatedEntity> notUpdatedEntities, ItemCollection itemCollection) {
+    LOGGER.debug("createItems:: Creating items: {}", jsons);
+
     List<CompletableFuture<UpdateOwnershipItemWrapper>> createFutures = jsons.stream()
       .map(itemJson -> {
-        String sourceId = itemJson.getString("id");
+        String sourceItemId = itemJson.getString("id");
         itemJson.remove("id");
 
         Item item = ItemUtil.fromStoredItemRepresentation(itemJson)
@@ -210,7 +212,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         String sourceHoldingId = item.getHoldingId();
 
         String targetHoldingId = holdingsRecordsWrappers.stream()
-          .filter(h -> h.sourceId().equals(sourceHoldingId)).findFirst().map(wrapper -> wrapper.holdingsRecord().getId())
+          .filter(h -> h.sourceHoldingsRecordId().equals(sourceHoldingId)).findFirst().map(wrapper -> wrapper.holdingsRecord().getId())
           .orElse(null);
 
         return itemCollection.add(item.withHoldingId(targetHoldingId))
@@ -218,7 +220,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
             LOGGER.warn("createHoldings:: Error during creating item with id: {} for holdingsRecord with id: {}", item.getId(), item.getHoldingId(), e);
             notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHoldingId).withErrorMessage(e.getMessage()));
             throw new CompletionException(e);
-          }).thenApply(i -> new UpdateOwnershipItemWrapper(sourceId, sourceHoldingId, i));
+          }).thenApply(i -> new UpdateOwnershipItemWrapper(sourceItemId, sourceHoldingId, i));
       })
       .toList();
 
@@ -231,6 +233,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
   private CompletableFuture<List<UpdateOwnershipHoldingsRecordWrapper>> createHoldings(List<JsonObject> jsons, List<NotUpdatedEntity> notUpdatedEntities, String instanceId,
                                                                                        HoldingsRecordCollection holdingsRecordCollection) {
+    LOGGER.debug("createHoldings:: Creating holdings record, for instance id: {}, holdings: {}", instanceId, jsons);
+
     jsons.forEach(MoveApiUtil::removeExtraRedundantFields);
 
     List<HoldingsRecord> holdingsRecordsToUpdateOwnership = jsons.stream()
@@ -240,13 +244,13 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
     List<CompletableFuture<UpdateOwnershipHoldingsRecordWrapper>> createFutures = holdingsRecordsToUpdateOwnership.stream()
       .map(holdingsRecord -> {
-        String sourceId = holdingsRecord.getId();
+        String sourceHoldingsRecordId = holdingsRecord.getId();
         return holdingsRecordCollection.add(holdingsRecord.withId(null))
           .exceptionally(e -> {
             LOGGER.warn("createHoldings:: Error during creating holdingsRecord with id: {}", holdingsRecord.getId(), e);
-            notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceId).withErrorMessage(e.getMessage()));
+            notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHoldingsRecordId).withErrorMessage(e.getMessage()));
             throw new CompletionException(e);
-          }).thenApply(h -> new UpdateOwnershipHoldingsRecordWrapper(sourceId, h));
+          }).thenApply(h -> new UpdateOwnershipHoldingsRecordWrapper(sourceHoldingsRecordId, h));
       })
       .toList();
 
@@ -259,15 +263,18 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
   private CompletableFuture<List<String>> deleteHoldings(List<UpdateOwnershipHoldingsRecordWrapper> holdingsRecordWrappers, List<NotUpdatedEntity> notUpdatedEntities,
                                                          HoldingsRecordCollection holdingsRecordCollection) {
+    LOGGER.debug("deleteHoldings:: Deleting holdings record with ids {}",
+      holdingsRecordWrappers.stream().map(UpdateOwnershipHoldingsRecordWrapper::sourceHoldingsRecordId).toList());
+
     List<CompletableFuture<String>> deleteFutures = holdingsRecordWrappers.stream()
-      .map(holdingsRecord -> {
+      .map(holdingsRecordWrapper -> {
         Promise<String> promise = Promise.promise();
-        holdingsRecordCollection.delete(holdingsRecord.sourceId(), success -> promise.complete(holdingsRecord.sourceId()),
+        holdingsRecordCollection.delete(holdingsRecordWrapper.sourceHoldingsRecordId(), success -> promise.complete(holdingsRecordWrapper.sourceHoldingsRecordId()),
           failure -> {
             LOGGER.warn("deleteHoldings:: Error during deleting holdingsRecord with id: {}, status code: {}, reason: {}",
-              holdingsRecord.sourceId(), failure.getStatusCode(), failure.getReason());
+              holdingsRecordWrapper.sourceHoldingsRecordId(), failure.getStatusCode(), failure.getReason());
 
-            notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(holdingsRecord.sourceId()).withErrorMessage(failure.getReason()));
+            notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(holdingsRecordWrapper.sourceHoldingsRecordId()).withErrorMessage(failure.getReason()));
             promise.fail(failure.getReason());
           });
         return promise.future().toCompletionStage().toCompletableFuture();
@@ -280,16 +287,19 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         .toList());
   }
 
-  private CompletableFuture<List<String>> deleteItems(List<UpdateOwnershipItemWrapper> items, List<NotUpdatedEntity> notUpdatedEntities, ItemCollection itemCollection) {
-    List<CompletableFuture<String>> deleteFutures = items.stream()
-      .map(item -> {
+  private CompletableFuture<List<String>> deleteItems(List<UpdateOwnershipItemWrapper> itemWrappers, List<NotUpdatedEntity> notUpdatedEntities, ItemCollection itemCollection) {
+    LOGGER.debug("deleteItems:: Deleting items with ids {}",
+      itemWrappers.stream().map(UpdateOwnershipItemWrapper::sourceItemId).toList());
+
+    List<CompletableFuture<String>> deleteFutures = itemWrappers.stream()
+      .map(itemWrapper -> {
         Promise<String> promise = Promise.promise();
-        itemCollection.delete(item.sourceId(), success -> promise.complete(item.sourceId()),
+        itemCollection.delete(itemWrapper.sourceItemId(), success -> promise.complete(itemWrapper.sourceItemId()),
           failure -> {
             LOGGER.warn("deleteItems:: Error during deleting item with id: {} for holdingsRecord with id {}, status code: {}, reason: {}",
-              item.sourceId(), item.sourceTenantHoldingId(), failure.getStatusCode(), failure.getReason());
+              itemWrapper.sourceItemId(), itemWrapper.sourceHoldingsRecordId(), failure.getStatusCode(), failure.getReason());
 
-            notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(item.sourceTenantHoldingId()).withErrorMessage(failure.getReason()));
+            notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(itemWrapper.sourceHoldingsRecordId()).withErrorMessage(failure.getReason()));
             promise.fail(failure.getReason());
           });
         return promise.future().toCompletionStage().toCompletableFuture();
@@ -302,7 +312,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         .toList());
   }
 
-  private void processNotFoundInstances(List<String> holdingsRecordIds, List<NotUpdatedEntity> notUpdatedEntities, WebContext context, List<JsonObject> jsons) {
+  private void processNotFoundHoldings(List<String> holdingsRecordIds, List<NotUpdatedEntity> notUpdatedEntities, WebContext context, List<JsonObject> jsons) {
     List<String> foundIds = jsons.stream().map(json -> json.getString("id")).toList();
     List<String> notFoundIds = ListUtils.subtract(holdingsRecordIds, foundIds);
     notFoundIds.forEach(id -> {
@@ -315,10 +325,15 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private List<UpdateOwnershipHoldingsRecordWrapper> getHoldingsToDelete(List<NotUpdatedEntity> notUpdatedEntities,
                                                                          List<UpdateOwnershipHoldingsRecordWrapper> createdHoldingsWrappers) {
     List<String> notUpdatedHoldingsIds = notUpdatedEntities.stream().map(NotUpdatedEntity::getEntityId).toList();
-    return createdHoldingsWrappers.stream().filter(holdingsRecord -> !notUpdatedHoldingsIds.contains(holdingsRecord.sourceId())).toList();
+    return createdHoldingsWrappers.stream().filter(holdingsRecord -> !notUpdatedHoldingsIds.contains(holdingsRecord.sourceHoldingsRecordId())).toList();
   }
 
-  private record UpdateOwnershipHoldingsRecordWrapper(String sourceId, HoldingsRecord holdingsRecord) {}
+  private record UpdateOwnershipHoldingsRecordWrapper(
+    String sourceHoldingsRecordId, HoldingsRecord holdingsRecord) {
+  }
 
-  private record UpdateOwnershipItemWrapper(String sourceId, String sourceTenantHoldingId, Item item) {}
+  private record UpdateOwnershipItemWrapper(String sourceItemId,
+                                            String sourceHoldingsRecordId,
+                                            Item item) {
+  }
 }
