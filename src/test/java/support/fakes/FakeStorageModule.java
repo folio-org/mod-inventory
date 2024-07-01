@@ -275,7 +275,7 @@ class FakeStorageModule extends AbstractVerticle {
 
     var limit = requestBody.getInteger("limit");
     var offset = requestBody.getInteger("offset");
-    var query = requestBody.getString("query");;
+    var query = requestBody.getString("query");
 
     System.out.printf("Handling %s%n", routingContext.request().uri());
 
