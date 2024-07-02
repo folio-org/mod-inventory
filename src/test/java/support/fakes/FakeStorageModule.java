@@ -186,7 +186,7 @@ class FakeStorageModule extends AbstractVerticle {
   private CompletableFuture<Void> createElement(WebContext context, JsonObject rawBody) {
     String id = rawBody.getString("id");
 
-    return preProcessRecords(null, rawBody).thenAccept(body -> getResourcesForTenant(context).put(id, body));
+    return preProcessRecords(context.getTenantId(), null, rawBody).thenAccept(body -> getResourcesForTenant(context).put(id, body));
   }
 
   private void replace(RoutingContext routingContext) {
@@ -197,7 +197,7 @@ class FakeStorageModule extends AbstractVerticle {
     JsonObject rawBody = getJsonFromBody(routingContext);
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
-    preProcessRecords(resourcesForTenant.get(id), rawBody).thenAccept(body -> {
+    preProcessRecords(context.getTenantId(), resourcesForTenant.get(id), rawBody).thenAccept(body -> {
       setDefaultProperties(body);
 
       if (ID_FOR_FAILURE.toString().equals(id)) {
@@ -275,7 +275,7 @@ class FakeStorageModule extends AbstractVerticle {
 
     var limit = requestBody.getInteger("limit");
     var offset = requestBody.getInteger("offset");
-    var query = requestBody.getString("query");;
+    var query = requestBody.getString("query");
 
     System.out.printf("Handling %s%n", routingContext.request().uri());
 
@@ -446,14 +446,14 @@ class FakeStorageModule extends AbstractVerticle {
     });
   }
 
-  private CompletableFuture<JsonObject> preProcessRecords(JsonObject oldBody, JsonObject newBody) {
+  private CompletableFuture<JsonObject> preProcessRecords(String tenant, JsonObject oldBody, JsonObject newBody) {
     CompletableFuture<JsonObject> lastPreProcess = completedFuture(newBody);
 
     for (RecordPreProcessor preProcessor : recordPreProcessors) {
       lastPreProcess = lastPreProcess
         .thenCompose(prev -> {
             try {
-              return preProcessor.process(oldBody, newBody);
+              return preProcessor.process(tenant, oldBody, newBody);
             } catch (Exception ex) {
               CompletableFuture<JsonObject> future = new CompletableFuture<>();
               future.completeExceptionally(ex);

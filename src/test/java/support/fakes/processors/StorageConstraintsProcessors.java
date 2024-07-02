@@ -29,7 +29,7 @@ public final class StorageConstraintsProcessors {
   }
 
   public static CompletableFuture<JsonObject> instanceRelationshipsConstraints(
-    @SuppressWarnings("unused") JsonObject oldRelationship, JsonObject newRelationship) throws MalformedURLException {
+    @SuppressWarnings("unused") String tenant, JsonObject oldRelationship, JsonObject newRelationship) throws MalformedURLException {
 
     final InstanceRelationship relationship = new InstanceRelationship(newRelationship);
 
@@ -58,7 +58,7 @@ public final class StorageConstraintsProcessors {
   }
 
   public static CompletableFuture<JsonObject> instancePrecedingSucceedingTitleConstraints(
-    @SuppressWarnings("unused") JsonObject oldRelationship, JsonObject newRelationship) throws MalformedURLException {
+    @SuppressWarnings("unused") String tenant, JsonObject oldRelationship, JsonObject newRelationship) throws MalformedURLException {
 
     final PrecedingSucceedingTitle relationship = PrecedingSucceedingTitle.from(newRelationship);
 
