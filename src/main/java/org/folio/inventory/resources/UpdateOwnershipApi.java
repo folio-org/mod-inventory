@@ -54,14 +54,15 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   public static final String INSTANCE_NOT_SHARED = "Instance with id: %s is not shared";
   public static final String INSTANCE_RELATED_TO_HOLDINGS_RECORD_NOT_SHARED = "Instance with id: %s related to holdings record with id: %s is not shared";
   public static final String INSTANCE_NOT_FOUND_AT_SOURCE_TENANT = "Instance with id: %s not found at source tenant, tenant: %s";
-  public static final String HOLDINGS_RECORD_NOT_FOUND_AT_SOURCE_TENANT = "Holdings record with id: %s not found at source tenant, tenant: %s";
   public static final String TENANT_NOT_IN_CONSORTIA = "%s tenant is not in consortia";
-  public static final String HOLDINGS_NOT_FOUND = "HoldingsRecord with id: %s not found on tenant: %s";
+  public static final String HOLDINGS_RECORD_NOT_FOUND = "HoldingsRecord with id: %s not found on tenant: %s";
   public static final String ITEM_NOT_FOUND = "Item with id: %s not found on tenant: %s";
   public static final String LOG_UPDATE_HOLDINGS_OWNERSHIP = "updateHoldingsOwnership:: %s";
   public static final String LOG_UPDATE_ITEMS_OWNERSHIP = "updateItemsOwnership:: %s";
   private static final String ITEM_NOT_LINKED_TO_SHARED_INSTANCE = "Item with id: %s not linked to shared Instance";
-  public static final String HOLDING_ID = "holdingId";
+  public static final String HOLDINGS_RECORD_NOT_LINKED_TO_SHARED_INSTANCE = "HoldingsRecord with id: %s not linked to shared Instance";
+  private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
+  private static final String INSTANCE_ID = "instanceId";
 
   private final ConsortiumService consortiumService;
 
@@ -175,7 +176,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                       }
                     });
                 } else {
-                  String holdingsRecordNotFoundErrorMessage = format(HOLDINGS_RECORD_NOT_FOUND_AT_SOURCE_TENANT,
+                  String holdingsRecordNotFoundErrorMessage = format(HOLDINGS_RECORD_NOT_FOUND,
                     itemsUpdateOwnership.getToHoldingsRecordId(), context.getTenantId());
                   LOGGER.warn(format(LOG_UPDATE_ITEMS_OWNERSHIP, holdingsRecordNotFoundErrorMessage));
                   return CompletableFuture.failedFuture(new NotFoundException(holdingsRecordNotFoundErrorMessage));
@@ -225,9 +226,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                 ItemCollection targetTenantItemCollection = storage.getItemCollection(targetTenantContext);
 
                 List<String> holdingsRecordsIds = holdingsRecords.stream().map(HoldingsRecord::getId).toList();
-                List<JsonObject> validatedItems = validateItemsToBeLinkedToSharedInstance(jsons, holdingsRecordsIds, notUpdatedEntities);
+                List<JsonObject> validatedItems = validateItems(jsons, holdingsRecordsIds, notUpdatedEntities);
 
-                List<UpdateOwnershipItemWrapper> itemWrappers = validatedItems.stream().map(itemJson -> mapItemWrapper(itemJson, toHoldingsRecord.getId())).toList();
+                List<UpdateOwnershipItemWrapper> itemWrappers = validatedItems.stream()
+                  .map(itemJson -> mapItemWrapper(itemJson, toHoldingsRecord.getId())).toList();
 
                 return createItems(itemWrappers, notUpdatedEntities, UpdateOwnershipItemWrapper::sourceItemId, targetTenantItemCollection)
                   .thenCompose(items -> deleteSourceItems(items, notUpdatedEntities, UpdateOwnershipItemWrapper::sourceItemId, sourceTenantItemCollection));
@@ -260,11 +262,16 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       return holdingsRecordFetchClient.find(holdingsUpdateOwnership.getHoldingsRecordIds(), MoveApiUtil::fetchByIdCql)
         .thenCompose(jsons -> {
           LOGGER.debug("updateOwnershipOfHoldingsRecords:: Found holdings to update ownership: {}", jsons);
-          processNotFoundEntities(holdingsUpdateOwnership.getHoldingsRecordIds(), notUpdatedEntities, context, jsons, HOLDINGS_NOT_FOUND);
+          processNotFoundEntities(holdingsUpdateOwnership.getHoldingsRecordIds(), notUpdatedEntities, context, jsons, HOLDINGS_RECORD_NOT_FOUND);
           if (!jsons.isEmpty()) {
-            return createHoldings(jsons, notUpdatedEntities, holdingsUpdateOwnership.getToInstanceId(), targetTenantHoldingsRecordCollection)
+            List<JsonObject> validatedHoldingsRecords = validateHoldingsRecords(jsons, holdingsUpdateOwnership.getToInstanceId(), notUpdatedEntities);
+            List<UpdateOwnershipHoldingsRecordWrapper> holdingsRecordWrappers =
+              validatedHoldingsRecords.stream().map(this::mapHoldingsRecordWrapper).toList();
+
+            return createHoldings(holdingsRecordWrappers, notUpdatedEntities, targetTenantHoldingsRecordCollection)
               .thenCompose(createdHoldings -> {
-                LOGGER.debug("updateOwnershipOfHoldingsRecords:: Created holdings: {}, for tenant: {}", createdHoldings, targetTenantContext.getTenantId());
+                LOGGER.debug("updateOwnershipOfHoldingsRecords:: Created holdings: {}, for tenant: {}",
+                  createdHoldings, targetTenantContext.getTenantId());
 
                 return transferAttachedItems(createdHoldings, notUpdatedEntities, routingContext, context, targetTenantContext)
                   .thenCompose(itemIds ->
@@ -340,27 +347,29 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         .toList());
   }
 
-  private CompletableFuture<List<UpdateOwnershipHoldingsRecordWrapper>> createHoldings(List<JsonObject> jsons, List<NotUpdatedEntity> notUpdatedEntities, String instanceId,
+  private UpdateOwnershipHoldingsRecordWrapper mapHoldingsRecordWrapper(JsonObject holdingsRecordJson) {
+    MoveApiUtil.removeExtraRedundantFields(holdingsRecordJson);
+
+    HoldingsRecord holdingsRecord = holdingsRecordJson.mapTo(HoldingsRecord.class).withHrid(null);
+    String sourceHoldingsRecordId = holdingsRecord.getId();
+
+    return new UpdateOwnershipHoldingsRecordWrapper(sourceHoldingsRecordId, holdingsRecord.withId(UUID.randomUUID().toString()));
+  }
+
+  private CompletableFuture<List<UpdateOwnershipHoldingsRecordWrapper>> createHoldings(List<UpdateOwnershipHoldingsRecordWrapper> holdingsRecordWrappers,
+                                                                                       List<NotUpdatedEntity> notUpdatedEntities,
                                                                                        HoldingsRecordCollection holdingsRecordCollection) {
-    LOGGER.debug("createHoldings:: Creating holdings record, for instance id: {}, holdings: {}", instanceId, jsons);
+    LOGGER.debug("createHoldings:: Creating holdings records: {}",
+      holdingsRecordWrappers.stream().map(UpdateOwnershipHoldingsRecordWrapper::holdingsRecord).toList());
 
-    jsons.forEach(MoveApiUtil::removeExtraRedundantFields);
-
-    List<HoldingsRecord> holdingsRecordsToUpdateOwnership = jsons.stream()
-      .map(json -> json.mapTo(HoldingsRecord.class).withHrid(null))
-      .filter(holdingsRecord -> holdingsRecord.getInstanceId().equals(instanceId))
-      .toList();
-
-    List<CompletableFuture<UpdateOwnershipHoldingsRecordWrapper>> createFutures = holdingsRecordsToUpdateOwnership.stream()
-      .map(holdingsRecord -> {
-        String sourceHoldingsRecordId = holdingsRecord.getId();
-        return holdingsRecordCollection.add(holdingsRecord.withId(null))
+    List<CompletableFuture<UpdateOwnershipHoldingsRecordWrapper>> createFutures = holdingsRecordWrappers.stream()
+      .map(holdingsRecordWrapper ->
+        holdingsRecordCollection.add(holdingsRecordWrapper.holdingsRecord())
           .exceptionally(e -> {
-            LOGGER.warn("createHoldings:: Error during creating holdingsRecord with id: {}", holdingsRecord.getId(), e);
-            notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHoldingsRecordId).withErrorMessage(e.getMessage()));
+            LOGGER.warn("createHoldings:: Error during creating holdingsRecord with id: {}", holdingsRecordWrapper.holdingsRecord(), e);
+            notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(holdingsRecordWrapper.sourceHoldingsRecordId()).withErrorMessage(e.getMessage()));
             throw new CompletionException(e);
-          }).thenApply(h -> new UpdateOwnershipHoldingsRecordWrapper(sourceHoldingsRecordId, h));
-      })
+          }).thenApply(h -> holdingsRecordWrapper))
       .toList();
 
     return CompletableFuture.allOf(createFutures.toArray(new CompletableFuture[0]))
@@ -458,16 +467,31 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     return promise.future().toCompletionStage().toCompletableFuture();
   }
 
-  private List<JsonObject> validateItemsToBeLinkedToSharedInstance(List<JsonObject> jsons, List<String> holdingsRecordsIds,
-                                                                   List<NotUpdatedEntity> notUpdatedEntities) {
+  private List<JsonObject> validateHoldingsRecords(List<JsonObject> jsons, String toInstanceId, List<NotUpdatedEntity> notUpdatedEntities) {
+    return jsons.stream().filter(holdingsRecordJson -> {
+      String instanceId = holdingsRecordJson.getString(INSTANCE_ID);
+      if (toInstanceId.equals(instanceId)) {
+        return true;
+      }
+      String holdingsRecordId = holdingsRecordJson.getString("id");
+      String errorMessage = format(HOLDINGS_RECORD_NOT_LINKED_TO_SHARED_INSTANCE, holdingsRecordId);
+      LOGGER.warn(format("validateHoldingsRecords:: %s", errorMessage));
+      notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(holdingsRecordId).withErrorMessage(errorMessage));
+
+      return false;
+    }).toList();
+  }
+
+  private List<JsonObject> validateItems(List<JsonObject> jsons, List<String> holdingsRecordsIds,
+                                         List<NotUpdatedEntity> notUpdatedEntities) {
     return jsons.stream().filter(json -> {
-      String holdingId = json.getString(HOLDING_ID);
+      String holdingId = json.getString(HOLDINGS_RECORD_ID);
       if (holdingId != null && holdingsRecordsIds.contains(holdingId)) {
         return true;
       }
       String itemId = json.getString("id");
       String errorMessage = format(ITEM_NOT_LINKED_TO_SHARED_INSTANCE, itemId);
-      LOGGER.warn(format("validateItemsToBeLinkedToSharedInstance:: %s", errorMessage));
+      LOGGER.warn(format("validateItems:: %s", errorMessage));
       notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(itemId).withErrorMessage(errorMessage));
 
       return false;
@@ -476,13 +500,13 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
   private String getTargetHoldingId(JsonObject itemJson, List<UpdateOwnershipHoldingsRecordWrapper> holdingsRecordsWrappers) {
     return holdingsRecordsWrappers.stream()
-      .filter(h -> h.sourceHoldingsRecordId().equals(itemJson.getString(HOLDING_ID))).findFirst().map(wrapper -> wrapper.holdingsRecord().getId())
+      .filter(h -> h.sourceHoldingsRecordId().equals(itemJson.getString(HOLDINGS_RECORD_ID))).findFirst().map(wrapper -> wrapper.holdingsRecord().getId())
       .orElse(null);
   }
 
   private UpdateOwnershipItemWrapper mapItemWrapper(JsonObject itemJson, String targetHoldingId) {
     String sourceItemId = itemJson.getString("id");
-    String sourceHoldingId = itemJson.getString(HOLDING_ID);
+    String sourceHoldingId = itemJson.getString(HOLDINGS_RECORD_ID);
 
     itemJson.put("id", UUID.randomUUID().toString());
 
