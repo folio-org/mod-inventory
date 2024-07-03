@@ -548,7 +548,8 @@
             "inventory-storage.items.item.post",
             "inventory-storage.items.item.delete",
             "inventory-storage.items.collection.get",
-            "inventory-storage.holdings.item.get"
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.item.get"
           ]
         },
         {
