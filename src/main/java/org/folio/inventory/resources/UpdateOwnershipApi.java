@@ -141,7 +141,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       final var context = new WebContext(routingContext);
       final var updateOwnershipRequest = routingContext.body().asJsonObject();
 
-      final var validationError = updateOwnershipHasRequiredFields(context.getTenantId(), updateOwnershipRequest, HoldingsUpdateOwnership.class);
+      final var validationError = updateOwnershipHasRequiredFields(context.getTenantId(), updateOwnershipRequest, ItemsUpdateOwnership.class);
 
       if (validationError.isPresent()) {
         unprocessableEntity(routingContext.response(), validationError.get());
@@ -157,7 +157,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       consortiumService.getConsortiumConfiguration(context).toCompletionStage().toCompletableFuture()
         .thenCompose(consortiumConfigurationOptional -> {
           if (consortiumConfigurationOptional.isPresent()) {
-            return storage.getHoldingsRecordCollection(context)
+            Context targetTenantContext = constructContext(itemsUpdateOwnership.getTargetTenantId(), context.getToken(), context.getOkapiLocation());
+            return storage.getHoldingsRecordCollection(targetTenantContext)
               .findById(itemsUpdateOwnership.getToHoldingsRecordId())
               .thenCompose(holdingsRecord -> {
                 if (holdingsRecord != null) {
@@ -165,7 +166,6 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                     .findById(holdingsRecord.getInstanceId())
                     .thenCompose(instance -> {
                       if (instance.getSource().equals(CONSORTIUM_MARC.getValue()) || instance.getSource().equals(CONSORTIUM_FOLIO.getValue())) {
-                        Context targetTenantContext = constructContext(itemsUpdateOwnership.getTargetTenantId(), context.getToken(), context.getOkapiLocation());
                         return updateOwnershipOfItems(itemsUpdateOwnership, holdingsRecord, notUpdatedEntities, routingContext, context, targetTenantContext);
                       } else {
                         String instanceNotSharedErrorMessage = format(INSTANCE_RELATED_TO_HOLDINGS_RECORD_NOT_SHARED,
@@ -177,7 +177,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                     });
                 } else {
                   String holdingsRecordNotFoundErrorMessage = format(HOLDINGS_RECORD_NOT_FOUND,
-                    itemsUpdateOwnership.getToHoldingsRecordId(), context.getTenantId());
+                    itemsUpdateOwnership.getToHoldingsRecordId(), targetTenantContext.getTenantId());
                   LOGGER.warn(format(LOG_UPDATE_ITEMS_OWNERSHIP, holdingsRecordNotFoundErrorMessage));
                   return CompletableFuture.failedFuture(new NotFoundException(holdingsRecordNotFoundErrorMessage));
                 }

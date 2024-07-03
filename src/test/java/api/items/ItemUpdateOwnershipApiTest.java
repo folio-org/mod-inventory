@@ -15,7 +15,6 @@ import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.support.http.client.Response;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -26,20 +25,25 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static api.ApiTestSuite.ID_FOR_FAILURE;
+import static api.ApiTestSuite.COLLEGE_TENANT_ID;
+import static api.ApiTestSuite.TENANT_ID;
 import static api.ApiTestSuite.createConsortiumTenant;
 import static api.support.InstanceSamples.smallAngryPlanet;
+import static java.lang.String.format;
+import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
+import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
+import static org.folio.inventory.resources.UpdateOwnershipApi.HOLDINGS_RECORD_NOT_FOUND;
+import static org.folio.inventory.resources.UpdateOwnershipApi.ITEM_NOT_FOUND;
 import static org.folio.inventory.support.ItemUtil.HOLDINGS_RECORD_ID;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
-import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.Assert.assertEquals;
 
-@Ignore
 @RunWith(JUnitParamsRunner.class)
 public class ItemUpdateOwnershipApiTest extends ApiTests {
 
@@ -55,17 +59,15 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
 
   @Test
   public void canUpdateItemsOwnershipToDifferentTenant() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
-    UUID sourceInstanceId = UUID.randomUUID();
-    JsonObject sourceInstance = smallAngryPlanet(sourceInstanceId);
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
 
-    UUID targetInstanceId = UUID.randomUUID();
-    JsonObject targetInstance = smallAngryPlanet(targetInstanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.put("source", FOLIO.getValue()));
+    InstanceApiClient.createInstance(collegeOkapiClient, instance.put("source", FOLIO.getValue()));
 
-    InstanceApiClient.createInstance(okapiClient, sourceInstance);
-    InstanceApiClient.createInstance(consortiumOkapiClient, targetInstance);
-
-    final UUID createHoldingsRecord1 = createHoldingForInstance(sourceInstanceId);
-    final UUID createHoldingsRecord2 = createHoldingForInstanceAtConsortium(targetInstanceId);
+    final UUID createHoldingsRecord1 = createHoldingForInstance(instanceId);
+    final UUID createHoldingsRecord2 = createHoldingForInstanceAtCollege(instanceId);
 
     final var firstItem = itemsClient.create(
       new ItemRequestBuilder()
@@ -80,7 +82,7 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
     JsonObject itemsUpdateOwnershipRequestBody = new ItemsUpdateOwnershipRequestBuilder(createHoldingsRecord2,
-      new JsonArray(List.of(firstItem.getId().toString(), secondItem.getId().toString())), ApiTestSuite.CONSORTIA_TENANT_ID).create();
+      new JsonArray(List.of(firstItem.getId().toString(), secondItem.getId().toString())), ApiTestSuite.COLLEGE_TENANT_ID).create();
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
@@ -89,31 +91,32 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
     assertThat(postItemsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
 
     final var sourceFirstUpdatedItem = itemsClient.getById(firstItem.getId());
-    final var targetFirstUpdatedItem = consortiumItemsClient.getById(firstItem.getId());
+    final var targetHoldingsRecordItems = collegeItemsClient.getMany(format("holdingsRecordId=%s", createHoldingsRecord2), 100);
+    assertEquals(2, targetHoldingsRecordItems.size());
+
+    JsonObject targetTenantItem1 = targetHoldingsRecordItems.get(0);
+    JsonObject targetTenantItem2 = targetHoldingsRecordItems.get(1);
 
     final var sourceSecondUpdatedItem = itemsClient.getById(secondItem.getId());
-    final var targetSecondUpdatedItem = consortiumItemsClient.getById(secondItem.getId());
 
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceFirstUpdatedItem.getStatusCode()));
-    assertThat(targetFirstUpdatedItem.getJson().getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
+    assertThat(targetTenantItem1.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
 
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceSecondUpdatedItem.getStatusCode()));
-    assertThat(targetSecondUpdatedItem.getJson().getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
+    assertThat(targetTenantItem2.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
   }
 
   @Test
   public void shouldReportErrorsWhenOnlySomeRequestedItemsOwnershipCouldNotBeUpdated() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
-    UUID sourceInstanceId = UUID.randomUUID();
-    JsonObject sourceInstance = smallAngryPlanet(sourceInstanceId);
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
 
-    UUID targetInstanceId = UUID.randomUUID();
-    JsonObject targetInstance = smallAngryPlanet(targetInstanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.put("source", FOLIO.getValue()));
+    InstanceApiClient.createInstance(collegeOkapiClient, instance.put("source", FOLIO.getValue()));
 
-    InstanceApiClient.createInstance(okapiClient, sourceInstance);
-    InstanceApiClient.createInstance(consortiumOkapiClient, targetInstance);
-
-    final UUID createHoldingsRecord1 = createHoldingForInstance(sourceInstanceId);
-    final UUID createHoldingsRecord2 = createHoldingForInstanceAtConsortium(targetInstanceId);
+    final UUID createHoldingsRecord1 = createHoldingForInstance(instanceId);
+    final UUID createHoldingsRecord2 = createHoldingForInstanceAtCollege(instanceId);
 
     final var item = itemsClient.create(
       new ItemRequestBuilder()
@@ -124,24 +127,29 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
     final var nonExistentItemId = UUID.randomUUID();
 
     JsonObject itemsUpdateOwnershipRequestBody = new ItemsUpdateOwnershipRequestBuilder(createHoldingsRecord2,
-      new JsonArray(List.of(item.getId().toString(), nonExistentItemId.toString())), ApiTestSuite.CONSORTIA_TENANT_ID).create();
+      new JsonArray(List.of(item.getId().toString(), nonExistentItemId.toString())), ApiTestSuite.COLLEGE_TENANT_ID).create();
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
     assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(200));
     assertThat(postItemsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    final var notFoundIds = toListOfStrings(postItemsUpdateOwnershipResponse.getJson(),
-      "nonUpdatedIds");
+    JsonArray notUpdatedEntitiesIds = postItemsUpdateOwnershipResponse.getJson()
+      .getJsonArray("notUpdatedEntities");
 
-    assertThat(notFoundIds, hasSize(1));
-    assertThat(notFoundIds.get(0), equalTo(nonExistentItemId.toString()));
+
+    assertThat(notUpdatedEntitiesIds.size(), is(1));
+    assertThat(notUpdatedEntitiesIds.getJsonObject(0).getString("entityId"), equalTo(nonExistentItemId.toString()));
+    assertEquals(format(ITEM_NOT_FOUND, nonExistentItemId, TENANT_ID), notUpdatedEntitiesIds.getJsonObject(0).getString("errorMessage"));
 
     final var sourceUpdatedItem = itemsClient.getById(item.getId());
-    final var targetUpdatedItem = consortiumItemsClient.getById(item.getId());
+    final var targetHoldingsRecordItems = collegeItemsClient.getMany(format("holdingsRecordId=%s", createHoldingsRecord2), 100);
+    assertEquals(1, targetHoldingsRecordItems.size());
+
+    JsonObject targetTenantItem1 = targetHoldingsRecordItems.get(0);
 
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceUpdatedItem.getStatusCode()));
-    assertThat(targetUpdatedItem.getJson().getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
+    assertThat(targetTenantItem1.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
   }
 
   @Test
@@ -171,7 +179,7 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
 
     assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("errors"));
     assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("itemIds"));
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("Item ids aren't specified"));
+    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("itemIds is a required field"));
   }
 
   @Test
@@ -185,18 +193,20 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
     assertThat(postItemsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
 
     assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("errors"));
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("tenantId"));
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("tenantId is a required field"));
+    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("targetTenantId"));
+    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("targetTenantId is a required field"));
   }
 
   @Test
   public void cannotUpdateItemsOwnershipToNonExistedHoldingsRecord() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
-    UUID sourceInstanceId = UUID.randomUUID();
-    JsonObject sourceInstance = smallAngryPlanet(sourceInstanceId);
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
 
-    InstanceApiClient.createInstance(okapiClient, sourceInstance);
+    InstanceApiClient.createInstance(okapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.put("source", FOLIO.getValue()));
+    InstanceApiClient.createInstance(collegeOkapiClient, instance.put("source", FOLIO.getValue()));
 
-    final UUID existingHoldingsId = createHoldingForInstance(sourceInstanceId);
+    final UUID existingHoldingsId = createHoldingForInstance(instanceId);
     final UUID nonExistentHoldingsId = UUID.randomUUID();
 
     final var item = itemsClient.create(
@@ -206,68 +216,12 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
     JsonObject itemsUpdateOwnershipRequestBody = new ItemsUpdateOwnershipRequestBuilder(nonExistentHoldingsId,
-      new JsonArray(List.of(item.getId().toString())), ApiTestSuite.CONSORTIA_TENANT_ID).create();
+      new JsonArray(List.of(item.getId().toString())), ApiTestSuite.COLLEGE_TENANT_ID).create();
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(422));
-    assertThat(postItemsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
-
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("errors"));
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString(nonExistentHoldingsId.toString()));
-  }
-
-  @Test
-  public void canUpdateItemsOwnershipDueToItemUpdateError() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
-    UUID sourceInstanceId = UUID.randomUUID();
-    JsonObject sourceInstance = smallAngryPlanet(sourceInstanceId);
-
-    UUID targetInstanceId = UUID.randomUUID();
-    JsonObject targetInstance = smallAngryPlanet(targetInstanceId);
-
-    InstanceApiClient.createInstance(okapiClient, sourceInstance);
-    InstanceApiClient.createInstance(consortiumOkapiClient, targetInstance);
-
-    final UUID createHoldingsRecord1 = createHoldingForInstance(sourceInstanceId);
-    final UUID createHoldingsRecord2 = createHoldingForInstanceAtConsortium(targetInstanceId);
-
-    final var firstItem = itemsClient.create(
-      new ItemRequestBuilder()
-        .forHolding(createHoldingsRecord1)
-        .withBarcode("645398607547")
-        .withStatus(ItemStatusName.AVAILABLE.value()));
-
-    final var secondItem = itemsClient.create(
-      new ItemRequestBuilder()
-        .forHolding(createHoldingsRecord1)
-        .withBarcode("645398607546")
-        .withId(ID_FOR_FAILURE)
-        .withStatus(ItemStatusName.AVAILABLE.value()));
-
-    JsonObject itemsUpdateOwnershipRequestBody = new ItemsUpdateOwnershipRequestBuilder(createHoldingsRecord2,
-      new JsonArray(List.of(firstItem.getId().toString(), secondItem.getId().toString())), ApiTestSuite.CONSORTIA_TENANT_ID).create();
-    Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
-
-    final var nonUpdatedIdsIds = toListOfStrings(postItemsUpdateOwnershipResponse.getJson(),
-      "nonUpdatedIds");
-
-    assertThat(nonUpdatedIdsIds, hasSize(1));
-    assertThat(nonUpdatedIdsIds.get(0), equalTo(ID_FOR_FAILURE.toString()));
-
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(200));
-    assertThat(postItemsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
-
-    final var sourceFirstItemUpdated = itemsClient.getById(firstItem.getId());
-    final var targetFirstItemUpdated = consortiumItemsClient.getById(firstItem.getId());
-
-    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceFirstItemUpdated.getStatusCode()));
-    assertThat(createHoldingsRecord2.toString(), equalTo(targetFirstItemUpdated.getJson().getString(HOLDINGS_RECORD_ID)));
-
-    final var sourceSecondUpdatedItem = itemsClient.getById(secondItem.getId());
-    final var targetSecondUpdatedItem = consortiumItemsClient.getById(secondItem.getId());
-
-    assertThat(createHoldingsRecord1.toString(), equalTo(sourceSecondUpdatedItem.getJson().getString(HOLDINGS_RECORD_ID)));
-    assertThat(HttpStatus.SC_NOT_FOUND, is(targetSecondUpdatedItem.getStatusCode()));
+    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(404));
+    assertThat(postItemsUpdateOwnershipResponse.getBody(), equalTo(format(HOLDINGS_RECORD_NOT_FOUND, nonExistentHoldingsId, COLLEGE_TENANT_ID)));
   }
 
   private Response updateItemsOwnership(JsonObject itemsUpdateOwnershipRequestBody) throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
@@ -281,8 +235,8 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
       .getId();
   }
 
-  private UUID createHoldingForInstanceAtConsortium(UUID instanceId) {
-    return consortiumHoldingsStorageClient.create(new HoldingRequestBuilder().forInstance(instanceId))
+  private UUID createHoldingForInstanceAtCollege(UUID instanceId) {
+    return collegeHoldingsStorageClient.create(new HoldingRequestBuilder().forInstance(instanceId))
       .getId();
   }
 }
