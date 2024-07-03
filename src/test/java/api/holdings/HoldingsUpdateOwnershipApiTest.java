@@ -140,14 +140,14 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord1.getString(INSTANCE_ID));
-    assertNotEquals(createHoldingsRecord1.toString(), targetTenantHoldingsRecord1.getString(INSTANCE_ID));
+    assertNotEquals(createHoldingsRecord1.toString(), targetTenantHoldingsRecord1.getString(ID));
 
     Response sourceTenantHoldingsRecord2 = holdingsStorageClient.getById(createHoldingsRecord2);
     JsonObject targetTenantHoldingsRecord2 = targetTenantHoldings.get(1);
 
     assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.getStatusCode());
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord2.getString(INSTANCE_ID));
-    assertNotEquals(createHoldingsRecord2.toString(), targetTenantHoldingsRecord2.getString(INSTANCE_ID));
+    assertNotEquals(createHoldingsRecord2.toString(), targetTenantHoldingsRecord2.getString(ID));
 
     // Verify related Items ownership updated
     Response sourceTenantItem1 = itemsClient.getById(firstItem.getId());
@@ -244,7 +244,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
   }
 
   @Test
-  public void canUpdateHoldingsOwnershipIfErrorDeletingRelatedItemsToDifferentTenant() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
+  public void canUpdateHoldingsOwnershipIfErrorDeletingRelatedItems() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
     UUID instanceId = UUID.randomUUID();
     JsonObject instance = smallAngryPlanet(instanceId);
 

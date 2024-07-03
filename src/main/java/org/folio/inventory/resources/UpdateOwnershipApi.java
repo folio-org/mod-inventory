@@ -59,7 +59,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   public static final String ITEM_NOT_FOUND = "Item with id: %s not found on tenant: %s";
   public static final String LOG_UPDATE_HOLDINGS_OWNERSHIP = "updateHoldingsOwnership:: %s";
   public static final String LOG_UPDATE_ITEMS_OWNERSHIP = "updateItemsOwnership:: %s";
-  private static final String ITEM_NOT_LINKED_TO_SHARED_INSTANCE = "Item with id: %s not linked to shared Instance";
+  public static final String ITEM_NOT_LINKED_TO_SHARED_INSTANCE = "Item with id: %s not linked to shared Instance";
   public static final String HOLDINGS_RECORD_NOT_LINKED_TO_SHARED_INSTANCE = "HoldingsRecord with id: %s not linked to shared Instance";
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
   private static final String INSTANCE_ID = "instanceId";
@@ -162,7 +162,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
               .findById(itemsUpdateOwnership.getToHoldingsRecordId())
               .thenCompose(holdingsRecord -> {
                 if (holdingsRecord != null) {
-                  return storage.getInstanceCollection(context)
+                  return storage.getInstanceCollection(targetTenantContext)
                     .findById(holdingsRecord.getInstanceId())
                     .thenCompose(instance -> {
                       if (instance.getSource().equals(CONSORTIUM_MARC.getValue()) || instance.getSource().equals(CONSORTIUM_FOLIO.getValue())) {
