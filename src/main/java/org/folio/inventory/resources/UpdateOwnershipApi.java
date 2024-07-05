@@ -162,19 +162,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
               .findById(itemsUpdateOwnership.getToHoldingsRecordId())
               .thenCompose(holdingsRecord -> {
                 if (holdingsRecord != null) {
-                  return storage.getInstanceCollection(targetTenantContext)
-                    .findById(holdingsRecord.getInstanceId())
-                    .thenCompose(instance -> {
-                      if (instance.getSource().equals(CONSORTIUM_MARC.getValue()) || instance.getSource().equals(CONSORTIUM_FOLIO.getValue())) {
-                        return updateOwnershipOfItems(itemsUpdateOwnership, holdingsRecord, notUpdatedEntities, routingContext, context, targetTenantContext);
-                      } else {
-                        String instanceNotSharedErrorMessage = format(INSTANCE_RELATED_TO_HOLDINGS_RECORD_NOT_SHARED,
-                          instance.getId(), itemsUpdateOwnership.getToHoldingsRecordId());
-
-                        LOGGER.warn(format(LOG_UPDATE_ITEMS_OWNERSHIP, instanceNotSharedErrorMessage));
-                        return CompletableFuture.failedFuture(new BadRequestException(instanceNotSharedErrorMessage));
-                      }
-                    });
+                  return verifyLinkedInstanceAndUpdateOwnership(routingContext, holdingsRecord, targetTenantContext, itemsUpdateOwnership, notUpdatedEntities, context);
                 } else {
                   String holdingsRecordNotFoundErrorMessage = format(HOLDINGS_RECORD_NOT_FOUND,
                     itemsUpdateOwnership.getToHoldingsRecordId(), targetTenantContext.getTenantId());
@@ -199,6 +187,22 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       LOGGER.warn("updateHoldingsOwnership:: Error during update ownership of items", e);
       handleFailure(e, routingContext);
     }
+  }
+
+  private CompletableFuture<List<String>> verifyLinkedInstanceAndUpdateOwnership(RoutingContext routingContext, HoldingsRecord holdingsRecord, Context targetTenantContext, ItemsUpdateOwnership itemsUpdateOwnership, List<NotUpdatedEntity> notUpdatedEntities, WebContext context) {
+    return storage.getInstanceCollection(targetTenantContext)
+      .findById(holdingsRecord.getInstanceId())
+      .thenCompose(instance -> {
+        if (instance.getSource().equals(CONSORTIUM_MARC.getValue()) || instance.getSource().equals(CONSORTIUM_FOLIO.getValue())) {
+          return updateOwnershipOfItems(itemsUpdateOwnership, holdingsRecord, notUpdatedEntities, routingContext, context, targetTenantContext);
+        } else {
+          String instanceNotSharedErrorMessage = format(INSTANCE_RELATED_TO_HOLDINGS_RECORD_NOT_SHARED,
+            instance.getId(), itemsUpdateOwnership.getToHoldingsRecordId());
+
+          LOGGER.warn(format(LOG_UPDATE_ITEMS_OWNERSHIP, instanceNotSharedErrorMessage));
+          return CompletableFuture.failedFuture(new BadRequestException(instanceNotSharedErrorMessage));
+        }
+      });
   }
 
   private CompletableFuture<List<String>> updateOwnershipOfItems(ItemsUpdateOwnership itemsUpdateOwnership, HoldingsRecord toHoldingsRecord,
