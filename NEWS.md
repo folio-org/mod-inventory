@@ -12,6 +12,7 @@
 * Call suppress-on-discovery for source record on holding update if discoverySuppress is true [MODINV-977](https://folio-org.atlassian.net/browse/MODINV-977)
 * Requires `holdings-storage 2.0 3.0 4.0 5.0 6.0 7.0`
 * InstanceIngress create events consumption [MODINV-986](https://folio-org.atlassian.net/browse/MODINV-986)
+* Additional Requirements - Update Data Import logic to normalize OCLC 035 values [MODINV-1044](https://folio-org.atlassian.net/browse/MODINV-1044)
 
 ## 20.2.0 2023-03-20
 * Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))
