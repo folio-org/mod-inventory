@@ -18,7 +18,10 @@ import api.support.http.ResourceClient;
 public abstract class ApiTests {
   private static boolean runningOnOwn;
   protected static OkapiHttpClient okapiClient;
+  protected static OkapiHttpClient consortiumOkapiClient;
+  protected static OkapiHttpClient collegeOkapiClient;
   protected final ResourceClient holdingsStorageClient;
+  protected final ResourceClient holdingsSourceStorageClient;
   protected final ResourceClient itemsStorageClient;
   protected final ResourceClient itemsClient;
   protected final ResourceClient instancesClient;
@@ -31,12 +34,17 @@ public abstract class ApiTests {
   protected final ResourceClient instanceRelationshipClient;
   protected final ResourceClient requestStorageClient;
   protected final ResourceClient sourceRecordStorageClient;
+  protected final ResourceClient consortiumItemsClient;
+  protected final ResourceClient consortiumHoldingsStorageClient;
+  protected final ResourceClient collegeItemsClient;
+  protected final ResourceClient collegeHoldingsStorageClient;
 
   protected final InstanceRelationshipTypeFixture instanceRelationshipTypeFixture;
   protected final MarkItemFixture markItemFixture;
 
   public ApiTests() {
     holdingsStorageClient = ResourceClient.forHoldingsStorage(okapiClient);
+    holdingsSourceStorageClient = ResourceClient.forHoldingSourceRecord(okapiClient);
     itemsStorageClient = ResourceClient.forItemsStorage(okapiClient);
     itemsClient = ResourceClient.forItems(okapiClient);
     instancesClient = ResourceClient.forInstances(okapiClient);
@@ -51,6 +59,12 @@ public abstract class ApiTests {
     sourceRecordStorageClient = ResourceClient.forSourceRecordStorage(okapiClient);
     instanceRelationshipTypeFixture = new InstanceRelationshipTypeFixture(okapiClient);
     markItemFixture = new MarkItemFixture(okapiClient);
+
+    consortiumHoldingsStorageClient = ResourceClient.forHoldingsStorage(consortiumOkapiClient);
+    consortiumItemsClient = ResourceClient.forItemsStorage(consortiumOkapiClient);
+
+    collegeHoldingsStorageClient = ResourceClient.forHoldingsStorage(collegeOkapiClient);
+    collegeItemsClient = ResourceClient.forItemsStorage(collegeOkapiClient);
   }
 
   @BeforeClass
@@ -67,6 +81,8 @@ public abstract class ApiTests {
     }
 
     okapiClient = ApiTestSuite.createOkapiHttpClient();
+    consortiumOkapiClient = ApiTestSuite.createOkapiHttpClient(ApiTestSuite.CONSORTIA_TENANT_ID);
+    collegeOkapiClient = ApiTestSuite.createOkapiHttpClient(ApiTestSuite.COLLEGE_TENANT_ID);
   }
 
   @AfterClass

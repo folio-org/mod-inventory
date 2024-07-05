@@ -35,8 +35,9 @@ public class MappingMetadataCacheTest {
   private static final String MARC_BIB_RECORD_TYPE = "marc-bib";
 
   private final Vertx vertx = Vertx.vertx();
-  private final MappingMetadataCache mappingMetadataCache = new MappingMetadataCache(vertx,
-    vertx.createHttpClient(), 3600);
+
+  private final MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx,
+    vertx.createHttpClient());
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(

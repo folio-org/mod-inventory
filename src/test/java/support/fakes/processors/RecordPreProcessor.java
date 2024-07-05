@@ -7,5 +7,5 @@ import io.vertx.core.json.JsonObject;
 @FunctionalInterface
 public interface RecordPreProcessor {
 
-  CompletableFuture<JsonObject> process(JsonObject oldItem, JsonObject newItem) throws Exception;
+  CompletableFuture<JsonObject> process(String tenant, JsonObject oldItem, JsonObject newItem) throws Exception;
 }

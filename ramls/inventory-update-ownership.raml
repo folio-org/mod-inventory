@@ -1,0 +1,66 @@
+#%RAML 1.0
+title: Inventory Update Ownership API
+version: v0.1
+protocols: [ HTTP, HTTPS ]
+baseUri: http://localhost
+
+documentation:
+  - title: "Inventory Update Ownership API"
+    content: <b>API for updating ownership of holdings records and items between ECS tenants</b>
+
+types:
+  errors: !include raml-util/schemas/errors.schema
+  items_update_ownership: !include items_update_ownership.json
+  holdings_update_ownership: !include holdings_update_ownership.json
+  move_response: !include move_response.json
+
+traits:
+  language: !include raml-util/traits/language.raml
+  validate: !include raml-util/traits/validation.raml
+
+/inventory/items/update-ownership:
+  displayName: Items Update Ownership
+  post:
+    is: [validate]
+    body:
+      application/json:
+        type: items_update_ownership
+    responses:
+      200:
+        description: "Items ownership updated to another tenant"
+        body:
+          application/json:
+            type: move_response
+      422:
+        description: "Validation error"
+        body:
+          application/json:
+            type: errors
+      500:
+        description: "Internal server error"
+        body:
+          text/plain:
+            example: "Internal server error"
+/inventory/holdings/update-ownership:
+  displayName: Holdings Record Update Ownership
+  post:
+    is: [validate]
+    body:
+      application/json:
+        type: holdings_update_ownership
+    responses:
+      200:
+        description: "Holdings record ownership updated to another tenant"
+        body:
+          application/json:
+            type: move_response
+      422:
+        description: "Validation error"
+        body:
+          application/json:
+            type: errors
+      500:
+        description: "Internal server error"
+        body:
+          text/plain:
+            example: "Internal server error"

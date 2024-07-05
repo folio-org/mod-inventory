@@ -53,6 +53,8 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
+import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_PATH;
+import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_REQUIRED_FIELDS;
 import static org.folio.inventory.domain.instances.Instance.DISCOVERY_SUPPRESS_KEY;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
@@ -61,8 +63,7 @@ import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOL
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.MARC;
-import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
-
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 
 public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { // NOSONAR
 
@@ -183,7 +184,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           recordId, chunkId))))
       .compose(e -> {
         JsonObject instanceAsJson = prepareTargetInstance(dataImportEventPayload, instanceToUpdate);
-        List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, requiredFields);
+        List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, INSTANCE_REQUIRED_FIELDS);
 
         if (!errors.isEmpty()) {
           String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
@@ -253,7 +254,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       .withStatus(Snapshot.Status.COMMITTED)
       .withProcessingStartedDate(new Date());
 
-    return postSnapshotInSrsAndHandleResponse(dataImportEventPayload, snapshot, tenantId);
+    return postSnapshotInSrsAndHandleResponse(dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getToken(), snapshot, tenantId);
   }
 
   @Override
@@ -356,7 +357,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   }
 
   private Future<Record> getRecordByInstanceId(DataImportEventPayload dataImportEventPayload, String instanceId, String tenantId) {
-    SourceStorageRecordsClient client = getSourceStorageRecordsClient(dataImportEventPayload, tenantId);
+    SourceStorageRecordsClient client = getSourceStorageRecordsClient(dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getToken(), tenantId);
     return client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE).compose(resp -> {
       if (resp.statusCode() != 200) {
         LOGGER.warn(format("Failed to retrieve MARC record by instance id: '%s', status code: %s",

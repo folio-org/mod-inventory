@@ -52,8 +52,8 @@ import java.util.function.Consumer;
 
 import static org.folio.HttpStatus.HTTP_INTERNAL_SERVER_ERROR;
 import static org.folio.HttpStatus.HTTP_NO_CONTENT;
+import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
 import static org.folio.inventory.consortium.handlers.MarcInstanceSharingHandlerImpl.SRS_RECORD_ID_TYPE;
-import static org.folio.inventory.consortium.util.RestDataImportHelperTest.buildHttpResponseWithBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -138,7 +138,7 @@ public class MarcInstanceSharingHandlerImplTest {
   }
 
   private final HttpResponse<Buffer> sourceStorageRecordsResponseBuffer =
-    buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, BufferImpl.buffer(recordJson));
+    buildHttpResponseWithBuffer(BufferImpl.buffer(recordJson), HttpStatus.HTTP_OK);
 
   @Test
   public void publishInstanceTest(TestContext testContext) {
@@ -192,8 +192,8 @@ public class MarcInstanceSharingHandlerImplTest {
     String instanceId = "eb89b292-d2b7-4c36-9bfc-f816d6f96418";
     String targetInstanceHrid = "consin0000000000101";
 
-    Record record = buildHttpResponseWithBuffer(HttpStatus.HTTP_OK,
-      BufferImpl.buffer(recordJsonWithLinkedAuthorities)).bodyAsJson(Record.class);
+    Record record = buildHttpResponseWithBuffer(BufferImpl.buffer(recordJsonWithLinkedAuthorities), HttpStatus.HTTP_OK)
+      .bodyAsJson(Record.class);
 
     Authority authority1 = new Authority().withId(AUTHORITY_ID_1).withSource(Authority.Source.MARC);
     Authority authority2 = new Authority().withId(AUTHORITY_ID_2).withSource(Authority.Source.CONSORTIUM_MARC);
@@ -267,7 +267,7 @@ public class MarcInstanceSharingHandlerImplTest {
 
     String instanceId = "eb89b292-d2b7-4c36-9bfc-f816d6f96418";
 
-    Record record = buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, BufferImpl.buffer(recordJsonWithLinkedAuthorities)).bodyAsJson(Record.class);
+    Record record = buildHttpResponseWithBuffer(BufferImpl.buffer(recordJsonWithLinkedAuthorities), HttpStatus.HTTP_OK).bodyAsJson(Record.class);
 
     //given
     marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient));
@@ -311,7 +311,7 @@ public class MarcInstanceSharingHandlerImplTest {
     String instanceId = "eb89b292-d2b7-4c36-9bfc-f816d6f96418";
     String targetInstanceHrid = "consin0000000000101";
 
-    Record record = buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, BufferImpl.buffer(recordJsonWithLinkedAuthorities)).bodyAsJson(Record.class);
+    Record record = buildHttpResponseWithBuffer(BufferImpl.buffer(recordJsonWithLinkedAuthorities), HttpStatus.HTTP_OK).bodyAsJson(Record.class);
 
     Authority authority1 = new Authority().withId(AUTHORITY_ID_1).withSource(Authority.Source.MARC);
     Authority authority2 = new Authority().withId(AUTHORITY_ID_2).withSource(Authority.Source.MARC);
@@ -380,7 +380,7 @@ public class MarcInstanceSharingHandlerImplTest {
     String instanceId = "eb89b292-d2b7-4c36-9bfc-f816d6f96418";
     String targetInstanceHrid = "consin0000000000101";
 
-    Record record = buildHttpResponseWithBuffer(HttpStatus.HTTP_OK, BufferImpl.buffer(recordJsonWithLinkedAuthorities)).bodyAsJson(Record.class);
+    Record record = buildHttpResponseWithBuffer(BufferImpl.buffer(recordJsonWithLinkedAuthorities), HttpStatus.HTTP_OK).bodyAsJson(Record.class);
 
     Authority authority1 = new Authority().withId(AUTHORITY_ID_1).withSource(Authority.Source.CONSORTIUM_MARC);
     Authority authority2 = new Authority().withId(AUTHORITY_ID_2).withSource(Authority.Source.CONSORTIUM_MARC);
@@ -523,7 +523,7 @@ public class MarcInstanceSharingHandlerImplTest {
     MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
     handler.deleteSourceRecordByRecordId(recordId, instanceId, tenant, sourceStorageClient)
       .onComplete(result -> assertTrue(result.failed()));
-    
+
     verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, SRS_RECORD_ID_TYPE);
   }
 

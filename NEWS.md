@@ -5,6 +5,13 @@
 * The result table is not displayed in the file details log [MODINV-1003](https://folio-org.atlassian.net/browse/MODINV-1003)
 * Invalid values (as it is) created in JSON when value is not matching accepted options provided in Instance field mapping for Nature of Content term [MODINV-1012](https://folio-org.atlassian.net/browse/MODINV-1012)
 * Remove null values from electronicAccess object before returning item and instance [MODINV-1006](https://folio-org.atlassian.net/browse/MODINV-1006)
+* 422 Unprocessable Content Error while updating  Instances and Items with electronic access without URI field populated. [MODINV-1024](https://folio-org.atlassian.net/browse/MODINV-1024)
+* Error appears when edit via quickMARC MARC Instance shared from Member tenant [MODDATAIMP-1052](https://folio-org.atlassian.net/browse/MODDATAIMP-1052)
+* Fix mod-inventory OOM issue [MODINV-1023](https://folio-org.atlassian.net/browse/MODINV-1023)
+* Replace GET with POST request for fetching instances and holdings on /items endpoint to omit 414 error [MODINV-943](https://folio-org.atlassian.net/browse/MODINV-943)
+* Call suppress-on-discovery for source record on holding update if discoverySuppress is true [MODINV-977](https://folio-org.atlassian.net/browse/MODINV-977)
+* Requires `holdings-storage 2.0 3.0 4.0 5.0 6.0 7.0`
+* InstanceIngress create events consumption [MODINV-986](https://folio-org.atlassian.net/browse/MODINV-986)
 
 ## 20.2.0 2023-03-20
 * Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))

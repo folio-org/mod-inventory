@@ -47,7 +47,7 @@ class FakeStorageModule extends AbstractVerticle {
   FakeStorageModule(
     String rootPath,
     String collectionPropertyName,
-    String tenantId,
+    List<String> tenants,
     Collection<String> requiredProperties,
     boolean hasCollectionDelete,
     String recordTypeName,
@@ -69,7 +69,7 @@ class FakeStorageModule extends AbstractVerticle {
     this.defaultProperties = defaultPropertiesWithId;
 
     storedResourcesByTenant = new HashMap<>();
-    storedResourcesByTenant.put(tenantId, new HashMap<>());
+    tenants.forEach(tenant -> storedResourcesByTenant.put(tenant, new HashMap<>()));
     this.recordPreProcessors = recordPreProcessors;
   }
 
@@ -82,6 +82,9 @@ class FakeStorageModule extends AbstractVerticle {
     router.route(pathTree).handler(this::emulateFailureIfNeeded);
     router.route(pathTree).handler(this::checkTokenHeader);
 
+    router.put(rootPath + "/:id/suppress-from-discovery").handler(this::successSuppressFromDiscovery);
+
+    router.post(rootPath + "/retrieve").handler(this::retrieveMany);
     router.post(rootPath).handler(this::checkRequiredProperties);
     router.post(rootPath).handler(this::checkUniqueProperties);
     router.post(rootPath + "/emulate-failure").handler(this::emulateFailure);
@@ -183,7 +186,7 @@ class FakeStorageModule extends AbstractVerticle {
   private CompletableFuture<Void> createElement(WebContext context, JsonObject rawBody) {
     String id = rawBody.getString("id");
 
-    return preProcessRecords(null, rawBody).thenAccept(body -> getResourcesForTenant(context).put(id, body));
+    return preProcessRecords(context.getTenantId(), null, rawBody).thenAccept(body -> getResourcesForTenant(context).put(id, body));
   }
 
   private void replace(RoutingContext routingContext) {
@@ -194,7 +197,7 @@ class FakeStorageModule extends AbstractVerticle {
     JsonObject rawBody = getJsonFromBody(routingContext);
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
-    preProcessRecords(resourcesForTenant.get(id), rawBody).thenAccept(body -> {
+    preProcessRecords(context.getTenantId(), resourcesForTenant.get(id), rawBody).thenAccept(body -> {
       setDefaultProperties(body);
 
       if (ID_FOR_FAILURE.toString().equals(id)) {
@@ -266,6 +269,37 @@ class FakeStorageModule extends AbstractVerticle {
     JsonResponse.success(routingContext.response(), result);
   }
 
+  private void retrieveMany(RoutingContext routingContext) {
+    WebContext context = new WebContext(routingContext);
+    var requestBody = routingContext.getBodyAsJson();
+
+    var limit = requestBody.getInteger("limit");
+    var offset = requestBody.getInteger("offset");
+    var query = requestBody.getString("query");
+
+    System.out.printf("Handling %s%n", routingContext.request().uri());
+
+    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
+
+    List<JsonObject> filteredItems = new FakeCQLToJSONInterpreter(false)
+      .execute(resourcesForTenant.values(), query);
+
+    List<JsonObject> pagedItems = filteredItems.stream()
+      .skip(offset)
+      .limit(limit)
+      .collect(Collectors.toList());
+
+    JsonObject result = new JsonObject();
+
+    result.put(collectionPropertyName, new JsonArray(pagedItems));
+    result.put("totalRecords", filteredItems.size());
+
+    System.out.printf("Found %s resources: %s%n", recordTypeName,
+      result.encodePrettily());
+
+    JsonResponse.success(routingContext.response(), result);
+  }
+
   private void empty(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
@@ -285,6 +319,17 @@ class FakeStorageModule extends AbstractVerticle {
     }
 
     SuccessResponse.noContent(routingContext.response());
+  }
+
+  private void successSuppressFromDiscovery(RoutingContext routingContext) {
+    var id = routingContext.request().getParam("id");
+    var resourcesForTenant = getResourcesForTenant(new WebContext(routingContext));
+    if (resourcesForTenant.containsKey(id)) {
+      resourcesForTenant.get(id).getJsonObject("additionalInfo").put("suppressDiscovery", true);
+      JsonResponse.success(routingContext.response(), new JsonObject());
+    } else {
+      ClientErrorResponse.notFound(routingContext.response());
+    }
   }
 
   private void delete(RoutingContext routingContext) {
@@ -401,14 +446,14 @@ class FakeStorageModule extends AbstractVerticle {
     });
   }
 
-  private CompletableFuture<JsonObject> preProcessRecords(JsonObject oldBody, JsonObject newBody) {
+  private CompletableFuture<JsonObject> preProcessRecords(String tenant, JsonObject oldBody, JsonObject newBody) {
     CompletableFuture<JsonObject> lastPreProcess = completedFuture(newBody);
 
     for (RecordPreProcessor preProcessor : recordPreProcessors) {
       lastPreProcess = lastPreProcess
         .thenCompose(prev -> {
             try {
-              return preProcessor.process(oldBody, newBody);
+              return preProcessor.process(tenant, oldBody, newBody);
             } catch (Exception ex) {
               CompletableFuture<JsonObject> future = new CompletableFuture<>();
               future.completeExceptionally(ex);

@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import api.holdings.HoldingsUpdateOwnershipApiTest;
 import org.folio.inventory.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.consortium.util.ConsortiumUtil;
@@ -68,17 +69,21 @@ import support.fakes.FakeOkapi;
   BoundWithTests.class,
   TenantApiTest.class,
   AdminApiTest.class,
-  InventoryConfigApiTest.class
+  InventoryConfigApiTest.class,
+  HoldingsUpdateOwnershipApiTest.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
   public static final String TENANT_ID = "test_tenant";
   public static final String CONSORTIA_TENANT_ID = "consortium";
+  public static final String COLLEGE_TENANT_ID = "college";
   public static final UUID ID_FOR_FAILURE = UUID.fromString("fa45a95b-38a3-430b-8f34-548ca005a176");
   public static final UUID ID_FOR_OPTIMISTIC_LOCKING_FAILURE = UUID.fromString("40900409-0409-4444-8888-409000000409");
 
   public static final String TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ";
   public static final String USER_ID = "7e115dfb-d1d6-46ac-b2dc-2b3e74cda694";
+  public static final String CENTRAL_TENANT_ID_FIELD = "centralTenantId";
+  public static final String CONSORTIUM_ID_FIELD = "consortiumId";
 
   private static String bookMaterialTypeId;
   private static String dvdMaterialTypeId;
@@ -218,10 +223,16 @@ public class ApiTestSuite {
   public static OkapiHttpClient createOkapiHttpClient()
     throws MalformedURLException {
 
+    return createOkapiHttpClient(TENANT_ID);
+  }
+
+  public static OkapiHttpClient createOkapiHttpClient(String tenantId)
+    throws MalformedURLException {
+
     return new OkapiHttpClient(
       vertxAssistant.getVertx(),
-      new URL(storageOkapiUrl()), TENANT_ID, TOKEN, USER_ID, null,
-      it -> System.out.println(String.format("Request failed: %s", it.toString())));
+      new URL(storageOkapiUrl()), tenantId, TOKEN, USER_ID, null,
+      it -> System.out.printf("Request failed: %s%n", it.toString()));
   }
 
   public static String storageOkapiUrl() {
@@ -447,6 +458,18 @@ public class ApiTestSuite {
         .put("name", "bibliography")
         .put("source", "folio")
     );
+  }
+
+  public static void createConsortiumTenant() throws MalformedURLException {
+    String expectedConsortiumId = UUID.randomUUID().toString();
+
+    JsonObject userTenantsCollection = new JsonObject()
+      .put(ApiTestSuite.CENTRAL_TENANT_ID_FIELD, ApiTestSuite.CONSORTIA_TENANT_ID)
+      .put(ApiTestSuite.CONSORTIUM_ID_FIELD, expectedConsortiumId);
+
+    ResourceClient client = ResourceClient.forUserTenants(createOkapiHttpClient());
+
+    client.create(userTenantsCollection);
   }
 
   private static void createIdentifierTypes()
