@@ -2,7 +2,6 @@ package org.folio.inventory.instanceingress.handler;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
-import static io.vertx.core.buffer.impl.BufferImpl.buffer;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
@@ -13,17 +12,19 @@ import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECO
 import static org.folio.rest.jaxrs.model.InstanceIngressPayload.SourceType.LINKED_DATA;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+import io.vertx.core.buffer.impl.BufferImpl;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -40,7 +41,6 @@ import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.instanceingress.InstanceIngressEventConsumer;
-import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.client.SourceStorageRecordsClient;
@@ -48,7 +48,6 @@ import org.folio.rest.client.SourceStorageSnapshotsClient;
 import org.folio.rest.jaxrs.model.InstanceIngressEvent;
 import org.folio.rest.jaxrs.model.InstanceIngressPayload;
 import org.folio.rest.jaxrs.model.Record;
-import org.folio.rest.jaxrs.model.Snapshot;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -60,7 +59,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(VertxUnitRunner.class)
-public class CreateInstanceIngressEventHandlerUnitTest {
+public class UpdateInstanceIngressEventHandlerUnitTest {
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String BIB_RECORD_PATH = "src/test/resources/handlers/bib-record.json";
 
@@ -75,8 +74,6 @@ public class CreateInstanceIngressEventHandlerUnitTest {
   @Mock
   private MappingMetadataCache mappingMetadataCache;
   @Mock
-  private IdStorageService idStorageService;
-  @Mock
   private HttpClient httpClient;
   @Mock
   private Context context;
@@ -84,7 +81,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
   private Storage storage;
   @Mock
   private InstanceCollection instanceCollection;
-  private CreateInstanceIngressEventHandler handler;
+  private UpdateInstanceIngressEventHandler handler;
 
   @Before
   public void setUp() {
@@ -92,8 +89,8 @@ public class CreateInstanceIngressEventHandlerUnitTest {
     doReturn("okapiUrl").when(context).getOkapiLocation();
     doReturn("token").when(context).getToken();
     doReturn(instanceCollection).when(storage).getInstanceCollection(context);
-    handler = spy(new CreateInstanceIngressEventHandler(precedingSucceedingTitlesHelper,
-      mappingMetadataCache, idStorageService, httpClient, context, storage));
+    handler = spy(new UpdateInstanceIngressEventHandler(precedingSucceedingTitlesHelper,
+      mappingMetadataCache, httpClient, context, storage));
   }
 
   @Test
@@ -102,7 +99,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
     var event = new InstanceIngressEvent()
       .withId(UUID.randomUUID().toString());
     var expectedMessage = format("InstanceIngressEvent message does not contain " +
-      "required data to create Instance for eventId: '%s'", event.getId());
+      "required data to update Instance for eventId: '%s'", event.getId());
 
     // when
     var future = handler.handle(event);
@@ -110,26 +107,6 @@ public class CreateInstanceIngressEventHandlerUnitTest {
     // then
     var exception = Assert.assertThrows(ExecutionException.class, future::get);
     assertEquals(expectedMessage, exception.getCause().getMessage());
-  }
-
-  @Test
-  public void shouldReturnFailedFuture_ifIdStorageServiceStoreFails() {
-    // given
-    var event = new InstanceIngressEvent()
-      .withId(UUID.randomUUID().toString())
-      .withEventPayload(new InstanceIngressPayload()
-        .withSourceRecordObject("{}")
-        .withSourceType(LINKED_DATA)
-      );
-    var expectedMessage = "idStorageService failure";
-    doReturn(failedFuture(expectedMessage)).when(idStorageService).store(anyString(), anyString(), anyString());
-
-    // when
-    var future = handler.handle(event);
-
-    // then
-    var exception = Assert.assertThrows(ExecutionException.class, future::get);
-    assertThat(exception.getCause().getMessage()).startsWith(expectedMessage);
   }
 
   @Test
@@ -141,7 +118,6 @@ public class CreateInstanceIngressEventHandlerUnitTest {
         .withSourceRecordObject("{}")
         .withSourceType(LINKED_DATA)
       );
-    doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
     doReturn(succeededFuture(Optional.empty())).when(mappingMetadataCache)
       .getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
     var expectedMessage = "MappingMetadata was not found for marc-bib record type";
@@ -163,16 +139,11 @@ public class CreateInstanceIngressEventHandlerUnitTest {
         .withSourceRecordObject("{}")
         .withSourceType(LINKED_DATA)
       );
-    doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
     var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
-
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
-    var snapshotHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Snapshot())), HttpStatus.SC_CREATED);
-    doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
 
     var expectedMessage = "Mapped Instance is invalid: [Field 'title' is a required field and can not be null, "
       + "Field 'instanceTypeId' is a required field and can not be null], from InstanceIngressEvent with id '" + event.getId() + "'";
@@ -186,7 +157,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
   }
 
   @Test
-  public void shouldReturnFailedFuture_ifInstanceSavingFailed() throws IOException {
+  public void shouldReturnFailedFuture_ifInstanceUpdateFailed() throws IOException {
     // given
     var event = new InstanceIngressEvent()
       .withId(UUID.randomUUID().toString())
@@ -194,22 +165,18 @@ public class CreateInstanceIngressEventHandlerUnitTest {
         .withSourceRecordObject(TestUtil.readFileFromPath(BIB_RECORD_PATH))
         .withSourceType(LINKED_DATA)
       );
-    doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
     var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
-    var snapshotHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Snapshot())), HttpStatus.SC_CREATED);
-    doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
 
     var expectedMessage = "Some failure";
     doAnswer(i -> {
       Consumer<Failure> failureHandler = i.getArgument(2);
       failureHandler.accept(new Failure(expectedMessage, 400));
       return null;
-    }).when(instanceCollection).add(any(), any(), any());
+    }).when(instanceCollection).update(any(), any(), any());
 
     // when
     var future = handler.handle(event);
@@ -220,7 +187,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
   }
 
   @Test
-  public void shouldReturnFailedFuture_ifCreatePrecedingSucceedingTitlesFailed() throws IOException {
+  public void shouldReturnFailedFuture_ifGetExistedPrecedingSucceedingTitlesFailed() throws IOException {
     // given
     var event = new InstanceIngressEvent()
       .withId(UUID.randomUUID().toString())
@@ -228,22 +195,18 @@ public class CreateInstanceIngressEventHandlerUnitTest {
         .withSourceRecordObject(TestUtil.readFileFromPath(BIB_RECORD_PATH))
         .withSourceType(LINKED_DATA)
       );
-    doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
     var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
-    var snapshotHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Snapshot())), HttpStatus.SC_CREATED);
-    doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
       successHandler.accept(new Success<>(i.getArgument(0)));
       return null;
-    }).when(instanceCollection).add(any(), any(), any());
-    var expectedMessage = "CreatePrecedingSucceedingTitles failure";
-    doReturn(failedFuture(expectedMessage)).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
+    }).when(instanceCollection).update(any(), any(), any());
+    var expectedMessage = "GetExistedPrecedingSucceedingTitlesFailed failure";
+    doReturn(failedFuture(expectedMessage)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
 
     // when
     var future = handler.handle(event);
@@ -254,7 +217,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
   }
 
   @Test
-  public void shouldReturnFailedFuture_ifSourceStorageSnapshotsClientReturnsError() throws IOException {
+  public void shouldReturnFailedFuture_ifDeletePrecedingSucceedingTitlesFailed() throws IOException {
     // given
     var event = new InstanceIngressEvent()
       .withId(UUID.randomUUID().toString())
@@ -262,19 +225,52 @@ public class CreateInstanceIngressEventHandlerUnitTest {
         .withSourceRecordObject(TestUtil.readFileFromPath(BIB_RECORD_PATH))
         .withSourceType(LINKED_DATA)
       );
-    doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
     var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
       successHandler.accept(new Success<>(i.getArgument(0)));
       return null;
-    }).when(instanceCollection).add(any(), any(), any());
-    doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
+    }).when(instanceCollection).update(any(), any(), any());
+    var titles = List.of(JsonObject.of("id", "123"));
+    doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
+    var expectedMessage = "DeletePrecedingSucceedingTitlesFailed failure";
+    doReturn(failedFuture(expectedMessage)).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
+
+    // when
+    var future = handler.handle(event);
+
+    // then
+    var exception = Assert.assertThrows(ExecutionException.class, future::get);
+    assertThat(exception.getCause().getMessage()).isEqualTo(expectedMessage);
+  }
+
+  @Test
+  public void shouldReturnFailedFuture_ifPostSourceStorageSnapshotFailed() throws IOException {
+    // given
+    var event = new InstanceIngressEvent()
+      .withId(UUID.randomUUID().toString())
+      .withEventPayload(new InstanceIngressPayload()
+        .withSourceRecordObject(TestUtil.readFileFromPath(BIB_RECORD_PATH))
+        .withSourceType(LINKED_DATA)
+      );
+    var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
+    doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
+      .withMappingRules(mappingRules.encode())
+      .withMappingParams(Json.encode(new MappingParameters())))))
+      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+    doAnswer(i -> {
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(i.getArgument(0)));
+      return null;
+    }).when(instanceCollection).update(any(), any(), any());
+    var titles = List.of(JsonObject.of("id", "123"));
+    doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
+    doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any());
     doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
@@ -290,7 +286,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
   }
 
   @Test
-  public void shouldReturnFailedFuture_ifItsFailedToCreateMarcRecordInSrs() throws IOException {
+  public void shouldReturnFailedFuture_ifItsFailedToGetRecordByInstanceIdFromSrsAndFailedToPutNewRecord() throws IOException {
     // given
     var event = new InstanceIngressEvent()
       .withId(UUID.randomUUID().toString())
@@ -298,26 +294,28 @@ public class CreateInstanceIngressEventHandlerUnitTest {
         .withSourceRecordObject(TestUtil.readFileFromPath(BIB_RECORD_PATH))
         .withSourceType(LINKED_DATA)
       );
-    doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
     var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
-    var snapshotHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Snapshot())), HttpStatus.SC_CREATED);
-    doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
       successHandler.accept(new Success<>(i.getArgument(0)));
       return null;
-    }).when(instanceCollection).add(any(), any(), any());
-    doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
+    }).when(instanceCollection).update(any(), any(), any());
+    var titles = List.of(JsonObject.of("id", "123"));
+    doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
+    doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
     doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
+    doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
-    doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).postSourceStorageRecords(any());
+    doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).getSourceStorageRecordsFormattedById(any(), any());
+    doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), any());
 
-    var expectedMessage = "Failed to create MARC record in SRS, instanceId: ";
+    var expectedMessage = "Failed to update MARC record in SRS, instanceId: ";
 
     // when
     var future = handler.handle(event);
@@ -328,8 +326,89 @@ public class CreateInstanceIngressEventHandlerUnitTest {
   }
 
   @Test
-  public void shouldReturnSucceededFuture_ifProcessFinishedCorrectly() throws IOException, ExecutionException, InterruptedException {
+  public void shouldReturnFailedFuture_ifItsFailedToPutNewRecordToSRS() throws IOException {
     // given
+    var event = new InstanceIngressEvent()
+      .withId(UUID.randomUUID().toString())
+      .withEventPayload(new InstanceIngressPayload()
+        .withSourceRecordObject(TestUtil.readFileFromPath(BIB_RECORD_PATH))
+        .withSourceType(LINKED_DATA)
+      );
+    var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
+    doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
+      .withMappingRules(mappingRules.encode())
+      .withMappingParams(Json.encode(new MappingParameters())))))
+      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+    doAnswer(i -> {
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(i.getArgument(0)));
+      return null;
+    }).when(instanceCollection).update(any(), any(), any());
+    var titles = List.of(JsonObject.of("id", "123"));
+    doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
+    doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
+    doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
+    var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"id\":\"5e525f1e-d373-4a07-9aff-b80856bacfef\"}"), HttpStatus.SC_OK);
+    doReturn(succeededFuture(existedRecordResponse)).when(sourceStorageClient).getSourceStorageRecordsFormattedById(any(), any());
+    var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
+    doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), any());
+
+    var expectedMessage = "Failed to update MARC record in SRS, instanceId: ";
+
+    // when
+    var future = handler.handle(event);
+
+    // then
+    var exception = Assert.assertThrows(ExecutionException.class, future::get);
+    assertThat(exception.getCause().getMessage()).startsWith(expectedMessage);
+  }
+
+  @Test
+  public void shouldReturnFailedFuture_ifCreatePrecedingSucceedingTitlesFailed() throws IOException {
+    // given
+    var event = new InstanceIngressEvent()
+      .withId(UUID.randomUUID().toString())
+      .withEventPayload(new InstanceIngressPayload()
+        .withSourceRecordObject(TestUtil.readFileFromPath(BIB_RECORD_PATH))
+        .withSourceType(LINKED_DATA)
+      );
+    var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
+    doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
+      .withMappingRules(mappingRules.encode())
+      .withMappingParams(Json.encode(new MappingParameters())))))
+      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+    doAnswer(i -> {
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(i.getArgument(0)));
+      return null;
+    }).when(instanceCollection).update(any(), any(), any());
+    var titles = List.of(JsonObject.of("id", "123"));
+    doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
+    doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
+    doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
+    var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"id\":\"5e525f1e-d373-4a07-9aff-b80856bacfef\"}"), HttpStatus.SC_OK);
+    doReturn(succeededFuture(existedRecordResponse)).when(sourceStorageClient).getSourceStorageRecordsFormattedById(any(), any());
+    var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_OK);
+    doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), any());
+    var expectedMessage = "CreatePrecedingSucceedingTitles failure";
+    doReturn(failedFuture(expectedMessage)).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
+
+    // when
+    var future = handler.handle(event);
+
+    // then
+    var exception = Assert.assertThrows(ExecutionException.class, future::get);
+    assertThat(exception.getCause().getMessage()).isEqualTo(expectedMessage);
+  }
+
+  @Test
+  public void shouldReturnSucceededFuture_ifProcessFinishedCorrectly() throws IOException, ExecutionException, InterruptedException {
     var linkedDataIdId = "someLinkedDataIdId";
     var event = new InstanceIngressEvent()
       .withId(UUID.randomUUID().toString())
@@ -339,24 +418,29 @@ public class CreateInstanceIngressEventHandlerUnitTest {
         .withSourceRecordIdentifier(UUID.randomUUID().toString())
         .withAdditionalProperty("linkedDataId", linkedDataIdId)
       );
-    doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
     var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
-    var snapshotHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Snapshot())), HttpStatus.SC_CREATED);
-    doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
       successHandler.accept(new Success<>(i.getArgument(0)));
       return null;
-    }).when(instanceCollection).add(any(), any(), any());
-    doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
+    }).when(instanceCollection).update(any(), any(), any());
+    var titles = List.of(JsonObject.of("id", "123"));
+    doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
+    doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
     doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any());
-    var sourceStorageHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Record())), HttpStatus.SC_CREATED);
-    doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).postSourceStorageRecords(any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
+    doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
+    var previousSrsId = UUID.randomUUID().toString();
+    var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"id\":\"" + previousSrsId + "\"}"), HttpStatus.SC_OK);
+    doReturn(succeededFuture(existedRecordResponse)).when(sourceStorageClient).getSourceStorageRecordsFormattedById(any(), any());
+    var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_OK);
+    doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), any());
+    doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
 
     // when
     var future = handler.handle(event);
@@ -370,9 +454,11 @@ public class CreateInstanceIngressEventHandlerUnitTest {
     assertThat(instance.getIdentifiers().stream().anyMatch(i -> i.value.equals("(ld) " + linkedDataIdId))).isTrue();
 
     var recordCaptor = ArgumentCaptor.forClass(Record.class);
-    verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
+    verify(sourceStorageClient).putSourceStorageRecordsGenerationById(eq(previousSrsId), recordCaptor.capture());
     var recordSentToSRS = recordCaptor.getValue();
     assertThat(recordSentToSRS.getId()).isNotNull();
+    assertThat(recordSentToSRS.getId()).isNotEqualTo(previousSrsId);
+    assertThat(recordSentToSRS.getMatchedId()).isEqualTo(previousSrsId);
     assertThat(recordSentToSRS.getId()).isNotEqualTo(event.getEventPayload().getSourceRecordIdentifier());
     assertThat(recordSentToSRS.getId()).doesNotContain(linkedDataIdId);
     assertThat(recordSentToSRS.getRecordType()).isEqualTo(Record.RecordType.MARC_BIB);
