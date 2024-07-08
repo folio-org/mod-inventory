@@ -151,7 +151,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
       List<NotUpdatedEntity> notUpdatedEntities = new ArrayList<>();
 
-      LOGGER.info("updateHoldingsOwnership:: Started updating ownership of item record: {}, to tenant: {}", itemsUpdateOwnership.getItemIds(),
+      LOGGER.info("updateItemsOwnership:: Started updating ownership of item record: {}, to tenant: {}", itemsUpdateOwnership.getItemIds(),
         itemsUpdateOwnership.getTargetTenantId());
 
       consortiumService.getConsortiumConfiguration(context).toCompletionStage().toCompletableFuture()
@@ -172,19 +172,19 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
               });
           }
           String notInConsortiaErrorMessage = format(TENANT_NOT_IN_CONSORTIA, context.getTenantId());
-          LOGGER.warn(format(LOG_UPDATE_HOLDINGS_OWNERSHIP, notInConsortiaErrorMessage));
+          LOGGER.warn(format(LOG_UPDATE_ITEMS_OWNERSHIP, notInConsortiaErrorMessage));
           return CompletableFuture.failedFuture(new BadRequestException(notInConsortiaErrorMessage));
         })
         .thenAccept(v -> respond(routingContext, notUpdatedEntities))
         .exceptionally(throwable -> {
-          LOGGER.warn("updateHoldingsOwnership:: Error during update ownership of items {}, to tenant: {}",
+          LOGGER.warn("updateItemsOwnership:: Error during update ownership of items {}, to tenant: {}",
             itemsUpdateOwnership.getItemIds(), itemsUpdateOwnership.getTargetTenantId(), throwable);
           handleFailure(throwable, routingContext);
           return null;
         });
 
     } catch (Exception e) {
-      LOGGER.warn("updateHoldingsOwnership:: Error during update ownership of items", e);
+      LOGGER.warn("updateItemsOwnership:: Error during update ownership of items", e);
       handleFailure(e, routingContext);
     }
   }
@@ -209,7 +209,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                                                                  List<NotUpdatedEntity> notUpdatedEntities, RoutingContext routingContext, WebContext context,
                                                                  Context targetTenantContext) {
     try {
-      LOGGER.debug("updateOwnershipOfHoldingsRecords:: Updating ownership of items: {}, to tenant: {}",
+      LOGGER.debug("updateOwnershipOfItems:: Updating ownership of items: {}, to tenant: {}",
         itemsUpdateOwnership.getItemIds(), targetTenantContext.getTenantId());
 
       String sharedInstanceId = toHoldingsRecord.getInstanceId();
@@ -221,7 +221,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
       return itemsRecordFetchClient.find(itemsUpdateOwnership.getItemIds(), MoveApiUtil::fetchByIdCql)
         .thenCompose(jsons -> {
-          LOGGER.debug("updateOwnershipOfHoldingsRecords:: Found items to update ownership: {}", jsons);
+          LOGGER.debug("updateOwnershipOfItems:: Found items to update ownership: {}", jsons);
           processNotFoundEntities(itemsUpdateOwnership.getItemIds(), notUpdatedEntities, context, jsons, ITEM_NOT_FOUND);
           if (!jsons.isEmpty()) {
             return getHoldingsByInstanceId(sourceTenantHoldingsRecordCollection, sharedInstanceId)
@@ -242,7 +242,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           return CompletableFuture.completedFuture(new ArrayList<>());
         });
     } catch (Exception e) {
-      LOGGER.warn("updateOwnershipOfHoldingsRecords:: Error during update ownership of items {}, to tenant: {}",
+      LOGGER.warn("updateOwnershipOfItems:: Error during update ownership of items {}, to tenant: {}",
         itemsUpdateOwnership.getItemIds(), itemsUpdateOwnership.getTargetTenantId(), e);
 
       return CompletableFuture.failedFuture(e);
@@ -336,7 +336,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .map(itemWrapper ->
         itemCollection.add(itemWrapper.item())
           .exceptionally(e -> {
-            LOGGER.warn("createHoldings:: Error during creating item with id: {} for holdingsRecord with id: {}",
+            LOGGER.warn("createItems:: Error during creating item with id: {} for holdingsRecord with id: {}",
               itemWrapper.item().getId(), itemWrapper.item().getHoldingId(), e);
 
             notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(getEntityIdForError.apply(itemWrapper)).withErrorMessage(e.getMessage()));
