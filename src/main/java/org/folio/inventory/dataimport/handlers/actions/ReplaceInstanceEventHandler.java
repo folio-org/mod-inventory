@@ -123,6 +123,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         consortiumService.getConsortiumConfiguration(context)
           .compose(consortiumConfigurationOptional -> {
             if (consortiumConfigurationOptional.isPresent()) {
+              LOGGER.info("handle:: consortiumConfigurationOptional is present");
               String centralTenantId = consortiumConfigurationOptional.get().getCentralTenantId();
               Context centralTenantContext = EventHandlingUtil.constructContext(centralTenantId, context.getToken(), context.getOkapiLocation());
               InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
@@ -146,6 +147,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           });
       } else {
         String targetInstanceTenantId = dataImportEventPayload.getContext().getOrDefault(CENTRAL_TENANT_ID, dataImportEventPayload.getTenant());
+        LOGGER.info("handle:: consortiumConfigurationOptional is missing, targetInstanceTenantId:: %s", targetInstanceTenantId);
         Context instanceUpdateContext = EventHandlingUtil.constructContext(targetInstanceTenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
         InstanceCollection instanceCollection = storage.getInstanceCollection(instanceUpdateContext);
 
@@ -218,16 +220,19 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           })
           .compose(instance -> {
             if (instanceToUpdate.getSource().equals(FOLIO.getValue())) {
+              LOGGER.info("processInstanceUpdate:: SOURCE=FOLIO");
               executeFieldsManipulation(instance, targetRecord);
               return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection, tenantId);
             }
             if (instanceToUpdate.getSource().equals(MARC.getValue())) {
+              LOGGER.info("processInstanceUpdate:: SOURCE=MARC");
               setExternalIds(targetRecord, instance);
               AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(targetRecord);
 
               JsonObject jsonInstance = new JsonObject(instance.getJsonForStorage().encode());
 
               setSuppressFormDiscovery(targetRecord, jsonInstance.getBoolean(DISCOVERY_SUPPRESS_KEY, false));
+              LOGGER.info("processInstanceUpdate:: Trying to put record in SRS, tenantId: %s", tenantId);
               return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, targetRecord.getMatchedId(), tenantId);
             }
             return Future.succeededFuture(instance);
