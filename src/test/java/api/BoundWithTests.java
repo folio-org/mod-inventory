@@ -25,17 +25,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.fail;
 
-public class BoundWithTests extends ApiTests
-{
-  protected final ResourceClient boundWithPartsStorageClient;
-  protected final ResourceClient boundWithItemsClient;
-
-  public BoundWithTests () {
-    super();
-    boundWithPartsStorageClient = ResourceClient.forBoundWithPartsStorage(okapiClient);
-    boundWithItemsClient = ResourceClient.forBoundWithItems( okapiClient );
-  }
-
+public class BoundWithTests extends ApiTests {
   @Test
   public void boundWithFlagsArePresentOnInstancesAndItemsAsExpected() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException
   {
@@ -401,7 +391,7 @@ public class BoundWithTests extends ApiTests
 
   }
 
-  private JsonObject makeObjectBoundWithPart (String itemId, String holdingsRecordId) {
+  public static JsonObject makeObjectBoundWithPart (String itemId, String holdingsRecordId) {
     JsonObject boundWithPart = new JsonObject();
     boundWithPart.put("itemId", itemId);
     boundWithPart.put("holdingsRecordId", holdingsRecordId);

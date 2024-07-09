@@ -25,6 +25,8 @@ import static org.folio.inventory.support.http.server.JsonResponse.success;
 public final class MoveApiUtil {
   public static final String HOLDINGS_STORAGE = "/holdings-storage/holdings";
   public static final String HOLDINGS_RECORDS_PROPERTY = "holdingsRecords";
+  public static final String BOUND_WITH_PARTS_STORAGE = "/inventory-storage/bound-with-parts";
+  public static final String BOUND_WITH_PARTS_RECORDS_PROPERTY = "boundWithParts";
   public static final String TARGET_TENANT_ID = "targetTenantId";
   public static final String ITEM_STORAGE = "/item-storage/items";
   public static final String ITEMS_PROPERTY = "items";
@@ -59,6 +61,11 @@ public final class MoveApiUtil {
     return createStorageClient(client, context, HOLDINGS_STORAGE);
   }
 
+  public static CollectionResourceClient createBoundWithPartsStorageClient(OkapiHttpClient client, WebContext context)
+    throws MalformedURLException {
+    return createStorageClient(client, context, BOUND_WITH_PARTS_STORAGE);
+  }
+
   public static CollectionResourceClient createItemStorageClient(OkapiHttpClient client, WebContext context)
     throws MalformedURLException {
     return createStorageClient(client, context, ITEM_STORAGE);
@@ -66,6 +73,10 @@ public final class MoveApiUtil {
 
   public static MultipleRecordsFetchClient createHoldingsRecordsFetchClient(CollectionResourceClient client) {
     return createFetchClient(client, HOLDINGS_RECORDS_PROPERTY);
+  }
+
+  public static MultipleRecordsFetchClient createBoundWithPartsFetchClient(CollectionResourceClient client) {
+    return createFetchClient(client, BOUND_WITH_PARTS_RECORDS_PROPERTY);
   }
 
   public static MultipleRecordsFetchClient createItemsFetchClient(CollectionResourceClient client) {
