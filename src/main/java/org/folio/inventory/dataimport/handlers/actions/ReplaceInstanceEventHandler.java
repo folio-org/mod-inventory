@@ -147,7 +147,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           });
       } else {
         String targetInstanceTenantId = dataImportEventPayload.getContext().getOrDefault(CENTRAL_TENANT_ID, dataImportEventPayload.getTenant());
-        LOGGER.info("handle:: consortiumConfigurationOptional is missing, targetInstanceTenantId:: %s", targetInstanceTenantId);
+        LOGGER.info("handle:: consortiumConfigurationOptional is missing, targetInstanceTenantId:: {}", targetInstanceTenantId);
         Context instanceUpdateContext = EventHandlingUtil.constructContext(targetInstanceTenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
         InstanceCollection instanceCollection = storage.getInstanceCollection(instanceUpdateContext);
 
@@ -232,7 +232,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
               JsonObject jsonInstance = new JsonObject(instance.getJsonForStorage().encode());
 
               setSuppressFormDiscovery(targetRecord, jsonInstance.getBoolean(DISCOVERY_SUPPRESS_KEY, false));
-              LOGGER.info("processInstanceUpdate:: Trying to put record in SRS, tenantId: %s", tenantId);
+              LOGGER.info("processInstanceUpdate:: Trying to put record in SRS, tenantId: {}", tenantId);
               return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, targetRecord.getMatchedId(), tenantId);
             }
             return Future.succeededFuture(instance);
