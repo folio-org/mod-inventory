@@ -170,7 +170,6 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
-
     var expectedMessage = "Some failure";
     doAnswer(i -> {
       Consumer<Failure> failureHandler = i.getArgument(2);
@@ -274,7 +273,6 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
-
     var expectedMessage = "Failed to create snapshot in SRS, snapshot id: ";
 
     // when
@@ -314,7 +312,6 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
     doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).getSourceStorageRecordsFormattedById(any(), any());
     doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), any());
-
     var expectedMessage = "Failed to update MARC record in SRS, instanceId: ";
 
     // when
@@ -355,7 +352,6 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(existedRecordResponse)).when(sourceStorageClient).getSourceStorageRecordsFormattedById(any(), any());
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
     doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), any());
-
     var expectedMessage = "Failed to update MARC record in SRS, instanceId: ";
 
     // when
@@ -409,6 +405,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
 
   @Test
   public void shouldReturnSucceededFuture_ifProcessFinishedCorrectly() throws IOException, ExecutionException, InterruptedException {
+    // given
     var linkedDataIdId = "someLinkedDataIdId";
     var event = new InstanceIngressEvent()
       .withId(UUID.randomUUID().toString())
@@ -465,4 +462,5 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, SUBFIELD_I)).hasValue(instance.getId());
     assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, SUBFIELD_L)).hasValue(linkedDataIdId);
   }
+
 }
