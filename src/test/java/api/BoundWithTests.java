@@ -5,7 +5,6 @@ import api.support.InstanceSamples;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
 
-import api.support.http.ResourceClient;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.support.http.client.IndividualResource;
