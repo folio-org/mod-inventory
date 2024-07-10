@@ -81,7 +81,7 @@ public final class AdditionalFieldsUtil {
   private static final String OCLC = "OCoLC";
   private static final ObjectMapper objectMapper = new ObjectMapper();
   public static final String FIELDS = "fields";
-  private static final String OCLC_PATTERN = "\\((" + OCLC + ")\\)((ocm|ocn)?0*|([a-zA-Z]+)0*)(\\d+\\w*)";
+  private static final String OCLC_PATTERN = "\\((" + OCLC + ")\\)((ocm|ocn|on)?0*|([a-zA-Z]+)0*)(\\d+\\w*)";
 
   static {
     // this function is executed when creating a new item to be saved in the cache.
@@ -285,7 +285,7 @@ public final class AdditionalFieldsUtil {
     Pattern pattern = Pattern.compile(OCLC_PATTERN);
 
     for (Subfield subfield : subFields) {
-      String data = subfield.getData();
+      String data = subfield.getData().replaceAll("[.\\s]", "");
       var code = subfield.getCode();
       Matcher matcher = pattern.matcher(data);
 
@@ -294,7 +294,7 @@ public final class AdditionalFieldsUtil {
         String numericAndTrailing = matcher.group(5); // Numeric part and any characters that follow
         String prefix = matcher.group(2); // Entire prefix including letters and potentially leading zeros
 
-        if (prefix != null && (prefix.startsWith("ocm") || prefix.startsWith("ocn"))) {
+        if (prefix != null && (prefix.startsWith("ocm") || prefix.startsWith("ocn") || prefix.startsWith("on"))) {
           // If "ocm" or "ocn", strip entirely from the prefix
           processedSet.add(code + "&(" + oclcTag + ")" + numericAndTrailing);
         } else {
