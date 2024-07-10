@@ -63,9 +63,11 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   public static final String LOG_UPDATE_ITEMS_OWNERSHIP = "updateItemsOwnership:: %s";
   public static final String ITEM_NOT_LINKED_TO_SHARED_INSTANCE = "Item with id: %s not linked to shared Instance";
   public static final String HOLDINGS_RECORD_NOT_LINKED_TO_SHARED_INSTANCE = "HoldingsRecord with id: %s not linked to shared Instance";
-  private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
-  private static final String INSTANCE_ID = "instanceId";
   public static final String HOLDING_BOUND_WITH_PARTS_ERROR = "Ownership of holdings record with linked bound with parts cannot be updated, holdings record id: %s";
+  public static final String ITEM_WITH_PARTS_ERROR = "Ownership of bound with parts item cannot be updated, item id: %s";
+  private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
+  private static final String ITEM_ID = "itemId";
+  private static final String INSTANCE_ID = "instanceId";
 
   private final ConsortiumService consortiumService;
 
@@ -238,7 +240,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                 List<UpdateOwnershipItemWrapper> itemWrappers = validatedItems.stream()
                   .map(itemJson -> mapItemWrapper(itemJson, toHoldingsRecord.getId())).toList();
 
-                return createItems(itemWrappers, notUpdatedEntities, UpdateOwnershipItemWrapper::sourceItemId, targetTenantItemCollection)
+                return validateItemsBoundWith(itemWrappers, notUpdatedEntities, routingContext, context)
+                  .thenCompose(wrappersWithoutBoundWith -> createItems(wrappersWithoutBoundWith, notUpdatedEntities, UpdateOwnershipItemWrapper::sourceItemId, targetTenantItemCollection))
                   .thenCompose(items -> deleteSourceItems(items, notUpdatedEntities, UpdateOwnershipItemWrapper::sourceItemId, sourceTenantItemCollection));
               });
           }
@@ -275,7 +278,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
             List<UpdateOwnershipHoldingsRecordWrapper> holdingsRecordWrappers =
               validatedHoldingsRecords.stream().map(this::mapHoldingsRecordWrapper).toList();
 
-            return validateHoldingsRecordBoundWithParts(holdingsRecordWrappers, notUpdatedEntities, routingContext, context)
+            return validateHoldingsRecordsBoundWith(holdingsRecordWrappers, notUpdatedEntities, routingContext, context)
               .thenCompose(wrappersWithoutBoundWith -> createHoldings(wrappersWithoutBoundWith, notUpdatedEntities, targetTenantHoldingsRecordCollection))
               .thenCompose(createdHoldings -> {
                 LOGGER.debug("updateOwnershipOfHoldingsRecords:: Created holdings: {}, for tenant: {}",
@@ -291,39 +294,6 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     } catch (Exception e) {
       LOGGER.warn("updateOwnershipOfHoldingsRecords:: Error during update ownership of holdings {}, to tenant: {}",
         holdingsUpdateOwnership.getHoldingsRecordIds(), holdingsUpdateOwnership.getTargetTenantId(), e);
-      return CompletableFuture.failedFuture(e);
-    }
-  }
-
-  private CompletableFuture<List<UpdateOwnershipHoldingsRecordWrapper>> validateHoldingsRecordBoundWithParts(List<UpdateOwnershipHoldingsRecordWrapper> holdingsRecordWrappers,
-                                                                                                             List<NotUpdatedEntity> notUpdatedEntities,
-                                                                                                             RoutingContext routingContext, WebContext context) {
-    try {
-      List<String> sourceHoldingsRecordsIds = holdingsRecordWrappers.stream().map(UpdateOwnershipHoldingsRecordWrapper::sourceHoldingsRecordId).toList();
-
-      CollectionResourceClient boundWithPartsStorageClient = createBoundWithPartsStorageClient(createHttpClient(client, routingContext, context), context);
-      MultipleRecordsFetchClient boundWithPartsFetchClient = createBoundWithPartsFetchClient(boundWithPartsStorageClient);
-
-      return boundWithPartsFetchClient.find(sourceHoldingsRecordsIds, MoveApiUtil::fetchByHoldingsRecordIdCql)
-        .thenApply(jsons -> {
-          List<String> boundWithHoldingsRecordsIds =
-            jsons.stream()
-              .map(boundWithPart -> boundWithPart.getString(HOLDINGS_RECORD_ID))
-              .distinct()
-              .toList();
-
-          return holdingsRecordWrappers.stream().filter(holdingsRecordWrapper -> {
-            if (boundWithHoldingsRecordsIds.contains(holdingsRecordWrapper.sourceHoldingsRecordId())) {
-              notUpdatedEntities.add(new NotUpdatedEntity()
-                .withErrorMessage(String.format(HOLDING_BOUND_WITH_PARTS_ERROR, holdingsRecordWrapper.sourceHoldingsRecordId()))
-                .withEntityId(holdingsRecordWrapper.sourceHoldingsRecordId()));
-              return false;
-            }
-            return true;
-          }).toList();
-        });
-    } catch (Exception e) {
-      LOGGER.warn("validateHoldingsRecordBoundWith:: Error during  validating holdings record bound with part, tenant: {}", context.getTenantId(), e);
       return CompletableFuture.failedFuture(e);
     }
   }
@@ -460,6 +430,72 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         .filter(future -> !future.isCompletedExceptionally())
         .map(CompletableFuture::join)
         .toList());
+  }
+
+  private CompletableFuture<List<UpdateOwnershipHoldingsRecordWrapper>> validateHoldingsRecordsBoundWith(List<UpdateOwnershipHoldingsRecordWrapper> holdingsRecordWrappers,
+                                                                                                         List<NotUpdatedEntity> notUpdatedEntities,
+                                                                                                         RoutingContext routingContext, WebContext context) {
+    try {
+      List<String> sourceHoldingsRecordsIds = holdingsRecordWrappers.stream().map(UpdateOwnershipHoldingsRecordWrapper::sourceHoldingsRecordId).toList();
+
+      CollectionResourceClient boundWithPartsStorageClient = createBoundWithPartsStorageClient(createHttpClient(client, routingContext, context), context);
+      MultipleRecordsFetchClient boundWithPartsFetchClient = createBoundWithPartsFetchClient(boundWithPartsStorageClient);
+
+      return boundWithPartsFetchClient.find(sourceHoldingsRecordsIds, MoveApiUtil::fetchByHoldingsRecordIdCql)
+        .thenApply(jsons -> {
+          List<String> boundWithHoldingsRecordsIds =
+            jsons.stream()
+              .map(boundWithPart -> boundWithPart.getString(HOLDINGS_RECORD_ID))
+              .distinct()
+              .toList();
+
+          return holdingsRecordWrappers.stream().filter(holdingsRecordWrapper -> {
+            if (boundWithHoldingsRecordsIds.contains(holdingsRecordWrapper.sourceHoldingsRecordId())) {
+              notUpdatedEntities.add(new NotUpdatedEntity()
+                .withErrorMessage(String.format(HOLDING_BOUND_WITH_PARTS_ERROR, holdingsRecordWrapper.sourceHoldingsRecordId()))
+                .withEntityId(holdingsRecordWrapper.sourceHoldingsRecordId()));
+              return false;
+            }
+            return true;
+          }).toList();
+        });
+    } catch (Exception e) {
+      LOGGER.warn("validateHoldingsRecordsBoundWith:: Error during  validating holdings record bound with part, tenant: {}", context.getTenantId(), e);
+      return CompletableFuture.failedFuture(e);
+    }
+  }
+
+  private CompletableFuture<List<UpdateOwnershipItemWrapper>> validateItemsBoundWith(List<UpdateOwnershipItemWrapper> itemWrappers,
+                                                                                     List<NotUpdatedEntity> notUpdatedEntities,
+                                                                                     RoutingContext routingContext, WebContext context) {
+    try {
+      List<String> sourceItemsIds = itemWrappers.stream().map(UpdateOwnershipItemWrapper::sourceItemId).toList();
+
+      CollectionResourceClient boundWithPartsStorageClient = createBoundWithPartsStorageClient(createHttpClient(client, routingContext, context), context);
+      MultipleRecordsFetchClient boundWithPartsFetchClient = createBoundWithPartsFetchClient(boundWithPartsStorageClient);
+
+      return boundWithPartsFetchClient.find(sourceItemsIds, MoveApiUtil::fetchByItemIdCql)
+        .thenApply(jsons -> {
+          List<String> boundWithItemsIds =
+            jsons.stream()
+              .map(boundWithPart -> boundWithPart.getString(ITEM_ID))
+              .distinct()
+              .toList();
+
+          return itemWrappers.stream().filter(itemWrapper -> {
+            if (boundWithItemsIds.contains(itemWrapper.sourceItemId())) {
+              notUpdatedEntities.add(new NotUpdatedEntity()
+                .withErrorMessage(String.format(ITEM_WITH_PARTS_ERROR, itemWrapper.sourceItemId()))
+                .withEntityId(itemWrapper.sourceItemId()));
+              return false;
+            }
+            return true;
+          }).toList();
+        });
+    } catch (Exception e) {
+      LOGGER.warn("validateItemsBoundWith:: Error during  validating items bound with part, tenant: {}", context.getTenantId(), e);
+      return CompletableFuture.failedFuture(e);
+    }
   }
 
   private void processNotFoundEntities(List<String> holdingsRecordIds, List<NotUpdatedEntity> notUpdatedEntities,

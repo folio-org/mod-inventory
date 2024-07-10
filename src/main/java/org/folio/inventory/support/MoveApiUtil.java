@@ -91,6 +91,10 @@ public final class MoveApiUtil {
     return CqlQuery.exactMatchAny("holdingsRecordId", ids);
   }
 
+  public static CqlQuery fetchByItemIdCql(List<String> ids) {
+    return CqlQuery.exactMatchAny("itemId", ids);
+  }
+
   public static void successWithEmptyIds(HttpServerResponse response) {
     successWithIds(response, new ArrayList<>());
   }
