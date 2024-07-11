@@ -565,7 +565,8 @@
             "inventory-storage.items.item.post",
             "inventory-storage.items.item.delete",
             "inventory-storage.items.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get"
           ]
         }
       ]
