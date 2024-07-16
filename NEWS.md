@@ -17,6 +17,7 @@
 * Handle assignment of ids during update ownership of holdings [MODINV-1053](https://folio-org.atlassian.net/browse/MODINV-1053)
 * Implement endpoint for updating ownership of Items [MODINV-955](https://folio-org.atlassian.net/browse/MODINV-955)
 * Disallow updating holdings ownership with related boundwith [MODINV-1051](https://folio-org.atlassian.net/browse/MODINV-1051)
+* Disallow updating ownership of boundwith item [MODINV-1052](https://folio-org.atlassian.net/browse/MODINV-1052)
 
 ## 20.2.0 2023-03-20
 * Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))

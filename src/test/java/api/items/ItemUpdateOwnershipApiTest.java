@@ -31,6 +31,7 @@ import java.util.concurrent.TimeoutException;
 import static api.ApiTestSuite.COLLEGE_TENANT_ID;
 import static api.ApiTestSuite.TENANT_ID;
 import static api.ApiTestSuite.createConsortiumTenant;
+import static api.BoundWithTests.makeObjectBoundWithPart;
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static java.lang.String.format;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
@@ -39,6 +40,7 @@ import static org.folio.inventory.resources.UpdateOwnershipApi.HOLDINGS_RECORD_N
 import static org.folio.inventory.resources.UpdateOwnershipApi.INSTANCE_RELATED_TO_HOLDINGS_RECORD_NOT_SHARED;
 import static org.folio.inventory.resources.UpdateOwnershipApi.ITEM_NOT_FOUND;
 import static org.folio.inventory.resources.UpdateOwnershipApi.ITEM_NOT_LINKED_TO_SHARED_INSTANCE;
+import static org.folio.inventory.resources.UpdateOwnershipApi.ITEM_WITH_PARTS_ERROR;
 import static org.folio.inventory.support.ItemUtil.HOLDINGS_RECORD_ID;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
@@ -162,6 +164,67 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
 
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceUpdatedItem.getStatusCode()));
     assertThat(targetTenantItem1.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
+  }
+
+  @Test
+  public void shouldReportErrorWhenOnlySomeRequestedItemIsBoundWith() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+    String itemHrId = "it0000001";
+
+    InstanceApiClient.createInstance(okapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.put("source", FOLIO.getValue()));
+    InstanceApiClient.createInstance(collegeOkapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
+
+    final UUID createHoldingsRecord1 = createHoldingForInstance(instanceId);
+    final UUID createHoldingsRecord2 = createHoldingForInstanceAtCollege(instanceId);
+
+    final var firstItem = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(createHoldingsRecord1)
+        .withBarcode("645398607547")
+        .withStatus(ItemStatusName.AVAILABLE.value()));
+
+    final var secondItem = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(createHoldingsRecord1)
+        .withHrid(itemHrId)
+        .withBarcode("645398607546")
+        .withStatus(ItemStatusName.AVAILABLE.value()));
+
+    JsonObject boundWithPart = makeObjectBoundWithPart(firstItem.getJson().getString("id"), createHoldingsRecord1.toString());
+    boundWithPartsStorageClient.create(boundWithPart);
+
+    JsonObject itemsUpdateOwnershipRequestBody = new ItemsUpdateOwnershipRequestBuilder(createHoldingsRecord2,
+      new JsonArray(List.of(firstItem.getId().toString(), secondItem.getId().toString())), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
+
+    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(200));
+    assertThat(postItemsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+
+    JsonArray notFoundIds = postItemsUpdateOwnershipResponse.getJson()
+      .getJsonArray("notUpdatedEntities");
+
+    assertThat(notFoundIds.size(), is(1));
+    assertThat(notFoundIds.getJsonObject(0).getString("entityId"), equalTo(firstItem.getJson().getString("id")));
+    assertThat(notFoundIds.getJsonObject(0).getString("errorMessage"),
+      equalTo(String.format(ITEM_WITH_PARTS_ERROR, firstItem.getJson().getString("id"))));
+
+    final var sourceFirstUpdatedItem = itemsClient.getById(firstItem.getId());
+    final var targetHoldingsRecordItems = collegeItemsClient.getMany(format("holdingsRecordId=%s", createHoldingsRecord2), 100);
+    assertEquals(1, targetHoldingsRecordItems.size());
+
+    JsonObject targetTenantItem = targetHoldingsRecordItems.get(0);
+
+    final var sourceSecondUpdatedItem = itemsClient.getById(secondItem.getId());
+
+    assertThat(HttpStatus.SC_OK, is(sourceFirstUpdatedItem.getStatusCode()));
+
+    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceSecondUpdatedItem.getStatusCode()));
+    assertThat(targetTenantItem.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
+    assertNotEquals(secondItem.getId().toString(), targetTenantItem.getString(ID));
+    assertNotEquals(targetTenantItem.getString("hrid"), itemHrId);
   }
 
   @Test
