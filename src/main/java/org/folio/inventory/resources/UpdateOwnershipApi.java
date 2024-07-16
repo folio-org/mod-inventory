@@ -298,39 +298,6 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     }
   }
 
-  private CompletableFuture<List<UpdateOwnershipHoldingsRecordWrapper>> validateHoldingsRecordBoundWithParts(List<UpdateOwnershipHoldingsRecordWrapper> holdingsRecordWrappers,
-                                                                                                             List<NotUpdatedEntity> notUpdatedEntities,
-                                                                                                             RoutingContext routingContext, WebContext context) {
-    try {
-      List<String> sourceHoldingsRecordsIds = holdingsRecordWrappers.stream().map(UpdateOwnershipHoldingsRecordWrapper::sourceHoldingsRecordId).toList();
-
-      CollectionResourceClient boundWithPartsStorageClient = createBoundWithPartsStorageClient(createHttpClient(client, routingContext, context), context);
-      MultipleRecordsFetchClient boundWithPartsFetchClient = createBoundWithPartsFetchClient(boundWithPartsStorageClient);
-
-      return boundWithPartsFetchClient.find(sourceHoldingsRecordsIds, MoveApiUtil::fetchByHoldingsRecordIdCql)
-        .thenApply(jsons -> {
-          List<String> boundWithHoldingsRecordsIds =
-            jsons.stream()
-              .map(boundWithPart -> boundWithPart.getString(HOLDINGS_RECORD_ID))
-              .distinct()
-              .toList();
-
-          return holdingsRecordWrappers.stream().filter(holdingsRecordWrapper -> {
-            if (boundWithHoldingsRecordsIds.contains(holdingsRecordWrapper.sourceHoldingsRecordId())) {
-              notUpdatedEntities.add(new NotUpdatedEntity()
-                .withErrorMessage(String.format(HOLDING_BOUND_WITH_PARTS_ERROR, holdingsRecordWrapper.sourceHoldingsRecordId()))
-                .withEntityId(holdingsRecordWrapper.sourceHoldingsRecordId()));
-              return false;
-            }
-            return true;
-          }).toList();
-        });
-    } catch (Exception e) {
-      LOGGER.warn("validateHoldingsRecordBoundWith:: Error during  validating holdings record bound with part, tenant: {}", context.getTenantId(), e);
-      return CompletableFuture.failedFuture(e);
-    }
-  }
-
   private CompletableFuture<List<String>> transferAttachedItems(List<UpdateOwnershipHoldingsRecordWrapper> holdingsRecordsWrappers, List<NotUpdatedEntity> notUpdatedEntities,
                                                                 RoutingContext routingContext, WebContext context, Context targetTenantContext) {
     List<String> sourceHoldingsRecordsIds = new ArrayList<>();
