@@ -40,6 +40,8 @@ import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlin
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
+import static org.folio.inventory.support.MoveApiUtil.createBoundWithPartsFetchClient;
+import static org.folio.inventory.support.MoveApiUtil.createBoundWithPartsStorageClient;
 import static org.folio.inventory.support.MoveApiUtil.createHoldingsRecordsFetchClient;
 import static org.folio.inventory.support.MoveApiUtil.createHoldingsStorageClient;
 import static org.folio.inventory.support.MoveApiUtil.createHttpClient;
@@ -63,6 +65,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   public static final String HOLDINGS_RECORD_NOT_LINKED_TO_SHARED_INSTANCE = "HoldingsRecord with id: %s not linked to shared Instance";
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
   private static final String INSTANCE_ID = "instanceId";
+  public static final String HOLDING_BOUND_WITH_PARTS_ERROR = "Ownership of holdings record with linked bound with parts cannot be updated, holdings record id: %s";
 
   private final ConsortiumService consortiumService;
 
@@ -272,7 +275,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
             List<UpdateOwnershipHoldingsRecordWrapper> holdingsRecordWrappers =
               validatedHoldingsRecords.stream().map(this::mapHoldingsRecordWrapper).toList();
 
-            return createHoldings(holdingsRecordWrappers, notUpdatedEntities, targetTenantHoldingsRecordCollection)
+            return validateHoldingsRecordBoundWithParts(holdingsRecordWrappers, notUpdatedEntities, routingContext, context)
+              .thenCompose(wrappersWithoutBoundWith -> createHoldings(wrappersWithoutBoundWith, notUpdatedEntities, targetTenantHoldingsRecordCollection))
               .thenCompose(createdHoldings -> {
                 LOGGER.debug("updateOwnershipOfHoldingsRecords:: Created holdings: {}, for tenant: {}",
                   createdHoldings, targetTenantContext.getTenantId());
@@ -287,6 +291,39 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     } catch (Exception e) {
       LOGGER.warn("updateOwnershipOfHoldingsRecords:: Error during update ownership of holdings {}, to tenant: {}",
         holdingsUpdateOwnership.getHoldingsRecordIds(), holdingsUpdateOwnership.getTargetTenantId(), e);
+      return CompletableFuture.failedFuture(e);
+    }
+  }
+
+  private CompletableFuture<List<UpdateOwnershipHoldingsRecordWrapper>> validateHoldingsRecordBoundWithParts(List<UpdateOwnershipHoldingsRecordWrapper> holdingsRecordWrappers,
+                                                                                                             List<NotUpdatedEntity> notUpdatedEntities,
+                                                                                                             RoutingContext routingContext, WebContext context) {
+    try {
+      List<String> sourceHoldingsRecordsIds = holdingsRecordWrappers.stream().map(UpdateOwnershipHoldingsRecordWrapper::sourceHoldingsRecordId).toList();
+
+      CollectionResourceClient boundWithPartsStorageClient = createBoundWithPartsStorageClient(createHttpClient(client, routingContext, context), context);
+      MultipleRecordsFetchClient boundWithPartsFetchClient = createBoundWithPartsFetchClient(boundWithPartsStorageClient);
+
+      return boundWithPartsFetchClient.find(sourceHoldingsRecordsIds, MoveApiUtil::fetchByHoldingsRecordIdCql)
+        .thenApply(jsons -> {
+          List<String> boundWithHoldingsRecordsIds =
+            jsons.stream()
+              .map(boundWithPart -> boundWithPart.getString(HOLDINGS_RECORD_ID))
+              .distinct()
+              .toList();
+
+          return holdingsRecordWrappers.stream().filter(holdingsRecordWrapper -> {
+            if (boundWithHoldingsRecordsIds.contains(holdingsRecordWrapper.sourceHoldingsRecordId())) {
+              notUpdatedEntities.add(new NotUpdatedEntity()
+                .withErrorMessage(String.format(HOLDING_BOUND_WITH_PARTS_ERROR, holdingsRecordWrapper.sourceHoldingsRecordId()))
+                .withEntityId(holdingsRecordWrapper.sourceHoldingsRecordId()));
+              return false;
+            }
+            return true;
+          }).toList();
+        });
+    } catch (Exception e) {
+      LOGGER.warn("validateHoldingsRecordBoundWith:: Error during  validating holdings record bound with part, tenant: {}", context.getTenantId(), e);
       return CompletableFuture.failedFuture(e);
     }
   }
@@ -308,14 +345,13 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       ItemCollection targetTenantItemCollection = storage.getItemCollection(targetTenantContext);
 
       return itemsFetchClient.find(sourceHoldingsRecordsIds, MoveApiUtil::fetchByHoldingsRecordIdCql)
-        .thenCompose(jsons -> {
-          LOGGER.debug("transferAttachedItems:: Found items to transfer: {}", jsons);
-          if (!jsons.isEmpty()) {
-            List<UpdateOwnershipItemWrapper> itemWrappers = jsons.stream().map(itemJson -> {
-              String targetHoldingId = getTargetHoldingId(itemJson, holdingsRecordsWrappers);
-              return mapItemWrapper(itemJson, targetHoldingId);
-            }).toList();
-
+        .thenApply(jsons -> jsons.stream().map(itemJson -> {
+          String targetHoldingId = getTargetHoldingId(itemJson, holdingsRecordsWrappers);
+          return mapItemWrapper(itemJson, targetHoldingId);
+        }).toList())
+        .thenCompose(itemWrappers -> {
+          if (!itemWrappers.isEmpty()) {
+            LOGGER.debug("transferAttachedItems:: Found items to transfer: {}", itemWrappers.stream().map(UpdateOwnershipItemWrapper::item));
             return createItems(itemWrappers, notUpdatedEntities, UpdateOwnershipItemWrapper::sourceHoldingsRecordId, targetTenantItemCollection)
               .thenCompose(items -> deleteSourceItems(items, notUpdatedEntities, UpdateOwnershipItemWrapper::sourceHoldingsRecordId, sourceTenantItemCollection));
           }

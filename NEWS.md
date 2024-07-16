@@ -13,6 +13,10 @@
 * Requires `holdings-storage 2.0 3.0 4.0 5.0 6.0 7.0`
 * InstanceIngress create events consumption [MODINV-986](https://folio-org.atlassian.net/browse/MODINV-986)
 * Additional Requirements - Update Data Import logic to normalize OCLC 035 values [MODINV-1044](https://folio-org.atlassian.net/browse/MODINV-1044)
+* Implement endpoint to update ownership of Holdings [MODINV-1031](https://folio-org.atlassian.net/browse/MODINV-1031)
+* Handle assignment of ids during update ownership of holdings [MODINV-1053](https://folio-org.atlassian.net/browse/MODINV-1053)
+* Implement endpoint for updating ownership of Items [MODINV-955](https://folio-org.atlassian.net/browse/MODINV-955)
+* Disallow updating holdings ownership with related boundwith [MODINV-1051](https://folio-org.atlassian.net/browse/MODINV-1051)
 
 ## 20.2.0 2023-03-20
 * Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))
