@@ -68,6 +68,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
   private static final String ITEM_ID = "itemId";
   private static final String INSTANCE_ID = "instanceId";
+  public static final String HOLDING_BOUND_WITH_PARTS_ERROR = "Ownership of holdings record with linked bound with parts cannot be updated, holdings record id: %s";
 
   private final ConsortiumService consortiumService;
 
@@ -294,6 +295,39 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     } catch (Exception e) {
       LOGGER.warn("updateOwnershipOfHoldingsRecords:: Error during update ownership of holdings {}, to tenant: {}",
         holdingsUpdateOwnership.getHoldingsRecordIds(), holdingsUpdateOwnership.getTargetTenantId(), e);
+      return CompletableFuture.failedFuture(e);
+    }
+  }
+
+  private CompletableFuture<List<UpdateOwnershipHoldingsRecordWrapper>> validateHoldingsRecordBoundWithParts(List<UpdateOwnershipHoldingsRecordWrapper> holdingsRecordWrappers,
+                                                                                                             List<NotUpdatedEntity> notUpdatedEntities,
+                                                                                                             RoutingContext routingContext, WebContext context) {
+    try {
+      List<String> sourceHoldingsRecordsIds = holdingsRecordWrappers.stream().map(UpdateOwnershipHoldingsRecordWrapper::sourceHoldingsRecordId).toList();
+
+      CollectionResourceClient boundWithPartsStorageClient = createBoundWithPartsStorageClient(createHttpClient(client, routingContext, context), context);
+      MultipleRecordsFetchClient boundWithPartsFetchClient = createBoundWithPartsFetchClient(boundWithPartsStorageClient);
+
+      return boundWithPartsFetchClient.find(sourceHoldingsRecordsIds, MoveApiUtil::fetchByHoldingsRecordIdCql)
+        .thenApply(jsons -> {
+          List<String> boundWithHoldingsRecordsIds =
+            jsons.stream()
+              .map(boundWithPart -> boundWithPart.getString(HOLDINGS_RECORD_ID))
+              .distinct()
+              .toList();
+
+          return holdingsRecordWrappers.stream().filter(holdingsRecordWrapper -> {
+            if (boundWithHoldingsRecordsIds.contains(holdingsRecordWrapper.sourceHoldingsRecordId())) {
+              notUpdatedEntities.add(new NotUpdatedEntity()
+                .withErrorMessage(String.format(HOLDING_BOUND_WITH_PARTS_ERROR, holdingsRecordWrapper.sourceHoldingsRecordId()))
+                .withEntityId(holdingsRecordWrapper.sourceHoldingsRecordId()));
+              return false;
+            }
+            return true;
+          }).toList();
+        });
+    } catch (Exception e) {
+      LOGGER.warn("validateHoldingsRecordBoundWith:: Error during  validating holdings record bound with part, tenant: {}", context.getTenantId(), e);
       return CompletableFuture.failedFuture(e);
     }
   }
