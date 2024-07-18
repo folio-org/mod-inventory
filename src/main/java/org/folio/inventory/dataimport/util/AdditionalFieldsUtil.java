@@ -68,6 +68,7 @@ public final class AdditionalFieldsUtil {
   public static final String TAG_999 = "999";
   public static final String TAG_001 = "001";
   private static final String TAG_003 = "003";
+  private static final String TAG_010 = "010";
   public static final String TAG_035 = "035";
   public static final char TAG_035_SUB = 'a';
   private static final char TAG_035_IND = ' ';
@@ -323,16 +324,14 @@ public final class AdditionalFieldsUtil {
         MarcFactory factory = MarcFactory.newInstance();
         org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
         if (marcRecord != null) {
-          removeOclcField(marcRecord, TAG_035);
 
           DataField dataField = factory.newDataField(TAG_035, TAG_035_IND, TAG_035_IND);
-
           normalizedValues.forEach(value -> {
             var v = value.split("&");
             dataField.addSubfield(factory.newSubfield(v[0].charAt(0), v[1]));
           });
 
-          addDataFieldInNumericalOrder(dataField, marcRecord);
+          replaceOclc035FieldWithNormalizedData(marcRecord, dataField);
 
           // use stream writer to recalculate leader
           streamWriter.write(marcRecord);
@@ -580,12 +579,22 @@ public final class AdditionalFieldsUtil {
     return isFieldFound;
   }
 
-  private static void removeOclcField(org.marc4j.marc.Record marcRecord, String fieldName) {
-    List<VariableField> variableFields = marcRecord.getVariableFields(fieldName);
+  private static void replaceOclc035FieldWithNormalizedData(org.marc4j.marc.Record marcRecord,
+                                              DataField dataField) {
+    var variableFields = marcRecord.getVariableFields(TAG_035);
     if (!variableFields.isEmpty()) {
       variableFields.stream()
         .filter(variableField -> variableField.find(OCLC))
         .forEach(marcRecord::removeVariableField);
+
+      var dataFields = marcRecord.getDataFields();
+      for (int i = 0; i < dataFields.size(); i++) {
+        if (dataFields.get(i).getTag().equals(TAG_010)) {
+          marcRecord.getDataFields().add(i + 1, dataField);
+          return;
+        }
+      }
+      addDataFieldInNumericalOrder(dataField, marcRecord);
     }
   }
 
