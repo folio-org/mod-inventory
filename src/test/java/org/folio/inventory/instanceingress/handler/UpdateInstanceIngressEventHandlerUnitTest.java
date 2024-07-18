@@ -131,6 +131,35 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
   }
 
   @Test
+  public void shouldReturnFailedFuture_ifExistingInstanceFetchingFailed() throws IOException {
+    // given
+    var event = new InstanceIngressEvent()
+      .withId(UUID.randomUUID().toString())
+      .withEventPayload(new InstanceIngressPayload()
+        .withSourceRecordObject("{}")
+        .withSourceType(LINKED_DATA)
+      );
+    var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
+    doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
+      .withMappingRules(mappingRules.encode())
+      .withMappingParams(Json.encode(new MappingParameters())))))
+      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+    var expectedMessage = "Error retrieving inventory Instance";
+    doAnswer(i -> {
+      Consumer<Failure> failureHandler = i.getArgument(2);
+      failureHandler.accept(new Failure(expectedMessage, 400));
+      return null;
+    }).when(instanceCollection).findById(any(), any(), any());
+
+    // when
+    var future = handler.handle(event);
+
+    // then
+    var exception = Assert.assertThrows(ExecutionException.class, future::get);
+    assertThat(exception.getCause().getMessage()).isEqualTo(expectedMessage);
+  }
+
+  @Test
   public void shouldReturnFailedFuture_ifInstanceValidationFails() throws IOException {
     // given
     var event = new InstanceIngressEvent()
@@ -144,7 +173,13 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
-
+   var existedInstance = new Instance(event.getId(), "1",
+      UUID.randomUUID().toString(), null, null, null);
+    doAnswer(i -> {
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(existedInstance));
+      return null;
+    }).when(instanceCollection).findById(any(), any(), any());
     var expectedMessage = "Mapped Instance is invalid: [Field 'title' is a required field and can not be null, "
       + "Field 'instanceTypeId' is a required field and can not be null], from InstanceIngressEvent with id '" + event.getId() + "'";
 
@@ -170,6 +205,13 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+   var existedInstance = new Instance(event.getId(), "1",
+      UUID.randomUUID().toString(), null, null, null);
+    doAnswer(i -> {
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(existedInstance));
+      return null;
+    }).when(instanceCollection).findById(any(), any(), any());
     var expectedMessage = "Some failure";
     doAnswer(i -> {
       Consumer<Failure> failureHandler = i.getArgument(2);
@@ -199,6 +241,13 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+   var existedInstance = new Instance(event.getId(), "1",
+      UUID.randomUUID().toString(), null, null, null);
+    doAnswer(i -> {
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(existedInstance));
+      return null;
+    }).when(instanceCollection).findById(any(), any(), any());
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
       successHandler.accept(new Success<>(i.getArgument(0)));
@@ -229,6 +278,13 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+   var existedInstance = new Instance(event.getId(), "1",
+      UUID.randomUUID().toString(), null, null, null);
+    doAnswer(i -> {
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(existedInstance));
+      return null;
+    }).when(instanceCollection).findById(any(), any(), any());
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
       successHandler.accept(new Success<>(i.getArgument(0)));
@@ -261,6 +317,13 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+   var existedInstance = new Instance(event.getId(), "1",
+      UUID.randomUUID().toString(), null, null, null);
+    doAnswer(i -> {
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(existedInstance));
+      return null;
+    }).when(instanceCollection).findById(any(), any(), any());
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
       successHandler.accept(new Success<>(i.getArgument(0)));
@@ -297,6 +360,13 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+   var existedInstance = new Instance(event.getId(), "1",
+      UUID.randomUUID().toString(), null, null, null);
+    doAnswer(i -> {
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(existedInstance));
+      return null;
+    }).when(instanceCollection).findById(any(), any(), any());
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
       successHandler.accept(new Success<>(i.getArgument(0)));
@@ -336,6 +406,13 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+   var existedInstance = new Instance(event.getId(), "1",
+      UUID.randomUUID().toString(), null, null, null);
+    doAnswer(i -> {
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(existedInstance));
+      return null;
+    }).when(instanceCollection).findById(any(), any(), any());
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
       successHandler.accept(new Success<>(i.getArgument(0)));
@@ -376,6 +453,13 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+   var existedInstance = new Instance(event.getId(), "1",
+      UUID.randomUUID().toString(), null, null, null);
+    doAnswer(i -> {
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(existedInstance));
+      return null;
+    }).when(instanceCollection).findById(any(), any(), any());
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
       successHandler.accept(new Success<>(i.getArgument(0)));
@@ -420,6 +504,13 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+   var existedInstance = new Instance(event.getId(), "1",
+      UUID.randomUUID().toString(), null, null, null);
+    doAnswer(i -> {
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(existedInstance));
+      return null;
+    }).when(instanceCollection).findById(any(), any(), any());
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
       successHandler.accept(new Success<>(i.getArgument(0)));
@@ -447,6 +538,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
 
     var instance = future.get();
     assertThat(instance.getId()).isEqualTo(event.getEventPayload().getSourceRecordIdentifier());
+    assertThat(instance.getHrid()).isEqualTo(existedInstance.getHrid());
     assertThat(instance.getSource()).isEqualTo("LINKED_DATA");
     assertThat(instance.getIdentifiers().stream().anyMatch(i -> i.value.equals("(ld) " + linkedDataIdId))).isTrue();
 

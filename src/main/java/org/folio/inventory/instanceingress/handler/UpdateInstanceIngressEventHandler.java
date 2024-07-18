@@ -1,6 +1,8 @@
 package org.folio.inventory.instanceingress.handler;
 
 import static java.lang.String.format;
+import static java.util.Objects.nonNull;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.reorderMarcRecordFields;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 
@@ -16,9 +18,11 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
+import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
+import org.folio.inventory.support.InstanceUtil;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.InstanceIngressEvent;
@@ -56,8 +60,9 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
       getMappingMetadata(context, super::getMappingMetadataCache)
         .compose(metadataOptional -> metadataOptional.map(metadata -> prepareAndExecuteMapping(metadata, targetRecord, event, instanceId, LOGGER))
           .orElseGet(() -> Future.failedFuture("MappingMetadata was not found for marc-bib record type")))
+        .compose(newInstance -> fillPreviousInstanceData(newInstance, instanceId))
         .compose(newInstance -> validateInstance(newInstance, event, LOGGER))
-        .compose(newInstance -> updateInstance(newInstance, event))
+        .compose(mappedInstance -> processInstanceUpdate(mappedInstance, event))
         .onFailure(e -> {
           if (!(e instanceof DuplicateEventException)) {
             LOGGER.error(FAILURE, event.getId(), e);
@@ -72,7 +77,20 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
     }
   }
 
-  private Future<Instance> updateInstance(Instance instance, InstanceIngressEvent event) {
+  private Future<org.folio.Instance> fillPreviousInstanceData(org.folio.Instance instance, String instanceId) {
+    return InstanceUtil.findInstanceById(instanceId, instanceCollection)
+      .compose(existingInstance -> {
+        instance.setHrid(existingInstance.getHrid());
+        instance.setVersion(Integer.parseInt(existingInstance.getVersion()));
+        return Future.succeededFuture(instance);
+      })
+      .onFailure(e -> {
+        var message = "Error retrieving inventory Instance";
+        LOGGER.error(message, e);
+      });
+  }
+
+  private Future<Instance> processInstanceUpdate(Instance instance, InstanceIngressEvent event) {
     Promise<Instance> promise = Promise.promise();
     instanceCollection.update(instance, success -> promise.complete(instance),
       failure -> {
@@ -107,8 +125,13 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
     postSnapshotInSrsAndHandleResponse(targetRecord.getSnapshotId(), context, super::postSnapshotInSrsAndHandleResponse)
       .onFailure(promise::fail)
       .compose(snapshot -> super.getRecordByInstanceId(sourceStorageRecordsClient, instance.getId()))
-      .compose(existedRecord -> {
-        targetRecord.setMatchedId(existedRecord.getId());
+      .compose(existingRecord -> {
+        targetRecord.setMatchedId(existingRecord.getId());
+        if (nonNull(existingRecord.getGeneration())) {
+          int incrementedGeneration = existingRecord.getGeneration();
+          targetRecord.setGeneration(++incrementedGeneration);
+        }
+        AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, TAG_999, 's', existingRecord.getId());
         return Future.succeededFuture(targetRecord.getMatchedId());
       })
       .compose(matchedId ->
