@@ -1,10 +1,33 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import static java.lang.String.format;
+import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.ActionProfile.Action.CREATE;
+import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.reorderMarcRecordFields;
+import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
+import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_PATH;
+import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_REQUIRED_FIELDS;
+import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
+import static org.folio.inventory.domain.instances.Instance.ID;
+import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
+
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
@@ -14,7 +37,6 @@ import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.services.OrderHelperService;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
-import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -28,29 +50,6 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.processing.mapping.mapper.MappingContext;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
-import static java.lang.String.format;
-import static org.apache.commons.lang.StringUtils.isNotBlank;
-import static org.apache.commons.lang3.StringUtils.isEmpty;
-import static org.folio.ActionProfile.Action.CREATE;
-import static org.folio.ActionProfile.FolioRecord.INSTANCE;
-import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.*;
-import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
-import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
-import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_PATH;
-import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_REQUIRED_FIELDS;
-import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
-import static org.folio.inventory.domain.instances.Instance.ID;
-import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
-import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 
 public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
@@ -106,7 +105,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
       LOGGER.info("Create instance with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
 
-      Future<RecordToEntity> recordToInstanceFuture = idStorageService.store(targetRecord.getId(), getInstanceId(targetRecord), dataImportEventPayload.getTenant());
+      Future<RecordToEntity> recordToInstanceFuture = idStorageService.store(targetRecord.getId(), super.getInstanceId(targetRecord), dataImportEventPayload.getTenant());
       recordToInstanceFuture.onSuccess(res -> {
           String instanceId = res.getEntityId();
           getMappingMetadataCache().get(jobExecutionId, context)
@@ -174,11 +173,6 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       future.completeExceptionally(e);
     }
     return future;
-  }
-
-  protected String getInstanceId(Record record) {
-    String subfield999ffi = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
-    return isEmpty(subfield999ffi) ? UUID.randomUUID().toString() : subfield999ffi;
   }
 
   private JsonObject prepareInstance(DataImportEventPayload dataImportEventPayload, String instanceId, String jobExecutionId) {

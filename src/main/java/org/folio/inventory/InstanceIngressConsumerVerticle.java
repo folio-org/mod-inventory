@@ -11,7 +11,7 @@ import org.folio.inventory.support.KafkaConsumerVerticle;
 public class InstanceIngressConsumerVerticle extends KafkaConsumerVerticle {
 
   private static final Logger LOGGER = LogManager.getLogger(InstanceIngressConsumerVerticle.class);
-  private static final String INSTANCE_INGRESS_TOPIC = "inventory.instance_ingress";
+  private static final String INSTANCE_INGRESS_TOPIC = "linked-data.instance-ingress";
   private static final String BASE_PROPERTY = "InstanceIngressConsumerVerticle";
 
   @Override

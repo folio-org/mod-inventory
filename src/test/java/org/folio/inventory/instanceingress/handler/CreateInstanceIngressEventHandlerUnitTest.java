@@ -238,8 +238,8 @@ public class CreateInstanceIngressEventHandlerUnitTest {
     var snapshotHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Snapshot())), HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     doAnswer(i -> {
-      Consumer<Success<Instance>> sucessHandler = i.getArgument(1);
-      sucessHandler.accept(new Success<>(i.getArgument(0)));
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(i.getArgument(0)));
       return null;
     }).when(instanceCollection).add(any(), any(), any());
     var expectedMessage = "CreatePrecedingSucceedingTitles failure";
@@ -270,8 +270,8 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
     doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
     doAnswer(i -> {
-      Consumer<Success<Instance>> sucessHandler = i.getArgument(1);
-      sucessHandler.accept(new Success<>(i.getArgument(0)));
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(i.getArgument(0)));
       return null;
     }).when(instanceCollection).add(any(), any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
@@ -308,8 +308,8 @@ public class CreateInstanceIngressEventHandlerUnitTest {
     var snapshotHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Snapshot())), HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     doAnswer(i -> {
-      Consumer<Success<Instance>> sucessHandler = i.getArgument(1);
-      sucessHandler.accept(new Success<>(i.getArgument(0)));
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(i.getArgument(0)));
       return null;
     }).when(instanceCollection).add(any(), any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
@@ -349,8 +349,8 @@ public class CreateInstanceIngressEventHandlerUnitTest {
     var snapshotHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Snapshot())), HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     doAnswer(i -> {
-      Consumer<Success<Instance>> sucessHandler = i.getArgument(1);
-      sucessHandler.accept(new Success<>(i.getArgument(0)));
+      Consumer<Success<Instance>> successHandler = i.getArgument(1);
+      successHandler.accept(new Success<>(i.getArgument(0)));
       return null;
     }).when(instanceCollection).add(any(), any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
