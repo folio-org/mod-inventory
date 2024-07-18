@@ -254,7 +254,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       .withStatus(Snapshot.Status.COMMITTED)
       .withProcessingStartedDate(new Date());
 
-    return postSnapshotInSrsAndHandleResponse(dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getToken(), snapshot, tenantId);
+    var context = EventHandlingUtil.constructContext(tenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+    return postSnapshotInSrsAndHandleResponse(context, snapshot);
   }
 
   @Override
@@ -321,7 +322,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
                                                List<MarcFieldProtectionSetting> marcFieldProtectionSettings,
                                                Instance instance, MappingParameters mappingParameters, String tenantId) {
     if (MARC_INSTANCE_SOURCE.equals(instance.getSource()) || CONSORTIUM_MARC.getValue().equals(instance.getSource())) {
-      return getRecordByInstanceId(dataImportEventPayload, instance.getId(), tenantId)
+      SourceStorageRecordsClient client = getSourceStorageRecordsClient(dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getToken(), tenantId);
+      return getRecordByInstanceId(client, instance.getId())
         .compose(existingRecord -> {
           Record incomingRecord = Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
           String updatedContent = new MarcRecordModifier().updateRecord(incomingRecord, existingRecord, marcFieldProtectionSettings);
@@ -356,8 +358,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     return Future.succeededFuture();
   }
 
-  private Future<Record> getRecordByInstanceId(DataImportEventPayload dataImportEventPayload, String instanceId, String tenantId) {
-    SourceStorageRecordsClient client = getSourceStorageRecordsClient(dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getToken(), tenantId);
+  protected Future<Record> getRecordByInstanceId(SourceStorageRecordsClient client, String instanceId) {
     return client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE).compose(resp -> {
       if (resp.statusCode() != 200) {
         LOGGER.warn(format("Failed to retrieve MARC record by instance id: '%s', status code: %s",

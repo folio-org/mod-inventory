@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.codehaus.plexus.util.StringUtils.isNotEmpty;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
@@ -9,11 +10,13 @@ import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_PATH
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
 import static org.folio.inventory.domain.instances.Instance.ID;
 
-import java.util.HashMap;
-
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import java.util.HashMap;
+import java.util.UUID;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -21,8 +24,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.HttpStatus;
+import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
+import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
@@ -33,9 +38,6 @@ import org.folio.processing.mapping.defaultmapper.RecordMapper;
 import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.client.SourceStorageRecordsClient;
-
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
 import org.folio.rest.client.SourceStorageSnapshotsClient;
 import org.folio.rest.jaxrs.model.AdditionalInfo;
 import org.folio.rest.jaxrs.model.EntityType;
@@ -136,17 +138,17 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     return promise.future();
   }
 
-  protected Future<Snapshot> postSnapshotInSrsAndHandleResponse(String okapiUrl, String token, Snapshot snapshot, String tenantId) {
+  protected Future<Snapshot> postSnapshotInSrsAndHandleResponse(Context context, Snapshot snapshot) {
     Promise<Snapshot> promise = Promise.promise();
-    getSourceStorageSnapshotsClient(okapiUrl, token, tenantId).postSourceStorageSnapshots(snapshot)
+    getSourceStorageSnapshotsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId()).postSourceStorageSnapshots(snapshot)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
-          LOGGER.info("postSnapshotInSrsAndHandleResponse:: Posted snapshot with id: {} to tenant: {}", snapshot.getJobExecutionId(), tenantId);
+          LOGGER.info("postSnapshotInSrsAndHandleResponse:: Posted snapshot with id: {} to tenant: {}", snapshot.getJobExecutionId(), context.getTenantId());
           promise.complete(result.bodyAsJson(Snapshot.class));
         } else {
           String msg = format("Failed to create snapshot in SRS, snapshot id: %s, tenant id: %s, status code: %s, snapshot: %s",
-            snapshot.getJobExecutionId(), tenantId, result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
+            snapshot.getJobExecutionId(), context.getTenantId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
           LOGGER.warn(msg);
           promise.fail(msg);
         }
@@ -224,6 +226,11 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     } else {
       srcRecord.setAdditionalInfo(new AdditionalInfo().withSuppressDiscovery(suppressFromDiscovery));
     }
+  }
+
+  protected String getInstanceId(Record record) {
+    String subfield999ffi = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
+    return isEmpty(subfield999ffi) ? UUID.randomUUID().toString() : subfield999ffi;
   }
 
   private void executeHrIdManipulation(Record srcRecord, JsonObject externalEntity) {
