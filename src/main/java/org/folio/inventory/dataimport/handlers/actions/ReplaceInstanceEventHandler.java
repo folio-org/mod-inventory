@@ -15,6 +15,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.exceptions.DataImportException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.dataimport.util.ValidationUtil;
@@ -62,6 +63,7 @@ import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
+import static org.folio.inventory.domain.instances.InstanceSource.LINKED_DATA;
 import static org.folio.inventory.domain.instances.InstanceSource.MARC;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 
@@ -117,6 +119,12 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
       Instance instanceToUpdate = Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
+
+      if (instanceToUpdate.getSource() != null && instanceToUpdate.getSource().equals(LINKED_DATA.getValue())) {
+        String msg = format("handle:: Failed to update Instance with id = %s. Instances with source=LINKED_DATA cannot be edited", instanceToUpdate.getId());
+        LOGGER.warn(msg);
+        return CompletableFuture.failedFuture(new DataImportException(msg));
+      }
 
       if (instanceToUpdate.getSource() != null && (instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO.getValue()) || instanceToUpdate.getSource().equals(CONSORTIUM_MARC.getValue()))) {
         LOGGER.info("handle:: Processing Consortium Instance jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
