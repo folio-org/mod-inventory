@@ -73,6 +73,10 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload payload) {
     logParametersEventHandler(LOGGER, payload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
+    LOGGER.info("[SLY-TEST-LOG]:[***]: payload: {}.", payload);
+    LOGGER.info("[SLY-TEST-LOG]:[***]: context: {}.", payload.getContext());
+    LOGGER.info("[SLY-TEST-LOG]:[***]: jobExecutionId: {}.", payload.getJobExecutionId());
+
     try {
       HashMap<String, String> payloadContext = payload.getContext();
       if (isNull(payloadContext) || isBlank(payloadContext.get(modifiedEntityType().value()))) {
