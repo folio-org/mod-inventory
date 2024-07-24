@@ -26,6 +26,8 @@ import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
+import org.folio.processing.events.services.publisher.EventPublisher;
+import org.folio.processing.events.services.publisher.KafkaEventPublisher;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.junit.AfterClass;
@@ -131,13 +133,18 @@ public class DataImportConsumerVerticleTest {
     cluster.start();
     String[] hostAndPort = cluster.getBrokerList().split(":");
 
+    vertx = Vertx.vertx();
+
     KafkaConfig kafkaConfig = KafkaConfig.builder()
       .kafkaHost(hostAndPort[0])
       .kafkaPort(hostAndPort[1])
       .build();
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
+    List<EventPublisher> eventPublishers = EventManager.getEventPublishers();
 
-    vertx = Vertx.vertx();
+    KafkaEventPublisher kafkaEventPublisher = (KafkaEventPublisher) eventPublishers.get(0);
+    kafkaEventPublisher.setTestEnvironment(true);
+
     DeploymentOptions options = new DeploymentOptions()
       .setConfig(new JsonObject()
         .put(KAFKA_HOST, hostAndPort[0])
