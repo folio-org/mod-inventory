@@ -40,15 +40,23 @@ import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.unit.Async;
+import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.RunTestOnContext;
+import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.apache.http.HttpStatus;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.IdStorageService;
+import org.folio.kafka.exception.DuplicateEventException;
+import org.folio.processing.exceptions.EventProcessingException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -74,6 +82,7 @@ import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 
+@RunWith(VertxUnitRunner.class)
 public class CreateAuthorityEventHandlerTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/marc-authority-rules.json";
@@ -82,7 +91,8 @@ public class CreateAuthorityEventHandlerTest {
   private static final String AUTHORITY_ID = UUID.randomUUID().toString();
   private static final String RECORD_ID = UUID.randomUUID().toString();
 
-  private final Vertx vertx = Vertx.vertx();
+  @Rule
+  public RunTestOnContext rule = new RunTestOnContext();
 
   private final JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
@@ -144,7 +154,7 @@ public class CreateAuthorityEventHandlerTest {
   public void setUp() throws IOException {
     MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
-    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, vertx.createHttpClient());
+    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(rule.vertx(), rule.vertx().createHttpClient(), true);
     createMarcAuthoritiesEventHandler = new CreateAuthorityEventHandler(storage, mappingMetadataCache, authorityIdStorageService);
     JsonObject mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
@@ -170,7 +180,8 @@ public class CreateAuthorityEventHandlerTest {
   }
 
   @Test
-  public void shouldProcessEvent() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldProcessEvent(TestContext testContext) throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    Async async = testContext.async();
     when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
 
     var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
@@ -186,15 +197,23 @@ public class CreateAuthorityEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createMarcAuthoritiesEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
-
-    assertEquals(DI_INVENTORY_AUTHORITY_CREATED.value(), actualDataImportEventPayload.getEventType());
-    assertNotNull(actualDataImportEventPayload.getContext().get(AUTHORITY.value()));
-    assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(AUTHORITY.value())).getString("id"));
+    Future.fromCompletionStage(future)
+      .onComplete(ar -> {
+        if(ar.failed()){
+          testContext.fail(ar.cause());
+        }
+        DataImportEventPayload actualDataImportEventPayload = ar.result();
+        testContext.assertNotNull(actualDataImportEventPayload);
+        testContext.assertEquals(DI_INVENTORY_AUTHORITY_CREATED.value(), actualDataImportEventPayload.getEventType());
+        testContext.assertNotNull(actualDataImportEventPayload.getContext().get(AUTHORITY.value()));
+        testContext.assertNotNull(new JsonObject(actualDataImportEventPayload.getContext().get(AUTHORITY.value())).getString("id"));
+        async.complete();
+      });
   }
 
-  @Test(expected = Exception.class)
-  public void shouldNotProcessEventEvenIfDuplicatedInventoryStorageErrorExists() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  @Test
+  public void shouldNotProcessEventEvenIfDuplicatedInventoryStorageErrorExists(TestContext testContext) throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    Async async = testContext.async();
     when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
@@ -215,11 +234,20 @@ public class CreateAuthorityEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createMarcAuthoritiesEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.SECONDS);
+    Future.fromCompletionStage(future)
+      .onComplete(ar -> {
+        if (ar.succeeded()) {
+          testContext.fail("Exception should be thrown");
+        } else {
+          testContext.assertTrue(ar.cause() instanceof DuplicateEventException);
+          async.complete();
+        }
+      });
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldThrowExceptionIfContextIsNull() throws ExecutionException, InterruptedException, TimeoutException {
+  @Test
+  public void shouldThrowExceptionIfContextIsNull(TestContext testContext) {
+    Async async = testContext.async();
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
       .withContext(null)
@@ -227,11 +255,20 @@ public class CreateAuthorityEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createMarcAuthoritiesEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
+    Future.fromCompletionStage(future)
+      .onComplete(ar -> {
+        if (ar.succeeded()) {
+          testContext.fail("Exception should be thrown");
+        } else {
+          testContext.assertTrue(ar.cause() instanceof EventProcessingException);
+          async.complete();
+        }
+      });
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldThrowExceptionIfContextIsEmpty() throws ExecutionException, InterruptedException, TimeoutException {
+  @Test
+  public void shouldThrowExceptionIfContextIsEmpty(TestContext testContext) {
+    Async async = testContext.async();
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
       .withContext(new HashMap<>())
@@ -239,13 +276,20 @@ public class CreateAuthorityEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createMarcAuthoritiesEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
+    Future.fromCompletionStage(future)
+      .onComplete(ar -> {
+        if (ar.succeeded()) {
+          testContext.fail("Exception should be thrown");
+        } else {
+          testContext.assertTrue(ar.cause() instanceof EventProcessingException);
+          async.complete();
+        }
+      });
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldThrowExceptionIfMarcAuthorityIsEmptyInContext()
-    throws ExecutionException, InterruptedException, TimeoutException {
-
+  @Test
+  public void shouldThrowExceptionIfMarcAuthorityIsEmptyInContext(TestContext testContext) {
+    Async async = testContext.async();
     HashMap<String, String> context = new HashMap<>();
     context.put(MARC_AUTHORITY.value(), "");
 
@@ -256,13 +300,20 @@ public class CreateAuthorityEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createMarcAuthoritiesEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
+    Future.fromCompletionStage(future)
+      .onComplete(ar -> {
+        if (ar.succeeded()) {
+          testContext.fail("Exception should be thrown");
+        } else {
+          testContext.assertTrue(ar.cause() instanceof EventProcessingException);
+          async.complete();
+        }
+      });
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldThrowExceptionIfMarcAuthorityIsNotInContext()
-    throws ExecutionException, InterruptedException, TimeoutException {
-
+  @Test
+  public void shouldThrowExceptionIfMarcAuthorityIsNotInContext(TestContext testContext) {
+    Async async = testContext.async();
     HashMap<String, String> context = new HashMap<>();
     context.put("Test_Value", "");
 
@@ -273,11 +324,20 @@ public class CreateAuthorityEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createMarcAuthoritiesEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
+    Future.fromCompletionStage(future)
+      .onComplete(ar -> {
+        if (ar.succeeded()) {
+          testContext.fail("Exception should be thrown");
+        } else {
+          testContext.assertTrue(ar.cause() instanceof EventProcessingException);
+          async.complete();
+        }
+      });
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventWhenRecordToAuthorityFutureFails() throws ExecutionException, InterruptedException, TimeoutException {
+  @Test
+  public void shouldNotProcessEventWhenRecordToAuthorityFutureFails(TestContext testContext) throws ExecutionException, InterruptedException, TimeoutException {
+    Async async = testContext.async();
     when(authorityIdStorageService.store(any(), any(), any())).thenReturn(Future.failedFuture(new RuntimeException("Something wrong with database!")));
 
     String expectedHoldingId = UUID.randomUUID().toString();
@@ -293,11 +353,19 @@ public class CreateAuthorityEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
 
     CompletableFuture<DataImportEventPayload> future = createMarcAuthoritiesEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.SECONDS);
+    Future.fromCompletionStage(future)
+      .onComplete(ar -> {
+        if (ar.succeeded()) {
+          testContext.fail("Exception should be thrown");
+        } else {
+          testContext.assertTrue(ar.cause() instanceof EventProcessingException);
+          async.complete();
+        }
+      });
   }
 
   @Test
-  public void isEligibleShouldReturnTrue() throws IOException {
+  public void isEligibleShouldReturnTrue(TestContext testContext) throws IOException {
     var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
 
     HashMap<String, String> context = new HashMap<>();
@@ -312,7 +380,7 @@ public class CreateAuthorityEventHandlerTest {
   }
 
   @Test
-  public void isEligibleShouldReturnFalseIfCurrentNodeIsEmpty() {
+  public void isEligibleShouldReturnFalseIfCurrentNodeIsEmpty(TestContext testContext) {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_AUTHORITY_RECORD_CREATED.value())
       .withContext(new HashMap<>());
@@ -320,7 +388,7 @@ public class CreateAuthorityEventHandlerTest {
   }
 
   @Test
-  public void isEligibleShouldReturnFalseIfCurrentNodeIsNotActionProfile() {
+  public void isEligibleShouldReturnFalseIfCurrentNodeIsNotActionProfile(TestContext testContext) {
     ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withProfileId(jobProfile.getId())
@@ -353,7 +421,7 @@ public class CreateAuthorityEventHandlerTest {
   }
 
   @Test
-  public void isEligibleShouldReturnFalseIfRecordIsNotAuthority() {
+  public void isEligibleShouldReturnFalseIfRecordIsNotAuthority(TestContext testContext) {
     ActionProfile actionProfile = new ActionProfile()
       .withId(UUID.randomUUID().toString())
       .withName("Create preliminary Item")
@@ -372,12 +440,12 @@ public class CreateAuthorityEventHandlerTest {
   }
 
   @Test
-  public void isPostProcessingNeededShouldReturnTrue() {
+  public void isPostProcessingNeededShouldReturnTrue(TestContext testContext) {
     assertTrue(createMarcAuthoritiesEventHandler.isPostProcessingNeeded());
   }
 
   @Test
-  public void shouldReturnPostProcessingInitializationEventType() {
+  public void shouldReturnPostProcessingInitializationEventType(TestContext testContext) {
     assertEquals(DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING.value(), createMarcAuthoritiesEventHandler.getPostProcessingInitializationEventType());
   }
 }

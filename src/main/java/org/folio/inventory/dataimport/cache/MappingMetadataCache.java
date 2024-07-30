@@ -111,8 +111,12 @@ public class MappingMetadataCache {
       });
   }
 
-  public static synchronized MappingMetadataCache getInstance(Vertx vertx, HttpClient httpClient) {
-    if (instance == null) {
+  public static MappingMetadataCache getInstance(Vertx vertx, HttpClient httpClient) {
+    return getInstance(vertx, httpClient, false);
+  }
+
+  public static synchronized MappingMetadataCache getInstance(Vertx vertx, HttpClient httpClient, boolean returnNew) {
+    if (instance == null || returnNew) {
       instance = new MappingMetadataCache(vertx, httpClient, Long.parseLong(getCacheEnvVariable(vertx.getOrCreateContext().config(), METADATA_EXPIRATION_TIME)));
     }
     return instance;
