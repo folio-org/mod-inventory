@@ -135,9 +135,10 @@ public class DataImportConsumerVerticleTest {
       .kafkaHost(hostAndPort[0])
       .kafkaPort(hostAndPort[1])
       .build();
-    EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
 
     vertx = Vertx.vertx();
+    EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
+
     DeploymentOptions options = new DeploymentOptions()
       .setConfig(new JsonObject()
         .put(KAFKA_HOST, hostAndPort[0])
