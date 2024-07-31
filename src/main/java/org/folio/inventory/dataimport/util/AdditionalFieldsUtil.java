@@ -69,7 +69,6 @@ public final class AdditionalFieldsUtil {
   public static final String TAG_999 = "999";
   public static final String TAG_001 = "001";
   private static final String TAG_003 = "003";
-  private static final String TAG_010 = "010";
   public static final String TAG_035 = "035";
   public static final char TAG_035_SUB = 'a';
   private static final char TAG_035_IND = ' ';
@@ -583,16 +582,15 @@ public final class AdditionalFieldsUtil {
   private static void replaceOclc035FieldWithNormalizedData(org.marc4j.marc.Record marcRecord,
                                               DataField dataField) {
     var variableFields = marcRecord.getVariableFields(TAG_035);
-    var index = new AtomicInteger();
+    int[] index = {0};
     if (!variableFields.isEmpty()) {
       variableFields.stream()
         .filter(variableField -> variableField.find(OCLC))
         .forEach(variableField -> {
-          if (index.get() == 0)
-            index.set(marcRecord.getDataFields().indexOf(variableField));
+          index[0] = (marcRecord.getDataFields().indexOf(variableField));
           marcRecord.removeVariableField(variableField);
         });
-      marcRecord.getDataFields().add(index.get(), dataField);
+      marcRecord.getDataFields().add(index[0], dataField);
     }
   }
 
