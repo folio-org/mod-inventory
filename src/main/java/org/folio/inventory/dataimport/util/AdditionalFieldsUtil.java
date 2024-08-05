@@ -806,7 +806,8 @@ public final class AdditionalFieldsUtil {
         var nodeTag = tag;
         //loop will add system generated fields that are absent in initial record, preserving their order, f.e. 035
         do {
-          var node = tag.startsWith(TAG_00X_PREFIX) ? removeAndGetNodeByTag(nodes00X, tag) : nodes.remove(0);
+          var node = tag.startsWith(TAG_00X_PREFIX) ? removeAndGetNodeByTag(nodes00X, tag)
+            : nodes.isEmpty() ? null : nodes.remove(0);
           if (node != null && !node.isEmpty()) {
             nodeTag = getTagFromNode(node);
             reorderedFields.add(node);
@@ -833,13 +834,11 @@ public final class AdditionalFieldsUtil {
   }
 
   private static JsonNode removeAndGetNodeByTag(List<JsonNode> nodes, String tag) {
-    for (int i = 0; i < nodes.size(); i++) {
-      var nodeTag = getTagFromNode(nodes.get(i));
-      if (nodeTag.equals(tag)) {
-        return nodes.remove(i);
-      }
-    }
-    return null;
+    var toRemove = nodes.stream()
+      .filter(node -> getTagFromNode(node).equals(tag))
+      .findFirst();
+    toRemove.ifPresent(nodes::remove);
+    return toRemove.orElse(null);
   }
 
   private static List<JsonNode> removeAndGetNodesByTagPrefix(List<JsonNode> nodes, String prefix) {
