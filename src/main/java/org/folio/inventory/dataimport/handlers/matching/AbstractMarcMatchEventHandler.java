@@ -24,21 +24,10 @@ import org.folio.processing.value.ListValue;
 import org.folio.processing.value.StringValue;
 import org.folio.processing.value.Value;
 import org.folio.rest.client.SourceStorageRecordsClient;
-import org.folio.rest.jaxrs.model.EntityType;
-import org.folio.rest.jaxrs.model.Field;
-import org.folio.rest.jaxrs.model.Filter;
-import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
-import org.folio.rest.jaxrs.model.RecordIdentifiersDto;
-import org.folio.rest.jaxrs.model.RecordMatchingDto;
-import org.folio.rest.jaxrs.model.RecordsIdentifiersCollection;
+import org.folio.rest.jaxrs.model.*;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
@@ -193,6 +182,17 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       default -> Collections.emptyList();
     };
 
+    Qualifier qualifier = matchDetail.getExistingMatchExpression().getQualifier();
+    Filter.Qualifier filterQualifier = null;
+    Filter.ComparisonPartType comparisonPartType = null;
+    String qualifierValue = null;
+
+    if (qualifier != null) {
+      filterQualifier = Filter.Qualifier.valueOf(qualifier.getQualifierType().toString());
+      comparisonPartType = Filter.ComparisonPartType.valueOf(qualifier.getComparisonPart().toString());
+      qualifierValue = qualifier.getQualifierValue();
+    }
+
     return new RecordMatchingDto()
       .withRecordType(getMatchedRecordType())
       .withFilters(List.of(new Filter()
@@ -200,7 +200,10 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         .withField(field)
         .withIndicator1(ind1)
         .withIndicator2(ind2)
-        .withSubfield(subfield)))
+        .withSubfield(subfield)
+        .withQualifier(filterQualifier)
+        .withQualifierValue(qualifierValue)
+        .withComparisonPartType(comparisonPartType)))
       .withReturnTotalRecordsCount(true);
   }
 
