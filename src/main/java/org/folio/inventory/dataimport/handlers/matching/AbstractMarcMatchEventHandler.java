@@ -28,6 +28,7 @@ import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Field;
 import org.folio.rest.jaxrs.model.Filter;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.Qualifier;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.jaxrs.model.RecordIdentifiersDto;
 import org.folio.rest.jaxrs.model.RecordMatchingDto;
@@ -45,6 +46,7 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.folio.processing.value.Value.ValueType.MISSING;
+import static org.folio.rest.jaxrs.model.Filter.*;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
 import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
 
@@ -193,6 +195,17 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       default -> Collections.emptyList();
     };
 
+    Qualifier qualifier = matchDetail.getExistingMatchExpression().getQualifier();
+    Filter.Qualifier qualifierFilterType = null;
+    ComparisonPartType comparisonPartType = null;
+    String qualifierValue = null;
+
+    if (qualifier != null) {
+      qualifierFilterType = Filter.Qualifier.valueOf(qualifier.getQualifierType().toString());
+      qualifierValue = qualifier.getQualifierValue();
+      comparisonPartType = ComparisonPartType.valueOf(qualifier.getComparisonPart().toString());
+    }
+
     return new RecordMatchingDto()
       .withRecordType(getMatchedRecordType())
       .withFilters(List.of(new Filter()
@@ -200,7 +213,10 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         .withField(field)
         .withIndicator1(ind1)
         .withIndicator2(ind2)
-        .withSubfield(subfield)))
+        .withSubfield(subfield)
+        .withQualifier(qualifierFilterType)
+        .withQualifierValue(qualifierValue)
+        .withComparisonPartType(comparisonPartType)))
       .withReturnTotalRecordsCount(true);
   }
 
