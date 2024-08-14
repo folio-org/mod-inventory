@@ -46,6 +46,7 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.folio.processing.value.Value.ValueType.MISSING;
+import static org.folio.rest.jaxrs.model.Filter.*;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
 import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
 
@@ -195,14 +196,14 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     };
 
     Qualifier qualifier = matchDetail.getExistingMatchExpression().getQualifier();
-    Filter.Qualifier filterQualifier = null;
-    Filter.ComparisonPartType comparisonPartType = null;
+    Filter.Qualifier qualifierFilterType = null;
+    ComparisonPartType comparisonPartType = null;
     String qualifierValue = null;
 
     if (qualifier != null) {
-      filterQualifier = Filter.Qualifier.valueOf(qualifier.getQualifierType().toString());
-      comparisonPartType = Filter.ComparisonPartType.valueOf(qualifier.getComparisonPart().toString());
+      qualifierFilterType = Filter.Qualifier.valueOf(qualifier.getQualifierType().toString());
       qualifierValue = qualifier.getQualifierValue();
+      comparisonPartType = ComparisonPartType.valueOf(qualifier.getComparisonPart().toString());
     }
 
     return new RecordMatchingDto()
@@ -213,7 +214,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         .withIndicator1(ind1)
         .withIndicator2(ind2)
         .withSubfield(subfield)
-        .withQualifier(filterQualifier)
+        .withQualifier(qualifierFilterType)
         .withQualifierValue(qualifierValue)
         .withComparisonPartType(comparisonPartType)))
       .withReturnTotalRecordsCount(true);
