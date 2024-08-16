@@ -201,9 +201,13 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     String qualifierValue = null;
 
     if (qualifier != null) {
-      qualifierFilterType = Filter.Qualifier.valueOf(qualifier.getQualifierType().toString());
       qualifierValue = qualifier.getQualifierValue();
-      comparisonPartType = ComparisonPartType.valueOf(qualifier.getComparisonPart().toString());
+      qualifierFilterType =
+        qualifier.getQualifierType() != null ?
+        Filter.Qualifier.valueOf(qualifier.getQualifierType().toString()) : null;
+      comparisonPartType =
+        qualifier.getComparisonPart() != null ?
+        ComparisonPartType.valueOf(qualifier.getComparisonPart().toString()) : null;
     }
 
     return new RecordMatchingDto()
