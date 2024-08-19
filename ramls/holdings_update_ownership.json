@@ -14,6 +14,10 @@
         "$ref": "uuid.json"
       }
     },
+    "targetLocationId": {
+      "description": "Id of the location at the target tenant where Holdings will be created.",
+      "$ref": "uuid.json"
+    },
     "targetTenantId": {
       "description": "Target tenant Id, where selected Holdings will be created.",
       "type": "string"
