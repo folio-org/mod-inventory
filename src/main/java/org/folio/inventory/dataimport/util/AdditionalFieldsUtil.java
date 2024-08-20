@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.collections4.CollectionUtils;
@@ -323,16 +324,14 @@ public final class AdditionalFieldsUtil {
         MarcFactory factory = MarcFactory.newInstance();
         org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
         if (marcRecord != null) {
-          removeOclcField(marcRecord, TAG_035);
 
           DataField dataField = factory.newDataField(TAG_035, TAG_035_IND, TAG_035_IND);
-
           normalizedValues.forEach(value -> {
             var v = value.split("&");
             dataField.addSubfield(factory.newSubfield(v[0].charAt(0), v[1]));
           });
 
-          addDataFieldInNumericalOrder(dataField, marcRecord);
+          replaceOclc035FieldWithNormalizedData(marcRecord, dataField);
 
           // use stream writer to recalculate leader
           streamWriter.write(marcRecord);
@@ -580,12 +579,18 @@ public final class AdditionalFieldsUtil {
     return isFieldFound;
   }
 
-  private static void removeOclcField(org.marc4j.marc.Record marcRecord, String fieldName) {
-    List<VariableField> variableFields = marcRecord.getVariableFields(fieldName);
+  private static void replaceOclc035FieldWithNormalizedData(org.marc4j.marc.Record marcRecord,
+                                              DataField dataField) {
+    var variableFields = marcRecord.getVariableFields(TAG_035);
+    int[] index = {0};
     if (!variableFields.isEmpty()) {
       variableFields.stream()
         .filter(variableField -> variableField.find(OCLC))
-        .forEach(marcRecord::removeVariableField);
+        .forEach(variableField -> {
+          index[0] = (marcRecord.getDataFields().indexOf(variableField));
+          marcRecord.removeVariableField(variableField);
+        });
+      marcRecord.getDataFields().add(index[0], dataField);
     }
   }
 
@@ -801,7 +806,8 @@ public final class AdditionalFieldsUtil {
         var nodeTag = tag;
         //loop will add system generated fields that are absent in initial record, preserving their order, f.e. 035
         do {
-          var node = tag.startsWith(TAG_00X_PREFIX) ? removeAndGetNodeByTag(nodes00X, tag) : nodes.remove(0);
+          var node = tag.startsWith(TAG_00X_PREFIX) ? removeAndGetNodeByTag(nodes00X, tag)
+            : nodes.isEmpty() ? null : nodes.remove(0);
           if (node != null && !node.isEmpty()) {
             nodeTag = getTagFromNode(node);
             reorderedFields.add(node);
@@ -828,13 +834,11 @@ public final class AdditionalFieldsUtil {
   }
 
   private static JsonNode removeAndGetNodeByTag(List<JsonNode> nodes, String tag) {
-    for (int i = 0; i < nodes.size(); i++) {
-      var nodeTag = getTagFromNode(nodes.get(i));
-      if (nodeTag.equals(tag)) {
-        return nodes.remove(i);
-      }
-    }
-    return null;
+    var toRemove = nodes.stream()
+      .filter(node -> getTagFromNode(node).equals(tag))
+      .findFirst();
+    toRemove.ifPresent(nodes::remove);
+    return toRemove.orElse(null);
   }
 
   private static List<JsonNode> removeAndGetNodesByTagPrefix(List<JsonNode> nodes, String prefix) {

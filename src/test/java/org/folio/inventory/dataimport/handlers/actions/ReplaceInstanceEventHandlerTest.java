@@ -134,6 +134,7 @@ public class ReplaceInstanceEventHandlerTest {
   private static final Integer INSTANCE_VERSION = 1;
   private static final String INSTANCE_VERSION_AS_STRING = "1";
   private static final String MARC_INSTANCE_SOURCE = "MARC";
+  private static final String LINKED_DATA_INSTANCE_SOURCE = "LINKED_DATA";
   private final String localTenant = "tenant";
   private final String consortiumTenant = "consortiumTenant";
   private final UUID instanceId = UUID.randomUUID();
@@ -256,7 +257,7 @@ public class ReplaceInstanceEventHandlerTest {
 
     Vertx vertx = Vertx.vertx();
     replaceInstanceEventHandler = spy(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, MappingMetadataCache.getInstance(vertx,
-      vertx.createHttpClient()), vertx.createHttpClient(), consortiumServiceImpl));
+      vertx.createHttpClient(), true), vertx.createHttpClient(), consortiumServiceImpl));
 
     var recordUUID = UUID.randomUUID().toString();
     HttpResponse<Buffer> recordHttpResponse = buildHttpResponseWithBuffer(BufferImpl.buffer(String.format(EXISTING_SRS_CONTENT, recordUUID, recordUUID, 0)), HttpStatus.SC_OK);
@@ -1240,6 +1241,32 @@ public class ReplaceInstanceEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.SECONDS);
+  }
+
+  @Test(expected = ExecutionException.class)
+  public void shouldNotProcessEventIfSourceLinkedData() throws InterruptedException, ExecutionException, TimeoutException {
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(), new JsonObject()
+            .put("id", instanceId)
+            .put("hrid", UUID.randomUUID().toString())
+            .put("source", LINKED_DATA_INSTANCE_SOURCE)
+            .put("_version", INSTANCE_VERSION)
+            .put("discoverySuppress", false)
+            .encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+            .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+            .withContext(context)
+            .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+            .withTenant(TENANT_ID)
+            .withOkapiUrl(mockServer.baseUrl())
+            .withToken(TOKEN)
+            .withJobExecutionId(UUID.randomUUID().toString());
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+    future.get(10, TimeUnit.SECONDS);
   }
 
   @Test

@@ -512,6 +512,47 @@ public class AdditionalFieldsUtilTest {
   }
 
   @Test
+  public void shouldPreserveOrderOf035FieldsAfterNormalization() {
+    // given
+    var parsedContent = "{\"leader\":\"00198cama 22003611a 4500\",\"fields\":[" +
+      "{\"001\":\"10065352\"}," +
+      "{\"005\":\"20220127143948.0\"}," +
+      "{\"008\":\"761216s1853mauch0010eng\"}," +
+      "{\"906\":{\"subfields\":[{\"a\":\"7\"},{\"b\":\"cbc\"},{\"c\":\"oclcrpl\"},{\"d\":\"u\"},{\"e\":\"ncip\"},{\"f\":\"19\"},{\"g\":\"y-gencatlg\"}],\"ind1\":\"\",\"ind2\":\"\"}}," +
+      "{\"035\":{\"subfields\":[{\"9\":\"(DLC)01012052\"}],\"ind1\":\"\",\"ind2\":\"\"}}," +
+      "{\"010\":{\"subfields\":[{\"a\":\"01012052\"}],\"ind1\":\"\",\"ind2\":\"\"}}," +
+      "{\"022\":{\"subfields\":[{\"a\":\"0022-0469\"}],\"ind1\":\"\",\"ind2\":\"\"}}," +
+      "{\"030\":{\"subfields\":[{\"a\":\"0030-0469\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)on2628488\"}],\"ind1\":\"\",\"ind2\":\"\"}}," +
+      "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)2628488\"}],\"ind1\":\"\",\"ind2\":\"\"}}," +
+      "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)00012345\"}],\"ind1\":\"\",\"ind2\":\"\"}}," +
+      "{\"040\":{\"subfields\":[{\"a\":\"DLC\"},{\"b\":\"eng\"},{\"c\":\"O\"},{\"d\":\"O\"},{\"d\":\"DLC\"}],\"ind1\":\"\",\"ind2\":\"\"}}]}";
+
+    var expectedParsedContent = "{\"leader\":\"00357cama 22001451a 4500\",\"fields\":[" +
+      "{\"001\":\"10065352\"}," +
+      "{\"005\":\"20220127143948.0\"}," +
+      "{\"008\":\"761216s1853mauch0010eng\"}," +
+      "{\"906\":{\"subfields\":[{\"a\":\"7\"},{\"b\":\"cbc\"},{\"c\":\"oclcrpl\"},{\"d\":\"u\"},{\"e\":\"ncip\"},{\"f\":\"19\"},{\"g\":\"y-gencatlg\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"035\":{\"subfields\":[{\"9\":\"(DLC)01012052\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"010\":{\"subfields\":[{\"a\":\"01012052\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"022\":{\"subfields\":[{\"a\":\"0022-0469\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"030\":{\"subfields\":[{\"a\":\"0030-0469\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)2628488\"},{\"a\":\"(OCoLC)12345\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"040\":{\"subfields\":[{\"a\":\"DLC\"},{\"b\":\"eng\"},{\"c\":\"O\"},{\"d\":\"O\"},{\"d\":\"DLC\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+
+    ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
+
+    Record record = new Record().withId(UUID.randomUUID().toString())
+      .withParsedRecord(parsedRecord)
+      .withGeneration(0)
+      .withState(Record.State.ACTUAL)
+      .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
+    // when
+    AdditionalFieldsUtil.normalize035(record);
+    Assert.assertEquals(expectedParsedContent, parsedRecord.getContent());
+  }
+
+  @Test
   public void shouldNotReturnSubfieldIfOclcNotExist() {
     // given
     String parsedContent = "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
