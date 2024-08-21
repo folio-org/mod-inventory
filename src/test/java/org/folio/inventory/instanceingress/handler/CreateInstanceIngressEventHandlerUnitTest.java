@@ -330,14 +330,16 @@ public class CreateInstanceIngressEventHandlerUnitTest {
   @Test
   public void shouldReturnSucceededFuture_ifProcessFinishedCorrectly() throws IOException, ExecutionException, InterruptedException {
     // given
-    var linkedDataIdId = "someLinkedDataIdId";
+    var linkedDataId = "someLinkedDataId";
+    var instanceId = "someInstanceId";
     var event = new InstanceIngressEvent()
       .withId(UUID.randomUUID().toString())
       .withEventPayload(new InstanceIngressPayload()
         .withSourceRecordObject(TestUtil.readFileFromPath(BIB_RECORD_PATH))
         .withSourceType(LINKED_DATA)
         .withSourceRecordIdentifier(UUID.randomUUID().toString())
-        .withAdditionalProperty("linkedDataId", linkedDataIdId)
+        .withAdditionalProperty("linkedDataId", linkedDataId)
+        .withAdditionalProperty("instanceId", instanceId)
       );
     doReturn(succeededFuture(null)).when(idStorageService).store(anyString(), anyString(), anyString());
     var mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
@@ -365,18 +367,16 @@ public class CreateInstanceIngressEventHandlerUnitTest {
     assertThat(future.isDone()).isTrue();
 
     var instance = future.get();
-    assertThat(instance.getId()).isEqualTo(event.getEventPayload().getSourceRecordIdentifier());
+    assertThat(instance.getId()).isEqualTo(instanceId);
     assertThat(instance.getSource()).isEqualTo("LINKED_DATA");
-    assertThat(instance.getIdentifiers().stream().anyMatch(i -> i.value.equals("(ld) " + linkedDataIdId))).isTrue();
+    assertThat(instance.getIdentifiers().stream().anyMatch(i -> i.value.equals("(ld) " + linkedDataId))).isTrue();
 
     var recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
     var recordSentToSRS = recordCaptor.getValue();
-    assertThat(recordSentToSRS.getId()).isNotNull();
-    assertThat(recordSentToSRS.getId()).isNotEqualTo(event.getEventPayload().getSourceRecordIdentifier());
-    assertThat(recordSentToSRS.getId()).doesNotContain(linkedDataIdId);
+    assertThat(recordSentToSRS.getId()).isEqualTo(event.getEventPayload().getSourceRecordIdentifier());
     assertThat(recordSentToSRS.getRecordType()).isEqualTo(Record.RecordType.MARC_BIB);
     assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, SUBFIELD_I)).hasValue(instance.getId());
-    assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, SUBFIELD_L)).hasValue(linkedDataIdId);
+    assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, SUBFIELD_L)).hasValue(linkedDataId);
   }
 }
