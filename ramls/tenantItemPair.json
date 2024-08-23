@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Pair of item and tenant IDs",
+  "type": "object",
+  "properties": {
+    "itemId": {
+      "type": "string",
+      "description": "Unique ID (UUID) of the item",
+      "$ref": "../../mod-inventory-storage/ramls/uuid.json"
+    },
+    "tenantId": {
+      "type": "string",
+      "description": "Unique ID of the tenant where the item is located"
+    }
+  },
+  "additionalProperties": false,
+  "required": ["itemId", "tenantId"]
+}

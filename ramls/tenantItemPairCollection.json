@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Collection of pairs of item and tenant IDs",
+  "type": "object",
+  "properties": {
+    "itemTenantPairs": {
+      "type": "array",
+      "description": "Unique ID (UUID) of the item",
+      "items": {
+        "type": "object",
+        "$ref": "tenantItemPair.json"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": ["itemTenantPairs"]
+}

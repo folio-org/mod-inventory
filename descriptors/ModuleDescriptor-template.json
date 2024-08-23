@@ -367,6 +367,14 @@
         },
         {
           "methods": ["GET"],
+          "pathPattern": "/inventory/tenant-items",
+          "permissionsRequired": ["inventory.items.collection.get"],
+          "modulePermissions": [
+            "inventory-storage.items.collection.get"
+          ]
+        },
+        {
+          "methods": ["GET"],
           "pathPattern": "/inventory/instances/{id}",
           "permissionsRequired": ["inventory.instances.item.get"],
           "modulePermissions": [
