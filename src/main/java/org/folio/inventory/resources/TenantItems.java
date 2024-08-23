@@ -67,7 +67,7 @@ public class TenantItems extends Items {
       .thenApply(v -> getItemsFutures.stream()
         .map(CompletableFuture::join)
         .flatMap(List::stream)
-        .collect(toList()))
+        .toList())
       .thenApply(this::constructResponse)
       .thenAccept(jsonObject -> JsonResponse.success(routingContext.response(), jsonObject));
   }
