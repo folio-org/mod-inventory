@@ -6,7 +6,7 @@
     "itemId": {
       "type": "string",
       "description": "Unique ID (UUID) of the item",
-      "$ref": "../../mod-inventory-storage/ramls/uuid.json"
+      "$ref": "uuid.json"
     },
     "tenantId": {
       "type": "string",
