@@ -15,6 +15,8 @@ import java.util.concurrent.CompletableFuture;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.TenantItemPair;
+import org.folio.TenantItemPairCollection;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
@@ -36,11 +38,8 @@ public class TenantItems extends Items {
   private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String TENANT_ITEMS_PATH = "/inventory/tenant-items";
-  private static final String TENANT_ITEM_PAIRS_FIELD = "itemTenantPairs";
   private static final String ITEMS_FIELD = "items";
   private static final String TOTAL_RECORDS_FIELD = "items";
-  private static final String ITEM_ID_FIELD = "itemId";
-  private static final String TENANT_ID_FIELD = "tenantId";
 
   public TenantItems(final Storage storage, final HttpClient client) {
     super(storage, client);
@@ -57,8 +56,9 @@ public class TenantItems extends Items {
    *
    */
   private void getItemsFromTenants(RoutingContext routingContext) {
-    var getItemsFutures = JsonArrayHelper.toList(routingContext.body().asJsonObject(), TENANT_ITEM_PAIRS_FIELD).stream()
-      .collect(groupingBy(json -> json.getString(TENANT_ID_FIELD), mapping(json -> json.getString(ITEM_ID_FIELD), toList())))
+    var getItemsFutures = routingContext.body().asPojo(TenantItemPairCollection.class)
+      .getItemTenantPairs().stream()
+      .collect(groupingBy(TenantItemPair::getTenantId, mapping(TenantItemPair::getTenantId, toList())))
       .entrySet().stream()
       .map(tenantToItems -> getItemsWithTenantId(tenantToItems.getKey(), tenantToItems.getValue(), routingContext))
       .toList();
