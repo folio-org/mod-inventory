@@ -508,7 +508,7 @@ public class Items extends AbstractInventoryResource {
         exception.toString())));
   }
 
-  protected CollectionResourceClient createItemsStorageClient(
+  private CollectionResourceClient createItemsStorageClient(
     OkapiHttpClient client,
     WebContext context)
     throws MalformedURLException {
@@ -718,7 +718,7 @@ public class Items extends AbstractInventoryResource {
     });
   }
 
-  protected void invalidOkapiUrlResponse(RoutingContext routingContext, WebContext context) {
+  private void invalidOkapiUrlResponse(RoutingContext routingContext, WebContext context) {
     ServerErrorResponse.internalError(routingContext.response(),
       String.format("Invalid Okapi URL: %s", context.getOkapiLocation()));
   }

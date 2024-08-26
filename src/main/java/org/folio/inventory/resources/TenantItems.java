@@ -9,6 +9,7 @@ import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -33,15 +34,15 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
 
-public class TenantItems extends Items {
+public class TenantItems extends AbstractInventoryResource {
 
   private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-  private static final String TENANT_ITEMS_PATH = "/inventory/tenant-items";
-  private static final String ITEMS_FIELD = "items";
-  private static final String TOTAL_RECORDS_FIELD = "items";
+  public static final String TENANT_ITEMS_PATH = "/inventory/tenant-items";
+  public static final String ITEMS_FIELD = "items";
+  public static final String TOTAL_RECORDS_FIELD = "totalRecords";
 
-  public TenantItems(final Storage storage, final HttpClient client) {
+  public TenantItems(Storage storage, HttpClient client) {
     super(storage, client);
   }
 
@@ -102,6 +103,10 @@ public class TenantItems extends Items {
     );
   }
 
+  private CollectionResourceClient createItemsStorageClient(OkapiHttpClient client, WebContext context) throws MalformedURLException {
+    return new CollectionResourceClient(client, new URL(context.getOkapiLocation() + "/item-storage/items"));
+  }
+
   private OkapiHttpClient createHttpClient(String tenantId, WebContext context,
                                              RoutingContext routingContext) throws MalformedURLException {
     return new OkapiHttpClient(WebClient.wrap(client),
@@ -112,6 +117,11 @@ public class TenantItems extends Items {
       context.getRequestId(),
       exception -> ServerErrorResponse.internalError(routingContext.response(),
         format("Failed to contact storage module: %s", exception.toString())));
+  }
+
+  private void invalidOkapiUrlResponse(RoutingContext routingContext, WebContext context) {
+    ServerErrorResponse.internalError(routingContext.response(),
+      String.format("Invalid Okapi URL: %s", context.getOkapiLocation()));
   }
 
 }
