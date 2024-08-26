@@ -366,7 +366,7 @@
           ]
         },
         {
-          "methods": ["GET"],
+          "methods": ["POST"],
           "pathPattern": "/inventory/tenant-items",
           "permissionsRequired": ["inventory.items.collection.get"],
           "modulePermissions": [
