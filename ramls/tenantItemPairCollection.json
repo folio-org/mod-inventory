@@ -3,7 +3,7 @@
   "description": "Collection of pairs of item and tenant IDs",
   "type": "object",
   "properties": {
-    "itemTenantPairs": {
+    "tenantItemPairs": {
       "type": "array",
       "description": "Unique ID (UUID) of the item",
       "items": {
@@ -13,5 +13,5 @@
     }
   },
   "additionalProperties": false,
-  "required": ["itemTenantPairs"]
+  "required": ["tenantItemPairs"]
 }

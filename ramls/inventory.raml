@@ -295,15 +295,18 @@ resourceTypes:
        Possible values of the 'relations' parameter are: 'onlyBoundWiths', 'onlyBoundWithsSkipDirectlyLinkedItem'",
             example: "holdingsRecordId==\"[UUID]\""}
           ]
-    /tenant-items:
-      displayName: Fetch items based on tenant IDs
-      post:
-        body:
-          application/json:
-            type: tenantItemPairCollection
-        responses:
-          200:
-            description: "Fetched items based on tenant IDs"
+  /tenant-items:
+    displayName: Fetch items based on tenant IDs
+    post:
+      body:
+        application/json:
+          type: tenantItemPairCollection
+      responses:
+        200:
+          description: "Fetched items based on tenant IDs"
+          body:
+            application/json:
+              type: items
   /holdings/{holdingsId}:
     put:
       description: Update Holdings by holdingsId

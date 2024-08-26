@@ -34,7 +34,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
 
-public class TenantItems extends AbstractInventoryResource {
+public class TenantItems {
 
   private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
@@ -42,11 +42,12 @@ public class TenantItems extends AbstractInventoryResource {
   public static final String ITEMS_FIELD = "items";
   public static final String TOTAL_RECORDS_FIELD = "totalRecords";
 
-  public TenantItems(Storage storage, HttpClient client) {
-    super(storage, client);
+  private final HttpClient client;
+
+  public TenantItems(HttpClient client) {
+    this.client = client;
   }
 
-  @Override
   public void register(Router router) {
     router.post(TENANT_ITEMS_PATH).handler(this::getItemsFromTenants);
   }
@@ -58,7 +59,7 @@ public class TenantItems extends AbstractInventoryResource {
    */
   private void getItemsFromTenants(RoutingContext routingContext) {
     var getItemsFutures = routingContext.body().asPojo(TenantItemPairCollection.class)
-      .getItemTenantPairs().stream()
+      .getTenantItemPairs().stream()
       .collect(groupingBy(TenantItemPair::getTenantId, mapping(TenantItemPair::getTenantId, toList())))
       .entrySet().stream()
       .map(tenantToItems -> getItemsWithTenantId(tenantToItems.getKey(), tenantToItems.getValue(), routingContext))

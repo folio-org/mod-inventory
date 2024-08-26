@@ -72,7 +72,7 @@ public class InventoryVerticle extends AbstractVerticle {
     new InventoryConfigApi().register(router);
     new TenantApi().register(router);
     new UpdateOwnershipApi(storage, client, consortiumService).register(router);
-    new TenantItems(storage, client).register(router);
+    new TenantItems(client).register(router);
 
     Handler<AsyncResult<HttpServer>> onHttpServerStart = result -> {
       if (result.succeeded()) {

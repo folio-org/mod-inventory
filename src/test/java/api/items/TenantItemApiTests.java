@@ -2,8 +2,9 @@ package api.items;
 
 import static api.ApiTestSuite.COLLEGE_TENANT_ID;
 import static api.ApiTestSuite.CONSORTIA_TENANT_ID;
+import static api.ApiTestSuite.getBookMaterialType;
+import static api.ApiTestSuite.getCanCirculateLoanType;
 import static api.support.InstanceSamples.smallAngryPlanet;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.resources.TenantItems.ITEMS_FIELD;
 import static org.folio.inventory.resources.TenantItems.TOTAL_RECORDS_FIELD;
@@ -29,7 +30,6 @@ import api.support.ApiRoot;
 import api.support.ApiTests;
 import api.support.InstanceApiClient;
 import api.support.builders.HoldingRequestBuilder;
-import api.support.builders.ItemRequestBuilder;
 import api.support.http.ResourceClient;
 import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
@@ -41,48 +41,49 @@ public class TenantItemApiTests extends ApiTests {
   public void testTenantItemsGetFromDifferentTenants() throws MalformedURLException,
     ExecutionException, InterruptedException, TimeoutException {
 
-    createConsortiumInstanceHoldingItem();
-    createCollegeInstanceHoldingItem();
+    var consortiumItemId = createConsortiumInstanceHoldingItem();
+    var collegeItemId = createCollegeInstanceHoldingItem();
+    var consortiumItem = consortiumItemsClient.getById(consortiumItemId).getJson();
+    var collegeItem = collegeItemsClient.getById(collegeItemId).getJson();
 
-    var consortiumItem = getItems(consortiumOkapiClient, 1).get(0);
-    var collegeItem = getItems(collegeOkapiClient, 1).get(0);
+    assertThat(consortiumItem.getString(ID)).matches(consortiumItemId.toString());
+    assertThat(collegeItem.getString(ID)).matches(collegeItemId.toString());
 
     var tenantItemPariCollection = constructTenantItemPairCollection(Map.of(
       CONSORTIA_TENANT_ID, consortiumItem.getString(ID),
       COLLEGE_TENANT_ID, collegeItem.getString(ID)
     ));
+
     var response = okapiClient.post(ApiRoot.tenantItems(), JsonObject.mapFrom(tenantItemPariCollection))
       .toCompletableFuture().get(5, TimeUnit.SECONDS);
     assertThat(response.getStatusCode()).isEqualTo(200);
-    var items = extractItems(response, 2);
 
+    var items = extractItems(response, 2);
     assertThat(items).contains(consortiumItem, collegeItem);
   }
 
-  private void createConsortiumInstanceHoldingItem() {
-    createInstanceHoldingItem(consortiumItemsClient, consortiumHoldingsStorageClient, consortiumOkapiClient);
+  private UUID createConsortiumInstanceHoldingItem() {
+    return createInstanceHoldingItem(consortiumItemsClient, consortiumHoldingsStorageClient, consortiumOkapiClient);
   }
 
-  private void createCollegeInstanceHoldingItem() {
-    createInstanceHoldingItem(collegeItemsClient, collegeHoldingsStorageClient, collegeOkapiClient);
+  private UUID createCollegeInstanceHoldingItem() {
+    return createInstanceHoldingItem(collegeItemsClient, collegeHoldingsStorageClient, collegeOkapiClient);
   }
 
-  private void createInstanceHoldingItem(ResourceClient itemStorageClient, ResourceClient holdingsStorageClient, OkapiHttpClient okapiHttpClient) {
+  private UUID createInstanceHoldingItem(ResourceClient itemsStorageClient, ResourceClient holdingsStorageClient, OkapiHttpClient okapiHttpClient) {
     var instanceId = UUID.randomUUID();
     InstanceApiClient.createInstance(okapiHttpClient, smallAngryPlanet(instanceId));
     var holdingId = holdingsStorageClient.create(new HoldingRequestBuilder()
       .forInstance(instanceId)).getId();
-    itemStorageClient.create(new ItemRequestBuilder().forHolding(holdingId)
-      .withBarcode(String.valueOf(Math.random() * 100)));
-  }
-
-  private List<JsonObject> getItems(OkapiHttpClient okapiHttpClient, int expected)
-    throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
-
-    var itemsResponse = okapiHttpClient.get(ApiRoot.items()).toCompletableFuture().get(5, SECONDS);
-    assertThat(itemsResponse.getStatusCode()).isEqualTo(200);
-
-    return extractItems(itemsResponse, expected);
+    var itemId = UUID.randomUUID();
+    var newItemRequest = JsonObject.of(
+      "id", itemId.toString(),
+      "status", new JsonObject().put("name", "Available"),
+      "holdingsRecordId", holdingId,
+      "materialTypeId", getBookMaterialType(),
+      "permanentLoanTypeId", getCanCirculateLoanType());
+    itemsStorageClient.create(newItemRequest);
+    return itemId;
   }
 
   private List<JsonObject> extractItems(Response itemsResponse, int expected) {
@@ -95,7 +96,7 @@ public class TenantItemApiTests extends ApiTests {
 
   private TenantItemPairCollection constructTenantItemPairCollection(Map<String, String> itemToTenantIds) {
     return new TenantItemPairCollection()
-      .withItemTenantPairs(itemToTenantIds.entrySet().stream()
+      .withTenantItemPairs(itemToTenantIds.entrySet().stream()
         .map(pair -> new TenantItemPair().withItemId(pair.getKey()).withTenantId(pair.getValue()))
         .toList());
   }
