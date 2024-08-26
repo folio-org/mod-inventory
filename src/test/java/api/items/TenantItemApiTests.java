@@ -6,7 +6,6 @@ import static api.support.InstanceSamples.smallAngryPlanet;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.resources.TenantItems.ITEMS_FIELD;
-import static org.folio.inventory.resources.TenantItems.TENANT_ITEMS_PATH;
 import static org.folio.inventory.resources.TenantItems.TOTAL_RECORDS_FIELD;
 import static org.folio.inventory.support.ItemUtil.ID;
 
@@ -52,7 +51,7 @@ public class TenantItemApiTests extends ApiTests {
       CONSORTIA_TENANT_ID, consortiumItem.getString(ID),
       COLLEGE_TENANT_ID, collegeItem.getString(ID)
     ));
-    var response = okapiClient.post(TENANT_ITEMS_PATH, JsonObject.mapFrom(tenantItemPariCollection))
+    var response = okapiClient.post(ApiRoot.tenantItems(), JsonObject.mapFrom(tenantItemPariCollection))
       .toCompletableFuture().get(5, TimeUnit.SECONDS);
     assertThat(response.getStatusCode()).isEqualTo(200);
     var items = extractItems(response, 2);

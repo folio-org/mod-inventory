@@ -38,7 +38,7 @@ public class TenantItems extends AbstractInventoryResource {
 
   private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-  public static final String TENANT_ITEMS_PATH = "/inventory/tenant-items";
+  private static final String TENANT_ITEMS_PATH = "/inventory/tenant-items";
   public static final String ITEMS_FIELD = "items";
   public static final String TOTAL_RECORDS_FIELD = "totalRecords";
 
