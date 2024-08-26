@@ -73,7 +73,7 @@ public class TenantItemApiTests extends ApiTests {
     var holdingId = holdingsStorageClient.create(new HoldingRequestBuilder()
       .forInstance(instanceId)).getId();
     itemStorageClient.create(new ItemRequestBuilder().forHolding(holdingId)
-      .book().canCirculate().withBarcode(String.valueOf(Math.random() * 100)));
+      .withBarcode(String.valueOf(Math.random() * 100)));
   }
 
   private List<JsonObject> getItems(OkapiHttpClient okapiHttpClient, int expected)
