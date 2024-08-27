@@ -98,7 +98,7 @@ public class TenantItems {
   }
 
   private List<JsonObject> getItemsWithTenantId(String tenantId, Response response) {
-    if (response.getStatusCode() == 200 && response.hasBody()) {
+    if (response.getStatusCode() != 200 || !response.hasBody()) {
       return List.of();
     }
     return JsonArrayHelper.toList(response.getJson(), ITEMS_FIELD).stream()
