@@ -7,6 +7,7 @@ import static api.ApiTestSuite.getCanCirculateLoanType;
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.resources.TenantItems.ITEMS_FIELD;
+import static org.folio.inventory.resources.TenantItems.TENANT_ID_FIELD;
 import static org.folio.inventory.resources.TenantItems.TOTAL_RECORDS_FIELD;
 import static org.folio.inventory.support.ItemUtil.ID;
 
@@ -58,6 +59,8 @@ public class TenantItemApiTests extends ApiTests {
       .toCompletableFuture().get(5, TimeUnit.SECONDS);
     assertThat(response.getStatusCode()).isEqualTo(200);
 
+    consortiumItem.put(TENANT_ID_FIELD, CONSORTIA_TENANT_ID);
+    collegeItem.put(TENANT_ID_FIELD, COLLEGE_TENANT_ID);
     var items = extractItems(response, 2);
     assertThat(items).contains(consortiumItem, collegeItem);
   }

@@ -41,6 +41,7 @@ public class TenantItems {
   private static final String TENANT_ITEMS_PATH = "/inventory/tenant-items";
   public static final String ITEMS_FIELD = "items";
   public static final String TOTAL_RECORDS_FIELD = "totalRecords";
+  public static final String TENANT_ID_FIELD = "tenantId";
 
   private final HttpClient client;
 
@@ -76,7 +77,7 @@ public class TenantItems {
   }
 
   private CompletableFuture<List<JsonObject>> getItemsWithTenantId(String tenantId, List<String> itemIds, RoutingContext routingContext) {
-    log.info("getItemsWithTenantId:: Fetching items - [{}] from tenant - {}", itemIds, tenantId);
+    log.info("getItemsWithTenantId:: Fetching items - {} from tenant - {}", itemIds, tenantId);
     var context = new WebContext(routingContext);
     CollectionResourceClient itemsStorageClient;
     try {
@@ -93,9 +94,16 @@ public class TenantItems {
     itemsStorageClient.getAll(getByIdsQuery, itemsFetched::complete);
 
     return itemsFetched.thenApplyAsync(response ->
-      response.getStatusCode() == 200 && response.hasBody()
-        ? JsonArrayHelper.toList(response.getJson(), ITEMS_FIELD)
-        : List.of());
+      getItemsWithTenantId(tenantId, response));
+  }
+
+  private List<JsonObject> getItemsWithTenantId(String tenantId, Response response) {
+    if (response.getStatusCode() == 200 && response.hasBody()) {
+      return List.of();
+    }
+    return JsonArrayHelper.toList(response.getJson(), ITEMS_FIELD).stream()
+      .map(item -> item.put(TENANT_ID_FIELD, tenantId))
+      .toList();
   }
 
   private JsonObject constructResponse(List<JsonObject> items) {
