@@ -1,4 +1,4 @@
-package org.folio.inventory.dataimport.consumers.vertices;
+package org.folio.inventory.dataimport.consumers;
 
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;

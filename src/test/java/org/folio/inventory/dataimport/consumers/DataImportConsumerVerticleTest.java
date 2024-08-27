@@ -1,4 +1,4 @@
-package org.folio.inventory.dataimport.consumers.vertices;
+package org.folio.inventory.dataimport.consumers;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static java.nio.charset.StandardCharsets.UTF_8;

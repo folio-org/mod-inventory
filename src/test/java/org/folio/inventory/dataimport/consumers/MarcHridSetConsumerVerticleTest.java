@@ -1,12 +1,4 @@
-package org.folio.inventory.dataimport.consumers.vertices;
-
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
+package org.folio.inventory.dataimport.consumers;
 
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
@@ -16,28 +8,26 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
-import org.folio.inventory.MarcBibUpdateConsumerVerticle;
-import org.folio.inventory.dataimport.consumers.MarcBibUpdateKafkaHandler;
+import org.folio.inventory.MarcHridSetConsumerVerticle;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+
+import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
+import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
 
 @RunWith(VertxUnitRunner.class)
-public class MarcBibUpdateConsumerVerticleTest {
+public class MarcHridSetConsumerVerticleTest {
+
   private static final String KAFKA_ENV_NAME = "test-env";
   private static Vertx vertx = Vertx.vertx();
+
   public static EmbeddedKafkaCluster cluster;
-
-  @Mock
-  private static MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler;
-
-  @Before
-  public void setUp() {
-    MockitoAnnotations.openMocks(this);
-  }
 
   @Test
   public void shouldDeployVerticle(TestContext context) {
@@ -55,7 +45,7 @@ public class MarcBibUpdateConsumerVerticleTest {
       .setWorker(true);
 
     Promise<String> promise = Promise.promise();
-    vertx.deployVerticle(MarcBibUpdateConsumerVerticle.class.getName(), options, promise);
+    vertx.deployVerticle(MarcHridSetConsumerVerticle.class.getName(), options, promise);
 
     promise.future().onComplete(ar -> {
       context.assertTrue(ar.succeeded());
