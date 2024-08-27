@@ -1,4 +1,4 @@
-package org.folio.inventory.dataimport.consumers.verticles;
+package org.folio.inventory.dataimport.consumers.vertices;
 
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
@@ -8,23 +8,18 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
-import org.folio.inventory.MarcHridSetConsumerVerticle;
+import org.folio.inventory.InstanceIngressConsumerVerticle;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
 import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
+import static org.folio.inventory.dataimport.util.KafkaConfigConstants.*;
 
 @RunWith(VertxUnitRunner.class)
-public class MarcHridSetConsumerVerticleTest {
+public class InstanceIngressConsumerVerticleTest {
 
-  private static final String TENANT_ID = "diku";
   private static final String KAFKA_ENV_NAME = "test-env";
   private static Vertx vertx = Vertx.vertx();
 
@@ -46,7 +41,7 @@ public class MarcHridSetConsumerVerticleTest {
       .setWorker(true);
 
     Promise<String> promise = Promise.promise();
-    vertx.deployVerticle(MarcHridSetConsumerVerticle.class.getName(), options, promise);
+    vertx.deployVerticle(InstanceIngressConsumerVerticle.class.getName(), options, promise);
 
     promise.future().onComplete(ar -> {
       context.assertTrue(ar.succeeded());
