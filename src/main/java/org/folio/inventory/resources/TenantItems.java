@@ -33,6 +33,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.handler.BodyHandler;
 
 public class TenantItems {
 
@@ -49,6 +50,7 @@ public class TenantItems {
   }
 
   public void register(Router router) {
+    router.post(TENANT_ITEMS_PATH + "*").handler(BodyHandler.create());
     router.post(TENANT_ITEMS_PATH).handler(this::getItemsFromTenants);
   }
 
