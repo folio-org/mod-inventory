@@ -1,4 +1,4 @@
-package org.folio.inventory.dataimport.consumers;
+package org.folio.inventory.dataimport.handlers;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
@@ -24,6 +24,7 @@ import org.folio.MappingProfile;
 import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
+import org.folio.inventory.dataimport.consumers.DataImportKafkaHandler;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.KafkaConfig;
 import org.folio.processing.events.EventManager;
@@ -135,11 +136,15 @@ public class DataImportKafkaHandlerTest {
   }
 
   @AfterClass
-  public static void afterClass(TestContext context) {
+  public static void tearDownClass(TestContext context) {
     Async async = context.async();
     vertx.close(ar -> {
-      cluster.stop();
-      async.complete();
+      if (ar.succeeded()) {
+        cluster.stop();
+        async.complete();
+      } else {
+        context.fail(ar.cause());
+      }
     });
   }
 
