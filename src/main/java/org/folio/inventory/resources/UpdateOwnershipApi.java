@@ -276,7 +276,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           if (!jsons.isEmpty()) {
             List<JsonObject> validatedHoldingsRecords = validateHoldingsRecords(jsons, holdingsUpdateOwnership.getToInstanceId(), notUpdatedEntities);
             List<UpdateOwnershipHoldingsRecordWrapper> holdingsRecordWrappers =
-              validatedHoldingsRecords.stream().map(this::mapHoldingsRecordWrapper).toList();
+              validatedHoldingsRecords.stream().map(h -> mapHoldingsRecordWrapper(h, holdingsUpdateOwnership)).toList();
 
             return validateHoldingsRecordsBoundWith(holdingsRecordWrappers, notUpdatedEntities, routingContext, context)
               .thenCompose(wrappersWithoutBoundWith -> createHoldings(wrappersWithoutBoundWith, notUpdatedEntities, targetTenantHoldingsRecordCollection))
@@ -571,10 +571,13 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .orElse(null);
   }
 
-  private UpdateOwnershipHoldingsRecordWrapper mapHoldingsRecordWrapper(JsonObject holdingsRecordJson) {
+  private UpdateOwnershipHoldingsRecordWrapper mapHoldingsRecordWrapper(JsonObject holdingsRecordJson, HoldingsUpdateOwnership holdingsUpdateOwnership) {
     MoveApiUtil.removeExtraRedundantFields(holdingsRecordJson);
 
-    HoldingsRecord holdingsRecord = holdingsRecordJson.mapTo(HoldingsRecord.class).withHrid(null);
+    HoldingsRecord holdingsRecord = holdingsRecordJson.mapTo(HoldingsRecord.class)
+      .withHrid(null)
+      .withPermanentLocationId(holdingsUpdateOwnership.getTargetLocationId());
+
     String sourceHoldingsRecordId = holdingsRecord.getId();
 
     return new UpdateOwnershipHoldingsRecordWrapper(sourceHoldingsRecordId, holdingsRecord.withId(UUID.randomUUID().toString()));
