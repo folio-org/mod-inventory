@@ -17,7 +17,6 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import org.folio.inventory.MarcBibUpdateConsumerVerticle;
-import org.folio.inventory.dataimport.consumers.MarcBibUpdateKafkaHandler;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
