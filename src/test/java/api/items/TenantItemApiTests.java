@@ -49,12 +49,12 @@ public class TenantItemApiTests extends ApiTests {
     assertThat(consortiumItem.getString(ID)).matches(consortiumItemId.toString());
     assertThat(collegeItem.getString(ID)).matches(collegeItemId.toString());
 
-    var tenantItemPariCollection = constructTenantItemPairCollection(Map.of(
+    var tenantItemPairCollection = constructTenantItemPairCollection(Map.of(
       CONSORTIA_TENANT_ID, consortiumItem.getString(ID),
       COLLEGE_TENANT_ID, collegeItem.getString(ID)
     ));
 
-    var response = okapiClient.post(ApiRoot.tenantItems(), JsonObject.mapFrom(tenantItemPariCollection))
+    var response = okapiClient.post(ApiRoot.tenantItems(), JsonObject.mapFrom(tenantItemPairCollection))
       .toCompletableFuture().get(5, TimeUnit.SECONDS);
     assertThat(response.getStatusCode()).isEqualTo(200);
 
@@ -94,10 +94,10 @@ public class TenantItemApiTests extends ApiTests {
     return items;
   }
 
-  private TenantItemPairCollection constructTenantItemPairCollection(Map<String, String> itemToTenantIds) {
+  private TenantItemPairCollection constructTenantItemPairCollection(Map<String, String> tenantsToItemIds) {
     return new TenantItemPairCollection()
-      .withTenantItemPairs(itemToTenantIds.entrySet().stream()
-        .map(pair -> new TenantItemPair().withItemId(pair.getKey()).withTenantId(pair.getValue()))
+      .withTenantItemPairs(tenantsToItemIds.entrySet().stream()
+        .map(pair -> new TenantItemPair().withTenantId(pair.getKey()).withItemId(pair.getValue()))
         .toList());
   }
 

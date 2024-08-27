@@ -19,7 +19,6 @@ import org.apache.logging.log4j.Logger;
 import org.folio.TenantItemPair;
 import org.folio.TenantItemPairCollection;
 import org.folio.inventory.common.WebContext;
-import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
@@ -62,7 +61,7 @@ public class TenantItems {
   private void getItemsFromTenants(RoutingContext routingContext) {
     var getItemsFutures = routingContext.body().asPojo(TenantItemPairCollection.class)
       .getTenantItemPairs().stream()
-      .collect(groupingBy(TenantItemPair::getTenantId, mapping(TenantItemPair::getTenantId, toList())))
+      .collect(groupingBy(TenantItemPair::getTenantId, mapping(TenantItemPair::getItemId, toList())))
       .entrySet().stream()
       .map(tenantToItems -> getItemsWithTenantId(tenantToItems.getKey(), tenantToItems.getValue(), routingContext))
       .toList();

@@ -5,7 +5,7 @@
   "properties": {
     "tenantItemPairs": {
       "type": "array",
-      "description": "Unique ID (UUID) of the item",
+      "description": "Pairs of tenantId and itemId",
       "items": {
         "type": "object",
         "$ref": "tenantItemPair.json"
