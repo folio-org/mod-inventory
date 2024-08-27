@@ -135,11 +135,15 @@ public class DataImportKafkaHandlerTest {
   }
 
   @AfterClass
-  public static void afterClass(TestContext context) {
+  public static void tearDownClass(TestContext context) {
     Async async = context.async();
     vertx.close(ar -> {
-      cluster.stop();
-      async.complete();
+      if (ar.succeeded()) {
+        cluster.stop();
+        async.complete();
+      } else {
+        context.fail(ar.cause());
+      }
     });
   }
 
