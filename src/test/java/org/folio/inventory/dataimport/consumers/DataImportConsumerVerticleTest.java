@@ -127,6 +127,7 @@ public class DataImportConsumerVerticleTest {
   @BeforeClass
   public static void setUpClass(TestContext context) {
     Async async = context.async();
+    vertx = Vertx.vertx();
     cluster = provisionWith(defaultClusterConfig());
     cluster.start();
     String[] hostAndPort = cluster.getBrokerList().split(":");
@@ -136,7 +137,6 @@ public class DataImportConsumerVerticleTest {
       .kafkaPort(hostAndPort[1])
       .build();
 
-    vertx = Vertx.vertx();
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
 
     DeploymentOptions options = new DeploymentOptions()
@@ -202,8 +202,12 @@ public class DataImportConsumerVerticleTest {
   public static void tearDownClass(TestContext context) {
     Async async = context.async();
     vertx.close(ar -> {
-      cluster.stop();
-      async.complete();
+      if (ar.succeeded()) {
+        cluster.stop();
+        async.complete();
+      } else {
+        context.fail(ar.cause());
+      }
     });
   }
 
