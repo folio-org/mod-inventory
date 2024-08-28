@@ -368,7 +368,7 @@
         {
           "methods": ["POST"],
           "pathPattern": "/inventory/tenant-items",
-          "permissionsRequired": ["inventory.items.collection.get"],
+          "permissionsRequired": ["inventory.tenant-items.collection.get"],
           "modulePermissions": [
             "inventory-storage.items.collection.get"
           ]
@@ -690,6 +690,11 @@
       "description": "Get item collection"
     },
     {
+      "permissionName": "inventory.tenant-items.collection.get",
+      "displayName": "Inventory - get item collection from multiple tenants",
+      "description": "Get item collection from multiple tenants"
+    },
+    {
       "permissionName": "inventory.items.collection.delete",
       "displayName": "Inventory - delete entire item collection",
       "description": "Delete entire item collection"
@@ -836,6 +841,7 @@
       "description": "Entire set of permissions needed to use the inventory",
       "subPermissions": [
         "inventory.items.collection.get",
+        "inventory.tenant-items.collection.get",
         "inventory.items.item.get",
         "inventory.items.item.post",
         "inventory.items.item.put",
