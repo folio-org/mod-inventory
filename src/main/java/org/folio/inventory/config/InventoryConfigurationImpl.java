@@ -32,7 +32,8 @@ public class InventoryConfigurationImpl implements InventoryConfiguration {
     Instance.INSTANCE_TYPE_ID_KEY,
     Instance.MODE_OF_ISSUANCE_ID_KEY,
     Instance.PRECEDING_TITLES_KEY,
-    Instance.SUCCEEDING_TITLES_KEY
+    Instance.SUCCEEDING_TITLES_KEY,
+    Instance.DATES_KEY
     );
 
   private static final Set<String> HOLDINGS_BLOCKED_FIELDS = Sets.newHashSet(
