@@ -24,7 +24,6 @@ import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REP
 @RunWith(VertxUnitRunner.class)
 public class MarcHridSetConsumerVerticleTest {
 
-  private static final String TENANT_ID = "diku";
   private static final String KAFKA_ENV_NAME = "test-env";
   private static Vertx vertx = Vertx.vertx();
 

@@ -1,4 +1,4 @@
-package org.folio.inventory.dataimport.consumers;
+package org.folio.inventory.dataimport.handlers;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler.JOB_EXECUTION_ID_KEY;
@@ -36,6 +36,7 @@ import io.vertx.kafka.client.producer.KafkaHeader;
 import org.folio.HoldingsType;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
