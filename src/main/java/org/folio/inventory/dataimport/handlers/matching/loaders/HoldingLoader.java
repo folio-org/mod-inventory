@@ -58,7 +58,7 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
         cqlSubMatch = getConditionByMultiMatchResult(eventPayload);
       } else if (isNotEmpty(eventPayload.getContext().get(INSTANCES_IDS_KEY))) {
         cqlSubMatch = getConditionByMultipleMarcBibMatchResult(eventPayload);
-      } else if (checkIfValueIsEmptyArray(eventPayload.getContext().get(EntityType.HOLDINGS.value()))) {
+      } else if (checkIfValueIsNullOrEmpty(eventPayload.getContext().get(EntityType.HOLDINGS.value()))) {
         JsonObject holdingAsJson = new JsonObject(eventPayload.getContext().get(EntityType.HOLDINGS.value()));
         if (holdingAsJson.getJsonObject(HOLDINGS_FIELD) != null) {
           holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_FIELD);
@@ -72,8 +72,8 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
     return cqlSubMatch;
   }
 
-  private static boolean checkIfValueIsEmptyArray(String value) {
-    if (value.equals(EMPTY_ARRAY))
+  private static boolean checkIfValueIsNullOrEmpty(String value) {
+    if (value == null || value.equals(EMPTY_ARRAY))
       return false;
     return isNotEmpty(value);
   }
