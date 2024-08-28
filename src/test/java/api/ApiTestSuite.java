@@ -39,6 +39,7 @@ import api.items.MarkItemRestrictedApiTests;
 import api.items.MarkItemUnavailableApiTests;
 import api.items.MarkItemUnknownApiTests;
 import api.items.MarkItemWithdrawnApiTests;
+import api.items.TenantItemApiTests;
 import api.support.ControlledVocabularyPreparation;
 import api.support.http.ResourceClient;
 import io.vertx.core.json.JsonArray;
@@ -72,7 +73,8 @@ import support.fakes.FakeOkapi;
   AdminApiTest.class,
   InventoryConfigApiTest.class,
   HoldingsUpdateOwnershipApiTest.class,
-  ItemUpdateOwnershipApiTest.class
+  ItemUpdateOwnershipApiTest.class,
+  TenantItemApiTests.class
 })
 public class ApiTestSuite {
   public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
