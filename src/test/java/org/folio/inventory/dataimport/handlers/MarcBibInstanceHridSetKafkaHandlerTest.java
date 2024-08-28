@@ -1,4 +1,4 @@
-package org.folio.inventory.dataimport.consumers;
+package org.folio.inventory.dataimport.handlers;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
@@ -13,6 +13,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.consumers.MarcBibInstanceHridSetKafkaHandler;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
