@@ -4,13 +4,11 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
@@ -26,6 +24,7 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
   private static final String HOLDINGS_FIELD = "holdings";
   private static final String INSTANCE_ID_FIELD = "instanceId";
   private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
+  private static final String EMPTY_ARRAY = "[]";
 
   private Storage storage;
   private AbstractPreloader preloader;
@@ -59,7 +58,7 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
         cqlSubMatch = getConditionByMultiMatchResult(eventPayload);
       } else if (isNotEmpty(eventPayload.getContext().get(INSTANCES_IDS_KEY))) {
         cqlSubMatch = getConditionByMultipleMarcBibMatchResult(eventPayload);
-      } else if (isNotEmpty(eventPayload.getContext().get(EntityType.HOLDINGS.value()))) {
+      } else if (checkIfValueIsEmptyArray(eventPayload.getContext().get(EntityType.HOLDINGS.value()))) {
         JsonObject holdingAsJson = new JsonObject(eventPayload.getContext().get(EntityType.HOLDINGS.value()));
         if (holdingAsJson.getJsonObject(HOLDINGS_FIELD) != null) {
           holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_FIELD);
@@ -71,6 +70,12 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
       }
     }
     return cqlSubMatch;
+  }
+
+  private static boolean checkIfValueIsEmptyArray(String value) {
+    if (value.equals(EMPTY_ARRAY))
+      return false;
+    return isNotEmpty(value);
   }
 
   private String getConditionByMultipleMarcBibMatchResult(DataImportEventPayload eventPayload) {
