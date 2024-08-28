@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.TenantItemPair;
@@ -34,9 +35,13 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.handler.BodyHandler;
 
+/**
+ * Resource that allows to get Inventory items from multiple tenants at once.
+ * User should have an affiliation in order to be able to retrieve items from the corresponding tenant.
+ */
 public class TenantItems {
 
-  private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+  private static final Logger LOG = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String TENANT_ITEMS_PATH = "/inventory/tenant-items";
   public static final String ITEMS_FIELD = "items";
@@ -77,7 +82,7 @@ public class TenantItems {
   }
 
   private CompletableFuture<List<JsonObject>> getItemsWithTenantId(String tenantId, List<String> itemIds, RoutingContext routingContext) {
-    log.info("getItemsWithTenantId:: Fetching items - {} from tenant - {}", itemIds, tenantId);
+    LOG.info("getItemsWithTenantId:: Fetching items - {} from tenant - {}", itemIds, tenantId);
     var context = new WebContext(routingContext);
     CollectionResourceClient itemsStorageClient;
     try {
@@ -98,7 +103,7 @@ public class TenantItems {
   }
 
   private List<JsonObject> getItemsWithTenantId(String tenantId, Response response) {
-    if (response.getStatusCode() != 200 || !response.hasBody()) {
+    if (response.getStatusCode() != HttpStatus.SC_OK || !response.hasBody()) {
       return List.of();
     }
     return JsonArrayHelper.toList(response.getJson(), ITEMS_FIELD).stream()
