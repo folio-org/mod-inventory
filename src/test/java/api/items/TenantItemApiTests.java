@@ -6,7 +6,7 @@ import static api.ApiTestSuite.getBookMaterialType;
 import static api.ApiTestSuite.getCanCirculateLoanType;
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.folio.inventory.resources.TenantItems.ITEMS_FIELD;
+import static org.folio.inventory.resources.TenantItems.ITEM_FIELD;
 import static org.folio.inventory.resources.TenantItems.TENANT_ID_FIELD;
 import static org.folio.inventory.resources.TenantItems.TOTAL_RECORDS_FIELD;
 import static org.folio.inventory.support.ItemUtil.ID;
@@ -38,6 +38,8 @@ import junitparams.JUnitParamsRunner;
 @RunWith(JUnitParamsRunner.class)
 public class TenantItemApiTests extends ApiTests {
 
+  private static final String TENANT_ITEMS_FIELD = "tenantItems";
+
   @Test
   public void testTenantItemsGetFromDifferentTenants() throws MalformedURLException,
     ExecutionException, InterruptedException, TimeoutException {
@@ -59,8 +61,8 @@ public class TenantItemApiTests extends ApiTests {
       .toCompletableFuture().get(5, TimeUnit.SECONDS);
     assertThat(response.getStatusCode()).isEqualTo(200);
 
-    consortiumItem.put(TENANT_ID_FIELD, CONSORTIA_TENANT_ID);
-    collegeItem.put(TENANT_ID_FIELD, COLLEGE_TENANT_ID);
+    consortiumItem = JsonObject.of(ITEM_FIELD, consortiumItem, TENANT_ID_FIELD, CONSORTIA_TENANT_ID);
+    collegeItem = JsonObject.of(ITEM_FIELD, collegeItem, TENANT_ID_FIELD, COLLEGE_TENANT_ID);
     var items = extractItems(response, 2);
     assertThat(items).contains(consortiumItem, collegeItem);
   }
@@ -91,7 +93,7 @@ public class TenantItemApiTests extends ApiTests {
 
   private List<JsonObject> extractItems(Response itemsResponse, int expected) {
     var itemsCollection = itemsResponse.getJson();
-    var items = JsonArrayHelper.toList(itemsCollection.getJsonArray(ITEMS_FIELD));
+    var items = JsonArrayHelper.toList(itemsCollection.getJsonArray(TENANT_ITEMS_FIELD));
     assertThat(items).hasSize(expected);
     assertThat(itemsCollection.getInteger(TOTAL_RECORDS_FIELD)).isEqualTo(expected);
     return items;
