@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Collection of pairs of item and tenant IDs",
+  "type": "object",
+  "properties": {
+    "tenantItems": {
+      "type": "array",
+      "description": "Items with corresponding tenantIds",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "totalRecords": {
+      "type": "integer"
+    }
+  },
+  "additionalProperties": false,
+  "required": ["item", "totalRecords"]
+}
