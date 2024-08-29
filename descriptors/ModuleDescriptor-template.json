@@ -594,7 +594,7 @@
     },
     {
       "id": "instance-storage",
-      "version": "10.0"
+      "version": "10.0 10.3"
     },
     {
       "id": "instance-storage-batch",

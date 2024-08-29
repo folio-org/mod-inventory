@@ -41,6 +41,7 @@ import org.folio.HttpStatus;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
 import org.folio.inventory.domain.instances.PublicationPeriod;
+import org.folio.inventory.domain.instances.Subject;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.ContentType;
@@ -387,6 +388,8 @@ public class InstancesApiExamples extends ApiTests {
     ExecutionException {
 
     UUID id = UUID.randomUUID();
+    final var subjectSourceId = "subjectSourceId";
+    final var subjectTypeId = "subjectTypeId";
 
     JsonObject smallAngryPlanet = smallAngryPlanet(id);
     smallAngryPlanet.put("natureOfContentTermIds",
@@ -400,7 +403,10 @@ public class InstancesApiExamples extends ApiTests {
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
       .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(2000, 2012)))
       .put("natureOfContentTermIds",
-        new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));
+        new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()))
+      .put("subjects", new JsonArray().add(
+        new Subject(null,  null, subjectSourceId, subjectTypeId)
+      ));
 
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(),
       newInstance.getString("id")));
@@ -434,6 +440,12 @@ public class InstancesApiExamples extends ApiTests {
     var publicationPeriod = updatedInstance.getJsonObject(PUBLICATION_PERIOD_KEY);
     assertThat(publicationPeriod.getInteger("start"), is(2000));
     assertThat(publicationPeriod.getInteger("end"), is(2012));
+
+    var subjects = updatedInstance.getJsonArray("subjects");
+    var subject = subjects.getJsonObject(0);
+    assertThat(subjects.size(), is(1));
+    assertThat(subject.getString(subjectSourceId), is(subjectSourceId));
+    assertThat(subject.getString(subjectTypeId), is(subjectTypeId));
   }
 
   @Test
