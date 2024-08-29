@@ -17,8 +17,10 @@ import java.util.concurrent.CompletableFuture;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.TenantItem;
 import org.folio.TenantItemPair;
 import org.folio.TenantItemPairCollection;
+import org.folio.TenantItemResponse;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.support.JsonArrayHelper;
@@ -28,7 +30,6 @@ import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -45,6 +46,7 @@ public class TenantItems {
 
   private static final String TENANT_ITEMS_PATH = "/inventory/tenant-items";
   public static final String ITEMS_FIELD = "items";
+  public static final String ITEM_FIELD = "item";
   public static final String TOTAL_RECORDS_FIELD = "totalRecords";
   public static final String TENANT_ID_FIELD = "tenantId";
 
@@ -77,11 +79,11 @@ public class TenantItems {
         .map(CompletableFuture::join)
         .flatMap(List::stream)
         .toList())
-      .thenApply(this::constructResponse)
-      .thenAccept(jsonObject -> JsonResponse.success(routingContext.response(), jsonObject));
+      .thenApply(items -> new TenantItemResponse().withTenantItems(items).withTotalRecords(items.size()))
+      .thenAccept(response -> JsonResponse.success(routingContext.response(), JsonObject.mapFrom(response)));
   }
 
-  private CompletableFuture<List<JsonObject>> getItemsWithTenantId(String tenantId, List<String> itemIds, RoutingContext routingContext) {
+  private CompletableFuture<List<TenantItem>> getItemsWithTenantId(String tenantId, List<String> itemIds, RoutingContext routingContext) {
     LOG.info("getItemsWithTenantId:: Fetching items - {} from tenant - {}", itemIds, tenantId);
     var context = new WebContext(routingContext);
     CollectionResourceClient itemsStorageClient;
@@ -98,24 +100,20 @@ public class TenantItems {
     var itemsFetched = new CompletableFuture<Response>();
     itemsStorageClient.getAll(getByIdsQuery, itemsFetched::complete);
 
-    return itemsFetched.thenApplyAsync(response ->
-      getItemsWithTenantId(tenantId, response));
+    return itemsFetched
+      .thenApply(this::getItems)
+      .thenApply(items -> items.stream()
+        .map(item -> new TenantItem()
+          .withAdditionalProperty(ITEM_FIELD, item)
+          .withAdditionalProperty(TENANT_ID_FIELD, tenantId))
+        .toList());
   }
 
-  private List<JsonObject> getItemsWithTenantId(String tenantId, Response response) {
+  private List<JsonObject> getItems(Response response) {
     if (response.getStatusCode() != HttpStatus.SC_OK || !response.hasBody()) {
       return List.of();
     }
-    return JsonArrayHelper.toList(response.getJson(), ITEMS_FIELD).stream()
-      .map(item -> item.put(TENANT_ID_FIELD, tenantId))
-      .toList();
-  }
-
-  private JsonObject constructResponse(List<JsonObject> items) {
-    return JsonObject.of(
-      ITEMS_FIELD, JsonArray.of(items.toArray()),
-      TOTAL_RECORDS_FIELD, items.size()
-    );
+    return JsonArrayHelper.toList(response.getJson(), ITEMS_FIELD);
   }
 
   private CollectionResourceClient createItemsStorageClient(OkapiHttpClient client, WebContext context) throws MalformedURLException {
