@@ -6,7 +6,6 @@ import static api.ApiTestSuite.getBookMaterialType;
 import static api.ApiTestSuite.getCanCirculateLoanType;
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.folio.inventory.resources.TenantItems.ITEMS_FIELD;
 import static org.folio.inventory.resources.TenantItems.ITEM_FIELD;
 import static org.folio.inventory.resources.TenantItems.TENANT_ID_FIELD;
 import static org.folio.inventory.resources.TenantItems.TOTAL_RECORDS_FIELD;
