@@ -46,7 +46,7 @@ public class TenantItems {
 
   private static final String TENANT_ITEMS_PATH = "/inventory/tenant-items";
   public static final String ITEMS_FIELD = "items";
-  public static final String ITEM_FIELD = "items";
+  public static final String ITEM_FIELD = "item";
   public static final String TOTAL_RECORDS_FIELD = "totalRecords";
   public static final String TENANT_ID_FIELD = "tenantId";
 
