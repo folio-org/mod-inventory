@@ -130,7 +130,6 @@ public class UpdateAuthorityEventHandlerTest {
       .willReturn(WireMock.ok().withBody(Json.encode(new MappingMetadataDto()
         .withMappingParams(Json.encode(new MappingParameters()))
         .withMappingRules(mappingRules.encode())))));
-
   }
 
   @Test
