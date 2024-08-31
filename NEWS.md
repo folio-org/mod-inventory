@@ -21,6 +21,7 @@
 * Disallow updating ownership of boundwith item [MODINV-1052](https://folio-org.atlassian.net/browse/MODINV-1052)
 * InstanceIngress update events consumption [MODINV-1008](https://folio-org.atlassian.net/browse/MODINV-1008)
 * Apply new date type fields to instance schema [MODINV-1067](https://folio-org.atlassian.net/browse/MODINV-1067)
+* Extend Authority with Additional fields [MODINV-1071](https://folio-org.atlassian.net/browse/MODINV-1071)
 
 ## 20.2.0 2023-03-20
 * Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))

@@ -21,11 +21,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.folio.ActionProfile;
+import org.folio.ActionProfile.FolioRecord;
 import org.folio.Authority;
 import org.folio.DataImportEventPayload;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.config.PropertiesReader;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
@@ -161,7 +163,9 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
       var mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
       var parsedRecord = new JsonObject((String) new JsonObject(payload.getContext().get(sourceRecordType().value()))
         .mapTo(Record.class).getParsedRecord().getContent());
-      RecordMapper<Authority> recordMapper = RecordMapperBuilder.buildMapper(sourceRecordType().value());
+      RecordMapper<Authority> recordMapper = PropertiesReader.getPropertyAsBoolean("authorities-extended")
+        ? RecordMapperBuilder.buildMapper(FolioRecord.MARC_AUTHORITY_EXTENDED.value())
+        : RecordMapperBuilder.buildMapper(sourceRecordType().value());
       var authority = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       authority.setSource(Authority.Source.MARC);
       return Future.succeededFuture(authority);
