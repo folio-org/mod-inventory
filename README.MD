@@ -131,7 +131,7 @@ Default value for all partitions is 1
 
 ## Properties
 
-`authorities-extended` property enables extended mapping for Authorities to support advanced references classification in 4xx-5xx fields:
+`authorities-extended` environment variable enables extended mapping for Authorities to support advanced references classification in 5xx fields:
 * broader terms (`$wg` tag)
 * narrower terms (`$wh` tag)
 * earlier headings (`$wa` tag)
