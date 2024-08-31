@@ -9,8 +9,6 @@ import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import java.util.Arrays;
-import java.util.Collection;
 import org.folio.ActionProfile;
 import org.folio.Authority;
 import org.folio.DataImportEventPayload;
@@ -19,7 +17,6 @@ import org.folio.MappingProfile;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.config.PropertiesReader;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
@@ -31,12 +28,9 @@ import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -76,13 +70,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@RunWith(Parameterized.class)
 public class UpdateAuthorityEventHandlerTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/marc-authority-rules.json";
   private static final String PARSED_AUTHORITY_RECORD = "src/test/resources/marc/authority/parsed-authority-record.json";
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
-  private final String propertyValue;
+
   private final Vertx vertx = Vertx.vertx();
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -119,15 +112,6 @@ public class UpdateAuthorityEventHandlerTest {
 
   private UpdateAuthorityEventHandler eventHandler;
 
-  public UpdateAuthorityEventHandlerTest(String propertyValue) {
-    this.propertyValue = propertyValue;
-  }
-
-  @Parameterized.Parameters
-  public static Collection<Object[]> data() {
-    return Arrays.asList(new Object[][]{{"true"}, {"false"}});
-  }
-
   @Before
   public void setUp() throws IOException {
     MockitoAnnotations.openMocks(this);
@@ -147,12 +131,6 @@ public class UpdateAuthorityEventHandlerTest {
         .withMappingParams(Json.encode(new MappingParameters()))
         .withMappingRules(mappingRules.encode())))));
 
-    PropertiesReader.setProperty("authorities-extended", propertyValue);
-  }
-
-  @After
-  public void tearDown() {
-    PropertiesReader.clearProperties();
   }
 
   @Test
