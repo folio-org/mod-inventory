@@ -46,6 +46,7 @@ import org.folio.rest.jaxrs.model.Snapshot;
 
 public interface InstanceIngressEventHandler {
   String LINKED_DATA_ID = "linkedDataId";
+  String INSTANCE_ID = "instanceId";
   String FAILURE = "Failed to process InstanceIngressEvent with id {}";
 
   CompletableFuture<Instance> handle(InstanceIngressEvent instanceIngressEvent);
@@ -57,11 +58,15 @@ public interface InstanceIngressEventHandler {
   }
 
   default Optional<String> getInstanceId(InstanceIngressEvent event) {
-    return ofNullable(event.getEventPayload().getSourceRecordIdentifier());
+    return ofNullable(event.getEventPayload())
+      .map(InstanceIngressPayload::getAdditionalProperties)
+      .map(ap -> ap.get(INSTANCE_ID))
+      .map(o -> (String) o);
   }
 
   default Record constructMarcBibRecord(InstanceIngressPayload eventPayload) {
-    var recordId = UUID.randomUUID().toString();
+    var recordId = ofNullable(eventPayload.getSourceRecordIdentifier())
+      .orElseGet(() -> UUID.randomUUID().toString());
     var marcBibRecord = new org.folio.rest.jaxrs.model.Record()
       .withId(recordId)
       .withRecordType(MARC_BIB)
