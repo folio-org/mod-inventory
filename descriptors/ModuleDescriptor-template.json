@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "13.1",
+      "version": "13.2",
       "handlers": [
         {
           "methods": ["GET"],
@@ -366,6 +366,14 @@
           ]
         },
         {
+          "methods": ["POST"],
+          "pathPattern": "/inventory/tenant-items",
+          "permissionsRequired": ["inventory.tenant-items.collection.get"],
+          "modulePermissions": [
+            "inventory-storage.items.collection.get"
+          ]
+        },
+        {
           "methods": ["GET"],
           "pathPattern": "/inventory/instances/{id}",
           "permissionsRequired": ["inventory.instances.item.get"],
@@ -594,7 +602,7 @@
     },
     {
       "id": "instance-storage",
-      "version": "10.0"
+      "version": "10.2"
     },
     {
       "id": "instance-storage-batch",
@@ -680,6 +688,11 @@
       "permissionName": "inventory.items.collection.get",
       "displayName": "Inventory - get item collection",
       "description": "Get item collection"
+    },
+    {
+      "permissionName": "inventory.tenant-items.collection.get",
+      "displayName": "Inventory - get item collection from multiple tenants",
+      "description": "Get item collection from multiple tenants"
     },
     {
       "permissionName": "inventory.items.collection.delete",
@@ -828,6 +841,7 @@
       "description": "Entire set of permissions needed to use the inventory",
       "subPermissions": [
         "inventory.items.collection.get",
+        "inventory.tenant-items.collection.get",
         "inventory.items.item.get",
         "inventory.items.item.post",
         "inventory.items.item.put",

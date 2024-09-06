@@ -71,6 +71,12 @@ public class ApiRoot {
     return new URL(String.format("%s/items?%s", inventory(), query));
   }
 
+  public static URL tenantItems()
+    throws MalformedURLException {
+
+    return new URL(String.format("%s/tenant-items", inventory()));
+  }
+
   public static String isbn() {
     return String.format("%s/isbn", ApiTestSuite.apiRoot());
   }

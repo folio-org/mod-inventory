@@ -29,6 +29,7 @@ public class FakeOkapi extends AbstractVerticle {
     registerFakeHoldingStorageModule(router);
     registerFakeAuthorityStorageModule(router);
     registerFakeItemsStorageModule(router);
+    registerFakeTenantItemsStorageModule(router);
     registerFakeMaterialTypesModule(router);
     registerFakeLoanTypesModule(router);
     registerFakeLocationsModule(router);
@@ -168,6 +169,14 @@ public class FakeOkapi extends AbstractVerticle {
         StorageRecordPreProcessors::setEffectiveShelvingOrder,
         StorageRecordPreProcessors::setStatusDateProcessor
       )
+      .create().register(router);
+  }
+
+  private void registerFakeTenantItemsStorageModule(Router router) {
+    new FakeStorageModuleBuilder()
+      .withRecordName("tenantItem")
+      .withRootPath("/inventory/tenant-items")
+      .withCollectionPropertyName("items")
       .create().register(router);
   }
 

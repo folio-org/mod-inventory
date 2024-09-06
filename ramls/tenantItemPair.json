@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "Pair of item and tenant IDs",
+  "type": "object",
+  "properties": {
+    "tenantId": {
+      "type": "string",
+      "description": "Unique ID of the tenant where the item is located"
+    },
+    "itemId": {
+      "type": "string",
+      "description": "Unique ID (UUID) of the item",
+      "$ref": "uuid.json"
+    }
+  },
+  "additionalProperties": false,
+  "required": ["itemId", "tenantId"]
+}
