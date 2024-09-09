@@ -47,6 +47,7 @@ import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
 import org.folio.inventory.domain.instances.Dates;
 import org.folio.inventory.domain.instances.PublicationPeriod;
+import org.folio.inventory.domain.instances.Subject;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.ContentType;
@@ -402,6 +403,8 @@ public class InstancesApiExamples extends ApiTests {
     ExecutionException {
 
     UUID id = UUID.randomUUID();
+    final var sourceId = "sourceId";
+    final var typeId = "typeId";
 
     JsonObject smallAngryPlanet = smallAngryPlanet(id);
     smallAngryPlanet.put("natureOfContentTermIds",
@@ -417,7 +420,10 @@ public class InstancesApiExamples extends ApiTests {
       .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(2000, 2012)))
       .put(DATES_KEY, datesToJson(new Dates(dateTypeId, date1, date2)))
       .put("natureOfContentTermIds",
-        new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));
+        new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()))
+      .put("subjects", new JsonArray().add(
+        new Subject(null,  null, sourceId, typeId)
+      ));
 
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(),
       newInstance.getString("id")));
@@ -456,6 +462,12 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(dates.getString(DATE_TYPE_ID_KEY), is(dateTypeId));
     assertThat(dates.getString(DATE1_KEY), is(date1));
     assertThat(dates.getString(DATE2_KEY), is(date2));
+
+    var subjects = updatedInstance.getJsonArray("subjects");
+    var subject = subjects.getJsonObject(0);
+    assertThat(subjects.size(), is(1));
+    assertThat(subject.getString(sourceId), is(sourceId));
+    assertThat(subject.getString(typeId), is(typeId));
   }
 
   @Test
