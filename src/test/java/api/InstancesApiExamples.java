@@ -403,8 +403,8 @@ public class InstancesApiExamples extends ApiTests {
     ExecutionException {
 
     UUID id = UUID.randomUUID();
-    final var subjectSourceId = "subjectSourceId";
-    final var subjectTypeId = "subjectTypeId";
+    final var sourceId = "sourceId";
+    final var typeId = "typeId";
 
     JsonObject smallAngryPlanet = smallAngryPlanet(id);
     smallAngryPlanet.put("natureOfContentTermIds",
@@ -422,7 +422,7 @@ public class InstancesApiExamples extends ApiTests {
       .put("natureOfContentTermIds",
         new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()))
       .put("subjects", new JsonArray().add(
-        new Subject(null,  null, subjectSourceId, subjectTypeId)
+        new Subject(null,  null, sourceId, typeId)
       ));
 
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(),
@@ -466,8 +466,8 @@ public class InstancesApiExamples extends ApiTests {
     var subjects = updatedInstance.getJsonArray("subjects");
     var subject = subjects.getJsonObject(0);
     assertThat(subjects.size(), is(1));
-    assertThat(subject.getString(subjectSourceId), is(subjectSourceId));
-    assertThat(subject.getString(subjectTypeId), is(subjectTypeId));
+    assertThat(subject.getString(sourceId), is(sourceId));
+    assertThat(subject.getString(typeId), is(typeId));
   }
 
   @Test

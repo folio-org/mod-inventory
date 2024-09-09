@@ -5,28 +5,28 @@ import io.vertx.core.json.JsonObject;
 public class Subject extends Authorized {
   // JSON property names
   private static final String VALUE_KEY = "value";
-  private static final String SUBJECT_SOURCE_KEY = "subjectSourceId";
-  private static final String SUBJECT_TYPE_KEY = "subjectTypeId";
+  private static final String SOURCE_KEY = "sourceId";
+  private static final String TYPE_KEY = "typeId";
 
   private final String value;
 
-  private final String subjectSourceId;
+  private final String sourceId;
 
-  private final String subjectTypeId;
+  private final String typeId;
 
-  public Subject(String value, String authorityId, String subjectSourceId, String subjectTypeId) {
+  public Subject(String value, String authorityId, String sourceId, String typeId) {
     super(authorityId);
     this.value = value;
-    this.subjectSourceId = subjectSourceId;
-    this.subjectTypeId = subjectTypeId;
+    this.sourceId = sourceId;
+    this.typeId = typeId;
   }
 
   public Subject(JsonObject json) {
     this(
       json.getString(VALUE_KEY),
       json.getString(AUTHORITY_ID_KEY),
-      json.getString(SUBJECT_SOURCE_KEY),
-      json.getString(SUBJECT_TYPE_KEY)
+      json.getString(SOURCE_KEY),
+      json.getString(TYPE_KEY)
     );
   }
 
@@ -38,11 +38,11 @@ public class Subject extends Authorized {
     return value;
   }
 
-  public String getSubjectSourceId() {
-    return subjectSourceId;
+  public String getSourceId() {
+    return sourceId;
   }
 
-  public String getSubjectTypeId() {
-    return subjectTypeId;
+  public String getTypeId() {
+    return typeId;
   }
 }
