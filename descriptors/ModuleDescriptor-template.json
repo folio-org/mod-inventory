@@ -559,7 +559,8 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.instances.item.get",
-            "inventory-storage.bound-with-parts.collection.get"
+            "inventory-storage.bound-with-parts.collection.get",
+            "user-tenants.collection.get"
           ]
         },
         {
@@ -574,7 +575,8 @@
             "inventory-storage.items.item.delete",
             "inventory-storage.items.collection.get",
             "inventory-storage.instances.item.get",
-            "inventory-storage.bound-with-parts.collection.get"
+            "inventory-storage.bound-with-parts.collection.get",
+            "user-tenants.collection.get"
           ]
         }
       ]
