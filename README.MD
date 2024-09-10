@@ -131,13 +131,13 @@ Default value for all partitions is 1
 
 ## Properties
 
-`authorities-extended` environment variable enables extended mapping for Authorities to support advanced references classification in 5xx fields:
+`AUTHORITY_EXTENDED` environment variable enables extended mapping for Authority to support advanced references classification in 5xx fields:
 * broader terms (`$wg` tag)
 * narrower terms (`$wh` tag)
 * earlier headings (`$wa` tag)
 * later headings (`$wb` tag)
 
-Default value for `authorities-extended` is `false`.
+Default value for `AUTHORITY_EXTENDED` is `false`.
 The mapping itself is implemented in [data-import-processing-core](https://github.com/folio-org/data-import-processing-core).
 
 
