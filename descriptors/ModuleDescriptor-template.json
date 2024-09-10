@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "13.2",
+      "version": "13.3",
       "handlers": [
         {
           "methods": ["GET"],
@@ -559,7 +559,8 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.holdings.collection.get",
             "inventory-storage.instances.item.get",
-            "inventory-storage.bound-with-parts.collection.get"
+            "inventory-storage.bound-with-parts.collection.get",
+            "user-tenants.collection.get"
           ]
         },
         {
@@ -574,7 +575,8 @@
             "inventory-storage.items.item.delete",
             "inventory-storage.items.collection.get",
             "inventory-storage.instances.item.get",
-            "inventory-storage.bound-with-parts.collection.get"
+            "inventory-storage.bound-with-parts.collection.get",
+            "user-tenants.collection.get"
           ]
         }
       ]
@@ -602,7 +604,7 @@
     },
     {
       "id": "instance-storage",
-      "version": "10.2"
+      "version": "10.3"
     },
     {
       "id": "instance-storage-batch",
