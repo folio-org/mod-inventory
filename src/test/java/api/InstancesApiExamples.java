@@ -12,6 +12,11 @@ import static io.vertx.core.http.HttpMethod.POST;
 import static io.vertx.core.http.HttpMethod.PUT;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.folio.inventory.domain.instances.Dates.DATE_TYPE_ID_KEY;
+import static org.folio.inventory.domain.instances.Dates.DATE1_KEY;
+import static org.folio.inventory.domain.instances.Dates.DATE2_KEY;
+import static org.folio.inventory.domain.instances.Dates.datesToJson;
+import static org.folio.inventory.domain.instances.Instance.DATES_KEY;
 import static org.folio.inventory.domain.instances.Instance.PRECEDING_TITLES_KEY;
 import static org.folio.inventory.domain.instances.Instance.PUBLICATION_PERIOD_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
@@ -40,7 +45,9 @@ import java.util.concurrent.TimeoutException;
 import org.folio.HttpStatus;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.domain.instances.Dates;
 import org.folio.inventory.domain.instances.PublicationPeriod;
+import org.folio.inventory.domain.instances.Subject;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.ContentType;
@@ -63,6 +70,9 @@ public class InstancesApiExamples extends ApiTests {
   private static final InventoryConfiguration config = new InventoryConfigurationImpl();
   private final String tagNameOne = "important";
   private final String tagNameTwo = "very important";
+  private final String dateTypeId = "0750f52b-3bfc-458d-9307-e9afc8bcdffa";
+  private final String date1 = "2014";
+  private final String date2 = "2016";
 
   @After
   public void disableFailureEmulation() throws Exception {
@@ -93,6 +103,7 @@ public class InstancesApiExamples extends ApiTests {
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType())
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameOne)))
       .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(1000, 2000)))
+      .put(DATES_KEY, datesToJson(new Dates(dateTypeId, date1, date2)))
       .put("natureOfContentTermIds",
         new JsonArray(asList(
           ApiTestSuite.getAudiobookNatureOfContentTermId(),
@@ -161,6 +172,11 @@ public class InstancesApiExamples extends ApiTests {
     var publicationPeriod = createdInstance.getJsonObject(PUBLICATION_PERIOD_KEY);
     assertThat(publicationPeriod.getInteger("start"), is(1000));
     assertThat(publicationPeriod.getInteger("end"), is(2000));
+
+    var dates = createdInstance.getJsonObject(DATES_KEY);
+    assertThat(dates.getString(DATE_TYPE_ID_KEY), is(dateTypeId));
+    assertThat(dates.getString(DATE1_KEY), is(date1));
+    assertThat(dates.getString(DATE2_KEY), is(date2));
   }
 
   @Test
@@ -387,11 +403,14 @@ public class InstancesApiExamples extends ApiTests {
     ExecutionException {
 
     UUID id = UUID.randomUUID();
+    final var sourceId = "sourceId";
+    final var typeId = "typeId";
 
     JsonObject smallAngryPlanet = smallAngryPlanet(id);
     smallAngryPlanet.put("natureOfContentTermIds",
       new JsonArray().add(ApiTestSuite.getBibliographyNatureOfContentTermId()));
     smallAngryPlanet.put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(1000, 2000)));
+    smallAngryPlanet.put(DATES_KEY, datesToJson(new Dates(null, date1, date2)));
 
     JsonObject newInstance = createInstance(smallAngryPlanet);
 
@@ -399,8 +418,12 @@ public class InstancesApiExamples extends ApiTests {
       .put("title", "The Long Way to a Small, Angry Planet")
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
       .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(2000, 2012)))
+      .put(DATES_KEY, datesToJson(new Dates(dateTypeId, date1, date2)))
       .put("natureOfContentTermIds",
-        new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));
+        new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()))
+      .put("subjects", new JsonArray().add(
+        new Subject(null,  null, sourceId, typeId)
+      ));
 
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(),
       newInstance.getString("id")));
@@ -434,6 +457,17 @@ public class InstancesApiExamples extends ApiTests {
     var publicationPeriod = updatedInstance.getJsonObject(PUBLICATION_PERIOD_KEY);
     assertThat(publicationPeriod.getInteger("start"), is(2000));
     assertThat(publicationPeriod.getInteger("end"), is(2012));
+
+    var dates = updatedInstance.getJsonObject(DATES_KEY);
+    assertThat(dates.getString(DATE_TYPE_ID_KEY), is(dateTypeId));
+    assertThat(dates.getString(DATE1_KEY), is(date1));
+    assertThat(dates.getString(DATE2_KEY), is(date2));
+
+    var subjects = updatedInstance.getJsonArray("subjects");
+    var subject = subjects.getJsonObject(0);
+    assertThat(subjects.size(), is(1));
+    assertThat(subject.getString(sourceId), is(sourceId));
+    assertThat(subject.getString(typeId), is(typeId));
   }
 
   @Test
@@ -612,7 +646,7 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(errors.size(), is(1));
     assertThat(errors.getJsonObject(0).getString("message"), is(
       "Instance is controlled by MARC record, these fields are blocked and can not be updated: " +
-        "physicalDescriptions,notes,languages,precedingTitles,identifiers,instanceTypeId,modeOfIssuanceId,subjects," +
+        "physicalDescriptions,notes,languages,precedingTitles,identifiers,instanceTypeId,modeOfIssuanceId,subjects,dates," +
         "source,title,indexTitle,publicationFrequency,electronicAccess,publicationRange," +
         "classifications,succeedingTitles,editions,hrid,series,instanceFormatIds,publication,contributors," +
         "alternativeTitles"));
