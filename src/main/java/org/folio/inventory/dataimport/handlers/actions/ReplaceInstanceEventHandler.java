@@ -121,7 +121,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       Instance instanceToUpdate = Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
 
       if (instanceToUpdate.getSource() != null && instanceToUpdate.getSource().equals(LINKED_DATA.getValue())) {
-        String msg = format("handle:: Failed to update Instance with id = %s. Instances with source=LINKED_DATA cannot be edited", instanceToUpdate.getId());
+        String msg = format("handle:: Failed to update Instance with id = %s. Instance with source=LINKED_DATA cannot be updated using Data Import. Please use Linked Data Editor.", instanceToUpdate.getId());
         LOGGER.warn(msg);
         return CompletableFuture.failedFuture(new DataImportException(msg));
       }
