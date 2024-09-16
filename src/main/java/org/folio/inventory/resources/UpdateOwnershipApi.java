@@ -580,14 +580,12 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
     String sourceHoldingsRecordId = holdingsRecord.getId();
 
-    return new UpdateOwnershipHoldingsRecordWrapper(sourceHoldingsRecordId, holdingsRecord.withId(UUID.randomUUID().toString()));
+    return new UpdateOwnershipHoldingsRecordWrapper(sourceHoldingsRecordId, holdingsRecord.withId(sourceHoldingsRecordId));
   }
 
   private UpdateOwnershipItemWrapper mapItemWrapper(JsonObject itemJson, String targetHoldingId) {
     String sourceItemId = itemJson.getString("id");
     String sourceHoldingId = itemJson.getString(HOLDINGS_RECORD_ID);
-
-    itemJson.put("id", UUID.randomUUID().toString());
 
     Item item = ItemUtil.fromStoredItemRepresentation(itemJson)
       .withHrid(null)

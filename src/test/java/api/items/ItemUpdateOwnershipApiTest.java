@@ -113,11 +113,11 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
 
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceFirstUpdatedItem.getStatusCode()));
     assertThat(targetTenantItem1.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
-    assertNotEquals(firstItem.getId().toString(), targetTenantItem1.getString(ID));
+    assertEquals(firstItem.getId().toString(), targetTenantItem1.getString(ID));
 
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceSecondUpdatedItem.getStatusCode()));
     assertThat(targetTenantItem2.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
-    assertNotEquals(secondItem.getId().toString(), targetTenantItem2.getString(ID));
+    assertEquals(secondItem.getId().toString(), targetTenantItem2.getString(ID));
     assertNotEquals(targetTenantItem2.getString("hrid"), itemHrId);
   }
 
@@ -223,7 +223,7 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
 
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceSecondUpdatedItem.getStatusCode()));
     assertThat(targetTenantItem.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
-    assertNotEquals(secondItem.getId().toString(), targetTenantItem.getString(ID));
+    assertEquals(secondItem.getId().toString(), targetTenantItem.getString(ID));
     assertNotEquals(targetTenantItem.getString("hrid"), itemHrId);
   }
 
