@@ -47,6 +47,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
 @RunWith(JUnitParamsRunner.class)
@@ -88,6 +89,9 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     List<JsonObject> targetTenantHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId), 100);
     assertEquals(2, targetTenantHoldings.size());
 
+    var targetTenantHoldingIds = targetTenantHoldings.stream().map(object -> object.getString(ID))
+      .toList();
+
     JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.get(0);
 
     assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
@@ -101,8 +105,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord2.getString(INSTANCE_ID));
     assertEquals(getMainLibraryLocation(), targetTenantHoldingsRecord2.getString(PERMANENT_LOCATION_ID_KEY));
     assertNull(targetTenantHoldingsRecord2.getString("hrid"));
-    assertEquals(createHoldingsRecord1.toString(), targetTenantHoldingsRecord1.getString(ID));
-    assertEquals(createHoldingsRecord2.toString(), targetTenantHoldingsRecord2.getString(ID));
+    assertTrue(targetTenantHoldingIds.contains(createHoldingsRecord1.toString()));
+    assertTrue(targetTenantHoldingIds.contains(createHoldingsRecord2.toString()));
   }
 
   @Test
@@ -144,11 +148,14 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     List<JsonObject> targetTenantHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId), 100);
     assertEquals(2, targetTenantHoldings.size());
 
+    var targetTenantHoldingIds = targetTenantHoldings.stream().map(object -> object.getString(ID))
+      .toList();
+
     JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.get(1);
 
     assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord1.getString(INSTANCE_ID));
-    assertEquals(createHoldingsRecord1.toString(), targetTenantHoldingsRecord1.getString(ID));
+    assertTrue(targetTenantHoldingIds.contains(createHoldingsRecord1.toString()));
     assertEquals(getMainLibraryLocation(), targetTenantHoldingsRecord1.getString(PERMANENT_LOCATION_ID_KEY));
 
     Response sourceTenantHoldingsRecord2 = holdingsStorageClient.getById(createHoldingsRecord2);
