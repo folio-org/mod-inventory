@@ -163,7 +163,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.getStatusCode());
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord2.getString(INSTANCE_ID));
-    assertNotEquals(createHoldingsRecord2.toString(), targetTenantHoldingsRecord2.getString(ID));
+    assertTrue(targetTenantHoldingIds.contains(createHoldingsRecord2.toString()));
     assertEquals(getMainLibraryLocation(), targetTenantHoldingsRecord2.getString(PERMANENT_LOCATION_ID_KEY));
 
     // Verify related Items ownership updated
@@ -172,10 +172,12 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertEquals(1, targetTenantItems1.size());
 
     JsonObject targetTenantItem1 = targetTenantItems1.get(0);
+    var targetTenantItemIds = targetTenantItems1.stream().map(object -> object.getString(ID))
+      .toList();
 
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceTenantItem1.getStatusCode()));
     assertThat(targetTenantItem1.getString(HOLDINGS_RECORD_ID), is(targetTenantHoldingsRecord1.getString(ID)));
-    assertEquals(firstItem.getId().toString(), targetTenantItem1.getString(ID));
+    assertTrue(targetTenantItemIds.contains(firstItem.getId().toString()));
 
     Response sourceTenantItem2 = itemsClient.getById(secondItem.getId());
     List<JsonObject> targetTenantItems2 = collegeItemsClient.getMany(String.format("holdingsRecordId=%s", targetTenantHoldingsRecord2.getString(ID)), 100);
