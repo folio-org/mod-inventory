@@ -1,10 +1,32 @@
 package org.folio.inventory.resources;
 
+import static java.lang.String.format;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
+import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
+import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
+import static org.folio.inventory.support.MoveApiUtil.createBoundWithPartsFetchClient;
+import static org.folio.inventory.support.MoveApiUtil.createBoundWithPartsStorageClient;
+import static org.folio.inventory.support.MoveApiUtil.createHoldingsRecordsFetchClient;
+import static org.folio.inventory.support.MoveApiUtil.createHoldingsStorageClient;
+import static org.folio.inventory.support.MoveApiUtil.createHttpClient;
+import static org.folio.inventory.support.MoveApiUtil.createItemStorageClient;
+import static org.folio.inventory.support.MoveApiUtil.createItemsFetchClient;
+import static org.folio.inventory.support.MoveApiUtil.respond;
+import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
+import static org.folio.inventory.validation.UpdateOwnershipValidator.updateOwnershipHasRequiredFields;
+
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.function.Function;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,30 +48,6 @@ import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.MoveApiUtil;
-
-import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.function.Function;
-
-import static java.lang.String.format;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
-import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
-import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
-import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
-import static org.folio.inventory.support.MoveApiUtil.createBoundWithPartsFetchClient;
-import static org.folio.inventory.support.MoveApiUtil.createBoundWithPartsStorageClient;
-import static org.folio.inventory.support.MoveApiUtil.createHoldingsRecordsFetchClient;
-import static org.folio.inventory.support.MoveApiUtil.createHoldingsStorageClient;
-import static org.folio.inventory.support.MoveApiUtil.createHttpClient;
-import static org.folio.inventory.support.MoveApiUtil.createItemStorageClient;
-import static org.folio.inventory.support.MoveApiUtil.createItemsFetchClient;
-import static org.folio.inventory.support.MoveApiUtil.respond;
-import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
-import static org.folio.inventory.validation.UpdateOwnershipValidator.updateOwnershipHasRequiredFields;
 
 public class UpdateOwnershipApi extends AbstractInventoryResource {
   private static final Logger LOGGER = LogManager.getLogger(MethodHandles.lookup().lookupClass());
