@@ -492,12 +492,13 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     // given
     var linkedDataId = "someLinkedDataId";
     var instanceId = "instanceId";
+    var srsId = UUID.randomUUID().toString();
     var event = new InstanceIngressEvent()
       .withId(UUID.randomUUID().toString())
       .withEventPayload(new InstanceIngressPayload()
         .withSourceRecordObject(TestUtil.readFileFromPath(BIB_RECORD_PATH))
         .withSourceType(LINKED_DATA)
-        .withSourceRecordIdentifier(UUID.randomUUID().toString())
+        .withSourceRecordIdentifier(srsId)
         .withAdditionalProperty("linkedDataId", linkedDataId)
         .withAdditionalProperty("instanceId", instanceId)
       );
@@ -525,8 +526,8 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
-    var previousSrsId = UUID.randomUUID().toString();
-    var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"id\":\"" + previousSrsId + "\"}"), HttpStatus.SC_OK);
+    var matchedId = UUID.randomUUID().toString();
+    var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"matchedId\":\"" + matchedId + "\"}"), HttpStatus.SC_OK);
     doReturn(succeededFuture(existedRecordResponse)).when(sourceStorageClient).getSourceStorageRecordsFormattedById(any(), any());
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_OK);
     doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), any());
@@ -545,15 +546,16 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     assertThat(instance.getIdentifiers().stream().anyMatch(i -> i.value.equals("(ld) " + linkedDataId))).isTrue();
 
     var recordCaptor = ArgumentCaptor.forClass(Record.class);
-    verify(sourceStorageClient).putSourceStorageRecordsGenerationById(eq(previousSrsId), recordCaptor.capture());
+    verify(sourceStorageClient).putSourceStorageRecordsGenerationById(eq(matchedId), recordCaptor.capture());
     var recordSentToSRS = recordCaptor.getValue();
     assertThat(recordSentToSRS.getId()).isNotNull();
-    assertThat(recordSentToSRS.getId()).isNotEqualTo(previousSrsId);
-    assertThat(recordSentToSRS.getMatchedId()).isEqualTo(previousSrsId);
+    assertThat(recordSentToSRS.getId()).isNotEqualTo(matchedId);
+    assertThat(recordSentToSRS.getMatchedId()).isEqualTo(matchedId);
     assertThat(recordSentToSRS.getId()).isEqualTo(event.getEventPayload().getSourceRecordIdentifier());
     assertThat(recordSentToSRS.getRecordType()).isEqualTo(Record.RecordType.MARC_BIB);
     assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, SUBFIELD_I)).hasValue(instance.getId());
     assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, SUBFIELD_L)).hasValue(linkedDataId);
+    assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, 's')).hasValue(srsId);
   }
 
 }

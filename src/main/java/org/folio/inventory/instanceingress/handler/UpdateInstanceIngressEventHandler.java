@@ -126,12 +126,12 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
       .onFailure(promise::fail)
       .compose(snapshot -> super.getRecordByInstanceId(sourceStorageRecordsClient, instance.getId()))
       .compose(existingRecord -> {
-        targetRecord.setMatchedId(existingRecord.getId());
+        targetRecord.setMatchedId(existingRecord.getMatchedId());
         if (nonNull(existingRecord.getGeneration())) {
           int incrementedGeneration = existingRecord.getGeneration();
           targetRecord.setGeneration(++incrementedGeneration);
         }
-        AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, TAG_999, 's', existingRecord.getId());
+        AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, TAG_999, 's', targetRecord.getId());
         return Future.succeededFuture(targetRecord.getMatchedId());
       })
       .compose(matchedId ->
