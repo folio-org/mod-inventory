@@ -348,7 +348,7 @@
         {
           "methods": ["GET"],
           "pathPattern": "/inventory/items-by-holdings-id",
-          "permissionsRequired": ["inventory.items.collection.get"],
+          "permissionsRequired": ["inventory.items-by-holdings-id.collection.get"],
           "modulePermissions": [
             "inventory-storage.bound-with-parts.collection.get",
             "inventory-storage.bound-with-parts.item.get",
@@ -761,7 +761,11 @@
       "displayName": "Inventory - update an item ownership",
       "description": "Update an item ownership"
     },
-
+    {
+      "permissionName": "inventory.items-by-holdings-id.collection.get",
+      "displayName": "Inventory - get item collection by holdings id",
+      "description": "Get item collection by holdings id"
+    },
     {
       "permissionName": "inventory.holdings.move.item.post",
       "displayName": "Inventory - move holdings record to another instance",
@@ -866,7 +870,8 @@
         "inventory.items.move.item.post",
         "inventory.holdings.move.item.post",
         "inventory.items.update-ownership.item.post",
-        "inventory.holdings.update-ownership.item.post"
+        "inventory.holdings.update-ownership.item.post",
+        "inventory.items-by-holdings-id.collection.get"
       ]
     },
     {
