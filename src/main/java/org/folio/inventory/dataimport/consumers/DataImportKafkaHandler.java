@@ -7,6 +7,8 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import java.util.Objects;
+import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -115,6 +117,15 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     registerDataImportProcessingHandlers(storage, client);
   }
 
+  private void sendPayloadWithDiError(DataImportEventPayload eventPayload) {
+    eventPayload.setEventType(DI_ERROR.value());
+    try (var eventPublisher = new KafkaEventPublisher(kafkaConfig, vertx, 100)) {
+      eventPublisher.publish(eventPayload);
+    } catch (Exception e) {
+      LOGGER.error("Error closing kafka publisher: {}", e.getMessage());
+    }
+  }
+
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> record) {
     try {
@@ -140,6 +151,9 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
           .orElse(CompletableFuture.failedFuture(new EventProcessingException(format("Job profile snapshot with id '%s' does not exist", jobProfileSnapshotId)))))
         .whenComplete((processedPayload, throwable) -> {
           if (throwable != null) {
+            if (Integer.parseInt(Objects.requireNonNull(extractStatusCode(throwable.getMessage()))) == HttpStatus.SC_UNAUTHORIZED) {
+              sendPayloadWithDiError(eventPayload);
+            }
             LOGGER.error(throwable.getMessage());
             promise.fail(throwable);
           } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
@@ -154,6 +168,18 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
       return Future.failedFuture(e);
     }
+  }
+
+  private static String extractStatusCode(String message) {
+    String searchString = "status code: ";
+    int startIndex = message.indexOf(searchString);
+    if (startIndex != -1) {
+      int endIndex = message.indexOf(",", startIndex);
+      if (endIndex != -1) {
+        return message.substring(startIndex + searchString.length(), endIndex).trim();
+      }
+    }
+    return null;
   }
 
   private void registerDataImportProcessingHandlers(Storage storage, HttpClient client) {
