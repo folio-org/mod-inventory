@@ -7,8 +7,6 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
-import java.util.Objects;
-import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -145,15 +143,13 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
       String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
       profileSnapshotCache.get(jobProfileSnapshotId, context)
+        .onFailure(e -> sendPayloadWithDiError(eventPayload))
         .toCompletionStage()
         .thenCompose(snapshotOptional -> snapshotOptional
           .map(profileSnapshot -> EventManager.handleEvent(eventPayload, profileSnapshot))
           .orElse(CompletableFuture.failedFuture(new EventProcessingException(format("Job profile snapshot with id '%s' does not exist", jobProfileSnapshotId)))))
         .whenComplete((processedPayload, throwable) -> {
           if (throwable != null) {
-            if (Integer.parseInt(Objects.requireNonNull(extractStatusCode(throwable.getMessage()))) == HttpStatus.SC_UNAUTHORIZED) {
-              sendPayloadWithDiError(eventPayload);
-            }
             LOGGER.error(throwable.getMessage());
             promise.fail(throwable);
           } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
@@ -168,18 +164,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
       return Future.failedFuture(e);
     }
-  }
-
-  private static String extractStatusCode(String message) {
-    String searchString = "status code: ";
-    int startIndex = message.indexOf(searchString);
-    if (startIndex != -1) {
-      int endIndex = message.indexOf(",", startIndex);
-      if (endIndex != -1) {
-        return message.substring(startIndex + searchString.length(), endIndex).trim();
-      }
-    }
-    return null;
   }
 
   private void registerDataImportProcessingHandlers(Storage storage, HttpClient client) {
