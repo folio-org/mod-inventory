@@ -119,6 +119,11 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     eventPayload.setEventType(DI_ERROR.value());
     try (var eventPublisher = new KafkaEventPublisher(kafkaConfig, vertx, 100)) {
       eventPublisher.publish(eventPayload);
+      var eventType = eventPayload.getEventType();
+      LOGGER.warn("publish:: {} send error for event: '{}' by jobExecutionId: '{}' ",
+        eventType + "_Producer",
+        eventType,
+        eventPayload.getJobExecutionId());
     } catch (Exception e) {
       LOGGER.error("Error closing kafka publisher: {}", e.getMessage());
     }
