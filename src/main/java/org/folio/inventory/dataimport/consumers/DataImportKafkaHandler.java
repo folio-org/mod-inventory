@@ -115,6 +115,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     registerDataImportProcessingHandlers(storage, client);
   }
 
+  // TODO: possible wrong placement of entity logs when cache error
   private void sendPayloadWithDiError(DataImportEventPayload eventPayload) {
     eventPayload.setEventType(DI_ERROR.value());
     try (var eventPublisher = new KafkaEventPublisher(kafkaConfig, vertx, 100)) {
