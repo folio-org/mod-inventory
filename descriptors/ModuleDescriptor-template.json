@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "13.3",
+      "version": "13.4",
       "handlers": [
         {
           "methods": ["GET"],
@@ -656,7 +656,7 @@
     },
     {
       "id": "source-storage-records",
-      "version": "3.0"
+      "version": "3.3"
     },
     {
       "id": "bound-with-parts-storage",
@@ -670,7 +670,7 @@
   "optional": [
     {
       "id": "mapping-metadata-provider",
-      "version": "1.0"
+      "version": "1.1"
     },
     {
       "id": "data-import-converter-storage",
