@@ -279,6 +279,8 @@ public class Instances extends AbstractInstances {
   private boolean areInstanceBlockedFieldsChanged(Instance existingInstance, Instance updatedInstance) {
     JsonObject existingInstanceJson = JsonObject.mapFrom(existingInstance);
     JsonObject updatedInstanceJson = JsonObject.mapFrom(updatedInstance);
+    log.info("Existing: {}", existingInstanceJson);
+    log.info("Updated: {}", updatedInstanceJson);
 
     // We still need zeroing "succeedingInstanceId" in precedingTitles and "precedingInstanceId" in succeedingTitles
     // because these fields are not provided for/from UI requests. We just ignore these fields on comparing as a blocked fields.
