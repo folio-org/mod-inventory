@@ -115,6 +115,21 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     registerDataImportProcessingHandlers(storage, client);
   }
 
+  // TODO: possible wrong placement of entity logs when cache error
+  private void sendPayloadWithDiError(DataImportEventPayload eventPayload) {
+    eventPayload.setEventType(DI_ERROR.value());
+    try (var eventPublisher = new KafkaEventPublisher(kafkaConfig, vertx, 100)) {
+      eventPublisher.publish(eventPayload);
+      var eventType = eventPayload.getEventType();
+      LOGGER.warn("publish:: {} send error for event: '{}' by jobExecutionId: '{}' ",
+        eventType + "_Producer",
+        eventType,
+        eventPayload.getJobExecutionId());
+    } catch (Exception e) {
+      LOGGER.error("Error closing kafka publisher: {}", e.getMessage());
+    }
+  }
+
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> record) {
     try {
@@ -134,6 +149,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
       String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
       profileSnapshotCache.get(jobProfileSnapshotId, context)
+        .onFailure(e -> sendPayloadWithDiError(eventPayload))
         .toCompletionStage()
         .thenCompose(snapshotOptional -> snapshotOptional
           .map(profileSnapshot -> EventManager.handleEvent(eventPayload, profileSnapshot))
