@@ -20,6 +20,7 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED;
+import static org.folio.inventory.InstanceIngressConsumerVerticle.INSTANCE_INGRESS_TOPIC;
 
 import org.folio.kafka.services.KafkaTopic;
 
@@ -45,7 +46,8 @@ public class InventoryKafkaTopicService {
       new InventoryKafkaTopic(DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING.value(), holdingCreatedReadyForPostProcessingPartitions()),
       new InventoryKafkaTopic(DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING.value(), authorityCreatedReadyForPostProcessingPartitions()),
       new InventoryKafkaTopic(DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING.value(), authorityUpdatedReadyForPostProcessingPartitions()),
-      new InventoryKafkaTopic(DI_SRS_MARC_BIB_RECORD_MODIFIED.value(), marcBibRecordModifiedPartitions())
+      new InventoryKafkaTopic(DI_SRS_MARC_BIB_RECORD_MODIFIED.value(), marcBibRecordModifiedPartitions()),
+      new InventoryKafkaTopic(INSTANCE_INGRESS_TOPIC, instanceIngressPartitions())
     };
   }
 
@@ -127,5 +129,9 @@ public class InventoryKafkaTopicService {
   private Integer marcBibRecordModifiedPartitions() {
     return Integer.valueOf(firstNonBlank(System.getenv(
       "DI_SRS_MARC_BIB_RECORD_MODIFIED_PARTITIONS"), "1"));
+  }
+
+  private Integer instanceIngressPartitions() {
+    return Integer.valueOf(firstNonBlank(System.getenv("INVENTORY_INSTANCE_INGRESS_PARTITIONS"), "1"));
   }
 }
