@@ -1,4 +1,4 @@
-## 20.3.0-SNAPSHOT 2024-xx-xx
+## 21.0.0-SNAPSHOT 2024-xx-xx
 * Existing "035" field is not retained the original position in imported record [MODINV-1049](https://folio-org.atlassian.net/browse/MODINV-1049)
 * Update Data Import logic to normalize OCLC 035 values [MODINV-949](https://folio-org.atlassian.net/browse/MODINV-949)
 * The sorting for Items on Instance details page is not worked [MODINV-1001](https://folio-org.atlassian.net/browse/MODINV-1001)
