@@ -275,23 +275,19 @@ public final class AdditionalFieldsUtil {
   public static void normalize035(Record srcRecord) {
     List<Subfield> subfields = get035SubfieldOclcValues(srcRecord, TAG_035);
     if (!subfields.isEmpty()) {
-      boolean isFormatted = formatOclc(subfields);
-      boolean isDeduplicated = deduplicateOclc(srcRecord, subfields, TAG_035);
-      if (isFormatted || isDeduplicated) {
-        recalculateLeaderAndParsedRecord(srcRecord);
-      }
+      formatOclc(subfields);
+      deduplicateOclc(srcRecord, subfields, TAG_035);
+      recalculateLeaderAndParsedRecord(srcRecord);
     }
   }
 
-  private static boolean formatOclc(List<Subfield> subfields) {
+  private static void formatOclc(List<Subfield> subfields) {
     Pattern pattern = Pattern.compile(OCLC_PATTERN);
-    boolean formatted = false;
 
     for (Subfield subfield : subfields) {
       String data = subfield.getData().replaceAll("[.\\s]", "");
       Matcher matcher = pattern.matcher(data);
       if (matcher.find()) {
-        formatted = true;
         String oclcTag = matcher.group(1); // "OCoLC"
         String numericAndTrailing = matcher.group(5); // Numeric part and any characters that follow
         String prefix = matcher.group(2); // Entire prefix including letters and potentially leading zeros
@@ -310,10 +306,9 @@ public final class AdditionalFieldsUtil {
         }
       }
     }
-    return formatted;
   }
 
-  private static boolean deduplicateOclc(Record srcRecord, List<Subfield> subfields, String tag) {
+  private static void deduplicateOclc(Record srcRecord, List<Subfield> subfields, String tag) {
     List<Subfield> subfieldsToDelete = new ArrayList<>();
 
     for (Subfield subfield: new ArrayList<>(subfields)) {
@@ -328,8 +323,6 @@ public final class AdditionalFieldsUtil {
       subfieldsToDelete.forEach(subfieldToDelete ->
         variableFields.forEach(field -> removeSubfieldIfExist(marcRecord, field, subfieldToDelete)));
     });
-
-    return !subfieldsToDelete.isEmpty();
   }
 
   private static boolean isOclcSubfieldDuplicated(Subfield s1, Subfield s2) {
