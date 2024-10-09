@@ -2,8 +2,6 @@ package org.folio.inventory.domain.instances;
 
 import static org.folio.inventory.domain.instances.Dates.datesFromJson;
 import static org.folio.inventory.domain.instances.Dates.datesToJson;
-import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodFromJson;
-import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodToJson;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 
 import java.lang.invoke.MethodHandles;
@@ -74,7 +72,6 @@ public class Instance {
   public static final String TAGS_KEY = "tags";
   public static final String TAG_LIST_KEY = "tagList";
   public static final String NATURE_OF_CONTENT_TERM_IDS_KEY = "natureOfContentTermIds";
-  public static final String PUBLICATION_PERIOD_KEY = "publicationPeriod";
   public static final String DATES_KEY = "dates";
 
   private final String id;
@@ -119,7 +116,6 @@ public class Instance {
   private Metadata metadata = null;
   private List<String> tags;
   private List<String> natureOfContentTermIds = new ArrayList<>();
-  private PublicationPeriod publicationPeriod;
   private Dates dates;
 
   protected static final String INVENTORY_PATH = "/inventory";
@@ -192,7 +188,6 @@ public class Instance {
       .setStatusUpdatedDate(instanceJson.getString(STATUS_UPDATED_DATE_KEY))
       .setTags(getTags(instanceJson))
       .setNatureOfContentTermIds(toListOfStrings(instanceJson.getJsonArray(NATURE_OF_CONTENT_TERM_IDS_KEY)))
-      .setPublicationPeriod(publicationPeriodFromJson(instanceJson.getJsonObject(PUBLICATION_PERIOD_KEY)))
       .setDates(datesFromJson(instanceJson.getJsonObject(DATES_KEY)));
   }
 
@@ -241,7 +236,6 @@ public class Instance {
     json.put(STATUS_UPDATED_DATE_KEY, statusUpdatedDate);
     json.put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray(getTags() == null ? Collections.emptyList() : getTags())));
     json.put(NATURE_OF_CONTENT_TERM_IDS_KEY, natureOfContentTermIds);
-    putIfNotNull(json, PUBLICATION_PERIOD_KEY, publicationPeriodToJson(publicationPeriod));
     putIfNotNull(json, DATES_KEY, datesToJson(dates));
 
     return json;
@@ -295,7 +289,6 @@ public class Instance {
     putIfNotNull(json, METADATA_KEY, getMetadata());
     putIfNotNull(json, TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray(getTags())));
     putIfNotNull(json, NATURE_OF_CONTENT_TERM_IDS_KEY, getNatureOfContentTermIds());
-    putIfNotNull(json, PUBLICATION_PERIOD_KEY, publicationPeriodToJson(publicationPeriod));
     putIfNotNull(json, DATES_KEY, datesToJson(dates));
 
     if (precedingTitles != null) {
@@ -759,7 +752,6 @@ public class Instance {
             .setMetadata(metadata)
             .setTags(tags)
             .setNatureOfContentTermIds(natureOfContentTermIds)
-            .setPublicationPeriod(publicationPeriod)
             .setDates(dates);
   }
 
@@ -794,7 +786,6 @@ public class Instance {
             .setMetadata(metadata)
             .setTags(tags)
             .setNatureOfContentTermIds(natureOfContentTermIds)
-            .setPublicationPeriod(publicationPeriod)
             .setDates(dates);
   }
 
@@ -829,11 +820,6 @@ public class Instance {
       .collect(Collectors.toList());
 
     return copyInstance().setIdentifiers(newIdentifiers);
-  }
-
-  public Instance setPublicationPeriod(PublicationPeriod period) {
-    this.publicationPeriod = period;
-    return this;
   }
 
   @Override
