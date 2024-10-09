@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 import java.util.regex.Matcher;
@@ -353,14 +352,16 @@ public final class AdditionalFieldsUtil {
       MarcJsonWriter jsonWriter = new MarcJsonWriter(os);
       org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
 
-      // use stream writer to recalculate leader
-      streamWriter.write(marcRecord);
-      jsonWriter.write(marcRecord);
+      if (marcRecord != null) {
+        // use stream writer to recalculate leader
+        streamWriter.write(marcRecord);
+        jsonWriter.write(marcRecord);
 
-      String parsedContentString = new JsonObject(os.toString()).encode();
-      // save parsed content string to cache then set it on the record
-      parsedRecordContentCache.put(parsedContentString, marcRecord);
-      recordForUpdate.setParsedRecord(recordForUpdate.getParsedRecord().withContent(parsedContentString));
+        String parsedContentString = new JsonObject(os.toString()).encode();
+        // save parsed content string to cache then set it on the record
+        parsedRecordContentCache.put(parsedContentString, marcRecord);
+        recordForUpdate.setParsedRecord(recordForUpdate.getParsedRecord().withContent(parsedContentString));
+      }
     } catch (Exception e) {
       LOGGER.warn("recalculateLeaderAndParsedRecord:: Failed to recalculate leader and parsed record for record: {}", recordForUpdate.getId(), e);
     }
@@ -588,21 +589,6 @@ public final class AdditionalFieldsUtil {
       isFieldFound = true;
     }
     return isFieldFound;
-  }
-
-  private static void replaceOclc035FieldWithNormalizedData(org.marc4j.marc.Record marcRecord,
-                                              DataField dataField) {
-    var variableFields = marcRecord.getVariableFields(TAG_035);
-    int[] index = {0};
-    if (!variableFields.isEmpty()) {
-      variableFields.stream()
-        .filter(variableField -> variableField.find(OCLC))
-        .forEach(variableField -> {
-          index[0] = (marcRecord.getDataFields().indexOf(variableField));
-          marcRecord.removeVariableField(variableField);
-        });
-      marcRecord.getDataFields().add(index[0], dataField);
-    }
   }
 
   /**
