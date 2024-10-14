@@ -542,7 +542,8 @@
           "modulePermissions": [
             "inventory-storage.holdings.item.put",
             "inventory-storage.holdings.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "user-tenants.collection.get"
           ]
         }
       ]
