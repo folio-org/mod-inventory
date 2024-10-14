@@ -330,7 +330,8 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.holdings.item.put",
             "inventory-storage.holdings.collection.get",
-            "inventory-storage.holdings.batch.post"
+            "inventory-storage.holdings.batch.post",
+            "user-tenants.collection.get"
           ]
         },
         {
