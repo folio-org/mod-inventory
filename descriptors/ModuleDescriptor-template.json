@@ -307,7 +307,8 @@
             "inventory-storage.items.item.get",
             "inventory-storage.items.collection.get",
             "inventory-storage.items.item.put",
-            "users.item.get"
+            "users.item.get",
+            "user-tenants.collection.get"
           ]
         },
         {
