@@ -328,7 +328,9 @@
           "permissionsRequired": ["inventory.holdings.item.put"],
           "modulePermissions": [
             "inventory-storage.holdings.item.get",
-            "inventory-storage.holdings.item.put"
+            "inventory-storage.holdings.item.put",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.batch.post"
           ]
         },
         {
