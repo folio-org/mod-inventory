@@ -307,7 +307,8 @@
             "inventory-storage.items.item.get",
             "inventory-storage.items.collection.get",
             "inventory-storage.items.item.put",
-            "users.item.get"
+            "users.item.get",
+            "user-tenants.collection.get"
           ]
         },
         {
@@ -328,7 +329,10 @@
           "permissionsRequired": ["inventory.holdings.item.put"],
           "modulePermissions": [
             "inventory-storage.holdings.item.get",
-            "inventory-storage.holdings.item.put"
+            "inventory-storage.holdings.item.put",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.batch.post",
+            "user-tenants.collection.get"
           ]
         },
         {
@@ -529,7 +533,8 @@
           "modulePermissions": [
             "inventory-storage.items.item.put",
             "inventory-storage.items.collection.get",
-            "inventory-storage.holdings.item.get"
+            "inventory-storage.holdings.item.get",
+            "user-tenants.collection.get"
           ]
         },
         {
@@ -539,7 +544,8 @@
           "modulePermissions": [
             "inventory-storage.holdings.item.put",
             "inventory-storage.holdings.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "user-tenants.collection.get"
           ]
         }
       ]
