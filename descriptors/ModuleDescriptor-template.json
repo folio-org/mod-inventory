@@ -307,8 +307,7 @@
             "inventory-storage.items.item.get",
             "inventory-storage.items.collection.get",
             "inventory-storage.items.item.put",
-            "users.item.get",
-            "user-tenants.collection.get"
+            "users.item.get"
           ]
         },
         {
@@ -329,10 +328,7 @@
           "permissionsRequired": ["inventory.holdings.item.put"],
           "modulePermissions": [
             "inventory-storage.holdings.item.get",
-            "inventory-storage.holdings.item.put",
-            "inventory-storage.holdings.collection.get",
-            "inventory-storage.holdings.batch.post",
-            "user-tenants.collection.get"
+            "inventory-storage.holdings.item.put"
           ]
         },
         {
@@ -544,6 +540,7 @@
           "modulePermissions": [
             "inventory-storage.holdings.item.put",
             "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.batch.post",
             "inventory-storage.instances.item.get",
             "user-tenants.collection.get"
           ]
