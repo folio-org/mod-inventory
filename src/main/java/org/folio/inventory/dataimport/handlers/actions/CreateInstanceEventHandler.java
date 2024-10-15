@@ -61,6 +61,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   private static final String INSTANCE_CREATION_999_ERROR_MESSAGE = "A new Instance was not created because the incoming record already contained a 999ff$s or 999ff$i field";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
+  public static final String DISCOVERY_SUPPRESS_PROPERTY = "discoverySuppress";
   protected final IdStorageService idStorageService;
   private final OrderHelperService orderHelperService;
 
@@ -147,6 +148,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                   var targetContent = targetRecord.getParsedRecord().getContent().toString();
                   var content = reorderMarcRecordFields(sourceContent, targetContent);
                   targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(content));
+                  setSuppressFormDiscovery(targetRecord, instanceAsJson.getBoolean(DISCOVERY_SUPPRESS_PROPERTY, false));
                   return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection, dataImportEventPayload.getTenant());
                 });
             })
