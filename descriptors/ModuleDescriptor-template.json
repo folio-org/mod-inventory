@@ -529,7 +529,8 @@
           "modulePermissions": [
             "inventory-storage.items.item.put",
             "inventory-storage.items.collection.get",
-            "inventory-storage.holdings.item.get"
+            "inventory-storage.holdings.item.get",
+            "user-tenants.collection.get"
           ]
         },
         {
@@ -539,7 +540,9 @@
           "modulePermissions": [
             "inventory-storage.holdings.item.put",
             "inventory-storage.holdings.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.holdings.batch.post",
+            "inventory-storage.instances.item.get",
+            "user-tenants.collection.get"
           ]
         }
       ]
