@@ -26,6 +26,7 @@
 * Keep original UUIDs when updating ownership of Holdings/Items [MODINV-1074](https://folio-org.atlassian.net/browse/MODINV-1074)
 * API version update [MODINV-1080](https://folio-org.atlassian.net/browse/MODINV-1080)
 * Add `inventory-storage.instances.retrieve.collection.post` and `inventory-storage.holdings.retrieve.collection.post` permissions
+* Fix inconsistencies in permission namings [MODINV-1072](https://folio-org.atlassian.net/browse/MODINV-1072)
 
 ## 20.2.0 2023-03-20
 * Inventory cannot process Holdings with virtual fields ([MODINV-941](https://issues.folio.org/browse/MODINV-941))
