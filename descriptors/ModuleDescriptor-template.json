@@ -22,7 +22,9 @@
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
             "inventory-storage.instances.item.get",
-            "inventory-storage.bound-with-parts.collection.get"
+            "inventory-storage.bound-with-parts.collection.get",
+            "inventory-storage.holdings.retrieve.collection.post",
+            "inventory-storage.instances.retrieve.collection.post"
           ]
         },
         {
@@ -362,7 +364,9 @@
             "inventory-storage.holdings.collection.get",
             "inventory-storage.holdings.item.get",
             "inventory-storage.instances.collection.get",
-            "inventory-storage.instances.item.get"
+            "inventory-storage.instances.item.get",
+            "inventory-storage.holdings.retrieve.collection.post",
+            "inventory-storage.instances.retrieve.collection.post"
           ]
         },
         {
@@ -615,7 +619,7 @@
     },
     {
       "id": "holdings-storage",
-      "version": "2.0 3.0 4.0 5.0 6.0 7.0"
+      "version": "2.0 3.0 4.0 5.0 6.0 7.0 8.0"
     },
     {
       "id": "material-types",
@@ -663,7 +667,7 @@
     },
     {
       "id": "bound-with-parts-storage",
-      "version": "1.0"
+      "version": "2.0"
     },
     {
       "id": "authority-storage",
