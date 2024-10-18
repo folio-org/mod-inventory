@@ -44,7 +44,7 @@
       <dependency>
         <groupId>org.testcontainers</groupId>
         <artifactId>testcontainers-bom</artifactId>
-        <version>1.17.5</version>
+        <version>1.20.2</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -322,6 +322,7 @@
     <kafkaclients.version>3.1.0</kafkaclients.version>
     <junit.version>4.13.2</junit.version>
     <data-import-processing-core.version>4.3.0-SNAPSHOT</data-import-processing-core.version>
+    <folio-module-descriptor-validator.version>1.0.0</folio-module-descriptor-validator.version>
   </properties>
 
   <distributionManagement>
@@ -341,6 +342,14 @@
     </snapshotRepository>
   </distributionManagement>
 
+  <pluginRepositories>
+    <pluginRepository>
+      <id>folio-nexus</id>
+      <name>FOLIO Maven repository</name>
+      <url>https://repository.folio.org/repository/maven-folio</url>
+    </pluginRepository>
+  </pluginRepositories>
+
   <scm>
     <url>https://github.com/folio-org/mod-inventory</url>
     <connection>scm:git:git://github.com:folio-org/mod-inventory.git</connection>
@@ -357,6 +366,19 @@
     </resources>
 
     <plugins>
+      <plugin>
+        <groupId>org.folio</groupId>
+        <artifactId>folio-module-descriptor-validator</artifactId>
+        <version>${folio-module-descriptor-validator.version}</version>
+        <inherited>false</inherited>
+        <executions>
+          <execution>
+            <goals>
+              <goal>validate</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-report-plugin</artifactId>
