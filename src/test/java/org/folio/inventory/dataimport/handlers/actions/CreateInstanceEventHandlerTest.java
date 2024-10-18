@@ -41,6 +41,7 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
+import org.folio.processing.value.BooleanValue;
 import org.folio.processing.value.ListValue;
 import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
@@ -56,6 +57,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -96,6 +98,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -136,6 +139,9 @@ public class CreateInstanceEventHandlerTest {
       .dynamicPort()
       .notifier(new Slf4jNotifier(true)));
 
+  @Captor
+  private ArgumentCaptor<Record> recordCaptor;
+
   private JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Create MARC Bibs")
@@ -156,6 +162,45 @@ public class CreateInstanceEventHandlerTest {
       .withMappingFields(Lists.newArrayList(
         new MappingRule().withPath("instance.instanceTypeId").withValue("\"instanceTypeIdExpression\"").withEnabled("true"),
         new MappingRule().withPath("instance.title").withValue("\"titleExpression\"").withEnabled("true"))));
+
+  private JobProfile jobProfileWithSuppressFromDiscovery = new JobProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Create MARC Bibs")
+    .withDataType(JobProfile.DataType.MARC);
+
+  private ActionProfile actionProfileWithSuppressFromDiscovery = new ActionProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Create Instance with suppress from discovery")
+    .withAction(ActionProfile.Action.CREATE)
+    .withFolioRecord(INSTANCE);
+
+  private MappingProfile mappingProfileWithSuppressFromDiscovery = new MappingProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Prelim item from MARC")
+    .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+    .withExistingRecordType(EntityType.INSTANCE)
+    .withMappingDetails(new MappingDetail()
+      .withMappingFields(Lists.newArrayList(
+        new MappingRule().withPath("instance.instanceTypeId").withValue("\"instanceTypeIdExpression\"").withEnabled("true"),
+        new MappingRule().withPath("instance.title").withValue("\"titleExpression\"").withEnabled("true"),
+        new MappingRule().withPath("instance.discoverySuppress").withValue("true").withEnabled("true")
+        )));
+
+  private ProfileSnapshotWrapper profileSnapshotWrapperWithSuppressFromDiscovery = new ProfileSnapshotWrapper()
+    .withId(UUID.randomUUID().toString())
+    .withProfileId(jobProfileWithSuppressFromDiscovery.getId())
+    .withContentType(JOB_PROFILE)
+    .withContent(jobProfileWithSuppressFromDiscovery)
+    .withChildSnapshotWrappers(Collections.singletonList(
+      new ProfileSnapshotWrapper()
+        .withProfileId(actionProfileWithSuppressFromDiscovery.getId())
+        .withContentType(ACTION_PROFILE)
+        .withContent(actionProfileWithSuppressFromDiscovery)
+        .withChildSnapshotWrappers(Collections.singletonList(
+          new ProfileSnapshotWrapper()
+            .withProfileId(mappingProfileWithSuppressFromDiscovery.getId())
+            .withContentType(MAPPING_PROFILE)
+            .withContent(JsonObject.mapFrom(mappingProfileWithSuppressFromDiscovery).getMap())))));
 
   private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
@@ -373,6 +418,69 @@ public class CreateInstanceEventHandlerTest {
     assertEquals(expectedDate.substring(0, 10), actualDate.substring(0, 10));
     assertEquals(recordId, recordCaptor.getValue().getMatchedId());
     assertEquals(instanceId, recordCaptor.getValue().getExternalIdsHolder().getInstanceId());
+  }
+
+  @Test
+  public void shouldProcessEventAndUpdateSuppresFromDiscovery() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String instanceTypeId = "fe19bae4-da28-472b-be90-d442e2428ead";
+    String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
+    String instanceId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
+    RecordToEntity recordToInstance = RecordToEntity.builder().recordId(recordId).entityId(instanceId).build();
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), BooleanValue.of(MappingRule.BooleanFieldAction.ALL_TRUE));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    when(instanceIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToInstance));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_999fi));
+    record.setId(recordId);
+
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put("acceptInstanceId", "true");
+
+    Buffer buffer = BufferImpl.buffer("{\"parsedRecord\":{" +
+      "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
+      "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\"" +
+      "}}");
+    HttpResponse<Buffer> resp = buildHttpResponseWithBuffer(buffer, SC_CREATED);
+    when(sourceStorageClient.postSourceStorageRecords(any())).thenReturn(Future.succeededFuture(resp));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapperWithSuppressFromDiscovery.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl());
+
+    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
+
+    verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
+    Record capturedRecord = recordCaptor.getValue();
+    assertTrue(capturedRecord.getAdditionalInfo().getSuppressDiscovery());
+
+    assertEquals(DI_INVENTORY_INSTANCE_CREATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    JsonObject createdInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    String actualInstanceId = createdInstance.getString("id");
+    assertNotNull(actualInstanceId);
+    assertEquals(instanceId, actualInstanceId);
+    assertEquals("MARC", createdInstance.getString("source"));
+    assertThat(createdInstance.getString("discoverySuppress"), is("true"));
+    verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
+    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(TENANT_ID)));
   }
 
   @Test(expected = ExecutionException.class)

@@ -1,3 +1,6 @@
+## 20.2.8 2024-10-28
+* [MODINV-1094](https://folio-org.atlassian.net/browse/MODINV-1094) Update suppressDiscovery in the MARC file when creating an instance with “suppressDiscovery=true” when importing data
+
 ## 20.2.3 2024-04-25
 * [MODINV-1022](https://folio-org.atlassian.net/browse/MODINV-1022) Circulation History in Item record removed when Item is marked Missing/Long missing/ Unavailable
 
