@@ -3,7 +3,6 @@ package org.folio.inventory.dataimport.util;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_001;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_035;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_035_SUB;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addControlledFieldToMarcRecord;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addDataFieldToMarcRecord;
@@ -445,6 +444,35 @@ public class AdditionalFieldsUtilTest {
           "{\"leader\":\"00098nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"}," +
           "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)607TST001\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
           "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+        },
+        {
+          "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+            "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC-M)ocn0001234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+            "{\"035\":{\"subfields\":[{\"a\":\"(ABC)ocn0001234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+            "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocn0001234\"}, {\"a\":\"(OCoLC)ocn1234\"}, {\"b\":\"(OCoLC)ocn1234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+            "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocm1234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+            "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocn00098765\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+            "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocn0001234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+            "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+
+          "{\"leader\":\"00218nam  22001091a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+            "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC-M)ocn0001234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+            "{\"035\":{\"subfields\":[{\"a\":\"(ABC)ocn0001234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+            "{\"035\":{\"subfields\":[{\"b\":\"(OCoLC)1234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+            "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)98765\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+            "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)1234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+            "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+        },
+        {
+          "{\"leader\":\"00126nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+            "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)1234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+            "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC-M)1234456\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+            "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+
+          "{\"leader\":\"00126nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
+            "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)1234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+            "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC-M)1234456\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+            "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
         }
       });
     }
@@ -466,13 +494,13 @@ public class AdditionalFieldsUtilTest {
   }
 
   @Test
-  public void shouldReturnSubfieldIfOclcExist() {
+  public void shouldReturnOnlyOclcSubfield() {
     // given
     String parsedContent = "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
       "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
       "{\"a\":\"(OCoLC)64758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
       "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
-    var expectedSubfields =  List.of("(ybp7406411)in001", "(OCoLC)64758");
+    var expectedSubfields =  List.of("(OCoLC)64758");
 
     ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
 
@@ -483,7 +511,7 @@ public class AdditionalFieldsUtilTest {
       .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
 
     // when
-    var subfields = get035SubfieldOclcValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData).toList();
+    var subfields = get035SubfieldOclcValues(record, TAG_035).stream().map(Subfield::getData).toList();
     // then
     Assert.assertEquals(expectedSubfields.size(), subfields.size());
     Assert.assertEquals(expectedSubfields.get(0), subfields.get(0));
@@ -528,7 +556,7 @@ public class AdditionalFieldsUtilTest {
       "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)00012345\"}],\"ind1\":\"\",\"ind2\":\"\"}}," +
       "{\"040\":{\"subfields\":[{\"a\":\"DLC\"},{\"b\":\"eng\"},{\"c\":\"O\"},{\"d\":\"O\"},{\"d\":\"DLC\"}],\"ind1\":\"\",\"ind2\":\"\"}}]}";
 
-    var expectedParsedContent = "{\"leader\":\"00357cama 22001451a 4500\",\"fields\":[" +
+    var expectedParsedContent = "{\"leader\":\"00372cama 22001571a 4500\",\"fields\":[" +
       "{\"001\":\"10065352\"}," +
       "{\"005\":\"20220127143948.0\"}," +
       "{\"008\":\"761216s1853mauch0010eng\"}," +
@@ -537,7 +565,8 @@ public class AdditionalFieldsUtilTest {
       "{\"010\":{\"subfields\":[{\"a\":\"01012052\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
       "{\"022\":{\"subfields\":[{\"a\":\"0022-0469\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
       "{\"030\":{\"subfields\":[{\"a\":\"0030-0469\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-      "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)2628488\"},{\"a\":\"(OCoLC)12345\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)2628488\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
+      "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)12345\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
       "{\"040\":{\"subfields\":[{\"a\":\"DLC\"},{\"b\":\"eng\"},{\"c\":\"O\"},{\"d\":\"O\"},{\"d\":\"DLC\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
 
     ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
@@ -567,7 +596,7 @@ public class AdditionalFieldsUtilTest {
       .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
 
     // when
-    var subfields = get035SubfieldOclcValues(record, TAG_035, TAG_035_SUB).stream().map(Subfield::getData).toList();
+    var subfields = get035SubfieldOclcValues(record, TAG_035).stream().map(Subfield::getData).toList();
     // then
     Assert.assertEquals(0, subfields.size());
   }
