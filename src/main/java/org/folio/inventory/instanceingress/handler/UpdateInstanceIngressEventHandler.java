@@ -9,6 +9,7 @@ import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
@@ -55,7 +56,8 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
         return CompletableFuture.failedFuture(new EventProcessingException(message));
       }
 
-      var targetRecord = constructMarcBibRecord(event.getEventPayload());
+      var recordId = UUID.randomUUID().toString();
+      var targetRecord = constructMarcBibRecord(event.getEventPayload(), recordId);
       var instanceId = getInstanceId(event).orElseGet(() -> super.getInstanceId(targetRecord));
       getMappingMetadata(context, super::getMappingMetadataCache)
         .compose(metadataOptional -> metadataOptional.map(metadata -> prepareAndExecuteMapping(metadata, targetRecord, event, instanceId, LOGGER))
@@ -126,12 +128,12 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
       .onFailure(promise::fail)
       .compose(snapshot -> super.getRecordByInstanceId(sourceStorageRecordsClient, instance.getId()))
       .compose(existingRecord -> {
-        targetRecord.setMatchedId(existingRecord.getId());
+        targetRecord.setMatchedId(existingRecord.getMatchedId());
         if (nonNull(existingRecord.getGeneration())) {
           int incrementedGeneration = existingRecord.getGeneration();
           targetRecord.setGeneration(++incrementedGeneration);
         }
-        AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, TAG_999, 's', existingRecord.getId());
+        AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, TAG_999, 's', targetRecord.getMatchedId());
         return Future.succeededFuture(targetRecord.getMatchedId());
       })
       .compose(matchedId ->
@@ -144,7 +146,7 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
                 targetRecord.getId(), instance.getId(), context.getTenantId());
               promise.complete(instance);
             } else {
-              String msg = format("Failed to update MARC record in SRS, instanceId: '%s', status code: %s, Record: %s",
+              String msg = format("Failed to update MARC record in SRS, instanceId: '%s', status code: %s, result: %s",
                 instance.getId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
               LOGGER.warn(msg);
               promise.fail(msg);

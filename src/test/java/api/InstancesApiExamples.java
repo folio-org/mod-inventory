@@ -18,10 +18,8 @@ import static org.folio.inventory.domain.instances.Dates.DATE2_KEY;
 import static org.folio.inventory.domain.instances.Dates.datesToJson;
 import static org.folio.inventory.domain.instances.Instance.DATES_KEY;
 import static org.folio.inventory.domain.instances.Instance.PRECEDING_TITLES_KEY;
-import static org.folio.inventory.domain.instances.Instance.PUBLICATION_PERIOD_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
-import static org.folio.inventory.domain.instances.PublicationPeriod.publicationPeriodToJson;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
@@ -46,7 +44,6 @@ import org.folio.HttpStatus;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
 import org.folio.inventory.domain.instances.Dates;
-import org.folio.inventory.domain.instances.PublicationPeriod;
 import org.folio.inventory.domain.instances.Subject;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.support.JsonArrayHelper;
@@ -102,7 +99,6 @@ public class InstancesApiExamples extends ApiTests {
       .put("administrativeNotes", adminNote)
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType())
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameOne)))
-      .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(1000, 2000)))
       .put(DATES_KEY, datesToJson(new Dates(dateTypeId, date1, date2)))
       .put("natureOfContentTermIds",
         new JsonArray(asList(
@@ -168,10 +164,6 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(natureOfContentTermIds, hasItem(ApiTestSuite.getBibliographyNatureOfContentTermId()));
 
     assertThat(createdInstance.getString("hrid"), notNullValue());
-
-    var publicationPeriod = createdInstance.getJsonObject(PUBLICATION_PERIOD_KEY);
-    assertThat(publicationPeriod.getInteger("start"), is(1000));
-    assertThat(publicationPeriod.getInteger("end"), is(2000));
 
     var dates = createdInstance.getJsonObject(DATES_KEY);
     assertThat(dates.getString(DATE_TYPE_ID_KEY), is(dateTypeId));
@@ -409,7 +401,7 @@ public class InstancesApiExamples extends ApiTests {
     JsonObject smallAngryPlanet = smallAngryPlanet(id);
     smallAngryPlanet.put("natureOfContentTermIds",
       new JsonArray().add(ApiTestSuite.getBibliographyNatureOfContentTermId()));
-    smallAngryPlanet.put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(1000, 2000)));
+
     smallAngryPlanet.put(DATES_KEY, datesToJson(new Dates(null, date1, date2)));
 
     JsonObject newInstance = createInstance(smallAngryPlanet);
@@ -417,7 +409,6 @@ public class InstancesApiExamples extends ApiTests {
     JsonObject updateInstanceRequest = newInstance.copy()
       .put("title", "The Long Way to a Small, Angry Planet")
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
-      .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(2000, 2012)))
       .put(DATES_KEY, datesToJson(new Dates(dateTypeId, date1, date2)))
       .put("natureOfContentTermIds",
         new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()))
@@ -454,10 +445,6 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(natureOfContentTermIds.size(), is(1));
     assertThat(natureOfContentTermIds.getString(0), is(ApiTestSuite.getAudiobookNatureOfContentTermId()));
 
-    var publicationPeriod = updatedInstance.getJsonObject(PUBLICATION_PERIOD_KEY);
-    assertThat(publicationPeriod.getInteger("start"), is(2000));
-    assertThat(publicationPeriod.getInteger("end"), is(2012));
-
     var dates = updatedInstance.getJsonObject(DATES_KEY);
     assertThat(dates.getString(DATE_TYPE_ID_KEY), is(dateTypeId));
     assertThat(dates.getString(DATE1_KEY), is(date1));
@@ -477,7 +464,6 @@ public class InstancesApiExamples extends ApiTests {
     JsonObject smallAngryPlanet = smallAngryPlanet(id);
     smallAngryPlanet.put("natureOfContentTermIds",
       new JsonArray().add(ApiTestSuite.getBibliographyNatureOfContentTermId()));
-    smallAngryPlanet.put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(1000, 2000)));
 
     JsonArray precedingTitles = new JsonArray();
     precedingTitles.add(
@@ -506,7 +492,6 @@ public class InstancesApiExamples extends ApiTests {
 
     JsonObject updateInstanceRequest = newInstance.copy()
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
-      .put(PUBLICATION_PERIOD_KEY, publicationPeriodToJson(new PublicationPeriod(2000, 2012)))
       .put(PRECEDING_TITLES_KEY, precedingTitles)
       .put("natureOfContentTermIds",
         new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));

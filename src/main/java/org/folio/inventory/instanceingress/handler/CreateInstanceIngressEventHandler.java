@@ -1,6 +1,7 @@
 package org.folio.inventory.instanceingress.handler;
 
 import static java.lang.String.format;
+import static java.util.Optional.ofNullable;
 import static org.apache.logging.log4j.LogManager.getLogger;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.reorderMarcRecordFields;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
@@ -8,6 +9,7 @@ import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
@@ -51,7 +53,9 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
         return CompletableFuture.failedFuture(new EventProcessingException(message));
       }
 
-      var targetRecord = constructMarcBibRecord(event.getEventPayload());
+      var recordId = ofNullable(event.getEventPayload().getSourceRecordIdentifier())
+        .orElseGet(() -> UUID.randomUUID().toString());
+      var targetRecord = constructMarcBibRecord(event.getEventPayload(), recordId);
       var instanceId = getInstanceId(event).orElseGet(() -> super.getInstanceId(targetRecord));
       idStorageService.store(targetRecord.getId(), instanceId, context.getTenantId())
         .compose(res -> getMappingMetadata(context, super::getMappingMetadataCache))

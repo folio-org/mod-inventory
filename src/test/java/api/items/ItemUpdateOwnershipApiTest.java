@@ -51,6 +51,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(JUnitParamsRunner.class)
 public class ItemUpdateOwnershipApiTest extends ApiTests {
@@ -109,15 +110,23 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
     JsonObject targetTenantItem1 = targetHoldingsRecordItems.get(0);
     JsonObject targetTenantItem2 = targetHoldingsRecordItems.get(1);
 
+    var targetTenantItemsIds = targetHoldingsRecordItems.stream()
+      .map(object -> object.getString(ID))
+      .toList();
+
     final var sourceSecondUpdatedItem = itemsClient.getById(secondItem.getId());
 
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceFirstUpdatedItem.getStatusCode()));
     assertThat(targetTenantItem1.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
-    assertNotEquals(firstItem.getId().toString(), targetTenantItem1.getString(ID));
+    assertTrue(targetTenantItemsIds.contains(firstItem.getId().toString()));
+    assertTrue(targetTenantItemsIds.contains(secondItem.getId().toString()));
+
+    var targetTenantHoldingsIds = targetHoldingsRecordItems.stream()
+      .map(object -> object.getString(HOLDINGS_RECORD_ID))
+      .toList();
 
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceSecondUpdatedItem.getStatusCode()));
-    assertThat(targetTenantItem2.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
-    assertNotEquals(secondItem.getId().toString(), targetTenantItem2.getString(ID));
+    assertTrue(targetTenantHoldingsIds.contains(createHoldingsRecord2.toString()));
     assertNotEquals(targetTenantItem2.getString("hrid"), itemHrId);
   }
 
@@ -223,7 +232,7 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
 
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceSecondUpdatedItem.getStatusCode()));
     assertThat(targetTenantItem.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
-    assertNotEquals(secondItem.getId().toString(), targetTenantItem.getString(ID));
+    assertEquals(secondItem.getId().toString(), targetTenantItem.getString(ID));
     assertNotEquals(targetTenantItem.getString("hrid"), itemHrId);
   }
 

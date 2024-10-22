@@ -64,9 +64,7 @@ public interface InstanceIngressEventHandler {
       .map(o -> (String) o);
   }
 
-  default Record constructMarcBibRecord(InstanceIngressPayload eventPayload) {
-    var recordId = ofNullable(eventPayload.getSourceRecordIdentifier())
-      .orElseGet(() -> UUID.randomUUID().toString());
+  default Record constructMarcBibRecord(InstanceIngressPayload eventPayload, String recordId) {
     var marcBibRecord = new org.folio.rest.jaxrs.model.Record()
       .withId(recordId)
       .withRecordType(MARC_BIB)
