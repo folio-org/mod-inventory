@@ -136,6 +136,7 @@ Default value for all partitions is 1
 * narrower terms (`$wh` tag)
 * earlier headings (`$wa` tag)
 * later headings (`$wb` tag)
+* saft*Trunc for every saft* field with "i" and numeric subfields excluded
 
 Default value for `AUTHORITY_EXTENDED` is `false`.
 The mapping itself is implemented in [data-import-processing-core](https://github.com/folio-org/data-import-processing-core).

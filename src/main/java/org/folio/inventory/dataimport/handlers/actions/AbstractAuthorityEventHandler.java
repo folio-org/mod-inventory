@@ -59,7 +59,7 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
 
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
-  private static boolean isAuthorityExtended = isAuthorityExtendedMode();
+  public static boolean isAuthorityExtended = isAuthorityExtendedMode();
 
   protected AbstractAuthorityEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
     this.storage = storage;
