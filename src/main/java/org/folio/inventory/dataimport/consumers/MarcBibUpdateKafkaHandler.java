@@ -28,6 +28,7 @@ import org.folio.MappingMetadataDto;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -49,6 +50,8 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   private static final AtomicLong INDEXER = new AtomicLong();
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
+  private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
+  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final MappingMetadataCache mappingMetadataCache;
@@ -89,7 +92,7 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
           new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, instanceEvent.getJobId()))))
         .onSuccess(mappingMetadataDto -> ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto))
         .compose(v -> instanceUpdateDelegate.handle(metaDataPayload, marcBibRecord, context))
-        .onComplete(ar -> processUpdateResult(ar, promise, consumerRecord, instanceEvent, marcBibRecord));
+        .onComplete(ar -> processUpdateResult(ar, metaDataPayload, promise, consumerRecord, instanceEvent, marcBibRecord));
       return promise.future();
     } catch (Exception e) {
       LOGGER.error(format("Failed to process data import kafka record from topic %s", consumerRecord.topic()), e);
@@ -97,7 +100,9 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
     }
   }
 
-  private void processUpdateResult(AsyncResult<Instance> result, Promise<String> promise,
+  private void processUpdateResult(AsyncResult<Instance> result,
+                                   HashMap<String, String> eventPayload,
+                                   Promise<String> promise,
                                    KafkaConsumerRecord<String, String> consumerRecord,
                                    MarcBibUpdate instanceEvent, Record marcBibRecord) {
     LinkUpdateReport linkUpdateReport;
@@ -106,11 +111,37 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
       promise.complete(consumerRecord.key());
     } else {
       var errorCause = result.cause();
+      if (errorCause instanceof OptimisticLockingException) {
+        processOLError(consumerRecord, promise, eventPayload, result);
+      } else {
+        eventPayload.remove(CURRENT_RETRY_NUMBER);
+        promise.fail(result.cause());
+      }
       linkUpdateReport = mapToLinkReport(instanceEvent, marcBibRecord.getId(), errorCause.getMessage());
       LOGGER.error("Failed to update instance by jobId {}:{}", instanceEvent.getJobId(), errorCause);
-      promise.fail(errorCause);
     }
     sendEventToKafka(linkUpdateReport, consumerRecord.headers());
+  }
+
+  private void processOLError(KafkaConsumerRecord<String, String> value, Promise<String> promise, HashMap<String, String> eventPayload, AsyncResult<Instance> ar) {
+    int currentRetryNumber = eventPayload.get(CURRENT_RETRY_NUMBER) == null
+      ? 0 : Integer.parseInt(eventPayload.get(CURRENT_RETRY_NUMBER));
+    if (currentRetryNumber < MAX_RETRIES_COUNT) {
+      eventPayload.put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
+      LOGGER.warn("Error updating Instance - {}. Retry MarcBibInstanceHridSetKafkaHandler handler...", ar.cause().getMessage());
+      handle(value).onComplete(result -> {
+        if (result.succeeded()) {
+          promise.complete(value.key());
+        } else {
+          promise.fail(result.cause());
+        }
+      });
+    } else {
+      eventPayload.remove(CURRENT_RETRY_NUMBER);
+      String errMessage = format("Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
+      LOGGER.error(errMessage);
+      promise.fail(new OptimisticLockingException(errMessage));
+    }
   }
 
   private void sendEventToKafka(LinkUpdateReport linkUpdateReport, List<KafkaHeader> kafkaHeaders) {
