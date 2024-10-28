@@ -9,6 +9,7 @@ import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import com.google.common.collect.Lists;
 
 import io.vertx.core.Future;
+import static org.apache.http.HttpStatus.SC_CREATED;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.buffer.impl.BufferImpl;
@@ -481,7 +482,7 @@ public class CreateInstanceEventHandlerTest {
     assertEquals("MARC", createdInstance.getString("source"));
     assertThat(createdInstance.getString("discoverySuppress"), is("true"));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
-    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(TENANT_ID)));
+    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), argThat(tenantId -> tenantId.equals(TENANT_ID)));
   }
 
   @Test(expected = ExecutionException.class)
@@ -1031,6 +1032,14 @@ public class CreateInstanceEventHandlerTest {
   private static HttpResponseImpl<Buffer> buildHttpResponseWithBuffer(Buffer buffer) {
     return new HttpResponseImpl<>(null, HttpStatus.SC_CREATED, "",
       null, null, null, buffer, null);
+  }
+
+  public static HttpResponseImpl<Buffer> buildHttpResponseWithBuffer(Buffer buffer, int httpStatus) {
+    return buildHttpResponseWithBuffer(buffer, httpStatus, "");
+  }
+
+  public static HttpResponseImpl<Buffer> buildHttpResponseWithBuffer(Buffer buffer, int httpStatus, String statusMessage) {
+    return new HttpResponseImpl<>(null, httpStatus, statusMessage, null, null, null, buffer, null);
   }
 
   private Response createdResponse() {
