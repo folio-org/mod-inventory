@@ -5,6 +5,8 @@ import static org.codehaus.plexus.util.StringUtils.isNotEmpty;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logEnd;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logStart;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -95,12 +97,17 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   protected Future<Instance> saveRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record srcRecord,
-                                                            Instance instance, InstanceCollection instanceCollection, String tenantId) {
+                                                              Instance instance, InstanceCollection instanceCollection, String tenantId, DataImportEventPayload dataImportEventPayload) {
     Promise<Instance> promise = Promise.promise();
+    long startTime = System.currentTimeMillis();
+    logStart("saveRecordInSrsAndHandleResponse:: Started creating record in SRS", dataImportEventPayload, LOGGER);
+
     getSourceStorageRecordsClient(payload, tenantId).postSourceStorageRecords(srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
+          logEnd("saveRecordInSrsAndHandleResponse:: Created record in SRS", dataImportEventPayload, startTime, LOGGER);
+
           payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(),
             Json.encode(encodeParsedRecordContent(result.bodyAsJson(Record.class))));
           LOGGER.info("Created MARC record in SRS with id: '{}', instanceId: '{}', from tenant: {}, jobExecutionId: {}",

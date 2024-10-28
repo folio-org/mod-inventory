@@ -13,6 +13,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.CacheLoadingException;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
@@ -22,6 +23,9 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
+
+import static org.folio.inventory.dataimport.util.LoggerUtil.logEnd;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logStart;
 
 /**
  * Cache for storing ProfileSnapshotWrapper entities by jobProfileSnapshotId
@@ -55,10 +59,16 @@ public class ProfileSnapshotCache {
     LOGGER.debug("Trying to load jobProfileSnapshot by id  '{}' for cache, okapi url: {}, tenantId: {}", profileSnapshotId, context.getOkapiLocation(), context.getTenantId());
 
     OkapiHttpClient client = new OkapiHttpClient(WebClient.wrap(httpClient), new URL(context.getOkapiLocation()), context.getTenantId(), context.getToken(), null, null, null);
+    String startMsg = "loadJobProfileSnapshot:: Started loading jobProfileSnapshot by id: " + profileSnapshotId;
+    long startTime = System.currentTimeMillis();
+    logStart(startMsg, context, LOGGER);
 
     return client.get(context.getOkapiLocation() + "/data-import-profiles/jobProfileSnapshots/" + profileSnapshotId)
       .toCompletableFuture()
       .thenCompose(httpResponse -> {
+        String endMsg = "loadJobProfileSnapshot:: Loaded jobProfileSnapshot by id: " + profileSnapshotId;
+        logEnd(endMsg, context, startTime, LOGGER);
+
         if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
           LOGGER.info("JobProfileSnapshot was loaded by id '{}'", profileSnapshotId);
           return CompletableFuture.completedFuture(Optional.of(Json.decodeValue(httpResponse.getBody(), (ProfileSnapshotWrapper.class))));

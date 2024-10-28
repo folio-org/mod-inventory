@@ -42,6 +42,55 @@ public final class EventHandlingUtil {
     };
   }
 
+  public static Context constructExtendedContext(String tenantId, String token, String okapiUrl, String jobExecutionId, String recordId) {
+    return new ExtendedContext(tenantId, token, okapiUrl, jobExecutionId, recordId);
+  }
+
+  public static class ExtendedContext implements Context {
+
+    private String tenantId;
+    private String token;
+    private String okapiUrl;
+    private String jobExecutionId;
+    private String recordId;
+
+    public ExtendedContext(String tenantId, String token, String okapiUrl, String jobExecutionId, String recordId) {
+      this.tenantId = tenantId;
+      this.token = token;
+      this.okapiUrl = okapiUrl;
+      this.jobExecutionId = jobExecutionId;
+      this.recordId = recordId;
+    }
+
+    @Override
+    public String getTenantId() {
+      return tenantId;
+    }
+
+    @Override
+    public String getToken() {
+      return token;
+    }
+
+    @Override
+    public String getOkapiLocation() {
+      return okapiUrl;
+    }
+
+    @Override
+    public String getUserId() {
+      return "";
+    }
+
+    public String getJobExecutionId() {
+      return jobExecutionId;
+    }
+
+    public String getRecordId() {
+      return recordId;
+    }
+  }
+
   public static List<String> validateJsonByRequiredFields(final JsonObject jsonObject, final List<String> requiredFields) {
     ArrayList<String> errorMessages = new ArrayList<>();
     for (String fieldPath : requiredFields) {

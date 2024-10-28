@@ -57,7 +57,9 @@ import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logEnd;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logStart;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
 
 public class CreateItemEventHandler implements EventHandler {
@@ -107,6 +109,9 @@ public class CreateItemEventHandler implements EventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    long startTime = System.currentTimeMillis();
+    logStart("handle:: Started event processing for item creation", dataImportEventPayload, LOGGER);
+
     logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
@@ -134,7 +139,8 @@ public class CreateItemEventHandler implements EventHandler {
       Future<RecordToEntity> recordToItemFuture = idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToItemFuture.onSuccess(res -> {
         String deduplicationItemId = res.getEntityId();
-        Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+//        Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+        Context context = EventHandlingUtil.constructExtendedContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), jobExecutionId, recordId);
         ItemCollection itemCollection = storage.getItemCollection(context);
 
         mappingMetadataCache.get(jobExecutionId, context)
@@ -156,7 +162,7 @@ public class CreateItemEventHandler implements EventHandler {
             mappedItemList.forEach(e -> {
               JsonObject itemAsJson = getItemFromJson((JsonObject) e);
               Promise<Item> createItemPromise = Promise.promise();
-              processSingleItem(jobExecutionId, recordId, chunkId, itemCollection, itemAsJson)
+              processSingleItem(jobExecutionId, recordId, chunkId, itemCollection, itemAsJson, dataImportEventPayload)
                 .onSuccess(item -> {
                   createdItems.add(item);
                   createItemPromise.complete();
@@ -197,6 +203,7 @@ public class CreateItemEventHandler implements EventHandler {
           })
           .onComplete(ar -> {
             if (ar.succeeded()) {
+              logEnd("handle:: Completed event processing for item creation", dataImportEventPayload, startTime, LOGGER);
               dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
               orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, DI_INVENTORY_ITEM_CREATED, context)
                 .onComplete(result -> future.complete(dataImportEventPayload)
@@ -221,7 +228,7 @@ public class CreateItemEventHandler implements EventHandler {
     return future;
   }
 
-  private Future<Item> processSingleItem(String jobExecutionId, String recordId, String chunkId, ItemCollection itemCollection, JsonObject mappedItemJson) {
+  private Future<Item> processSingleItem(String jobExecutionId, String recordId, String chunkId, ItemCollection itemCollection, JsonObject mappedItemJson, DataImportEventPayload dataImportEventPayload) {
     List<String> errors = validateItem(mappedItemJson, requiredFields);
     LOGGER.debug(format("processSingleItem:: Trying to create item with id: %s", mappedItemJson.getString("id")));
     if (!errors.isEmpty()) {
@@ -231,9 +238,9 @@ public class CreateItemEventHandler implements EventHandler {
       return Future.failedFuture(msg);
     }
     Item mappedItem = ItemUtil.jsonToItem(mappedItemJson);
-    return isItemBarcodeUnique(mappedItemJson.getString("barcode"), itemCollection)
+    return isItemBarcodeUnique(mappedItemJson.getString("barcode"), itemCollection, dataImportEventPayload)
       .compose(isUnique -> isUnique
-        ? addItem(mappedItem, itemCollection)
+        ? addItem(mappedItem, itemCollection, dataImportEventPayload)
         : Future.failedFuture(format("Barcode must be unique, %s is already assigned to another item", mappedItemJson.getString("barcode"))));
   }
 
@@ -355,7 +362,7 @@ public class CreateItemEventHandler implements EventHandler {
     return errors;
   }
 
-  private Future<Boolean> isItemBarcodeUnique(String barcode, ItemCollection itemCollection) {
+  private Future<Boolean> isItemBarcodeUnique(String barcode, ItemCollection itemCollection, DataImportEventPayload dataImportEventPayload) {
 
     if (isEmpty(barcode)) {
       return Future.succeededFuture(Boolean.TRUE);
@@ -363,8 +370,14 @@ public class CreateItemEventHandler implements EventHandler {
 
     Promise<Boolean> promise = Promise.promise();
     try {
+      long startTime = System.currentTimeMillis();
+      logStart("isItemBarcodeUnique:: Started loading item by barcode", dataImportEventPayload, LOGGER);
+
       itemCollection.findByCql(CqlHelper.barcodeIs(barcode), PagingParameters.defaults(),
-        findResult -> promise.complete(findResult.getResult().records.isEmpty()),
+        findResult -> {
+          logEnd("isItemBarcodeUnique:: Loaded items collection by barcode", dataImportEventPayload, startTime, LOGGER);
+          promise.complete(findResult.getResult().records.isEmpty());
+        },
         failure -> promise.fail(failure.getReason()));
     } catch (UnsupportedEncodingException e) {
       LOGGER.warn(format("isItemBarcodeUnique:: Error to find items by barcode '%s'", barcode), e);
@@ -373,7 +386,7 @@ public class CreateItemEventHandler implements EventHandler {
     return promise.future();
   }
 
-  private Future<Item> addItem(Item item, ItemCollection itemCollection) {
+  private Future<Item> addItem(Item item, ItemCollection itemCollection, DataImportEventPayload dataImportEventPayload) {
     Promise<Item> promise = Promise.promise();
     List<CirculationNote> notes = item.getCirculationNotes()
       .stream()
@@ -387,7 +400,15 @@ public class CreateItemEventHandler implements EventHandler {
       notes.forEach(note -> LOGGER.trace("addItem:: circulation note with id : {} added to item with itemId: {}", note.getId(), item.getId()));
     }
 
-    itemCollection.add(item.withCirculationNotes(notes), success -> promise.complete(success.getResult()),
+    long startTime = System.currentTimeMillis();
+    String startMsg = "addItem:: Started creating item with id: " + item.getId();
+    logStart(startMsg, dataImportEventPayload, LOGGER);
+    itemCollection.add(item.withCirculationNotes(notes),
+      success -> {
+        String endMsg = "addItem:: Created item with id: " + item.getId();
+        logEnd(endMsg, dataImportEventPayload, startTime, LOGGER);
+        promise.complete(success.getResult());
+      },
       failure -> {
         //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
         if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {

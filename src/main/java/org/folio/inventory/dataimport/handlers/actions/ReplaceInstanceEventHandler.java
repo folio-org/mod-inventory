@@ -219,7 +219,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           .compose(instance -> {
             if (instanceToUpdate.getSource().equals(FOLIO.getValue())) {
               executeFieldsManipulation(instance, targetRecord);
-              return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection, tenantId);
+              return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection, tenantId, dataImportEventPayload);
             }
             if (instanceToUpdate.getSource().equals(MARC.getValue())) {
               setExternalIds(targetRecord, instance);

@@ -1,6 +1,8 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import static java.lang.String.format;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logEnd;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logStart;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -95,15 +97,20 @@ public class PrecedingSucceedingTitlesHelper {
     preparePrecedingTitles(instance, precedingSucceedingTitles);
     prepareSucceedingTitles(instance, precedingSucceedingTitles);
 
-    precedingSucceedingTitles.forEach(title -> precedingSucceedingTitlesRepository.post(title)
-      .whenComplete((v, e) -> {
-          if (e != null) {
-            LOGGER.error("Error during creating PrecedingSucceedingTitle for instance {}", instance.getId(), e);
-            LOGGER.info("Error during creating PrecedingSucceedingTitles retry creating new PrecedingSucceedingTitles");
-            precedingSucceedingTitlesRepository.post(title);
+    precedingSucceedingTitles.forEach(title -> {
+      long startTime = System.currentTimeMillis();
+      logStart("createPrecedingSucceedingTitles:: Started sending post precedingSucceedingTitle", context, LOGGER);
+      precedingSucceedingTitlesRepository.post(title)
+        .whenComplete((v, e) -> {
+          logEnd("createPrecedingSucceedingTitles:: Sent post precedingSucceedingTitle", context, startTime, LOGGER);
+            if (e != null) {
+              LOGGER.error("Error during creating PrecedingSucceedingTitle for instance {}", instance.getId(), e);
+              LOGGER.info("Error during creating PrecedingSucceedingTitles retry creating new PrecedingSucceedingTitles");
+              precedingSucceedingTitlesRepository.post(title);
+            }
           }
-        }
-      ));
+        );
+    });
     return Future.succeededFuture();
   }
 

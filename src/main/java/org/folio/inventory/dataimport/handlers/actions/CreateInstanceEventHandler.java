@@ -44,7 +44,9 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.*;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logEnd;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logStart;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.rest.jaxrs.model.ProfileSnapshotWrapper.ContentType.ACTION_PROFILE;
@@ -72,6 +74,9 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    long startTime = System.currentTimeMillis();
+    logStart("handle:: Started event processing for instance creation", dataImportEventPayload, LOGGER);
+
     logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
@@ -91,7 +96,8 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(format(ACTION_HAS_NO_MAPPING_MSG, jobExecutionId, recordId)));
       }
 
-      Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+//      Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      Context context = EventHandlingUtil.constructExtendedContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), jobExecutionId, recordId);
       Record targetRecord = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
       var sourceContent = targetRecord.getParsedRecord().getContent().toString();
 
@@ -137,17 +143,18 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                 return Future.failedFuture(msg);
               }
 
-              return addInstance(mappedInstance, instanceCollection)
+              return addInstance(mappedInstance, instanceCollection, dataImportEventPayload)
                 .compose(createdInstance -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
                 .compose(createdInstance -> executeFieldsManipulation(createdInstance, targetRecord))
                 .compose(createdInstance -> {
                   var targetContent = targetRecord.getParsedRecord().getContent().toString();
                   var content = reorderMarcRecordFields(sourceContent, targetContent);
                   targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(content));
-                  return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection, dataImportEventPayload.getTenant());
+                  return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection, dataImportEventPayload.getTenant(), dataImportEventPayload);
                 });
             })
             .onSuccess(ar -> {
+              logEnd("handle:: Completed event processing for instance creation", dataImportEventPayload, startTime, LOGGER);
               dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
               orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload, DI_INVENTORY_INSTANCE_CREATED, context)
                 .onComplete(result -> future.complete(dataImportEventPayload));
@@ -157,6 +164,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                 LOGGER.error("Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
                   recordId, chunkId, e);
               }
+              logEnd("handle:: Failed event processing for instance creation", dataImportEventPayload, startTime, LOGGER);
               future.completeExceptionally(e);
             });
         })
@@ -221,9 +229,17 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     }
   }
 
-  private Future<Instance> addInstance(Instance instance, InstanceCollection instanceCollection) {
+  private Future<Instance> addInstance(Instance instance, InstanceCollection instanceCollection, DataImportEventPayload dataImportEventPayload) {
     Promise<Instance> promise = Promise.promise();
-    instanceCollection.add(instance, success -> promise.complete(success.getResult()),
+    long startTime = System.currentTimeMillis();
+    String startMsg = "addInstance:: Started creating instance with id: " + instance.getId();
+    logStart(startMsg, dataImportEventPayload, LOGGER);
+
+    instanceCollection.add(instance, success -> {
+        String endMsg = "addInstance:: Created instance with id: " + instance.getId();
+        logEnd(endMsg, dataImportEventPayload, startTime, LOGGER);
+        promise.complete(success.getResult());
+      },
       failure -> {
         //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
         if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {

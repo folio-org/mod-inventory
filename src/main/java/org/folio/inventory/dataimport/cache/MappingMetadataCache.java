@@ -21,7 +21,11 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
+
+import static org.folio.inventory.dataimport.util.LoggerUtil.logEnd;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logStart;
 
 /**
  * Cache for storing MappingMetadataDto entities by jobExecutionId
@@ -64,10 +68,16 @@ public class MappingMetadataCache {
     LOGGER.debug("Trying to load MappingMetadata by jobExecutionId  '{}' for cache, okapi url: {}, tenantId: {}", jobExecutionId, context.getOkapiLocation(), context.getTenantId());
 
     OkapiHttpClient client = new OkapiHttpClient(WebClient.wrap(httpClient), new URL(context.getOkapiLocation()), context.getTenantId(), context.getToken(), null, null, null);
+    String startMsg = "loadMappingMetadata:: Started loading MappingMetadata by jobExecutionId: " + jobExecutionId;
+    long startTime = System.currentTimeMillis();
+    logStart(startMsg, context, LOGGER);
 
     return client.get(context.getOkapiLocation() + "/mapping-metadata/" + jobExecutionId)
       .toCompletableFuture()
       .thenCompose(httpResponse -> {
+        String endMsg = "loadMappingMetadata:: Loaded MappingMetadata by jobExecutionId: " + jobExecutionId;
+        logEnd(endMsg, context, startTime, LOGGER);
+
         if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
           LOGGER.info("MappingMetadata was loaded by jobExecutionId '{}'", jobExecutionId);
           return CompletableFuture.completedFuture(Optional.of(Json.decodeValue(httpResponse.getBody(), MappingMetadataDto.class)));
