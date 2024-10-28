@@ -51,8 +51,8 @@ public class JsonHelperTest {
   }
 
   @Test
-  public void shouldNotIncludeNullOeEmptyValues() {
-    var nutNullString = "notNull";
+  public void shouldNotIncludeOnlyNullValues() {
+    var notNullString = "notNull";
     var key = "key";
     var rootKey = "root";
     var arrayKey = "array";
@@ -64,7 +64,7 @@ public class JsonHelperTest {
     var arrayList = new ArrayList<JsonArray>();
     var jsonArray = new JsonArray();
 
-    nestedValue.put(nutNullString, nutNullString);
+    nestedValue.put(notNullString, notNullString);
     nestedValue.put("null", null);
     nestedValue.put("empty", "");
     value.put(key, nestedValue);
@@ -81,12 +81,12 @@ public class JsonHelperTest {
     var listResult = representation.getJsonArray(arrayKey);
     var arrayListResult = representation.getJsonArray(arrayListKey).getJsonArray(0).getJsonObject(0);
     var jsonArrayResult = representation.getJsonArray(jsonArrayKey).getJsonObject(0);
-    assertThat(objResult.size(), is(1));
-    assertThat(objResult.getValue(nutNullString), is(nutNullString));
-    assertThat(arrayListResult.size(), is(1));
-    assertThat(arrayListResult.getValue(nutNullString), is(nutNullString));
-    assertThat(jsonArrayResult.size(), is(1));
-    assertThat(jsonArrayResult.getValue(nutNullString), is(nutNullString));
-    assertThat(listResult.size(), is(1));
+    assertThat(objResult.size(), is(2));
+    assertThat(objResult.getValue(notNullString), is(notNullString));
+    assertThat(arrayListResult.size(), is(2));
+    assertThat(arrayListResult.getValue(notNullString), is(notNullString));
+    assertThat(jsonArrayResult.size(), is(2));
+    assertThat(jsonArrayResult.getValue(notNullString), is(notNullString));
+    assertThat(listResult.getList().size(), is(1));
   }
 }

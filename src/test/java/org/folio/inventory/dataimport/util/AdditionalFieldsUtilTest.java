@@ -241,18 +241,38 @@ public class AdditionalFieldsUtilTest {
   public void isFieldsFillingNeededTrue() {
     String instanceId = UUID.randomUUID().toString();
     String instanceHrId = UUID.randomUUID().toString();
-    Record record = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId).withInstanceHrid(UUID.randomUUID().toString()));
+    Record srcRecord = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId).withInstanceHrid(UUID.randomUUID().toString()));
     Instance instance = new Instance(instanceId, "0", instanceHrId, "", "", "");
-    Assert.assertTrue(AdditionalFieldsUtil.isFieldsFillingNeeded(record, instance));
+    Assert.assertTrue(AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance));
+
+    srcRecord.getExternalIdsHolder().setInstanceHrid(null);
+    Assert.assertTrue(AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance));
   }
 
   @Test
   public void isFieldsFillingNeededFalse() {
     String instanceId = UUID.randomUUID().toString();
     String instanceHrId = UUID.randomUUID().toString();
-    Record record = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId).withInstanceHrid(instanceHrId));
+    Record srcRecord = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId).withInstanceHrid(instanceHrId));
     Instance instance = new Instance(instanceId, "0", instanceHrId, "", "", "");
-    Assert.assertFalse(AdditionalFieldsUtil.isFieldsFillingNeeded(record, instance));
+    assertFalse(AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance));
+
+    srcRecord.getExternalIdsHolder().withInstanceId(instanceId);
+    instance = new Instance(UUID.randomUUID().toString(), "0", instanceHrId, "", "", "");
+    assertFalse(AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance));
+
+    srcRecord.getExternalIdsHolder().withInstanceId(null).withInstanceHrid(null);
+    instance = new Instance(UUID.randomUUID().toString(), "0", instanceHrId, "", "", "");
+    assertFalse(AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance));
+  }
+
+  @Test(expected = Exception.class)
+  public void isFieldsFillingNeededForExternalHolderInstanceShouldThrowException() {
+    String instanceId = UUID.randomUUID().toString();
+    String instanceHrId = UUID.randomUUID().toString();
+    Record srcRecord = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId).withInstanceHrid(instanceHrId));
+    Instance instance = new Instance(null, "0", instanceHrId, "", "", "");
+    AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance);
   }
 
   @Test

@@ -2,7 +2,6 @@ package org.folio.inventory.support;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import liquibase.util.StringUtil;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -86,8 +85,6 @@ public class JsonHelper {
     for (var key : itemObject.fieldNames()) {
       var value = itemObject.getValue(key);
       if (value == null) {
-        keysToRemove.add(key);
-      } else if (value instanceof String str && StringUtil.isEmpty(str)) {
         keysToRemove.add(key);
       } else if (value instanceof JsonObject object) {
         handleNullNestedFields(object);

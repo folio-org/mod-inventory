@@ -1,6 +1,18 @@
 ## 20.2.8 2024-10-28
 * [MODINV-1094](https://folio-org.atlassian.net/browse/MODINV-1094) Update suppressDiscovery in the MARC file when creating an instance with “suppressDiscovery=true” when importing data
 
+## 20.2.7 2024-06-26
+* [MODDATAIMP-1046](https://folio-org.atlassian.net/browse/MODDATAIMP-1046) Reorder only 00X fields while preserving system order for all other
+
+## 20.2.6 2024-05-29
+* [MODDATAIMP-1052](https://folio-org.atlassian.net/browse/MODDATAIMP-1052) Fix editing shared Instance via quickMARC from Member tenant
+
+## 20.2.5 2024-05-24
+* [MODINV-1026](https://folio-org.atlassian.net/browse/MODINV-1026) Don't group fields with same tags together
+
+## 20.2.4 2024-05-09
+* [MODINV-1024](https://folio-org.atlassian.net/browse/MODINV-1024) Fix error while updating Instances and Items with electronic access without URI field populated.
+
 ## 20.2.3 2024-04-25
 * [MODINV-1022](https://folio-org.atlassian.net/browse/MODINV-1022) Circulation History in Item record removed when Item is marked Missing/Long missing/ Unavailable
 
