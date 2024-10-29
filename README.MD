@@ -129,6 +129,19 @@ After setup, it is good to check logs in all related modules for errors.
   * DI_SRS_MARC_BIB_RECORD_MODIFIED_PARTITIONS
 Default value for all partitions is 1
 
+## Properties
+
+`AUTHORITY_EXTENDED` environment variable enables extended mapping for Authority to support advanced references classification in 5xx fields:
+* broader terms (`$wg` tag)
+* narrower terms (`$wh` tag)
+* earlier headings (`$wa` tag)
+* later headings (`$wb` tag)
+* saft*Trunc for every saft* field with "i" and numeric subfields excluded
+
+Default value for `AUTHORITY_EXTENDED` is `false`.
+The mapping itself is implemented in [data-import-processing-core](https://github.com/folio-org/data-import-processing-core).
+
+
 # Making Requests
 
 These modules provide HTTP based APIs rather than any UI themselves.
