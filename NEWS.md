@@ -1,4 +1,4 @@
-## 21.0.0-SNAPSHOT 2024-xx-xx
+## 21.0.0 2024-10-29
 * Existing "035" field is not retained the original position in imported record [MODINV-1049](https://folio-org.atlassian.net/browse/MODINV-1049)
 * Update Data Import logic to normalize OCLC 035 values [MODINV-949](https://folio-org.atlassian.net/browse/MODINV-949)
 * The sorting for Items on Instance details page is not worked [MODINV-1001](https://folio-org.atlassian.net/browse/MODINV-1001)
@@ -22,7 +22,6 @@
 * Disallow updating ownership of boundwith item [MODINV-1052](https://folio-org.atlassian.net/browse/MODINV-1052)
 * InstanceIngress update events consumption [MODINV-1008](https://folio-org.atlassian.net/browse/MODINV-1008)
 * Apply new date type fields to instance schema [MODINV-1067](https://folio-org.atlassian.net/browse/MODINV-1067)
-* Extend Authority with Additional fields [MODINV-1071](https://folio-org.atlassian.net/browse/MODINV-1071)
 * Keep original UUIDs when updating ownership of Holdings/Items [MODINV-1074](https://folio-org.atlassian.net/browse/MODINV-1074)
 * API version update [MODINV-1080](https://folio-org.atlassian.net/browse/MODINV-1080)
 * Add `inventory-storage.instances.retrieve.collection.post` and `inventory-storage.holdings.retrieve.collection.post` permissions
