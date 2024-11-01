@@ -36,6 +36,11 @@ class ExternalStorageModuleHoldingsRecordCollection
       tenant, token, "holdingsRecords", client);
   }
 
+  public ExternalStorageModuleHoldingsRecordCollection(String baseAddress, String tenant, String token, HttpClient client, String recordId, String jobExecutionId) {
+    super(String.format("%s/%s", baseAddress, "holdings-storage/holdings"),
+      tenant, token, "holdingsRecords", client, recordId, jobExecutionId);
+  }
+
   @Override
   protected HoldingsRecord mapFromJson(JsonObject holdingFromServer) {
     try {

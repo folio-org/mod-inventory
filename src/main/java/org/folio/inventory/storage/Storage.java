@@ -3,6 +3,7 @@ package org.folio.inventory.storage;
 import java.util.function.Function;
 
 import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.CollectionProvider;
 import org.folio.inventory.domain.HoldingsRecordCollection;
@@ -46,16 +47,31 @@ public class Storage {
   }
 
   public ItemCollection getItemCollection(Context context) {
+    if (context instanceof EventHandlingUtil.ExtendedContext extendedContext) {
+      return providerFactory.apply(context).getTraceableItemRecordCollection(
+        context.getTenantId(), context.getToken(), extendedContext.getRecordId(), extendedContext.getJobExecutionId());
+    }
+
     return providerFactory.apply(context).getItemCollection(
       context.getTenantId(), context.getToken());
   }
 
   public InstanceCollection getInstanceCollection(Context context) {
+    if (context instanceof EventHandlingUtil.ExtendedContext extendedContext) {
+      return providerFactory.apply(context).getTraceableInstanceCollection(
+        context.getTenantId(), context.getToken(), extendedContext.getRecordId(), extendedContext.getJobExecutionId());
+    }
+
     return providerFactory.apply(context).getInstanceCollection(
       context.getTenantId(), context.getToken());
   }
 
   public HoldingsRecordCollection getHoldingsRecordCollection(Context context) {
+    if (context instanceof EventHandlingUtil.ExtendedContext extendedContext) {
+      return providerFactory.apply(context).getTraceableHoldingsRecordCollection(
+        context.getTenantId(), context.getToken(), extendedContext.getRecordId(), extendedContext.getJobExecutionId());
+    }
+
     return providerFactory.apply(context).getHoldingsRecordCollection(
       context.getTenantId(), context.getToken());
   }

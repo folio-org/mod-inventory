@@ -18,7 +18,12 @@ class ExternalStorageModuleItemCollection
       tenant, token, "items", client);
   }
 
-  @Override
+    public ExternalStorageModuleItemCollection(String baseAddress, String tenant, String token, HttpClient client, String recordId, String jobExecutionId) {
+      super(String.format("%s/%s", baseAddress, "item-storage/items"),
+        tenant, token, "items", client, recordId, jobExecutionId);
+    }
+
+    @Override
   protected Item mapFromJson(JsonObject itemFromServer) {
     return ItemUtil.fromStoredItemRepresentation(itemFromServer);
   }

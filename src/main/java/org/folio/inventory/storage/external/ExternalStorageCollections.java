@@ -38,6 +38,23 @@ public class ExternalStorageCollections implements CollectionProvider {
   }
 
   @Override
+  public InstanceCollection getTraceableInstanceCollection(String tenantId, String token, String recordId, String jobExecutionId) {
+    return new ExternalStorageModuleInstanceCollection(baseAddress,
+      tenantId, token, client, recordId, jobExecutionId);
+  }
+
+  @Override
+  public HoldingsRecordCollection getTraceableHoldingsRecordCollection(String tenantId, String token, String recordId, String jobExecutionId) {
+    return new ExternalStorageModuleHoldingsRecordCollection(baseAddress,
+      tenantId, token, client, recordId, jobExecutionId);
+  }
+
+  @Override
+  public ItemCollection getTraceableItemRecordCollection(String tenantId, String token, String recordId, String jobExecutionId) {
+    return new ExternalStorageModuleItemCollection(baseAddress, tenantId, token, client, recordId, jobExecutionId);
+  }
+
+  @Override
   public AuthorityRecordCollection getAuthorityCollection(String tenantId, String token) {
     return new ExternalStorageModuleAuthorityRecordCollection(baseAddress,
         tenantId, token, client);

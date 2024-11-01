@@ -48,6 +48,13 @@ class ExternalStorageModuleInstanceCollection
     batchAddress = String.format("%s/%s", baseAddress, "instance-storage/batch/instances");
   }
 
+  public ExternalStorageModuleInstanceCollection(String baseAddress, String tenant, String token, HttpClient client, String recordId, String jobExecutionId) {
+    super(String.format("%s/%s", baseAddress, "instance-storage/instances"),
+      tenant, token, "instances", client, recordId, jobExecutionId);
+
+    batchAddress = String.format("%s/%s", baseAddress, "instance-storage/batch/instances");
+  }
+
   @Override
   protected JsonObject mapToRequest(Instance instance) {
     return instance.getJsonForStorage();

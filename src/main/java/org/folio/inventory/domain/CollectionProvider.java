@@ -11,4 +11,17 @@ public interface CollectionProvider {
   AuthorityRecordCollection getAuthorityCollection(String tenantId, String token);
   UserCollection getUserCollection(String tenantId, String token);
   HoldingsRecordsSourceCollection getHoldingsRecordsSourceCollection(String tenantId, String token);
+
+  default InstanceCollection getTraceableInstanceCollection(String tenantId, String token, String recordId, String jobExecutionId) {
+    return getInstanceCollection(tenantId, token);
+  }
+
+  default HoldingsRecordCollection getTraceableHoldingsRecordCollection(String tenantId, String token, String recordId, String jobExecutionId) {
+    return getHoldingsRecordCollection(tenantId, token);
+  }
+
+  default ItemCollection getTraceableItemRecordCollection(String tenantId, String token, String recordId, String jobExecutionId) {
+    return getItemCollection(tenantId, token);
+  }
+
 }

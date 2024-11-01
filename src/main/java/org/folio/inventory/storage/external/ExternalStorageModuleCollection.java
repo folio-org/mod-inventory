@@ -35,6 +35,9 @@ abstract class ExternalStorageModuleCollection<T> {
   private static final String TENANT_HEADER = "X-Okapi-Tenant";
   private static final String TOKEN_HEADER = "X-Okapi-Token";
 
+  private static final String RECORD_ID_HEADER = "X-Okapi-Record-Id";
+  private static final String JOB_EXECUTION_ID_HEADER = "X-Okapi-Job-Execution-Id";
+
   private static final Logger LOGGER = LogManager.getLogger(ExternalStorageModuleCollection.class);
 
 
@@ -43,6 +46,9 @@ abstract class ExternalStorageModuleCollection<T> {
   private final String token;
   private final String collectionWrapperPropertyName;
   protected final WebClient webClient;
+
+  private String jobExecutionId;
+  private String recordId;
 
   ExternalStorageModuleCollection(
     String storageAddress,
@@ -56,6 +62,12 @@ abstract class ExternalStorageModuleCollection<T> {
     this.token = token;
     this.collectionWrapperPropertyName = collectionWrapperPropertyName;
     this.webClient = WebClient.wrap(client);
+  }
+
+  ExternalStorageModuleCollection(String format, String tenant, String token, String instances, HttpClient client, String recordId, String jobExecutionId) {
+    this(format, tenant, token, instances, client);
+    this.recordId = recordId;
+    this.jobExecutionId = jobExecutionId;
   }
 
   protected abstract JsonObject mapToRequest(T record);
@@ -208,6 +220,13 @@ abstract class ExternalStorageModuleCollection<T> {
   }
 
   protected HttpRequest<Buffer> withStandardHeaders(HttpRequest<Buffer> request) {
+    if (recordId != null) {
+      request.putHeader(RECORD_ID_HEADER, recordId);
+    }
+    if (jobExecutionId != null) {
+      request.putHeader(JOB_EXECUTION_ID_HEADER, jobExecutionId);
+    }
+
     return request
       .putHeader(ACCEPT, "application/json, text/plain")
       .putHeader(TENANT_HEADER, tenant)
