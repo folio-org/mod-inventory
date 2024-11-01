@@ -22,7 +22,7 @@ import org.folio.rest.jaxrs.model.Record;
 import java.util.Map;
 
 import static java.lang.String.format;
-import static org.folio.inventory.dataimport.handlers.actions.AbstractAuthorityEventHandler.isAuthorityExtended;
+import static org.folio.inventory.dataimport.handlers.actions.AbstractAuthorityEventHandler.getIsAuthorityExtended;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
 
 public class AuthorityUpdateDelegate {
@@ -50,7 +50,7 @@ public class AuthorityUpdateDelegate {
       JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
       String authorityId = marcRecord.getExternalIdsHolder().getAuthorityId();
       LOGGER.info("Authority update with authorityId: {}", authorityId);
-      RecordMapper<Authority> recordMapper = isAuthorityExtended
+      RecordMapper<Authority> recordMapper = getIsAuthorityExtended()
         ? RecordMapperBuilder.buildMapper(FolioRecord.MARC_AUTHORITY_EXTENDED.value())
         : RecordMapperBuilder.buildMapper(MARC_FORMAT);
       var mappedAuthority = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
