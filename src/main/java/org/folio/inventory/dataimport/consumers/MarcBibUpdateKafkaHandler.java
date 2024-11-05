@@ -110,7 +110,7 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
                                    KafkaConsumerRecord<String, String> consumerRecord,
                                    MarcBibUpdate instanceEvent) {
     if (result.failed() && result.cause() instanceof OptimisticLockingException) {
-      processOLError(consumerRecord, promise, eventPayload, result);
+      processOLError(consumerRecord, promise, eventPayload, instanceEvent.getJobId(), result);
       return;
     }
 
@@ -132,12 +132,14 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   private void processOLError(KafkaConsumerRecord<String, String> value,
                               Promise<String> promise,
                               HashMap<String, String> eventPayload,
+                              String jobId,
                               AsyncResult<Instance> ar) {
     int currentRetryNumber = Optional.ofNullable(eventPayload.get(CURRENT_RETRY_NUMBER))
       .map(Integer::parseInt).orElse(0);
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       eventPayload.put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn("Error updating Instance - {}. Retry MarcBibUpdateKafkaHandler handler...", ar.cause().getMessage());
+      LOGGER.warn("Error updating Instance: {}, jobId: {},  Retry MarcBibUpdateKafkaHandler handler...",
+        ar.cause().getMessage(), jobId);
       handle(value).onComplete(result -> {
         if (result.succeeded()) {
           promise.complete(value.key());
