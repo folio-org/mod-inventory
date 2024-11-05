@@ -51,9 +51,18 @@ public class InstanceUpdateDelegate {
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
       return InstanceUtil.findInstanceById(instanceId, instanceCollection)
-        .onSuccess(existingInstance -> fillVersion(existingInstance, eventPayload))
-        .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
-        .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection));
+        .onSuccess(existingInstance -> {
+          LOGGER.info("handleInstanceUpdate:: current version: {}", existingInstance.getVersion());
+          fillVersion(existingInstance, eventPayload);
+        })
+        .compose(existingInstance -> {
+          LOGGER.info("handleInstanceUpdate:: version before mapping: {}", existingInstance.getVersion());
+          return updateInstance(existingInstance, mappedInstance);
+        })
+        .compose(updatedInstance -> {
+          LOGGER.info("handleInstanceUpdate:: version before update: {}", updatedInstance.getVersion());
+          return updateInstanceInStorage(updatedInstance, instanceCollection);
+        });
     } catch (Exception e) {
       LOGGER.error("Error updating inventory instance", e);
       return Future.failedFuture(e);
