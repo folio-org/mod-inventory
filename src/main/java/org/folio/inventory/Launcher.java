@@ -26,7 +26,10 @@ public class Launcher {
   private static final String MARC_BIB_UPDATE_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG = "inventory.kafka.MarcBibUpdateConsumerVerticle.instancesNumber";
   private static final String CONSORTIUM_INSTANCE_SHARING_CONSUMER_VERTICLE_NUMBER_CONFIG = "inventory.kafka.ConsortiumInstanceSharingConsumerVerticle.instancesNumber";
   private static final String INSTANCE_INGRESS_VERTICLE_NUMBER_CONFIG = "inventory.kafka.InstanceIngressConsumerVerticle.instancesNumber";
+  private static final String SYSTEM_USER_ENABLED = "SYSTEM_USER_ENABLED";
   private static final VertxAssistant vertxAssistant = new VertxAssistant();
+
+  public static boolean systemUserEnabled;
 
   private static String inventoryModuleDeploymentId;
   private static String consumerVerticleDeploymentId;
@@ -44,6 +47,8 @@ public class Launcher {
     Runtime.getRuntime().addShutdownHook(new Thread(Launcher::stop));
 
     Map<String, Object> config = new HashMap<>();
+
+    systemUserEnabled =  Boolean.parseBoolean(System.getProperty(SYSTEM_USER_ENABLED, "false"));
 
     String portString = System.getProperty("http.port", System.getProperty("port", "9403"));
     Integer port = Integer.valueOf(portString);

@@ -13,6 +13,8 @@ import org.folio.inventory.support.JsonHelper;
 
 import io.vertx.core.json.JsonObject;
 
+import static org.folio.inventory.Launcher.systemUserEnabled;
+
 public final class EventHandlingUtil {
   private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
 
@@ -27,7 +29,7 @@ public final class EventHandlingUtil {
 
       @Override
       public String getToken() {
-        return token;
+        return systemUserEnabled ? token : "";
       }
 
       @Override

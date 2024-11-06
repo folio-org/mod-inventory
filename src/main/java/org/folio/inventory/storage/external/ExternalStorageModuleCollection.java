@@ -5,6 +5,7 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.apache.http.HttpHeaders.ACCEPT;
 import static org.apache.http.HttpHeaders.CONTENT_TYPE;
 import static org.apache.http.HttpHeaders.LOCATION;
+import static org.folio.inventory.Launcher.systemUserEnabled;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.buffer.Buffer;
@@ -211,7 +212,7 @@ abstract class ExternalStorageModuleCollection<T> {
     return request
       .putHeader(ACCEPT, "application/json, text/plain")
       .putHeader(TENANT_HEADER, tenant)
-      .putHeader(TOKEN_HEADER, token);
+      .putHeader(TOKEN_HEADER, systemUserEnabled ? token : "");
   }
 
   protected CompletionStage<Response> mapAsyncResultToCompletionStage(
