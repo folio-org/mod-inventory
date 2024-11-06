@@ -91,12 +91,19 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
       Context context = EventHandlingUtil.constructContext(instanceEvent.getTenant(), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
       Record marcBibRecord = instanceEvent.getRecord();
 
-      mappingMetadataCache.getByRecordType(instanceEvent.getJobId(), context, MARC_BIB_RECORD_TYPE)
-        .map(metadataOptional -> metadataOptional.orElseThrow(() ->
-          new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, instanceEvent.getJobId()))))
-        .onSuccess(mappingMetadataDto -> ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto))
-        .compose(v -> instanceUpdateDelegate.handle(metaDataPayload, marcBibRecord, context))
-        .onComplete(ar -> processUpdateResult(ar, metaDataPayload, promise, consumerRecord, instanceEvent));
+      io.vertx.core.Context vertxContext = Vertx.currentContext();
+      if(vertxContext == null) {
+        return Future.failedFuture("saveRecords must be executed by a Vertx thread");
+      }
+
+      vertxContext.owner().executeBlocking(() ->
+        mappingMetadataCache.getByRecordType(instanceEvent.getJobId(), context, MARC_BIB_RECORD_TYPE)
+          .map(metadataOptional -> metadataOptional.orElseThrow(() ->
+            new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, instanceEvent.getJobId()))))
+          .onSuccess(mappingMetadataDto -> ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto))
+          .compose(v -> instanceUpdateDelegate.handle(metaDataPayload, marcBibRecord, context))
+          .onComplete(ar -> processUpdateResult(ar, metaDataPayload, promise, consumerRecord, instanceEvent))
+      );
       return promise.future();
     } catch (Exception e) {
       LOGGER.error(format("Failed to process data import kafka record from topic %s", consumerRecord.topic()), e);

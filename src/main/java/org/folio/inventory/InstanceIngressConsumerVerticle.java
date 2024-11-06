@@ -19,7 +19,7 @@ public class InstanceIngressConsumerVerticle extends KafkaConsumerVerticle {
   public void start(Promise<Void> startPromise) {
     var instanceIngressEventHandler = new InstanceIngressEventConsumer(vertx, getStorage(), getHttpClient(), getMappingMetadataCache());
 
-    var consumerWrapper = createConsumer(INSTANCE_INGRESS_TOPIC, BASE_PROPERTY, true);
+    var consumerWrapper = createConsumer(INSTANCE_INGRESS_TOPIC, BASE_PROPERTY);
 
     consumerWrapper.start(instanceIngressEventHandler, constructModuleName())
       .onFailure(startPromise::fail)
