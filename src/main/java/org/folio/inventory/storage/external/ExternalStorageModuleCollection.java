@@ -37,6 +37,7 @@ abstract class ExternalStorageModuleCollection<T> {
 
   private static final String RECORD_ID_HEADER = "X-Okapi-Record-Id";
   private static final String JOB_EXECUTION_ID_HEADER = "X-Okapi-Job-Execution-Id";
+  private static final String REQUEST_START_HEADER = "X-Okapi-Req-Start";
 
   private static final Logger LOGGER = LogManager.getLogger(ExternalStorageModuleCollection.class);
 
@@ -226,6 +227,8 @@ abstract class ExternalStorageModuleCollection<T> {
     if (jobExecutionId != null) {
       request.putHeader(JOB_EXECUTION_ID_HEADER, jobExecutionId);
     }
+
+    request.putHeader(REQUEST_START_HEADER, String.valueOf(System.currentTimeMillis()));
 
     return request
       .putHeader(ACCEPT, "application/json, text/plain")
