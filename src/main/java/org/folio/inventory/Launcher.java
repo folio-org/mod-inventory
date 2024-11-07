@@ -43,12 +43,14 @@ public class Launcher {
     throws InterruptedException, ExecutionException, TimeoutException {
 
     Logging.initialiseFormat();
+    final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
     Runtime.getRuntime().addShutdownHook(new Thread(Launcher::stop));
 
     Map<String, Object> config = new HashMap<>();
 
     systemUserEnabled =  Boolean.parseBoolean(System.getProperty(SYSTEM_USER_ENABLED, "false"));
+    log.info("SYSTEM_USER_ENABLED = {}", systemUserEnabled);
 
     String portString = System.getProperty("http.port", System.getProperty("port", "9403"));
     Integer port = Integer.valueOf(portString);
@@ -72,7 +74,6 @@ public class Launcher {
       Map<String, Object> consumerVerticlesConfig = getConsumerVerticleConfig();
       startConsumerVerticles(consumerVerticlesConfig);
     } else {
-      final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
       log.warn("\n*******\n*  WARNING: The module is running in Traffics Diversion mode (there is no Consumers to accept DI Kafka messages)\n*******");
     }
   }
