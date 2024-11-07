@@ -43,12 +43,11 @@ public class Launcher {
     throws InterruptedException, ExecutionException, TimeoutException {
 
     Logging.initialiseFormat();
-    final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
-
     Runtime.getRuntime().addShutdownHook(new Thread(Launcher::stop));
 
     Map<String, Object> config = new HashMap<>();
 
+    final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
     systemUserEnabled =  Boolean.parseBoolean(System.getProperty(SYSTEM_USER_ENABLED, "false"));
     log.info("SYSTEM_USER_ENABLED = {}", systemUserEnabled);
 

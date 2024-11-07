@@ -24,6 +24,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.HttpStatus;
+import org.folio.inventory.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
@@ -96,7 +97,8 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected Future<Instance> saveRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record srcRecord,
                                                             Instance instance, InstanceCollection instanceCollection, String tenantId) {
     Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId).postSourceStorageRecords(srcRecord)
+    getSourceStorageRecordsClientWrapper(payload.getOkapiUrl(), payload.getToken(), tenantId)
+      .postSourceStorageRecords(srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
@@ -119,7 +121,8 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected Future<Instance> putRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record srcRecord,
                                                              Instance instance, String matchedId, String tenantId) {
     Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId).putSourceStorageRecordsGenerationById(matchedId ,srcRecord)
+    getSourceStorageRecordsClientWrapper(payload.getOkapiUrl(), payload.getToken(), tenantId)
+      .putSourceStorageRecordsGenerationById(matchedId ,srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_OK.toInt()) {
@@ -205,6 +208,13 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   public SourceStorageRecordsClient getSourceStorageRecordsClient(String okapiUrl, String token, String tenantId) {
     return new SourceStorageRecordsClient(okapiUrl, tenantId, token, getHttpClient());
   }
+
+  public SourceStorageRecordsClientWrapper getSourceStorageRecordsClientWrapper(String okapiUrl,
+                                                                                String token,
+                                                                                String tenantId) {
+    return new SourceStorageRecordsClientWrapper(okapiUrl, tenantId, token, getHttpClient());
+  }
+
 
   public SourceStorageSnapshotsClient getSourceStorageSnapshotsClient(String okapiUrl, String token, String tenantId) {
     return new SourceStorageSnapshotsClient(okapiUrl, tenantId, token, getHttpClient());

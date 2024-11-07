@@ -330,7 +330,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
                                                List<MarcFieldProtectionSetting> marcFieldProtectionSettings,
                                                Instance instance, MappingParameters mappingParameters, String tenantId) {
     if (MARC_INSTANCE_SOURCE.equals(instance.getSource()) || CONSORTIUM_MARC.getValue().equals(instance.getSource())) {
-      SourceStorageRecordsClient client = getSourceStorageRecordsClient(dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getToken(), tenantId);
+      SourceStorageRecordsClient client = getSourceStorageRecordsClientWrapper(dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getToken(), tenantId);
       return getRecordByInstanceId(client, instance.getId())
         .compose(existingRecord -> {
           Record incomingRecord = Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
