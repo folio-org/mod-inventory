@@ -5,6 +5,7 @@ import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.apache.http.HttpHeaders.ACCEPT;
 import static org.apache.http.HttpHeaders.CONTENT_TYPE;
 import static org.apache.http.HttpHeaders.LOCATION;
+import static org.folio.inventory.Launcher.systemUserEnabled;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -22,6 +23,8 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebContext;
 
 public class OkapiHttpClient {
@@ -40,6 +43,8 @@ public class OkapiHttpClient {
   private final Consumer<Throwable> exceptionHandler;
 
   static Map<Vertx,WebClient> webClients = new HashMap<>();
+
+  private static final Logger LOGGER = LogManager.getLogger(OkapiHttpClient.class);
 
   static WebClient getWebClient(Vertx vertx) {
     return webClients.computeIfAbsent(vertx, WebClient::create);
@@ -201,13 +206,21 @@ public class OkapiHttpClient {
   }
 
   private HttpRequest<Buffer> withStandardHeaders(HttpRequest<Buffer> request) {
-    return request
+    request
       .putHeader(ACCEPT, "application/json, text/plain")
       .putHeader(OKAPI_URL_HEADER, okapiUrl.toString())
       .putHeader(TENANT_HEADER, this.tenantId)
-      .putHeader(TOKEN_HEADER, this.token)
       .putHeader(OKAPI_USER_ID_HEADER, this.userId)
       .putHeader(OKAPI_REQUEST_ID, this.requestId);
+
+    if (systemUserEnabled) {
+      LOGGER.info("Request by system user.");
+      request.putHeader(TOKEN_HEADER, this.token);
+    } else {
+      LOGGER.info("Request supported by sidecar.");
+    }
+
+    return request;
   }
 
   private static CompletionStage<Response> mapAsyncResultToCompletionStage(

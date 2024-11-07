@@ -209,10 +209,18 @@ abstract class ExternalStorageModuleCollection<T> {
   }
 
   protected HttpRequest<Buffer> withStandardHeaders(HttpRequest<Buffer> request) {
-    return request
+    request
       .putHeader(ACCEPT, "application/json, text/plain")
-      .putHeader(TENANT_HEADER, tenant)
-      .putHeader(TOKEN_HEADER, systemUserEnabled ? token : "");
+      .putHeader(TENANT_HEADER, tenant);
+
+    if (systemUserEnabled) {
+      LOGGER.info("Request by system user.");
+      request.putHeader(TOKEN_HEADER, token);
+    } else {
+      LOGGER.info("Request supported by sidecar.");
+    }
+
+    return request;
   }
 
   protected CompletionStage<Response> mapAsyncResultToCompletionStage(
