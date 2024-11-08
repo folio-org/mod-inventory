@@ -11,6 +11,8 @@ import org.apache.logging.log4j.Logger;
 import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.Record;
 
+import static org.folio.inventory.Launcher.systemUserEnabled;
+
 public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClient {
 
   protected static final Logger LOGGER = LogManager.getLogger(SourceStorageRecordsClientWrapper.class);
@@ -20,11 +22,15 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
   private final String okapiUrl;
   private final WebClient webClient;
 
+  private static String getToken(String token) {
+    return systemUserEnabled ? token : null;
+  }
+
   public SourceStorageRecordsClientWrapper(String okapiUrl, String tenantId, String token, HttpClient httpClient) {
-    super(okapiUrl, tenantId, token, httpClient);
+    super(okapiUrl, tenantId, getToken(token), httpClient);
     this.okapiUrl = okapiUrl;
     this.tenantId = tenantId;
-    this.token = token;
+    this.token = getToken(token);
     this.webClient = WebClient.wrap(httpClient);
   }
 
