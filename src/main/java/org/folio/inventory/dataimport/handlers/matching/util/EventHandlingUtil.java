@@ -29,7 +29,7 @@ public final class EventHandlingUtil {
 
       @Override
       public String getToken() {
-        return token;
+        return systemUserEnabled ? token : null;
       }
 
       @Override

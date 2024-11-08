@@ -5,13 +5,11 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.inventory.dataimport.handlers.actions.AbstractInstanceEventHandler;
 import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.Record;
-
-import static org.folio.inventory.Launcher.systemUserEnabled;
 
 public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClient {
 
@@ -40,13 +38,13 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
 
     io.vertx.ext.web.client.HttpRequest<Buffer> request =
       webClient.requestAbs(io.vertx.core.http.HttpMethod.POST,
-        okapiUrl + "/source-storage/records"+queryParams.toString());
+        okapiUrl + "/source-storage/records" + queryParams.toString());
 
     request.putHeader("Content-type", "application/json");
     request.putHeader("Accept", "application/json,text/plain");
 
     if (tenantId != null) {
-      if (systemUserEnabled) {
+      if (!StringUtils.isEmpty(token)) {
         LOGGER.info("Request by system user.");
         request.putHeader("X-Okapi-Token", token);
       } else {

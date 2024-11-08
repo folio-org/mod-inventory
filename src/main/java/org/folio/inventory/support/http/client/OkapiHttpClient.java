@@ -23,6 +23,7 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebContext;
@@ -213,7 +214,7 @@ public class OkapiHttpClient {
       .putHeader(OKAPI_USER_ID_HEADER, this.userId)
       .putHeader(OKAPI_REQUEST_ID, this.requestId);
 
-    if (systemUserEnabled) {
+    if (!StringUtils.isEmpty(this.token)) {
       LOGGER.info("Request by system user.");
       request.putHeader(TOKEN_HEADER, this.token);
     } else {
