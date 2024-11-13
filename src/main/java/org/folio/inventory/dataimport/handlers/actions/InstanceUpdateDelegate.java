@@ -22,7 +22,6 @@ import org.folio.rest.jaxrs.model.Record;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
@@ -127,7 +126,7 @@ public class InstanceUpdateDelegate {
                 });
               return updateFuture;
             })
-            .get(2, TimeUnit.SECONDS);
+            .get();
           return Future.succeededFuture(updatedInstance);
         } catch (Exception ex) {
           LOGGER.error("Error updating inventory instance: {}", ex.getMessage());
