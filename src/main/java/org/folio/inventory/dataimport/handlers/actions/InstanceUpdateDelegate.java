@@ -114,7 +114,7 @@ public class InstanceUpdateDelegate {
               LOGGER.info("handleInstanceUpdate:: version before update: {}, jobId: {}", modified.getVersion(), marcRecord.getSnapshotId());
               CompletableFuture<Instance> updateFuture = new CompletableFuture<>();
               instanceCollection.update(modified,
-                success -> updateFuture.complete(modified),
+                success -> updateFuture.thenApply(noInstance -> modified),
                 failure -> {
                   if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
                     var ex = new OptimisticLockingException(failure.getReason());
