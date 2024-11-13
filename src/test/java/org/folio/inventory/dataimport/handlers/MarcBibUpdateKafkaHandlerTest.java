@@ -3,6 +3,8 @@ package org.folio.inventory.dataimport.handlers;
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
 import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
 import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.FAIL;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.SUCCESS;
 import static org.mockito.AdditionalMatchers.not;
@@ -39,6 +41,7 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.consumers.MarcBibUpdateKafkaHandler;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
+import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
@@ -237,6 +240,8 @@ public class MarcBibUpdateKafkaHandlerTest {
     // given
     var topic = String.join(".", kafkaConfig.getEnvId(), TENANT_ID, LINKS_STATS.topicName());
     var expectedReportsCount = cluster.readValues(ReadKeyValues.from(topic)).size() + 1;
+    var instanceId = AdditionalFieldsUtil.getValue(record, TAG_999, SUBFIELD_I)
+      .orElse(null);
 
     MarcBibUpdate payload = new MarcBibUpdate()
       .withRecord(record)
@@ -264,7 +269,7 @@ public class MarcBibUpdateKafkaHandlerTest {
       .orElse(null);
 
     Assert.assertNotNull(report);
-    Assert.assertEquals(record.getId(), report.getInstanceId());
+    Assert.assertEquals(instanceId, report.getInstanceId());
     Assert.assertEquals(SUCCESS, report.getStatus());
     Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());
     Assert.assertEquals(payload.getTenant(), report.getTenant());
@@ -276,6 +281,8 @@ public class MarcBibUpdateKafkaHandlerTest {
     // given
     var topic = String.join(".", kafkaConfig.getEnvId(), TENANT_ID, LINKS_STATS.topicName());
     var expectedReportsCount = cluster.readValues(ReadKeyValues.from(topic)).size() + 1;
+    var instanceId = AdditionalFieldsUtil.getValue(record, TAG_999, SUBFIELD_I)
+      .orElse(null);
 
     record.setId(INVALID_INSTANCE_ID);
     record.getExternalIdsHolder().setInstanceId(INVALID_INSTANCE_ID);
@@ -305,7 +312,7 @@ public class MarcBibUpdateKafkaHandlerTest {
       .orElse(null);
 
     Assert.assertNotNull(report);
-    Assert.assertEquals(record.getId(), report.getInstanceId());
+    Assert.assertEquals(instanceId, report.getInstanceId());
     Assert.assertEquals(FAIL, report.getStatus());
     Assert.assertEquals(payload.getTenant(), report.getTenant());
     Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());

@@ -2,7 +2,6 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
@@ -76,14 +75,14 @@ public class InstanceUpdateDelegate {
 
   public Future<Instance> handleBlocking(Map<String, String> eventPayload, Record marcRecord, Context context) {
     logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
-    Promise<Instance> promise = Promise.promise();
-    io.vertx.core.Context vertxContext = Vertx.currentContext();
+    //Promise<Instance> promise = Promise.promise();
+//    io.vertx.core.Context vertxContext = Vertx.currentContext();
+//
+//    if(vertxContext == null) {
+//      return Future.failedFuture("handle:: operation must be executed by a Vertx thread");
+//    }
 
-    if(vertxContext == null) {
-      return Future.failedFuture("handle:: operation must be executed by a Vertx thread");
-    }
-
-    vertxContext.owner().executeBlocking(() -> {
+    //vertxContext.owner().executeBlocking(() -> {
         try {
           JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
           MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
@@ -94,23 +93,23 @@ public class InstanceUpdateDelegate {
           var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
           InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
-          CompletableFuture<Instance> getfuture = new CompletableFuture<>();
+          CompletableFuture<Instance> getFuture = new CompletableFuture<>();
           instanceCollection.findById(instanceId, success -> {
               if (success.getResult() == null) {
                 LOGGER.warn("findInstanceById:: Can't find Instance by id: {} ", instanceId);
                 throw new NotFoundException(format("Can't find Instance by id: %s", instanceId));
               } else {
                 LOGGER.info("handleInstanceUpdate:: current version: {}, jobId: {}", success.getResult().getVersion(), marcRecord.getSnapshotId());
-                getfuture.complete(success.getResult());
+                getFuture.complete(success.getResult());
               }
             },
             failure -> {
               LOGGER.warn(format("findInstanceById:: Error retrieving Instance by id %s - %s, status code %s", instanceId, failure.getReason(), failure.getStatusCode()));
               var ex = new ExternalResourceFetchException(format("Instance fetch by id: %s failed", instanceId), failure.getReason(), failure.getStatusCode(), null);
-              getfuture.completeExceptionally(ex);
+              getFuture.completeExceptionally(ex);
             });
 
-          return getfuture.thenCompose(existing -> updateInstance(existing, mappedInstance))
+          var updatedInstance = getFuture.thenCompose(existing -> updateInstance(existing, mappedInstance))
             .thenCompose(modified -> {
               LOGGER.info("handleInstanceUpdate:: version before update: {}, jobId: {}", modified.getVersion(), marcRecord.getSnapshotId());
               CompletableFuture<Instance> updateFuture = new CompletableFuture<>();
@@ -129,21 +128,23 @@ public class InstanceUpdateDelegate {
               return updateFuture;
             })
             .get(2, TimeUnit.SECONDS);
+          return Future.succeededFuture(updatedInstance);
         } catch (Exception ex) {
           LOGGER.error("Error updating inventory instance: {}", ex.getMessage());
-          throw ex;
+          return Future.failedFuture(ex);
+          //throw ex;
         }
-      },
-      r -> {
-        if (r.failed()) {
-          LOGGER.warn("handle:: Error during instance save", r.cause());
-          promise.fail(r.cause());
-        } else {
-          LOGGER.debug("saveRecords:: Instance save was successful");
-          promise.complete(r.result());
-        }
-      });
-    return promise.future();
+      //},
+//      r -> {
+//        if (r.failed()) {
+//          LOGGER.warn("handle:: Error during instance save", r.cause());
+//          promise.fail(r.cause());
+//        } else {
+//          LOGGER.debug("saveRecords:: Instance save was successful");
+//          promise.complete(r.result());
+//        }
+//      });
+    //return promise.future();
   }
 
   private void fillVersion(Instance existingInstance, Map<String, String> eventPayload) {
