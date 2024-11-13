@@ -22,6 +22,7 @@ import org.folio.rest.jaxrs.model.Record;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
@@ -99,7 +100,7 @@ public class InstanceUpdateDelegate {
                 throw new NotFoundException(format("Can't find Instance by id: %s", instanceId));
               } else {
                 LOGGER.info("handleInstanceUpdate:: current version: {}, jobId: {}", success.getResult().getVersion(), marcRecord.getSnapshotId());
-                getFuture.complete(success.getResult());
+                getFuture.thenApply(noInstance -> success.getResult());  //complete(success.getResult());
               }
             },
             failure -> {
@@ -126,7 +127,7 @@ public class InstanceUpdateDelegate {
                 });
               return updateFuture;
             })
-            .get();
+            .get(2, TimeUnit.SECONDS);
           return Future.succeededFuture(updatedInstance);
         } catch (Exception ex) {
           LOGGER.error("Error updating inventory instance: {}", ex.getMessage());
