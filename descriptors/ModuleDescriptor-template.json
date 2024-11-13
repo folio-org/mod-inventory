@@ -610,6 +610,10 @@
       "version": "1.0"
     },
     {
+      "id": "user-tenants",
+      "version": "1.0"
+    },
+    {
       "id": "item-storage",
       "version": "10.0"
     },
