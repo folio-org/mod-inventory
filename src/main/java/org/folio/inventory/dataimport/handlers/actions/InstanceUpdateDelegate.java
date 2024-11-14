@@ -60,6 +60,8 @@ public class InstanceUpdateDelegate {
         })
         .compose(existingInstance -> {
           LOGGER.info("handleInstanceUpdate:: version before mapping: {}", existingInstance.getVersion());
+          instanceCollection.findByIdAndUpdate(instanceId, existingInstance, context);
+          LOGGER.info("EXISTING: {}", existingInstance);
           return Future.fromCompletionStage(updateInstance(existingInstance, mappedInstance));
         })
         .compose(updatedInstance -> {

@@ -95,7 +95,7 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
         .map(metadataOptional -> metadataOptional.orElseThrow(() ->
           new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, instanceEvent.getJobId()))))
         .onSuccess(mappingMetadataDto -> ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto))
-        .compose(v -> instanceUpdateDelegate.handleBlocking(metaDataPayload, marcBibRecord, context))
+        .compose(v -> instanceUpdateDelegate.handle(metaDataPayload, marcBibRecord, context))
         .onComplete(ar -> processUpdateResult(ar, metaDataPayload, promise, consumerRecord, instanceEvent));
       return promise.future();
     } catch (Exception e) {

@@ -38,10 +38,10 @@ abstract class ExternalStorageModuleCollection<T> {
   private static final Logger LOGGER = LogManager.getLogger(ExternalStorageModuleCollection.class);
 
 
-  private final String storageAddress;
-  private final String tenant;
-  private final String token;
-  private final String collectionWrapperPropertyName;
+  protected final String storageAddress;
+  protected final String tenant;
+  protected final String token;
+  protected final String collectionWrapperPropertyName;
   protected final WebClient webClient;
 
   ExternalStorageModuleCollection(

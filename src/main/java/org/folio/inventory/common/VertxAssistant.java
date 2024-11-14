@@ -55,12 +55,13 @@ public class VertxAssistant {
   public void deployVerticle(String verticleClass,
                              Map<String, Object> config,
                              CompletableFuture<String> deployed) {
-    deployVerticle(verticleClass, config, 1, deployed);
+    deployVerticle(verticleClass, config, 1, null, deployed);
   }
 
   public void deployVerticle(String verticleClass,
                              Map<String, Object> config,
                              int verticleInstancesNumber,
+                             Integer workerPoolSize,
                              CompletableFuture<String> deployed) {
     long startTime = System.currentTimeMillis();
 
@@ -69,6 +70,10 @@ public class VertxAssistant {
     options.setConfig(new JsonObject(config));
     options.setWorker(true);
     options.setInstances(verticleInstancesNumber);
+
+    if (workerPoolSize != null) {
+      options.setWorkerPoolSize(workerPoolSize);
+    }
 
     vertx.deployVerticle(verticleClass, options, result -> {
       if (result.succeeded()) {
