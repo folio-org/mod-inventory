@@ -53,21 +53,25 @@ public class InstanceUpdateDelegate {
       var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
-      return InstanceUtil.findInstanceById(instanceId, instanceCollection)
-        .onSuccess(existingInstance -> {
-          LOGGER.info("handleInstanceUpdate:: current version: {}", existingInstance.getVersion());
-          fillVersion(existingInstance, eventPayload);
-        })
-        .compose(existingInstance -> {
-          LOGGER.info("handleInstanceUpdate:: version before mapping: {}", existingInstance.getVersion());
-          instanceCollection.findByIdAndUpdate(instanceId, existingInstance, context);
-          LOGGER.info("EXISTING: {}", existingInstance);
-          return Future.fromCompletionStage(updateInstance(existingInstance, mappedInstance));
-        })
-        .compose(updatedInstance -> {
-          LOGGER.info("handleInstanceUpdate:: version before update: {}", updatedInstance.getVersion());
-          return updateInstanceInStorage(updatedInstance, instanceCollection);
-        });
+      var updated = instanceCollection.findByIdAndUpdate(instanceId, mappedInstance)
+        .toCompletionStage().toCompletableFuture().get();
+      return Future.succeededFuture(updated);
+
+//      return InstanceUtil.findInstanceById(instanceId, instanceCollection)
+//        .onSuccess(existingInstance -> {
+//          LOGGER.info("handleInstanceUpdate:: current version: {}", existingInstance.getVersion());
+//          fillVersion(existingInstance, eventPayload);
+//        })
+//        .compose(existingInstance -> {
+//          LOGGER.info("handleInstanceUpdate:: version before mapping: {}", existingInstance.getVersion());
+//          instanceCollection.findByIdAndUpdate(instanceId, existingInstance, context);
+//          LOGGER.info("EXISTING: {}", existingInstance);
+//          return Future.fromCompletionStage(updateInstance(existingInstance, mappedInstance));
+//        })
+//        .compose(updatedInstance -> {
+//          LOGGER.info("handleInstanceUpdate:: version before update: {}", updatedInstance.getVersion());
+//          return updateInstanceInStorage(updatedInstance, instanceCollection);
+//        });
     } catch (Exception e) {
       LOGGER.error("Error updating inventory instance", e);
       return Future.failedFuture(e);

@@ -1,5 +1,8 @@
 package org.folio.inventory.storage.external;
 
+import static java.lang.String.format;
+import static org.apache.http.HttpHeaders.CONTENT_TYPE;
+import static org.apache.http.HttpHeaders.LOCATION;
 import static org.apache.http.HttpStatus.SC_CREATED;
 import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
@@ -15,11 +18,13 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import io.vertx.core.Future;
+import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.BatchResult;
 import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.Instance;
@@ -149,12 +154,54 @@ class ExternalStorageModuleInstanceCollection
     }
   }
 
-  private CompletableFuture<Instance> updateInstance(Instance existingInstance, org.folio.Instance mappedInstance) {
+  @Override
+  public Future<Instance> findByIdAndUpdate(String id, org.folio.Instance mappedInstance) {
+    var request = withStandardHeaders(webClient.getAbs(individualRecordLocation(id)));
+    return request.send()
+      .map(httpResponse -> new Response(httpResponse.statusCode(), httpResponse.bodyAsString(),
+          httpResponse.getHeader(CONTENT_TYPE), httpResponse.getHeader(LOCATION)))
+      .compose(response -> {
+        if (response.getStatusCode() == 200) {
+            JsonObject instanceFromServer = response.getJson();
+            try {
+              Instance found = mapFromJson(instanceFromServer);
+              return Future.succeededFuture(found);
+            } catch (Exception e) {
+              LOGGER.error("Failed to process retrieved Instance : {}", e.getMessage());
+              return Future.failedFuture(e);
+            }
+        }
+        LOGGER.error("Error retrieving Instance by id {} - {}, status code {}", id, response.getBody(), response.getStatusCode());
+        return Future.failedFuture("Error retrieving Instance by id: %s".formatted(id));
+      })
+      .map(existing -> modifyInstance(existing, mappedInstance))
+      .compose(modified -> {
+        String location = individualRecordLocation(id);
+        var putRequest = withStandardHeaders(webClient.putAbs(location));
+        return putRequest.sendJsonObject(mapToRequest(modified))
+          .map(httpResponse -> new Response(httpResponse.statusCode(), httpResponse.bodyAsString(),
+            httpResponse.getHeader(CONTENT_TYPE), httpResponse.getHeader(LOCATION)))
+          .compose(response -> {
+            if (response.getStatusCode() == 204) {
+              return Future.succeededFuture(modified);
+            } else if (response.getStatusCode() == HttpStatus.SC_CONFLICT) {
+              return Future.failedFuture(new OptimisticLockingException(response.getBody()));
+            }
+            LOGGER.error(format("Error updating Instance - %s, status code %s", response.getBody(), response.getStatusCode()));
+            return Future.failedFuture(response.getBody());
+          });
+      });
+  }
+
+  private String individualRecordLocation(String id) {
+    return String.format("%s/%s", storageAddress, id);
+  }
+
+  private Instance modifyInstance(Instance existingInstance, org.folio.Instance mappedInstance) {
     mappedInstance.setId(existingInstance.getId());
     JsonObject existing = JsonObject.mapFrom(existingInstance);
     JsonObject mapped = JsonObject.mapFrom(mappedInstance);
     JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, mapped);
-    Instance mergedInstance = Instance.fromJson(mergedInstanceAsJson);
-    return CompletableFuture.completedFuture(mergedInstance);
+    return Instance.fromJson(mergedInstanceAsJson);
   }
 }
