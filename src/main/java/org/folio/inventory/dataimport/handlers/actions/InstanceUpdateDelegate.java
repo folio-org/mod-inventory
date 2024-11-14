@@ -11,7 +11,6 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
-import org.folio.inventory.exceptions.ExternalResourceFetchException;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
@@ -94,42 +93,49 @@ public class InstanceUpdateDelegate {
           var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
           InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
-          CompletableFuture<Instance> getFuture = new CompletableFuture<>();
-          instanceCollection.findById(instanceId, success -> {
-              if (success.getResult() == null) {
-                LOGGER.warn("findInstanceById:: Can't find Instance by id: {} ", instanceId);
-                var ex = new NotFoundException(format("Can't find Instance by id: %s", instanceId));
-                getFuture.completeExceptionally(ex);
-              } else {
-                LOGGER.info("handleInstanceUpdate:: current version: {}, jobId: {}", success.getResult().getVersion(), marcRecord.getSnapshotId());
-                getFuture.complete(success.getResult());
-              }
-            },
-            failure -> {
-              LOGGER.warn(format("findInstanceById:: Error retrieving Instance by id %s - %s, status code %s", instanceId, failure.getReason(), failure.getStatusCode()));
-              var ex = new ExternalResourceFetchException(format("Instance fetch by id: %s failed", instanceId), failure.getReason(), failure.getStatusCode(), null);
-              getFuture.completeExceptionally(ex);
-            });
+          var existing = instanceCollection.findById(instanceId).get(5, TimeUnit.SECONDS);
+          if (existing == null) {
+            throw new NotFoundException(format("Can't find Instance by id: %s", instanceId));
+          }
+          var modified = updateInstance(existing, mappedInstance).get(5, TimeUnit.SECONDS);
+          return instanceCollection.update(modified).get(5, TimeUnit.SECONDS);
 
-          return getFuture.thenCompose(existing -> updateInstance(existing, mappedInstance))
-            .thenCompose(modified -> {
-              LOGGER.info("handleInstanceUpdate:: version before update: {}, jobId: {}", modified.getVersion(), marcRecord.getSnapshotId());
-              CompletableFuture<Instance> updateFuture = new CompletableFuture<>();
-              instanceCollection.update(modified,
-                success -> updateFuture.complete(modified),
-                failure -> {
-                  if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
-                    var ex = new OptimisticLockingException(failure.getReason());
-                    updateFuture.completeExceptionally(ex);
-                  } else {
-                    LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
-                    var ex = new ExternalResourceFetchException(format("Error updating Instance - %s", failure.getReason()), failure.getReason(), failure.getStatusCode(), null);
-                    updateFuture.completeExceptionally(ex);
-                  }
-                });
-              return updateFuture;
-            })
-            .get(2, TimeUnit.SECONDS);
+//          CompletableFuture<Instance> getFuture = new CompletableFuture<>();
+//          instanceCollection.findById(instanceId, success -> {
+//              if (success.getResult() == null) {
+//                LOGGER.warn("findInstanceById:: Can't find Instance by id: {} ", instanceId);
+//                var ex = new NotFoundException(format("Can't find Instance by id: %s", instanceId));
+//                getFuture.completeExceptionally(ex);
+//              } else {
+//                LOGGER.info("handleInstanceUpdate:: current version: {}, jobId: {}", success.getResult().getVersion(), marcRecord.getSnapshotId());
+//                getFuture.complete(success.getResult());
+//              }
+//            },
+//            failure -> {
+//              LOGGER.warn(format("findInstanceById:: Error retrieving Instance by id %s - %s, status code %s", instanceId, failure.getReason(), failure.getStatusCode()));
+//              var ex = new ExternalResourceFetchException(format("Instance fetch by id: %s failed", instanceId), failure.getReason(), failure.getStatusCode(), null);
+//              getFuture.completeExceptionally(ex);
+//            });
+//
+//          return getFuture.thenCompose(existing -> updateInstance(existing, mappedInstance))
+//            .thenCompose(modified -> {
+//              LOGGER.info("handleInstanceUpdate:: version before update: {}, jobId: {}", modified.getVersion(), marcRecord.getSnapshotId());
+//              CompletableFuture<Instance> updateFuture = new CompletableFuture<>();
+//              instanceCollection.update(modified,
+//                success -> updateFuture.complete(modified),
+//                failure -> {
+//                  if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+//                    var ex = new OptimisticLockingException(failure.getReason());
+//                    updateFuture.completeExceptionally(ex);
+//                  } else {
+//                    LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
+//                    var ex = new ExternalResourceFetchException(format("Error updating Instance - %s", failure.getReason()), failure.getReason(), failure.getStatusCode(), null);
+//                    updateFuture.completeExceptionally(ex);
+//                  }
+//                });
+//              return updateFuture;
+//            })
+//            .get(2, TimeUnit.SECONDS);
           //return Future.succeededFuture(updatedInstance);
         } catch (Exception ex) {
           LOGGER.error("Error updating inventory instance: {}", ex.getMessage());
