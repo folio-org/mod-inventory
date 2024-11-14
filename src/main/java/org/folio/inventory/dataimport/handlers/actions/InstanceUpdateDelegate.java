@@ -2,7 +2,6 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
@@ -75,14 +74,14 @@ public class InstanceUpdateDelegate {
 
   public Future<Instance> handleBlocking(Map<String, String> eventPayload, Record marcRecord, Context context) {
     logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
-    Promise<Instance> promise = Promise.promise();
-    io.vertx.core.Context vertxContext = Vertx.currentContext();
-
-    if(vertxContext == null) {
-      return Future.failedFuture("handle:: operation must be executed by a Vertx thread");
-    }
-
-    vertxContext.owner().executeBlocking(() -> {
+//    Promise<Instance> promise = Promise.promise();
+//    io.vertx.core.Context vertxContext = Vertx.currentContext();
+//
+//    if(vertxContext == null) {
+//      return Future.failedFuture("handle:: operation must be executed by a Vertx thread");
+//    }
+//
+//    vertxContext.owner().executeBlocking(() -> {
         try {
           JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
           MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
@@ -95,10 +94,11 @@ public class InstanceUpdateDelegate {
 
           var existing = instanceCollection.findById(instanceId).get(5, TimeUnit.SECONDS);
           if (existing == null) {
-            throw new NotFoundException(format("Can't find Instance by id: %s", instanceId));
+            return Future.failedFuture(new NotFoundException(format("Can't find Instance by id: %s", instanceId)));
           }
           var modified = updateInstance(existing, mappedInstance).get(5, TimeUnit.SECONDS);
-          return instanceCollection.update(modified).get(5, TimeUnit.SECONDS);
+          var updated = instanceCollection.update(modified).get(5, TimeUnit.SECONDS);
+          return Future.succeededFuture(updated);
 
 //          CompletableFuture<Instance> getFuture = new CompletableFuture<>();
 //          instanceCollection.findById(instanceId, success -> {
@@ -139,20 +139,20 @@ public class InstanceUpdateDelegate {
           //return Future.succeededFuture(updatedInstance);
         } catch (Exception ex) {
           LOGGER.error("Error updating inventory instance: {}", ex.getMessage());
-          //return Future.failedFuture(ex);
-          throw ex;
+          return Future.failedFuture(ex);
+          //throw ex;
         }
-      },
-      r -> {
-        if (r.failed()) {
-          LOGGER.warn("handle:: Error during instance save", r.cause());
-          promise.fail(r.cause());
-        } else {
-          LOGGER.debug("saveRecords:: Instance save was successful");
-          promise.complete(r.result());
-        }
-      });
-    return promise.future();
+//      },
+//      r -> {
+//        if (r.failed()) {
+//          LOGGER.warn("handle:: Error during instance save", r.cause());
+//          promise.fail(r.cause());
+//        } else {
+//          LOGGER.debug("saveRecords:: Instance save was successful");
+//          promise.complete(r.result());
+//        }
+//      });
+//    return promise.future();
   }
 
   private void fillVersion(Instance existingInstance, Map<String, String> eventPayload) {
