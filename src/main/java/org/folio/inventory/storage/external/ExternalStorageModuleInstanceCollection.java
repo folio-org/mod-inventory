@@ -1,6 +1,7 @@
 package org.folio.inventory.storage.external;
 
 import static java.lang.String.format;
+import static org.apache.http.HttpHeaders.ACCEPT;
 import static org.apache.http.HttpHeaders.CONTENT_TYPE;
 import static org.apache.http.HttpHeaders.LOCATION;
 import static org.apache.http.HttpStatus.SC_CREATED;
@@ -134,11 +135,13 @@ class ExternalStorageModuleInstanceCollection
   public Future<String> findByIdAndUpdate(String id, org.folio.Instance mappedInstance, Context context) {
     try {
       var client = java.net.http.HttpClient.newHttpClient();
+      LOGGER.info("OKAPI: {}, full PATH: {}", context.getOkapiLocation(), String.format("%s/%s", context.getOkapiLocation(), individualRecordLocation(id)));
       var getRequest = java.net.http.HttpRequest.newBuilder()
-        .uri(URI.create(String.format("%s/%s/%s", context.getOkapiLocation(), storageAddress, id)))
+        .uri(URI.create(String.format("%s/%s", context.getOkapiLocation(), individualRecordLocation(id))))
         .headers(OKAPI_TOKEN_HEADER, context.getToken(),
           OKAPI_TENANT_HEADER, context.getTenantId(),
-          OKAPI_URL_HEADER, context.getOkapiLocation())
+          OKAPI_URL_HEADER, context.getOkapiLocation(),
+          ACCEPT, "application/json, text/plain")
         .GET()
         .build();
 
@@ -153,6 +156,8 @@ class ExternalStorageModuleInstanceCollection
         LOGGER.info("jsonObj: {}", jsonObj);
         LOGGER.info("ins: {}", ins);
       }
+
+      LOGGER.info("RESPONSE: {}", response);
 
       return Future.succeededFuture(response.body());
     } catch (Exception e) {
