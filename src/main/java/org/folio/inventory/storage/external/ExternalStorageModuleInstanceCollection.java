@@ -135,9 +135,9 @@ class ExternalStorageModuleInstanceCollection
   public Future<String> findByIdAndUpdate(String id, org.folio.Instance mappedInstance, Context context) {
     try {
       var client = java.net.http.HttpClient.newHttpClient();
-      LOGGER.info("OKAPI: {}, full PATH: {}", context.getOkapiLocation(), String.format("%s/%s", context.getOkapiLocation(), individualRecordLocation(id)));
+      LOGGER.info("full PATH: {}", individualRecordLocation(id));
       var getRequest = java.net.http.HttpRequest.newBuilder()
-        .uri(URI.create(String.format("%s/%s", context.getOkapiLocation(), individualRecordLocation(id))))
+        .uri(URI.create(individualRecordLocation(id)))
         .headers(OKAPI_TOKEN_HEADER, context.getToken(),
           OKAPI_TENANT_HEADER, context.getTenantId(),
           OKAPI_URL_HEADER, context.getOkapiLocation(),
