@@ -193,7 +193,7 @@ abstract class ExternalStorageModuleCollection<T> {
     deleteLocation(individualRecordLocation(id), completionCallback, failureCallback);
   }
 
-  private String individualRecordLocation(String id) {
+  protected String individualRecordLocation(String id) {
     return String.format("%s/%s", storageAddress, id);
   }
 

@@ -7,7 +7,5 @@ import org.folio.inventory.domain.SearchableCollection;
 
 public interface InstanceCollection
   extends AsynchronousCollection<Instance>, SearchableCollection<Instance> {
-  Future<String> findByIdAndUpdate(String id, org.folio.Instance mappedInstance, Context context);
-
-  Future<Instance> findByIdAndUpdate(String id, org.folio.Instance mappedInstance);
+  Future<Instance> findByIdAndUpdate(String id, org.folio.Instance mappedInstance, Context context);
 }

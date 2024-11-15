@@ -92,10 +92,7 @@ public class InstanceUpdateDelegate {
           var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
           InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
-          var syncCallInstance = instanceCollection.findByIdAndUpdate(instanceId, mappedInstance, context);
-          LOGGER.info("syncCallInstance: {}", syncCallInstance);
-
-          return instanceCollection.findByIdAndUpdate(instanceId, mappedInstance);
+          return instanceCollection.findByIdAndUpdate(instanceId, mappedInstance, context);
           //return Future.succeededFuture(updated);
         } catch (Exception ex) {
           LOGGER.error("Error updating inventory instance: {}", ex.getMessage());
