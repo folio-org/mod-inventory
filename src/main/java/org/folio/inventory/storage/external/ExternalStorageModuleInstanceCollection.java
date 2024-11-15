@@ -8,16 +8,13 @@ import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.vertx.core.Future;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
@@ -47,6 +44,7 @@ class ExternalStorageModuleInstanceCollection
   private static final Logger LOGGER = LogManager.getLogger(ExternalStorageModuleInstanceCollection.class);
 
   private final String batchAddress;
+  private final java.net.http.HttpClient httpClient;
 
   ExternalStorageModuleInstanceCollection(
     String baseAddress,
@@ -58,6 +56,7 @@ class ExternalStorageModuleInstanceCollection
       tenant, token, "instances", client);
 
     batchAddress = String.format("%s/%s", baseAddress, "instance-storage/batch/instances");
+    httpClient = java.net.http.HttpClient.newHttpClient();
   }
 
   @Override
@@ -82,7 +81,7 @@ class ExternalStorageModuleInstanceCollection
 
     List<JsonObject> jsonList = items.stream()
       .map(this::mapToRequest)
-      .collect(Collectors.toList());
+      .toList();
 
     JsonObject batchRequest = new JsonObject()
       .put("instances", new JsonArray(jsonList))
@@ -130,104 +129,76 @@ class ExternalStorageModuleInstanceCollection
   }
 
   @Override
-  public Future<Instance> findByIdAndUpdate(String id, org.folio.Instance mappedInstance, Context context) {
+  public Instance findByIdAndUpdate(String id, JsonObject instance, Context inventoryContext) {
     try {
-      var client = java.net.http.HttpClient.newHttpClient();
-      var uri = URI.create(individualRecordLocation(id));
-      var getRequest = java.net.http.HttpRequest.newBuilder()
-        .uri(uri)
-        .headers(OKAPI_TOKEN_HEADER, context.getToken(),
-          OKAPI_TENANT_HEADER, context.getTenantId(),
-          OKAPI_URL_HEADER, context.getOkapiLocation(),
-          ACCEPT, "application/json, text/plain")
-        .GET()
-        .build();
+      var response = findInstance(id, inventoryContext);
+      var responseBody = response.body();
 
-      var response = client.send(getRequest, java.net.http.HttpResponse.BodyHandlers.ofString());
       if (response.statusCode() != 200) {
         LOGGER.warn("Failed to fetch Instance by id - {} : {}, {}",
-          id, response.body(), response.statusCode());
-        return Future.failedFuture(new ExternalResourceFetchException(
-          "Failed to fetch Instance record", response.body(), response.statusCode(), null));
+          id, responseBody, response.statusCode());
+        throw new ExternalResourceFetchException("Failed to fetch Instance record",
+          responseBody, response.statusCode(), null);
       }
 
-      var jsonInstance = new JsonObject(response.body());
+      var jsonInstance = new JsonObject(responseBody);
       var existingInstance = mapFromJson(jsonInstance);
-      var modified = modifyInstance(existingInstance, mappedInstance);
+      var modified = modifyInstance(existingInstance, instance);
       var modifiedInstance = mapToRequest(modified);
 
-      ObjectMapper objectMapper = new ObjectMapper();
-      var mapAsStr = objectMapper.writerFor(Map.class).writeValueAsString(modifiedInstance.getMap());
       LOGGER.info("modifiedInstance 1: {}", modifiedInstance.encode());
 
-      var putRequest = java.net.http.HttpRequest.newBuilder()
-        .uri(uri)
-        .headers(OKAPI_TOKEN_HEADER, context.getToken(),
-          OKAPI_TENANT_HEADER, context.getTenantId(),
-          OKAPI_URL_HEADER, context.getOkapiLocation(),
-          ACCEPT, "application/json, text/plain")
-        .PUT(java.net.http.HttpRequest.BodyPublishers.ofString(modifiedInstance.encode()))
-        .build();
-
-      response = client.send(putRequest, java.net.http.HttpResponse.BodyHandlers.ofString());
+      response = updateInstance(id, modifiedInstance, inventoryContext);
       if (response.statusCode() != 204) {
         var errorMessage = String.format("Failed to update Instance by id - %s : %s, %s",
-        id, response.body(), response.statusCode());
+          id, response.body(), response.statusCode());
         LOGGER.warn(errorMessage);
-        return Future.failedFuture(new EventProcessingException(errorMessage));
+        throw new EventProcessingException(errorMessage);
       }
 
-      return Future.succeededFuture(modified);
-    } catch (Exception e) {
-      LOGGER.error("Error updating instance", e);
-      return Future.failedFuture(e);
+      return modified;
+    } catch (InterruptedException | IOException ex) {
+      throw new EventProcessingException(
+        String.format("Failed to find and update Instance by id - %s", id), ex);
     }
   }
 
-//  @Override
-//  public Future<Instance> findByIdAndUpdate(String id, org.folio.Instance mappedInstance) {
-//    var request = withStandardHeaders(webClient.getAbs(individualRecordLocation(id)));
-//    return request.send()
-//      .map(httpResponse -> new Response(httpResponse.statusCode(), httpResponse.bodyAsString(),
-//        httpResponse.getHeader(CONTENT_TYPE), httpResponse.getHeader(LOCATION)))
-//      .compose(response -> {
-//        if (response.getStatusCode() == 200) {
-//          JsonObject instanceFromServer = response.getJson();
-//          try {
-//            Instance found = mapFromJson(instanceFromServer);
-//            return Future.succeededFuture(found);
-//          } catch (Exception e) {
-//            LOGGER.error("Failed to process retrieved Instance : {}", e.getMessage());
-//            return Future.failedFuture(e);
-//          }
-//        }
-//        LOGGER.error("Error retrieving Instance by id {} - {}, status code {}", id, response.getBody(), response.getStatusCode());
-//        return Future.failedFuture("Error retrieving Instance by id: %s".formatted(id));
-//      })
-//      .map(existing -> modifyInstance(existing, mappedInstance))
-//      .compose(modified -> {
-//        String location = individualRecordLocation(id);
-//        var putRequest = withStandardHeaders(webClient.putAbs(location));
-//        return putRequest.sendJsonObject(mapToRequest(modified))
-//          .map(httpResponse -> new Response(httpResponse.statusCode(), httpResponse.bodyAsString(),
-//            httpResponse.getHeader(CONTENT_TYPE), httpResponse.getHeader(LOCATION)))
-//          .compose(response -> {
-//            if (response.getStatusCode() == 204) {
-//              return Future.succeededFuture(modified);
-//            } else if (response.getStatusCode() == HttpStatus.SC_CONFLICT) {
-//              return Future.failedFuture(new OptimisticLockingException(response.getBody()));
-//            }
-//            LOGGER.error(format("Error updating Instance - %s, status code %s", response.getBody(), response.getStatusCode()));
-//            return Future.failedFuture(response.getBody());
-//          });
-//      });
-//  }
+  private java.net.http.HttpResponse<String> findInstance(String id, Context inventoryContext)
+    throws IOException, InterruptedException {
+    var uri = URI.create(individualRecordLocation(id));
+    var getRequest = java.net.http.HttpRequest.newBuilder()
+      .uri(uri)
+      .headers(OKAPI_TOKEN_HEADER, inventoryContext.getToken(),
+        OKAPI_TENANT_HEADER, inventoryContext.getTenantId(),
+        OKAPI_URL_HEADER, inventoryContext.getOkapiLocation(),
+        ACCEPT, "application/json, text/plain")
+      .GET()
+      .build();
 
-  private Instance modifyInstance(Instance existingInstance, org.folio.Instance mappedInstance) {
-    mappedInstance.setId(existingInstance.getId());
+    return httpClient.send(getRequest, java.net.http.HttpResponse.BodyHandlers.ofString());
+  }
+
+  private java.net.http.HttpResponse<String> updateInstance(String id,
+                                                            JsonObject modifiedInstance,
+                                                            Context inventoryContext)
+    throws IOException, InterruptedException {
+    var uri = URI.create(individualRecordLocation(id));
+    var putRequest = java.net.http.HttpRequest.newBuilder()
+      .uri(uri)
+      .headers(OKAPI_TOKEN_HEADER, inventoryContext.getToken(),
+        OKAPI_TENANT_HEADER, inventoryContext.getTenantId(),
+        OKAPI_URL_HEADER, inventoryContext.getOkapiLocation(),
+        ACCEPT, "application/json, text/plain")
+      .PUT(java.net.http.HttpRequest.BodyPublishers.ofString(modifiedInstance.encode()))
+      .build();
+
+    return httpClient.send(putRequest, java.net.http.HttpResponse.BodyHandlers.ofString());
+  }
+
+  private Instance modifyInstance(Instance existingInstance, JsonObject instance) {
+    instance.put(Instance.ID, existingInstance.getId());
     JsonObject existing = JsonObject.mapFrom(existingInstance);
-    JsonObject mapped = JsonObject.mapFrom(mappedInstance);
-    JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, mapped);
+    JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, instance);
     return Instance.fromJson(mergedInstanceAsJson);
   }
 }

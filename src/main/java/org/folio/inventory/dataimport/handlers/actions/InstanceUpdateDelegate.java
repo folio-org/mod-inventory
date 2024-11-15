@@ -21,7 +21,6 @@ import org.folio.rest.jaxrs.model.Record;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import static java.lang.String.format;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
@@ -74,7 +73,7 @@ public class InstanceUpdateDelegate {
 
   public Future<Instance> handleBlocking(Map<String, String> eventPayload, Record marcRecord, Context context) {
     logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
-    Promise<Future<Instance>> promise = Promise.promise();
+    Promise<Instance> promise = Promise.promise();
     io.vertx.core.Context vertxContext = Vertx.currentContext();
 
     if(vertxContext == null) {
@@ -90,13 +89,12 @@ public class InstanceUpdateDelegate {
           LOGGER.info("Instance update with instanceId: {}", instanceId);
           RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_BIB_RECORD_FORMAT);
           var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
+          var modified = JsonObject.mapFrom(mappedInstance);
           InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
-          return instanceCollection.findByIdAndUpdate(instanceId, mappedInstance, context);
-          //return Future.succeededFuture(updated);
+          return instanceCollection.findByIdAndUpdate(instanceId, modified, context);
         } catch (Exception ex) {
           LOGGER.error("Error updating inventory instance: {}", ex.getMessage());
-          //return Future.failedFuture(ex);
           throw ex;
         }
       },
@@ -109,7 +107,7 @@ public class InstanceUpdateDelegate {
           promise.complete(r.result());
         }
       });
-    return promise.future().compose(Function.identity());
+    return promise.future();
   }
 
   private void fillVersion(Instance existingInstance, Map<String, String> eventPayload) {
