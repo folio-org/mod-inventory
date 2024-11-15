@@ -158,7 +158,7 @@ class ExternalStorageModuleInstanceCollection
 
       ObjectMapper objectMapper = new ObjectMapper();
       var mapAsStr = objectMapper.writerFor(Map.class).writeValueAsString(modifiedInstance.getMap());
-      LOGGER.info("modifiedInstance: {}", mapAsStr);
+      LOGGER.info("modifiedInstance 1: {}", modifiedInstance.encode());
 
       var putRequest = java.net.http.HttpRequest.newBuilder()
         .uri(uri)
@@ -166,7 +166,7 @@ class ExternalStorageModuleInstanceCollection
           OKAPI_TENANT_HEADER, context.getTenantId(),
           OKAPI_URL_HEADER, context.getOkapiLocation(),
           ACCEPT, "application/json, text/plain")
-        .PUT(java.net.http.HttpRequest.BodyPublishers.ofString(mapAsStr))
+        .PUT(java.net.http.HttpRequest.BodyPublishers.ofString(modifiedInstance.encode()))
         .build();
 
       response = client.send(putRequest, java.net.http.HttpResponse.BodyHandlers.ofString());
