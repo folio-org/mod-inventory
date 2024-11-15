@@ -113,7 +113,7 @@ public class Launcher {
     vertxAssistant.deployVerticle(QuickMarcConsumerVerticle.class.getName(),
       consumerVerticlesConfig, quickMarcConsumerVerticleNumber, null, future3);
     vertxAssistant.deployVerticle(MarcBibUpdateConsumerVerticle.class.getName(),
-      consumerVerticlesConfig, marcBibUpdateConsumerVerticleNumber, 1, future4);
+      consumerVerticlesConfig, marcBibUpdateConsumerVerticleNumber, null, future4);
     vertxAssistant.deployVerticle(ConsortiumInstanceSharingConsumerVerticle.class.getName(),
       consumerVerticlesConfig, consortiumInstanceSharingVerticleNumber, null, future5);
     vertxAssistant.deployVerticle(InstanceIngressConsumerVerticle.class.getName(),
