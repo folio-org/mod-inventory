@@ -11,10 +11,12 @@ import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Future;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -154,13 +156,17 @@ class ExternalStorageModuleInstanceCollection
       var modified = modifyInstance(existingInstance, mappedInstance);
       var modifiedInstance = mapToRequest(modified);
 
+      ObjectMapper objectMapper = new ObjectMapper();
+      var mapAsStr = objectMapper.writerFor(Map.class).writeValueAsString(modifiedInstance.getMap());
+      LOGGER.info("modifiedInstance: {}", mapAsStr);
+
       var putRequest = java.net.http.HttpRequest.newBuilder()
         .uri(uri)
         .headers(OKAPI_TOKEN_HEADER, context.getToken(),
           OKAPI_TENANT_HEADER, context.getTenantId(),
           OKAPI_URL_HEADER, context.getOkapiLocation(),
           ACCEPT, "application/json, text/plain")
-        .PUT(java.net.http.HttpRequest.BodyPublishers.ofString(modifiedInstance.mapTo(String.class)))
+        .PUT(java.net.http.HttpRequest.BodyPublishers.ofString(mapAsStr))
         .build();
 
       response = client.send(putRequest, java.net.http.HttpResponse.BodyHandlers.ofString());
