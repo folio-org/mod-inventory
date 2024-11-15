@@ -21,7 +21,7 @@ import org.folio.rest.jaxrs.model.Record;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static java.lang.String.format;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
@@ -60,8 +60,6 @@ public class InstanceUpdateDelegate {
         })
         .compose(existingInstance -> {
           LOGGER.info("handleInstanceUpdate:: version before mapping: {}", existingInstance.getVersion());
-          instanceCollection.findByIdAndUpdate(instanceId, existingInstance, context);
-          LOGGER.info("EXISTING: {}", existingInstance);
           return Future.fromCompletionStage(updateInstance(existingInstance, mappedInstance));
         })
         .compose(updatedInstance -> {
@@ -76,7 +74,7 @@ public class InstanceUpdateDelegate {
 
   public Future<Instance> handleBlocking(Map<String, String> eventPayload, Record marcRecord, Context context) {
     logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
-    Promise<Instance> promise = Promise.promise();
+    Promise<Future<Instance>> promise = Promise.promise();
     io.vertx.core.Context vertxContext = Vertx.currentContext();
 
     if(vertxContext == null) {
@@ -94,8 +92,10 @@ public class InstanceUpdateDelegate {
           var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
           InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
-          return instanceCollection.findByIdAndUpdate(instanceId, mappedInstance)
-            .toCompletionStage().toCompletableFuture().get(60, TimeUnit.SECONDS);
+          var syncCallInstance = instanceCollection.findByIdAndUpdate(instanceId, mappedInstance, context);
+          LOGGER.info("syncCallInstance: {}", syncCallInstance);
+
+          return instanceCollection.findByIdAndUpdate(instanceId, mappedInstance);
           //return Future.succeededFuture(updated);
         } catch (Exception ex) {
           LOGGER.error("Error updating inventory instance: {}", ex.getMessage());
@@ -112,7 +112,7 @@ public class InstanceUpdateDelegate {
           promise.complete(r.result());
         }
       });
-    return promise.future();
+    return promise.future().compose(Function.identity());
   }
 
   private void fillVersion(Instance existingInstance, Map<String, String> eventPayload) {

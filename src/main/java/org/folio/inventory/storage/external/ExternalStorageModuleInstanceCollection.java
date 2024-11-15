@@ -17,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Future;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
@@ -130,7 +131,7 @@ class ExternalStorageModuleInstanceCollection
   }
 
   @Override
-  public Future<Instance> findByIdAndUpdate(String id, Instance instance, Context context) {
+  public Future<String> findByIdAndUpdate(String id, org.folio.Instance mappedInstance, Context context) {
     try {
       var client = java.net.http.HttpClient.newHttpClient();
       var getRequest = java.net.http.HttpRequest.newBuilder()
@@ -145,9 +146,15 @@ class ExternalStorageModuleInstanceCollection
       if (response.statusCode() == 200) {
          LOGGER.info("body: {}", response.body());
          LOGGER.info("jsonObject: {}", new JsonObject(response.body()));
+        ObjectMapper objectMapper = new ObjectMapper();
+        var jsonObj = objectMapper.readValue(response.body(), JsonObject.class);
+        var ins = objectMapper.readValue(response.body(), Instance.class);
+
+        LOGGER.info("jsonObj: {}", jsonObj);
+        LOGGER.info("ins: {}", ins);
       }
 
-      return Future.succeededFuture();
+      return Future.succeededFuture(response.body());
     } catch (Exception e) {
       LOGGER.error("Error updating instance", e);
       return Future.failedFuture(e);
