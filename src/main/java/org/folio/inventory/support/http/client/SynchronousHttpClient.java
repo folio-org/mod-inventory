@@ -68,7 +68,7 @@ public class SynchronousHttpClient extends AbstractOkapiHttpClient {
       .uri(uri)
       .GET();
 
-    getHeadersMap().forEach(request::header);
+    getHeaders().forEach(request::header);
 
     return request.build();
   }
@@ -79,7 +79,7 @@ public class SynchronousHttpClient extends AbstractOkapiHttpClient {
       .uri(uri)
       .PUT(java.net.http.HttpRequest.BodyPublishers.ofString(requestBody.encode()));
 
-    getHeadersMap().forEach(request::header);
+    getHeaders().forEach(request::header);
 
     return request.build();
   }

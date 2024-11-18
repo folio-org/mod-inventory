@@ -182,7 +182,7 @@ public class OkapiHttpClient extends AbstractOkapiHttpClient {
   }
 
   private HttpRequest<Buffer> withStandardHeaders(HttpRequest<Buffer> request) {
-    getHeadersMap().forEach(request::putHeader);
+    getHeaders().forEach(request::putHeader);
     return request;
   }
 
