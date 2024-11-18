@@ -1,3 +1,6 @@
+## 21.0.1 2024-11-18
+* Missing interface dependencies in module descriptor [MODINV-1117](https://folio-org.atlassian.net/browse/MODINV-1117)
+
 ## 21.0.0 2024-10-29
 * Existing "035" field is not retained the original position in imported record [MODINV-1049](https://folio-org.atlassian.net/browse/MODINV-1049)
 * Update Data Import logic to normalize OCLC 035 values [MODINV-949](https://folio-org.atlassian.net/browse/MODINV-949)
