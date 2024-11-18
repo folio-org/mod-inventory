@@ -2,7 +2,6 @@ package org.folio.inventory.support.http.client;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.failedFuture;
-import static org.apache.http.HttpHeaders.ACCEPT;
 import static org.apache.http.HttpHeaders.CONTENT_TYPE;
 import static org.apache.http.HttpHeaders.LOCATION;
 
@@ -13,7 +12,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -21,23 +19,11 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
-
 import org.folio.inventory.common.WebContext;
 
-public class OkapiHttpClient {
-  private static final String TENANT_HEADER = "X-Okapi-Tenant";
-  private static final String TOKEN_HEADER = "X-Okapi-Token";
-  private static final String OKAPI_URL_HEADER = "X-Okapi-Url";
-  private static final String OKAPI_USER_ID_HEADER = "X-Okapi-User-Id";
-  private static final String OKAPI_REQUEST_ID = "X-Okapi-Request-Id";
+public class OkapiHttpClient extends AbstractOkapiHttpClient {
 
   private final WebClient webClient;
-  private final URL okapiUrl;
-  private final String tenantId;
-  private final String token;
-  private final String userId;
-  private final String requestId;
-  private final Consumer<Throwable> exceptionHandler;
 
   static Map<Vertx,WebClient> webClients = new HashMap<>();
 
@@ -81,13 +67,8 @@ public class OkapiHttpClient {
   public OkapiHttpClient(WebClient webClient, URL okapiUrl, String tenantId,
     String token, String userId, String requestId, Consumer<Throwable> exceptionHandler) {
 
+    super(okapiUrl, tenantId, userId, token, requestId, exceptionHandler);
     this.webClient = webClient;
-    this.okapiUrl = okapiUrl;
-    this.tenantId = tenantId;
-    this.userId = userId;
-    this.token = token;
-    this.requestId = requestId;
-    this.exceptionHandler = exceptionHandler;
   }
 
   public CompletionStage<Response> post(URL url, JsonObject body) {
@@ -201,13 +182,8 @@ public class OkapiHttpClient {
   }
 
   private HttpRequest<Buffer> withStandardHeaders(HttpRequest<Buffer> request) {
-    return request
-      .putHeader(ACCEPT, "application/json, text/plain")
-      .putHeader(OKAPI_URL_HEADER, okapiUrl.toString())
-      .putHeader(TENANT_HEADER, this.tenantId)
-      .putHeader(TOKEN_HEADER, this.token)
-      .putHeader(OKAPI_USER_ID_HEADER, this.userId)
-      .putHeader(OKAPI_REQUEST_ID, this.requestId);
+    getHeadersMap().forEach(request::putHeader);
+    return request;
   }
 
   private static CompletionStage<Response> mapAsyncResultToCompletionStage(

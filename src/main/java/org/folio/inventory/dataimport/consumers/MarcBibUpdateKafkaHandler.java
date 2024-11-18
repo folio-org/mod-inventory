@@ -80,6 +80,7 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
       MarcBibUpdate instanceEvent = OBJECT_MAPPER.readValue(consumerRecord.value(), MarcBibUpdate.class);
       Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(consumerRecord.headers());
       HashMap<String, String> metaDataPayload = new HashMap<>();
+      var jobId = instanceEvent.getJobId();
 
       LOGGER.info("Event payload has been received with event type: {} by jobId: {}", instanceEvent.getType(), instanceEvent.getJobId());
 
@@ -91,12 +92,13 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
       Context context = EventHandlingUtil.constructContext(instanceEvent.getTenant(), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
       Record marcBibRecord = instanceEvent.getRecord();
 
-      mappingMetadataCache.getByRecordType(instanceEvent.getJobId(), context, MARC_BIB_RECORD_TYPE)
-        .map(metadataOptional -> metadataOptional.orElseThrow(() ->
-          new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, instanceEvent.getJobId()))))
-        .onSuccess(mappingMetadataDto -> ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto))
-        .compose(v -> instanceUpdateDelegate.handleBlocking(metaDataPayload, marcBibRecord, context))
+      var mappingMetadataDto =
+        mappingMetadataCache.getByRecordTypeBlocking(jobId, context, MARC_BIB_RECORD_TYPE)
+          .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobId)));
+      ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto);
+      instanceUpdateDelegate.handleBlocking(metaDataPayload, marcBibRecord, context)
         .onComplete(ar -> processUpdateResult(ar, metaDataPayload, promise, consumerRecord, instanceEvent));
+
       return promise.future();
     } catch (Exception e) {
       LOGGER.error(format("Failed to process data import kafka record from topic %s", consumerRecord.topic()), e);
