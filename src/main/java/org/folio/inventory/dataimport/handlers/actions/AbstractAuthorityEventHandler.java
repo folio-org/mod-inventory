@@ -235,4 +235,7 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
   public static void setAuthorityExtendedMode(boolean newIsAuthoritiesExtended) {
     isAuthorityExtended = newIsAuthoritiesExtended;
   }
+   public static boolean getIsAuthorityExtended() {
+    return isAuthorityExtended;
+  }
 }

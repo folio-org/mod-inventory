@@ -12,15 +12,19 @@ import java.util.function.Consumer;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.folio.inventory.dataimport.handlers.actions.AbstractAuthorityEventHandler;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnit;
 
 import org.folio.Authority;
 import org.folio.inventory.TestUtil;
@@ -31,8 +35,9 @@ import org.folio.inventory.dataimport.handlers.actions.AuthorityUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.quickmarc.UpdateAuthorityQuickMarcEventHandler;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
+import org.mockito.junit.MockitoRule;
 
-@RunWith(MockitoJUnitRunner.class)
+@RunWith(JUnitParamsRunner.class)
 public class UpdateAuthorityQuickMarcEventHandlerTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/authority-rules.json";
@@ -53,6 +58,9 @@ public class UpdateAuthorityQuickMarcEventHandlerTest {
   private JsonObject mappingRules;
   private JsonObject record;
   private Authority existingAuthority;
+
+  @Rule
+  public MockitoRule mockitoRule = MockitoJUnit.rule();
 
   @Before
   public void setUp() throws IOException {
@@ -83,7 +91,9 @@ public class UpdateAuthorityQuickMarcEventHandlerTest {
   }
 
   @Test
-  public void shouldProcessEvent() {
+  @Parameters({"true", "false"})
+  public void shouldProcessEvent(String isAuthorityExtendedMode) {
+    AbstractAuthorityEventHandler.setAuthorityExtendedMode(Boolean.parseBoolean(isAuthorityExtendedMode));
     HashMap<String, String> eventPayload = new HashMap<>();
     eventPayload.put("RECORD_TYPE", "MARC_AUTHORITY");
     eventPayload.put("MARC_AUTHORITY", record.encode());
@@ -107,6 +117,7 @@ public class UpdateAuthorityQuickMarcEventHandlerTest {
     Assert.assertEquals("token", argument.getValue().getToken());
     Assert.assertEquals("dummy", argument.getValue().getTenantId());
     Assert.assertEquals("http://localhost", argument.getValue().getOkapiLocation());
+    AbstractAuthorityEventHandler.setAuthorityExtendedMode(false);
   }
 
   @Test
