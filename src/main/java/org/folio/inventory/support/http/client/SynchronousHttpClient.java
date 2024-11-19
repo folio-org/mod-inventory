@@ -29,7 +29,7 @@ public class SynchronousHttpClient extends AbstractOkapiHttpClient {
   public SynchronousHttpClient(URL okapiUrl, String tenantId,
                                String token, String userId, String requestId, Consumer<Throwable> exceptionHandler) {
 
-    super(okapiUrl, tenantId, token, userId, requestId, exceptionHandler);
+    super(okapiUrl, tenantId, userId, token, requestId, exceptionHandler);
     this.httpClient = HttpClient.newBuilder().build();
   }
 

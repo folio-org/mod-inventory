@@ -27,7 +27,7 @@ public abstract class AbstractOkapiHttpClient {
   private final Consumer<Throwable> exceptionHandler;
   private final Map<String, String> headers;
 
-  protected AbstractOkapiHttpClient(URL okapiUrl, String tenantId, String token, String userId, String requestId, Consumer<Throwable> exceptionHandler) {
+  protected AbstractOkapiHttpClient(URL okapiUrl, String tenantId, String userId, String token, String requestId, Consumer<Throwable> exceptionHandler) {
     this.okapiUrl = okapiUrl;
     this.tenantId = tenantId;
     this.token = token;
