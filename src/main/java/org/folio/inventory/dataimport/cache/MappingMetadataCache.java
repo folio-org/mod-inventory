@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.cache;
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -12,6 +13,9 @@ import java.net.URL;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
 import lombok.SneakyThrows;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpStatus;
@@ -63,11 +67,48 @@ public class MappingMetadataCache {
 
   public Optional<MappingMetadataDto> getByRecordTypeBlocking(String jobExecutionId, Context context, String recordType) {
     try {
-      return cache.synchronous().get(jobExecutionId, key -> getMappingMetadata(recordType, context));
+      var mapping = cache.synchronous().asMap().get(jobExecutionId);
+      if (mapping != null && mapping.isPresent()) {
+        return mapping;
+      }
+      mapping = getMappingMetadata(recordType, context);
+      cache.put(jobExecutionId, CompletableFuture.completedFuture(mapping));
+      return mapping;
+      //return cache.synchronous().asMap().computeIfAbsent(jobExecutionId, key -> getMappingMetadata(recordType, context));
     } catch (Exception e) {
       LOGGER.warn(MAPPING_PARAM_LOAD_ERROR_LOG_MSG_TEMPLATE, jobExecutionId, e);
       throw e;
     }
+  }
+
+  public <T> Future<T> getByRecordTypeAndHandle(String jobExecutionId, Context context, String recordType,
+                                                Supplier<Exception> metadataMissingErrorSupplier,
+                                                Function<MappingMetadataDto, Future<T>> handler) {
+    Promise<Future<T>> promise = Promise.promise();
+    try {
+      var mapping = cache.synchronous().asMap().get(jobExecutionId);
+      if (mapping != null && mapping.isPresent()) {
+        return handler.apply(mapping.get());
+      }
+
+      Future.fromCompletionStage(cache.get(jobExecutionId, (key, executor) ->
+          loadMappingMetadata(recordType, context)
+            .thenCompose(mappingMetadataDto -> {
+              if (mappingMetadataDto.isEmpty()) {
+                promise.fail(metadataMissingErrorSupplier.get());
+              } else {
+                var handlerResult = handler.apply(mappingMetadataDto.get());
+                promise.complete(handlerResult);
+              }
+              return CompletableFuture.completedFuture(mappingMetadataDto);
+            })
+      ));
+    } catch (Exception ex) {
+      LOGGER.warn(MAPPING_PARAM_LOAD_ERROR_LOG_MSG_TEMPLATE, jobExecutionId, ex);
+      promise.fail(ex);
+    }
+
+    return promise.future().compose(Function.identity());
   }
 
   @SneakyThrows
@@ -126,6 +167,7 @@ public class MappingMetadataCache {
     var response = httpSyncClient.get(context.getOkapiLocation() + "/mapping-metadata/type/" + recordType);
 
     LOGGER.info("Mapping params are fetched for recordType: {}", recordType);
+    LOGGER.info("Response: {}", response);
 
     if (response.getStatusCode() == HttpStatus.SC_OK) {
       LOGGER.info("MappingMetadata was fetched by recordType '{}'", recordType);

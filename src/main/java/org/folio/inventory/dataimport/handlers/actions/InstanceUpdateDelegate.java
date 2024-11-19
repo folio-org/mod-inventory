@@ -71,16 +71,16 @@ public class InstanceUpdateDelegate {
     }
   }
 
-  public Future<Instance> handleBlocking(Map<String, String> eventPayload, Record marcRecord, Context context) {
+  public Instance handleBlocking(Map<String, String> eventPayload, Record marcRecord, Context context) {
     logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
-    Promise<Instance> promise = Promise.promise();
-    io.vertx.core.Context vertxContext = Vertx.currentContext();
-
-    if(vertxContext == null) {
-      return Future.failedFuture("handle:: operation must be executed by a Vertx thread");
-    }
-
-    vertxContext.owner().executeBlocking(() -> {
+//    Promise<Instance> promise = Promise.promise();
+//    io.vertx.core.Context vertxContext = Vertx.currentContext();
+//
+//    if(vertxContext == null) {
+//      return Future.failedFuture("handleBlocking:: operation must be executed by a Vertx thread");
+//    }
+//
+//    vertxContext.owner().executeBlocking(() -> {
         try {
           JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
           MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
@@ -97,17 +97,17 @@ public class InstanceUpdateDelegate {
           LOGGER.error("Error updating inventory instance: {}", ex.getMessage());
           throw ex;
         }
-      },
-      r -> {
-        if (r.failed()) {
-          LOGGER.warn("handle:: Error during instance save", r.cause());
-          promise.fail(r.cause());
-        } else {
-          LOGGER.debug("saveRecords:: Instance save was successful");
-          promise.complete(r.result());
-        }
-      });
-    return promise.future();
+//      },
+//      r -> {
+//        if (r.failed()) {
+//          LOGGER.warn("handle:: Error during instance save", r.cause());
+//          promise.fail(r.cause());
+//        } else {
+//          LOGGER.debug("saveRecords:: Instance save was successful");
+//          promise.complete(r.result());
+//        }
+//      });
+//    return promise.future();
   }
 
   private void fillVersion(Instance existingInstance, Map<String, String> eventPayload) {

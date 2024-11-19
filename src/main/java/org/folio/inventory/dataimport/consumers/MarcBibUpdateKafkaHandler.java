@@ -55,6 +55,7 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
+  private static final String OKAPI_USER_ID = "x-okapi-user-id";
   private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
@@ -76,7 +77,7 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> consumerRecord) {
     try {
-      Promise<String> promise = Promise.promise();
+      Promise<Instance> promise = Promise.promise();
       MarcBibUpdate instanceEvent = OBJECT_MAPPER.readValue(consumerRecord.value(), MarcBibUpdate.class);
       Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(consumerRecord.headers());
       HashMap<String, String> metaDataPayload = new HashMap<>();
@@ -89,17 +90,48 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
         LOGGER.error(message);
         return Future.failedFuture(message);
       }
-      Context context = EventHandlingUtil.constructContext(instanceEvent.getTenant(), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
+      Context context = EventHandlingUtil.constructContext(instanceEvent.getTenant(), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER), headersMap.get(OKAPI_USER_ID));
       Record marcBibRecord = instanceEvent.getRecord();
+
+      io.vertx.core.Context vertxContext = Vertx.currentContext();
+
+      if(vertxContext == null) {
+        return Future.failedFuture("handleBlocking:: operation must be executed by a Vertx thread");
+      }
+
+      vertxContext.owner().executeBlocking(() -> {
+//      mappingMetadataCache.getByRecordTypeAndHandle(jobId, context, MARC_BIB_RECORD_TYPE,
+//        () -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobId)),
+//        mappingMetadataDto -> {
+//          ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto);
+//          return instanceUpdateDelegate.handleBlocking(metaDataPayload, marcBibRecord, context);
+//        }
+//      )
+//        .onComplete(ar -> processUpdateResult(ar, metaDataPayload, promise, consumerRecord, instanceEvent));
 
       var mappingMetadataDto =
         mappingMetadataCache.getByRecordTypeBlocking(jobId, context, MARC_BIB_RECORD_TYPE)
           .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobId)));
       ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto);
-      instanceUpdateDelegate.handleBlocking(metaDataPayload, marcBibRecord, context)
-        .onComplete(ar -> processUpdateResult(ar, metaDataPayload, promise, consumerRecord, instanceEvent));
+      return instanceUpdateDelegate.handleBlocking(metaDataPayload, marcBibRecord, context);
+    },
+      r -> {
+        if (r.failed()) {
+          LOGGER.warn("handle:: Error during instance save", r.cause());
+          promise.fail(r.cause());
+        } else {
+          LOGGER.debug("saveRecords:: Instance save was successful");
+          promise.complete(r.result());
+        }
+      });
 
-      return promise.future();
+      //Promise<String> finalPromise = Promise.promise();
+      //promise.future().result()
+      //  .onComplete(ar -> processUpdateResult(ar, metaDataPayload, finalPromise, consumerRecord, instanceEvent));
+      Promise<String> finalPromise = Promise.promise();
+      promise.future()
+        .onComplete(ar -> processUpdateResult(ar, metaDataPayload, finalPromise, consumerRecord, instanceEvent));
+      return finalPromise.future();
     } catch (Exception e) {
       LOGGER.error(format("Failed to process data import kafka record from topic %s", consumerRecord.topic()), e);
       return Future.failedFuture(e);
