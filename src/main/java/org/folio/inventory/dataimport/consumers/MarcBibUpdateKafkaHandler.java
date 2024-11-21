@@ -86,7 +86,7 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
       LOGGER.info("Event payload has been received with event type: {} by jobId: {}", instanceEvent.getType(), instanceEvent.getJobId());
 
       if (isNull(instanceEvent.getRecord()) || !MarcBibUpdate.Type.UPDATE.equals(instanceEvent.getType())) {
-        String message = String.format("Event message does not contain required data to update Instance by jobId: '%s'", instanceEvent.getJobId());
+        String message = format("Event message does not contain required data to update Instance by jobId: '%s'", instanceEvent.getJobId());
         LOGGER.error(message);
         return Future.failedFuture(message);
       }
@@ -96,7 +96,7 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
       io.vertx.core.Context vertxContext = Vertx.currentContext();
 
       if(vertxContext == null) {
-        return Future.failedFuture("handleBlocking:: operation must be executed by a Vertx thread");
+        return Future.failedFuture("handle:: operation must be executed by a Vertx thread");
       }
 
       vertxContext.owner().executeBlocking(
@@ -109,10 +109,10 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
         },
         r -> {
           if (r.failed()) {
-            LOGGER.warn("handle:: Error during instance save", r.cause());
+            LOGGER.warn("handle:: Error during instance update", r.cause());
             promise.fail(r.cause());
           } else {
-            LOGGER.debug("saveRecords:: Instance save was successful");
+            LOGGER.debug("handle:: Instance update was successful");
             promise.complete(r.result());
           }
         }

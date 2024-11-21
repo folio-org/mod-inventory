@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
+import java.util.Map;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -17,9 +18,6 @@ import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
-
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 import static java.lang.String.format;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
@@ -53,9 +51,7 @@ public class InstanceUpdateDelegate {
 
       return InstanceUtil.findInstanceById(instanceId, instanceCollection)
         .onSuccess(existingInstance -> fillVersion(existingInstance, eventPayload))
-        .compose(existingInstance ->
-          Future.fromCompletionStage(updateInstance(existingInstance, mappedInstance))
-        )
+        .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
         .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection));
     } catch (Exception e) {
       LOGGER.error("Error updating inventory instance", e);
@@ -95,17 +91,17 @@ public class InstanceUpdateDelegate {
       : JsonObject.mapFrom(parsedRecord.getContent());
   }
 
-  private CompletableFuture<Instance> updateInstance(Instance existingInstance, org.folio.Instance mappedInstance) {
+  private Future<Instance> updateInstance(Instance existingInstance, org.folio.Instance mappedInstance) {
     try {
       mappedInstance.setId(existingInstance.getId());
       JsonObject existing = JsonObject.mapFrom(existingInstance);
       JsonObject mapped = JsonObject.mapFrom(mappedInstance);
       JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, mapped);
       Instance mergedInstance = Instance.fromJson(mergedInstanceAsJson);
-      return CompletableFuture.completedFuture(mergedInstance);
+      return Future.succeededFuture(mergedInstance);
     } catch (Exception e) {
       LOGGER.error("Error updating instance", e);
-      return CompletableFuture.failedFuture(e);
+      return Future.failedFuture(e);
     }
   }
 

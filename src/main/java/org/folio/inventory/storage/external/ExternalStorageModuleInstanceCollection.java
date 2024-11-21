@@ -1,5 +1,6 @@
 package org.folio.inventory.storage.external;
 
+import static java.lang.String.format;
 import static org.apache.http.HttpStatus.SC_CREATED;
 import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
@@ -49,10 +50,10 @@ class ExternalStorageModuleInstanceCollection
     String token,
     HttpClient client) {
 
-    super(String.format("%s/%s", baseAddress, "instance-storage/instances"),
+    super(format("%s/%s", baseAddress, "instance-storage/instances"),
       tenant, token, "instances", client);
 
-    batchAddress = String.format("%s/%s", baseAddress, "instance-storage/batch/instances");
+    batchAddress = format("%s/%s", baseAddress, "instance-storage/batch/instances");
   }
 
   @Override
@@ -67,8 +68,8 @@ class ExternalStorageModuleInstanceCollection
   }
 
   @Override
-  protected String getId(Instance record) {
-    return record.getId();
+  protected String getId(Instance instance) {
+    return instance.getId();
   }
 
   @Override
@@ -133,10 +134,8 @@ class ExternalStorageModuleInstanceCollection
       var responseBody = response.getBody();
 
       if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
-        LOGGER.warn("Instance not found by id - {} : {}",
-          id, responseBody);
-        throw new NotFoundException(
-          String.format("Instance not found by id - %s : %s", id, responseBody));
+        LOGGER.warn("Instance not found by id - {} : {}", id, responseBody);
+        throw new NotFoundException(format("Instance not found by id - %s : %s", id, responseBody));
       } else if (response.getStatusCode() != HttpStatus.SC_OK) {
         LOGGER.warn("Failed to fetch Instance by id - {} : {}, {}",
           id, responseBody, response.getStatusCode());
@@ -151,7 +150,7 @@ class ExternalStorageModuleInstanceCollection
 
       response = client.put(url, modifiedInstance);
       if (response.getStatusCode() != 204) {
-        var errorMessage = String.format("Failed to update Instance by id - %s : %s, %s",
+        var errorMessage = format("Failed to update Instance by id - %s : %s, %s",
           id, response.getBody(), response.getStatusCode());
         LOGGER.warn(errorMessage);
         throw new InternalServerErrorException(errorMessage);
@@ -159,7 +158,7 @@ class ExternalStorageModuleInstanceCollection
       return modified;
     } catch (Exception ex) {
       throw new InternalServerErrorException(
-        String.format("Failed to find and update Instance by id - %s : %s", id, ex));
+        format("Failed to find and update Instance by id - %s : %s", id, ex));
     }
   }
 

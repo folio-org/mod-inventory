@@ -58,16 +58,15 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
   protected abstract Logger getLogger();
 
   protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, String loadLimitPropertyKey) {
-    var loadLimit = getLoadLimit(loadLimitPropertyKey);
-    return createConsumer(eventType, loadLimit, true);
+    return createConsumer(eventType, loadLimitPropertyKey, true);
   }
 
-  protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, int loadLimit, boolean namespacedTopic) {
+  protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, String loadLimitPropertyKey, boolean namespacedTopic) {
     var kafkaConsumerWrapper = KafkaConsumerWrapper.<String, String>builder()
       .context(context)
       .vertx(vertx)
       .kafkaConfig(getKafkaConfig())
-      .loadLimit(loadLimit)
+      .loadLimit(getLoadLimit(loadLimitPropertyKey))
       .globalLoadSensor(new GlobalLoadSensor())
       .subscriptionDefinition(getSubscriptionDefinition(getKafkaConfig().getEnvId(), eventType, namespacedTopic))
       .build();
@@ -126,10 +125,6 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
 
   protected int getMaxDistributionNumber(String property) {
     return getConsumerProperty(MAX_DISTRIBUTION_NUMBER_TEMPLATE, property, MAX_DISTRIBUTION_NUMBER_DEFAULT);
-  }
-
-  protected int getLoadLimit(String propertyKey, String defaultValue) {
-    return getConsumerProperty(LOAD_LIMIT_TEMPLATE, propertyKey, defaultValue);
   }
 
   private JsonObject getConfig() {

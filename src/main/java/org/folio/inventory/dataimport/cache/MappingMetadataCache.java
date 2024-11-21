@@ -1,5 +1,7 @@
 package org.folio.inventory.dataimport.cache;
 
+import static java.lang.String.format;
+
 import com.github.benmanes.caffeine.cache.AsyncCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Future;
@@ -23,6 +25,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.CacheLoadingException;
 import org.folio.inventory.support.http.client.SynchronousHttpClient;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
+
 
 /**
  * Cache for storing MappingMetadataDto entities by jobExecutionId
@@ -93,7 +96,7 @@ public class MappingMetadataCache {
          LOGGER.warn("MappingMetadata was not found by jobExecutionId '{}'", jobExecutionId);
           return CompletableFuture.completedFuture(Optional.empty());
         } else {
-          String message = String.format("Error loading MappingMetadata by id: '%s', status code: %s, response message: %s",
+          String message = format("Error loading MappingMetadata by id: '%s', status code: %s, response message: %s",
             jobExecutionId, httpResponse.getStatusCode(), httpResponse.getBody());
           LOGGER.warn(message);
           return CompletableFuture.failedFuture(new CacheLoadingException(message));
@@ -117,7 +120,7 @@ public class MappingMetadataCache {
           LOGGER.warn("MappingMetadata was not found by recordType '{}'", recordType);
           return CompletableFuture.completedFuture(Optional.empty());
         } else {
-          String message = String.format("Error loading MappingMetadata by recordType: '%s', status code: %s, response message: %s",
+          String message = format("Error loading MappingMetadata by recordType: '%s', status code: %s, response message: %s",
             recordType, httpResponse.getStatusCode(), httpResponse.getBody());
           LOGGER.warn(message);
           return CompletableFuture.failedFuture(new CacheLoadingException(message));
@@ -142,7 +145,7 @@ public class MappingMetadataCache {
       LOGGER.warn("MappingMetadata was not found by recordType '{}'", recordType);
       return Optional.empty();
     } else {
-      String message = String.format("Error loading MappingMetadata by recordType: '%s', status code: %s, response message: %s",
+      String message = format("Error loading MappingMetadata by recordType: '%s', status code: %s, response message: %s",
         recordType, response.getStatusCode(), response.getBody());
       LOGGER.warn(message);
       throw new CacheLoadingException(message);

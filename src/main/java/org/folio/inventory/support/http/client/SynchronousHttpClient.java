@@ -22,9 +22,8 @@ public class SynchronousHttpClient extends AbstractOkapiHttpClient {
   private final HttpClient httpClient;
 
   public SynchronousHttpClient(Context context) throws MalformedURLException {
-    this(new URL(context.getOkapiLocation()),
-      context.getTenantId(), context.getToken(), context.getUserId(),
-      null, null);
+    this(new URL(context.getOkapiLocation()), context.getTenantId(), context.getToken(),
+      context.getUserId(), null, null);
   }
 
   public SynchronousHttpClient(URL okapiUrl, String tenantId,
