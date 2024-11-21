@@ -2,7 +2,6 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
@@ -53,18 +52,11 @@ public class InstanceUpdateDelegate {
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
       return InstanceUtil.findInstanceById(instanceId, instanceCollection)
-        .onSuccess(existingInstance -> {
-          LOGGER.info("handleInstanceUpdate:: current version: {}", existingInstance.getVersion());
-          fillVersion(existingInstance, eventPayload);
-        })
-        .compose(existingInstance -> {
-          LOGGER.info("handleInstanceUpdate:: version before mapping: {}", existingInstance.getVersion());
-          return Future.fromCompletionStage(updateInstance(existingInstance, mappedInstance));
-        })
-        .compose(updatedInstance -> {
-          LOGGER.info("handleInstanceUpdate:: version before update: {}", updatedInstance.getVersion());
-          return updateInstanceInStorage(updatedInstance, instanceCollection);
-        });
+        .onSuccess(existingInstance -> fillVersion(existingInstance, eventPayload))
+        .compose(existingInstance ->
+          Future.fromCompletionStage(updateInstance(existingInstance, mappedInstance))
+        )
+        .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection));
     } catch (Exception e) {
       LOGGER.error("Error updating inventory instance", e);
       return Future.failedFuture(e);
@@ -73,41 +65,22 @@ public class InstanceUpdateDelegate {
 
   public Instance handleBlocking(Map<String, String> eventPayload, Record marcRecord, Context context) {
     logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
-//    Promise<Instance> promise = Promise.promise();
-//    io.vertx.core.Context vertxContext = Vertx.currentContext();
-//
-//    if(vertxContext == null) {
-//      return Future.failedFuture("handleBlocking:: operation must be executed by a Vertx thread");
-//    }
-//
-//    vertxContext.owner().executeBlocking(() -> {
-        try {
-          JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
-          MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
-          JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
-          String instanceId = marcRecord.getExternalIdsHolder().getInstanceId();
-          LOGGER.info("Instance update with instanceId: {}", instanceId);
-          RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_BIB_RECORD_FORMAT);
-          var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
-          var modified = JsonObject.mapFrom(mappedInstance);
-          InstanceCollection instanceCollection = storage.getInstanceCollection(context);
+    try {
+      JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
+      MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
+      JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
+      String instanceId = marcRecord.getExternalIdsHolder().getInstanceId();
+      LOGGER.info("Instance update with instanceId: {}", instanceId);
+      RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_BIB_RECORD_FORMAT);
+      var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
+      var modified = JsonObject.mapFrom(mappedInstance);
+      InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
-          return instanceCollection.findByIdAndUpdate(instanceId, modified, context);
-        } catch (Exception ex) {
-          LOGGER.error("Error updating inventory instance: {}", ex.getMessage());
-          throw ex;
-        }
-//      },
-//      r -> {
-//        if (r.failed()) {
-//          LOGGER.warn("handle:: Error during instance save", r.cause());
-//          promise.fail(r.cause());
-//        } else {
-//          LOGGER.debug("saveRecords:: Instance save was successful");
-//          promise.complete(r.result());
-//        }
-//      });
-//    return promise.future();
+      return instanceCollection.findByIdAndUpdate(instanceId, modified, context);
+    } catch (Exception ex) {
+      LOGGER.error("Error updating inventory instance: {}", ex.getMessage());
+      throw ex;
+    }
   }
 
   private void fillVersion(Instance existingInstance, Map<String, String> eventPayload) {

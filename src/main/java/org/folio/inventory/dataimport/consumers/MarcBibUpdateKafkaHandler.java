@@ -99,42 +99,32 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
         return Future.failedFuture("handleBlocking:: operation must be executed by a Vertx thread");
       }
 
-      vertxContext.owner().executeBlocking(() -> {
-//      mappingMetadataCache.getByRecordTypeAndHandle(jobId, context, MARC_BIB_RECORD_TYPE,
-//        () -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobId)),
-//        mappingMetadataDto -> {
-//          ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto);
-//          return instanceUpdateDelegate.handleBlocking(metaDataPayload, marcBibRecord, context);
-//        }
-//      )
-//        .onComplete(ar -> processUpdateResult(ar, metaDataPayload, promise, consumerRecord, instanceEvent));
-
-      var mappingMetadataDto =
-        mappingMetadataCache.getByRecordTypeBlocking(jobId, context, MARC_BIB_RECORD_TYPE)
-          .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobId)));
-      ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto);
-      return instanceUpdateDelegate.handleBlocking(metaDataPayload, marcBibRecord, context);
-    },
-      r -> {
-        if (r.failed()) {
-          LOGGER.warn("handle:: Error during instance save", r.cause());
-          promise.fail(r.cause());
-        } else {
-          LOGGER.debug("saveRecords:: Instance save was successful");
-          promise.complete(r.result());
+      vertxContext.owner().executeBlocking(
+        () -> {
+          var mappingMetadataDto =
+            mappingMetadataCache.getByRecordTypeBlocking(jobId, context, MARC_BIB_RECORD_TYPE)
+              .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobId)));
+          ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto);
+          return instanceUpdateDelegate.handleBlocking(metaDataPayload, marcBibRecord, context);
+        },
+        r -> {
+          if (r.failed()) {
+            LOGGER.warn("handle:: Error during instance save", r.cause());
+            promise.fail(r.cause());
+          } else {
+            LOGGER.debug("saveRecords:: Instance save was successful");
+            promise.complete(r.result());
+          }
         }
-      });
+      );
 
-      //Promise<String> finalPromise = Promise.promise();
-      //promise.future().result()
-      //  .onComplete(ar -> processUpdateResult(ar, metaDataPayload, finalPromise, consumerRecord, instanceEvent));
       Promise<String> finalPromise = Promise.promise();
       promise.future()
         .onComplete(ar -> processUpdateResult(ar, metaDataPayload, finalPromise, consumerRecord, instanceEvent));
       return finalPromise.future();
-    } catch (Exception e) {
-      LOGGER.error(format("Failed to process data import kafka record from topic %s", consumerRecord.topic()), e);
-      return Future.failedFuture(e);
+    } catch (Exception ex) {
+      LOGGER.error(format("Failed to process kafka record from topic %s", consumerRecord.topic()), ex);
+      return Future.failedFuture(ex);
     }
   }
 

@@ -4,8 +4,6 @@ import static org.apache.http.HttpHeaders.CONTENT_TYPE;
 import static org.apache.http.HttpHeaders.LOCATION;
 
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.exceptions.ExternalResourceFetchException;
 import org.folio.inventory.exceptions.InternalServerErrorException;
@@ -20,8 +18,6 @@ import java.util.function.Consumer;
 
 
 public class SynchronousHttpClient extends AbstractOkapiHttpClient {
-
-  private static final Logger LOGGER = LogManager.getLogger(SynchronousHttpClient.class);
 
   private final HttpClient httpClient;
 
@@ -44,7 +40,6 @@ public class SynchronousHttpClient extends AbstractOkapiHttpClient {
 
   public Response get(String url) {
     var request = getRequest(url);
-    request.headers().map().entrySet().forEach(entry -> LOGGER.info("key: {}, value: {}", entry.getKey(), entry.getValue()));
     try {
       var httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
       return mapResponse(httpResponse);

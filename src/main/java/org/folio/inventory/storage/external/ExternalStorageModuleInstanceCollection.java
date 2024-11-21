@@ -149,8 +149,6 @@ class ExternalStorageModuleInstanceCollection
       var modified = modifyInstance(existingInstance, instance);
       var modifiedInstance = mapToRequest(modified);
 
-      LOGGER.info("modifiedInstance: {}", modifiedInstance.encode());
-
       response = client.put(url, modifiedInstance);
       if (response.getStatusCode() != 204) {
         var errorMessage = String.format("Failed to update Instance by id - %s : %s, %s",
@@ -175,8 +173,6 @@ class ExternalStorageModuleInstanceCollection
   private SynchronousHttpClient getSynchronousHttpClient(Context context) throws MalformedURLException {
     if (httpClient == null) {
       httpClient = new SynchronousHttpClient(new URL(context.getOkapiLocation()), tenant, token, context.getUserId(), null, null);
-      LOGGER.info("TENANT: {}, TOKEN: {}, USER-ID: {}", httpClient.getTenantId(), httpClient.getToken(), httpClient.getUserId());
-      LOGGER.info("CONTEXT TENANT: {}, CONTEXT TOKEN: {}", context.getTenantId(), context.getToken());
     }
 
     return httpClient;
