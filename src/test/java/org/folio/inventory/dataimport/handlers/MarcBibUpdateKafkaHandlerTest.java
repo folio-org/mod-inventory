@@ -12,6 +12,7 @@ import static org.mockito.AdditionalMatchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -39,6 +40,7 @@ import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.consumers.MarcBibUpdateKafkaHandler;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -167,6 +169,36 @@ public class MarcBibUpdateKafkaHandlerTest {
         verify(mockedStorage).getInstanceCollection(any());
         verify(mockedInstanceCollection).findByIdAndUpdate(anyString(), any(), any());
       });
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldReturnSucceededFutureAfterHandlingOptimisticLockingError(TestContext context) {
+    // given
+    Async async = context.async();
+    MarcBibUpdate payload = new MarcBibUpdate()
+      .withRecord(record)
+      .withLinkIds(List.of(1, 2, 3))
+      .withType(MarcBibUpdate.Type.UPDATE)
+      .withTenant(TENANT_ID)
+      .withJobId(UUID.randomUUID().toString());
+
+    String expectedKafkaRecordKey = "test_key";
+    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
+    when(kafkaRecord.value()).thenReturn(Json.encode(payload));
+    Mockito.when(mockedInstanceCollection.findByIdAndUpdate(not(eq(INVALID_INSTANCE_ID)), any(), any()))
+      .thenThrow(OptimisticLockingException.class).thenReturn(instance);
+
+    // when
+    Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+
+    // then
+    future.onComplete(ar -> {
+      verify(mappingMetadataCache, times(2)).getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
+      verify(mockedStorage, times(2)).getInstanceCollection(any());
+      verify(mockedInstanceCollection, times(2)).findByIdAndUpdate(anyString(), any(), any());
+
       async.complete();
     });
   }
