@@ -67,8 +67,8 @@ public class MappingMetadataCache {
 
   public Optional<MappingMetadataDto> getByRecordTypeBlocking(String jobExecutionId, Context context, String recordType) {
     try {
-      var mapping = cache.synchronous().asMap().get(jobExecutionId);
-      if (mapping != null && mapping.isPresent()) {
+      var mapping = cache.synchronous().asMap().getOrDefault(jobExecutionId, Optional.empty());
+      if (mapping.isPresent()) {
         return mapping;
       }
       mapping = getMappingMetadata(recordType, context);

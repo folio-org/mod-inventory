@@ -5,9 +5,8 @@ import static org.apache.http.HttpHeaders.LOCATION;
 
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.exceptions.ExternalResourceFetchException;
-import org.folio.inventory.exceptions.InternalServerErrorException;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -33,33 +32,24 @@ public class SynchronousHttpClient extends AbstractOkapiHttpClient {
     this.httpClient = HttpClient.newBuilder().build();
   }
 
-  public Response get(URL url) {
+  public Response get(URL url) throws IOException, InterruptedException {
     return get(url.toString());
   }
 
-  public Response get(String url) {
+  public Response get(String url) throws IOException, InterruptedException {
     var request = getRequest(url);
-    try {
-      var httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-      return mapResponse(httpResponse);
-    } catch(Exception ex) {
-      throw new ExternalResourceFetchException(
-        String.format("Failed to fetch resource by URL - %s : %s", url, ex.getMessage()), null, 0, null);
-    }
+    var httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    return mapResponse(httpResponse);
   }
 
-  public Response put(URL url, JsonObject requestBody) {
+  public Response put(URL url, JsonObject requestBody) throws IOException, InterruptedException {
     return put(url.toString(), requestBody);
   }
 
-  public Response put(String url, JsonObject requestBody) {
+  public Response put(String url, JsonObject requestBody) throws IOException, InterruptedException {
     var request = putRequest(url, requestBody);
-    try {
-      var httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-      return mapResponse(httpResponse);
-    } catch(Exception ex) {
-      throw new InternalServerErrorException(ex);
-    }
+    var httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+    return mapResponse(httpResponse);
   }
 
   private HttpRequest getRequest(String url) {
