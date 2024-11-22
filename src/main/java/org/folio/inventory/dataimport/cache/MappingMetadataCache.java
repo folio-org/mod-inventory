@@ -135,9 +135,6 @@ public class MappingMetadataCache {
     var httpSyncClient = new SynchronousHttpClient(context);
     var response = httpSyncClient.get(context.getOkapiLocation() + "/mapping-metadata/type/" + recordType);
 
-    LOGGER.info("Mapping params are fetched for recordType: {}", recordType);
-    LOGGER.info("Response: {}", response);
-
     if (response.getStatusCode() == HttpStatus.SC_OK) {
       LOGGER.info("MappingMetadata was fetched by recordType '{}'", recordType);
       return Optional.of(Json.decodeValue(response.getBody(), MappingMetadataDto.class));

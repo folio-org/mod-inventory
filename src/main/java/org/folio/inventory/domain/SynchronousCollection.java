@@ -5,5 +5,5 @@ import org.folio.inventory.common.Context;
 
 public interface SynchronousCollection<T> {
 
-  T findByIdAndUpdate(String id, JsonObject mappedInstance, Context context);
+  T findByIdAndUpdate(String id, JsonObject entity, Context context);
 }
