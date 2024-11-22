@@ -245,22 +245,29 @@ public class MarcBibUpdateKafkaHandlerTest {
     marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
-    var reports = cluster.observeValues(ObserveKeyValues.on(topic, expectedReportsCount)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
+    vertx.runOnContext(v -> {
+      List<String> reports;
+      try {
+        reports = cluster.observeValues(ObserveKeyValues.on(topic, expectedReportsCount)
+          .observeFor(30, TimeUnit.SECONDS)
+          .build());
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
 
-    var report = reports.stream()
-      .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
-      .filter(event -> payload.getJobId().equals(event.getJobId()))
-      .findAny()
-      .orElse(null);
+      var report = reports.stream()
+        .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
+        .filter(event -> payload.getJobId().equals(event.getJobId()))
+        .findAny()
+        .orElse(null);
 
-    Assert.assertNotNull(report);
-    Assert.assertEquals(instanceId, report.getInstanceId());
-    Assert.assertEquals(SUCCESS, report.getStatus());
-    Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());
-    Assert.assertEquals(payload.getTenant(), report.getTenant());
-    Assert.assertNull(report.getFailCause());
+      Assert.assertNotNull(report);
+      Assert.assertEquals(instanceId, report.getInstanceId());
+      Assert.assertEquals(SUCCESS, report.getStatus());
+      Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());
+      Assert.assertEquals(payload.getTenant(), report.getTenant());
+      Assert.assertNull(report.getFailCause());
+    });
   }
 
   @Test
@@ -288,21 +295,28 @@ public class MarcBibUpdateKafkaHandlerTest {
     marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
-    var reports = cluster.observeValues(ObserveKeyValues.on(topic, expectedReportsCount)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
+    vertx.runOnContext(v -> {
+      List<String> reports;
+      try {
+        reports = cluster.observeValues(ObserveKeyValues.on(topic, expectedReportsCount)
+          .observeFor(30, TimeUnit.SECONDS)
+          .build());
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
 
-    var report = reports.stream()
-      .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
-      .filter(event -> payload.getJobId().equals(event.getJobId()))
-      .findAny()
-      .orElse(null);
+      var report = reports.stream()
+        .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
+        .filter(event -> payload.getJobId().equals(event.getJobId()))
+        .findAny()
+        .orElse(null);
 
-    Assert.assertNotNull(report);
-    Assert.assertEquals(instanceId, report.getInstanceId());
-    Assert.assertEquals(FAIL, report.getStatus());
-    Assert.assertEquals(payload.getTenant(), report.getTenant());
-    Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());
-    Assert.assertEquals("Can't find Instance by id: " + record.getId(), report.getFailCause());
+      Assert.assertNotNull(report);
+      Assert.assertEquals(instanceId, report.getInstanceId());
+      Assert.assertEquals(FAIL, report.getStatus());
+      Assert.assertEquals(payload.getTenant(), report.getTenant());
+      Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());
+      Assert.assertEquals("Can't find Instance by id: " + record.getId(), report.getFailCause());
+    });
   }
 }
