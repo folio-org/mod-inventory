@@ -915,6 +915,46 @@
       ]
     }
   ],
+  "metadata": {
+    "user": {
+      "type": "system",
+      "permissions": [
+        "orders.po-lines.collection.get",
+        "user-tenants.collection.get",
+        "mapping-metadata.item.get",
+        "mapping-metadata.type.item.get",
+        "converter-storage.jobprofilesnapshots.get",
+        "source-storage.records.put",
+        "source-storage.records.post",
+        "source-storage.records.item.get",
+        "source-storage.records.formatted.item.get",
+        "source-storage.records.generation.item.put",
+        "source-storage.records.matching.collection.post",
+        "inventory-storage.items.item.post",
+        "inventory-storage.items.item.put",
+        "inventory-storage.items.item.get",
+        "inventory-storage.items.collection.get",
+        "inventory-storage.material-types.item.get",
+        "inventory-storage.material-types.collection.get",
+        "inventory-storage.loan-types.item.get",
+        "inventory-storage.loan-types.collection.get",
+        "inventory-storage.locations.item.get",
+        "inventory-storage.locations.collection.get",
+        "inventory-storage.holdings.item.get",
+        "inventory-storage.holdings.item.post",
+        "inventory-storage.holdings.item.put",
+        "inventory-storage.holdings.collection.get",
+        "inventory-storage.instances.item.get",
+        "inventory-storage.instances.item.put",
+        "inventory-storage.instances.item.post",
+        "inventory-storage.instances.collection.get",
+        "inventory-storage.preceding-succeeding-titles.item.post",
+        "inventory-storage.preceding-succeeding-titles.collection.get",
+        "inventory-storage.preceding-succeeding-titles.item.put",
+        "inventory-storage.preceding-succeeding-titles.item.delete"
+      ]
+    }
+  },
   "launchDescriptor": {
     "dockerImage": "${artifactId}:${version}",
     "dockerPull": false,
