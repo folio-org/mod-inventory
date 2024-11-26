@@ -919,7 +919,6 @@
     "user": {
       "type": "system",
       "permissions": [
-        "orders.po-lines.collection.get",
         "user-tenants.collection.get",
         "mapping-metadata.item.get",
         "mapping-metadata.type.item.get",
