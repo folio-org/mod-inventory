@@ -1,3 +1,6 @@
+## 21.0.2 2024-11-27
+* Update dependencies fixing vulnerabilities [MODINV-1124](https://folio-org.atlassian.net/browse/MODINV-1124)
+
 ## 21.0.1 2024-11-18
 * Missing interface dependencies in module descriptor [MODINV-1117](https://folio-org.atlassian.net/browse/MODINV-1117)
 
