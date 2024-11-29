@@ -1,5 +1,5 @@
 ## 21.1.0-SNAPSHOT 2024-xx-xx
-* Provide consistent handling of two or more Marc Bib Update events for the same bib record [MODINV-1100](https://folio-org.atlassian.net/browse/MODINV-1049)
+* Provide consistent handling with concurrency two or more Marc Bib Update events for the same bib record [MODINV-1100](https://folio-org.atlassian.net/browse/MODINV-1100)
 
 ## 21.0.0 2024-10-29
 * Existing "035" field is not retained the original position in imported record [MODINV-1049](https://folio-org.atlassian.net/browse/MODINV-1049)
