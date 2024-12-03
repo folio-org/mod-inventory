@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers.matching.util;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import io.vertx.core.json.Json;
 import org.apache.commons.lang3.StringUtils;
@@ -19,6 +20,10 @@ public final class EventHandlingUtil {
   private EventHandlingUtil() {}
 
   public static Context constructContext(String tenantId, String token, String okapiUrl) {
+    return constructContext(tenantId, token, okapiUrl, null);
+  }
+
+  public static Context constructContext(String tenantId, String token, String okapiUrl, String userId) {
     return new Context() {
       @Override
       public String getTenantId() {
@@ -37,7 +42,7 @@ public final class EventHandlingUtil {
 
       @Override
       public String getUserId() {
-        return "";
+        return Optional.ofNullable(userId).orElse("");
       }
     };
   }

@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
+import java.util.Map;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -17,8 +18,6 @@ import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
-
-import java.util.Map;
 
 import static java.lang.String.format;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
@@ -57,6 +56,26 @@ public class InstanceUpdateDelegate {
     } catch (Exception e) {
       LOGGER.error("Error updating inventory instance", e);
       return Future.failedFuture(e);
+    }
+  }
+
+  public Instance handleBlocking(Map<String, String> eventPayload, Record marcRecord, Context context) {
+    logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
+    try {
+      JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
+      MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
+      JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
+      String instanceId = marcRecord.getExternalIdsHolder().getInstanceId();
+      LOGGER.info("Instance update with instanceId: {}", instanceId);
+      RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_BIB_RECORD_FORMAT);
+      var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
+      var modified = JsonObject.mapFrom(mappedInstance);
+      InstanceCollection instanceCollection = storage.getInstanceCollection(context);
+
+      return instanceCollection.findByIdAndUpdate(instanceId, modified, context);
+    } catch (Exception ex) {
+      LOGGER.error("Error updating inventory instance: {}", ex.getMessage());
+      throw ex;
     }
   }
 
