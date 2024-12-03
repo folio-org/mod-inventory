@@ -108,7 +108,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
   private Future<Instance> updateSuppressFromDiscoveryFlagIfNeeded(Instance targetInstance, Target targetTenantProvider,
                                                                    Map<String, String> kafkaHeaders) {
-    if (targetInstance.getDiscoverySuppress()) {
+    if (Boolean.TRUE.equals(targetInstance.getDiscoverySuppress())) {
       SourceStorageRecordsClient sourceStorageClient = getSourceStorageRecordsClient(targetTenantProvider.getTenantId(), kafkaHeaders);
       return updateSourceRecordSuppressFromDiscoveryByInstanceId(targetInstance.getId(), targetInstance.getDiscoverySuppress(), sourceStorageClient)
         .map(targetInstance);
