@@ -52,10 +52,13 @@ import java.util.function.Consumer;
 
 import static org.folio.HttpStatus.HTTP_INTERNAL_SERVER_ERROR;
 import static org.folio.HttpStatus.HTTP_NO_CONTENT;
+import static org.folio.HttpStatus.HTTP_OK;
 import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
 import static org.folio.inventory.consortium.handlers.MarcInstanceSharingHandlerImpl.SRS_RECORD_ID_TYPE;
+import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.INSTANCE_ID_TYPE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -176,6 +179,7 @@ public class MarcInstanceSharingHandlerImplTest {
 
       ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
       verify(instanceOperationsHelper).updateInstance(updatedInstanceCaptor.capture(), argThat(p -> MEMBER_TENANT.equals(p.getTenantId())));
+      verify(marcHandler, times(0)).updateSourceRecordSuppressFromDiscoveryByInstanceId(any(), anyBoolean(), any());
       Instance updatedInstance = updatedInstanceCaptor.getValue();
       testContext.assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
       testContext.assertEquals(targetInstanceHrid, updatedInstance.getHrid());
@@ -546,6 +550,39 @@ public class MarcInstanceSharingHandlerImplTest {
   }
 
   @Test
+  public void updateSourceRecordSuppressFromDiscoveryByInstanceIdSuccessTest() {
+
+    String instanceId = "fea6477b-d8f5-4d22-9e86-6218407c780b";
+
+    HttpResponse<Buffer> mockedResponse = mock(HttpResponse.class);
+
+    when(mockedResponse.statusCode()).thenReturn(HTTP_OK.toInt());
+    when(sourceStorageClient.putSourceStorageRecordsSuppressFromDiscoveryById(any(), any(), anyBoolean()))
+      .thenReturn(Future.succeededFuture(mockedResponse));
+
+    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
+    handler.updateSourceRecordSuppressFromDiscoveryByInstanceId(instanceId, true, sourceStorageClient)
+      .onComplete(result -> assertEquals(instanceId, result.result()));
+
+    verify(sourceStorageClient, times(1)).putSourceStorageRecordsSuppressFromDiscoveryById(instanceId, INSTANCE_ID_TYPE, true);
+  }
+
+  @Test
+  public void updateSourceRecordSuppressFromDiscoveryByInstanceIdFailedTest() {
+
+    String instanceId = "991f37c8-cd22-4db7-9543-a4ec68735e95";
+
+    when(sourceStorageClient.putSourceStorageRecordsSuppressFromDiscoveryById(any(), any(), anyBoolean()))
+      .thenReturn(Future.failedFuture(new NotFoundException("Not found")));
+
+    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
+    handler.updateSourceRecordSuppressFromDiscoveryByInstanceId(instanceId, true, sourceStorageClient)
+      .onComplete(result -> assertTrue(result.failed()));
+
+    verify(sourceStorageClient, times(1)).putSourceStorageRecordsSuppressFromDiscoveryById(instanceId, INSTANCE_ID_TYPE, true);
+  }
+
+  @Test
   public void shouldPopulateTargetInstanceWithNonMarcControlledFields(TestContext testContext) {
     //given
     Async async = testContext.async();
@@ -576,6 +613,7 @@ public class MarcInstanceSharingHandlerImplTest {
     doReturn(sourceStorageClient).when(marcHandler).getSourceStorageRecordsClient(anyString(), eq(kafkaHeaders));
     doReturn(Future.succeededFuture(record)).when(marcHandler).getSourceMARCByInstanceId(any(), any(), any());
     doReturn(Future.succeededFuture(instanceId)).when(marcHandler).deleteSourceRecordByRecordId(any(), any(), any(), any());
+    doReturn(Future.succeededFuture(instanceId)).when(marcHandler).updateSourceRecordSuppressFromDiscoveryByInstanceId(any(), anyBoolean(), any());
 
     when(restDataImportHelper.importMarcRecord(any(), any(), any()))
       .thenReturn(Future.succeededFuture("COMMITTED"));
@@ -592,6 +630,7 @@ public class MarcInstanceSharingHandlerImplTest {
 
       ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
       verify(instanceOperationsHelper).updateInstance(updatedInstanceCaptor.capture(), argThat(p -> CONSORTIUM_TENANT.equals(p.getTenantId())));
+      verify(marcHandler, times(1)).updateSourceRecordSuppressFromDiscoveryByInstanceId(instanceId, true, sourceStorageClient);
       Instance targetInstanceWithNonMarcData = updatedInstanceCaptor.getValue();
       testContext.assertEquals("MARC", targetInstanceWithNonMarcData.getSource());
       testContext.assertEquals(targetInstanceHrid, targetInstanceWithNonMarcData.getHrid());
