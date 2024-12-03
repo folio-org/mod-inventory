@@ -3,15 +3,18 @@ package org.folio.inventory.dataimport.consumers;
 import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
 import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
 import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.FAIL;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.SUCCESS;
 import static org.mockito.AdditionalMatchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import io.vertx.core.Future;
@@ -20,6 +23,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
+import io.vertx.ext.unit.junit.RunTestOnContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import java.io.IOException;
@@ -27,7 +31,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import net.mguenther.kafka.junit.ObserveKeyValues;
@@ -35,9 +38,10 @@ import net.mguenther.kafka.junit.ReadKeyValues;
 import org.folio.MappingMetadataDto;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
+import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
@@ -51,6 +55,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -65,9 +70,12 @@ public class MarcBibUpdateKafkaHandlerTest {
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
   private static final String INVALID_INSTANCE_ID = "02e54bce-9588-11ed-a1eb-0242ac120002";
   private static final String TENANT_ID = "test";
-  private static final Vertx vertx = Vertx.vertx();
+  private static Vertx vertx;
   private static EmbeddedKafkaCluster cluster;
   private static KafkaConfig kafkaConfig;
+
+  @ClassRule
+  public static RunTestOnContext rule = new RunTestOnContext();
 
   @Mock
   private Storage mockedStorage;
@@ -78,12 +86,14 @@ public class MarcBibUpdateKafkaHandlerTest {
   @Mock
   private MappingMetadataCache mappingMetadataCache;
   private Record record;
-  private Instance existingInstance;
+  private Instance instance;
   private MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler;
   private AutoCloseable mocks;
 
   @BeforeClass
   public static void beforeClass() {
+    vertx = rule.vertx();
+
     cluster = provisionWith(defaultClusterConfig());
     cluster.start();
     String[] hostAndPort = cluster.getBrokerList().split(":");
@@ -107,36 +117,20 @@ public class MarcBibUpdateKafkaHandlerTest {
   @Before
   public void setUp() throws IOException {
     JsonObject mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
-    existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
+    instance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
     record = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class);
     record.getParsedRecord().withContent(JsonObject.mapFrom(record.getParsedRecord().getContent()).encode());
 
     mocks = MockitoAnnotations.openMocks(this);
     when(mockedStorage.getInstanceCollection(any(Context.class))).thenReturn(mockedInstanceCollection);
 
-    doAnswer(invocationOnMock -> {
-      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(null));
-      return null;
-    }).when(mockedInstanceCollection).findById(eq(INVALID_INSTANCE_ID), any(), any());
+    Mockito.when(mockedInstanceCollection.findByIdAndUpdate(not(eq(INVALID_INSTANCE_ID)), any(), any()))
+        .thenReturn(instance);
 
-    doAnswer(invocationOnMock -> {
-      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(existingInstance));
-      return null;
-    }).when(mockedInstanceCollection).findById(not(eq(INVALID_INSTANCE_ID)), any(), any());
-
-    doAnswer(invocationOnMock -> {
-      Instance instance = invocationOnMock.getArgument(0);
-      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(instance));
-      return null;
-    }).when(mockedInstanceCollection).update(any(Instance.class), any(), any());
-
-    Mockito.when(mappingMetadataCache.getByRecordType(anyString(), any(Context.class), anyString()))
-      .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
+    Mockito.when(mappingMetadataCache.getByRecordTypeBlocking(anyString(), any(Context.class), eq(MARC_BIB_RECORD_TYPE)))
+      .thenReturn(Optional.of(new MappingMetadataDto()
         .withMappingRules(mappingRules.encode())
-        .withMappingParams(Json.encode(new MappingParameters())))));
+        .withMappingParams(Json.encode(new MappingParameters()))));
 
     marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertx, 100, kafkaConfig, new InstanceUpdateDelegate(mockedStorage), mappingMetadataCache);
   }
@@ -168,20 +162,52 @@ public class MarcBibUpdateKafkaHandlerTest {
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
       context.assertEquals(expectedKafkaRecordKey, ar.result());
+
+      context.verify(vo -> {
+        verify(mappingMetadataCache).getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
+        verify(mockedStorage).getInstanceCollection(any());
+        verify(mockedInstanceCollection).findByIdAndUpdate(anyString(), any(), any());
+      });
       async.complete();
     });
+  }
 
-    verify(mockedInstanceCollection, times(1)).findById(anyString(), any(), any());
-    verify(mockedInstanceCollection, times(1)).update(any(Instance.class), any(), any());
-    verify(mappingMetadataCache, times(1)).getByRecordType(anyString(), any(Context.class), anyString());
+  @Test
+  public void shouldReturnSucceededFutureAfterHandlingOptimisticLockingError(TestContext context) {
+    // given
+    Async async = context.async();
+    MarcBibUpdate payload = new MarcBibUpdate()
+      .withRecord(record)
+      .withLinkIds(List.of(1, 2, 3))
+      .withType(MarcBibUpdate.Type.UPDATE)
+      .withTenant(TENANT_ID)
+      .withJobId(UUID.randomUUID().toString());
+
+    String expectedKafkaRecordKey = "test_key";
+    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
+    when(kafkaRecord.value()).thenReturn(Json.encode(payload));
+    Mockito.when(mockedInstanceCollection.findByIdAndUpdate(not(eq(INVALID_INSTANCE_ID)), any(), any()))
+      .thenThrow(OptimisticLockingException.class).thenReturn(instance);
+
+    // when
+    Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+
+    // then
+    future.onComplete(ar -> {
+      verify(mappingMetadataCache, times(2)).getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
+      verify(mockedStorage, times(2)).getInstanceCollection(any());
+      verify(mockedInstanceCollection, times(2)).findByIdAndUpdate(anyString(), any(), any());
+
+      async.complete();
+    });
   }
 
   @Test
   public void shouldReturnFailedFutureWhenMappingRulesNotFound(TestContext context) {
     // given
     Async async = context.async();
-    Mockito.when(mappingMetadataCache.getByRecordType(anyString(), any(Context.class), anyString()))
-      .thenReturn(Future.succeededFuture(Optional.empty()));
+    Mockito.when(mappingMetadataCache.getByRecordTypeBlocking(anyString(), any(Context.class), anyString()))
+      .thenReturn(Optional.empty());
 
     MarcBibUpdate payload = new MarcBibUpdate()
       .withRecord(record)
@@ -197,12 +223,10 @@ public class MarcBibUpdateKafkaHandlerTest {
     future.onComplete(ar -> {
       context.assertTrue(ar.failed());
       context.assertTrue(ar.cause().getMessage().contains("MappingParameters and mapping rules snapshots were not found by jobId"));
+      verifyNoInteractions(mockedInstanceCollection);
+      verify(mappingMetadataCache).getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
       async.complete();
     });
-
-    verify(mockedInstanceCollection, times(0)).findById(anyString(), any(), any());
-    verify(mockedInstanceCollection, times(0)).update(any(Instance.class), any(), any());
-    verify(mappingMetadataCache, times(1)).getByRecordType(anyString(), any(Context.class), anyString());
   }
 
   @Test
@@ -223,12 +247,10 @@ public class MarcBibUpdateKafkaHandlerTest {
     future.onComplete(ar -> {
       context.assertTrue(ar.failed());
       context.assertTrue(ar.cause().getMessage().contains("Event message does not contain required data to update Instance by jobId"));
+      verifyNoInteractions(mockedInstanceCollection);
+      verifyNoInteractions(mappingMetadataCache);
       async.complete();
     });
-
-    verify(mockedInstanceCollection, times(0)).findById(anyString(), any(), any());
-    verify(mockedInstanceCollection, times(0)).update(any(Instance.class), any(), any());
-    verify(mappingMetadataCache, times(0)).getByRecordType(anyString(), any(Context.class), anyString());
   }
 
   @Test
@@ -236,6 +258,8 @@ public class MarcBibUpdateKafkaHandlerTest {
     // given
     var topic = String.join(".", kafkaConfig.getEnvId(), TENANT_ID, LINKS_STATS.topicName());
     var expectedReportsCount = cluster.readValues(ReadKeyValues.from(topic)).size() + 1;
+    var instanceId = AdditionalFieldsUtil.getValue(record, TAG_999, SUBFIELD_I)
+      .orElse(null);
 
     MarcBibUpdate payload = new MarcBibUpdate()
       .withRecord(record)
@@ -252,22 +276,29 @@ public class MarcBibUpdateKafkaHandlerTest {
     marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
-    var reports = cluster.observeValues(ObserveKeyValues.on(topic, expectedReportsCount)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
+    vertx.runOnContext(v -> {
+      List<String> reports;
+      try {
+        reports = cluster.observeValues(ObserveKeyValues.on(topic, expectedReportsCount)
+          .observeFor(30, TimeUnit.SECONDS)
+          .build());
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
 
-    var report = reports.stream()
-      .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
-      .filter(event -> payload.getJobId().equals(event.getJobId()))
-      .findAny()
-      .orElse(null);
+      var report = reports.stream()
+        .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
+        .filter(event -> payload.getJobId().equals(event.getJobId()))
+        .findAny()
+        .orElse(null);
 
-    Assert.assertNotNull(report);
-    Assert.assertEquals(record.getId(), report.getInstanceId());
-    Assert.assertEquals(SUCCESS, report.getStatus());
-    Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());
-    Assert.assertEquals(payload.getTenant(), report.getTenant());
-    Assert.assertNull(report.getFailCause());
+      Assert.assertNotNull(report);
+      Assert.assertEquals(instanceId, report.getInstanceId());
+      Assert.assertEquals(SUCCESS, report.getStatus());
+      Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());
+      Assert.assertEquals(payload.getTenant(), report.getTenant());
+      Assert.assertNull(report.getFailCause());
+    });
   }
 
   @Test
@@ -275,6 +306,8 @@ public class MarcBibUpdateKafkaHandlerTest {
     // given
     var topic = String.join(".", kafkaConfig.getEnvId(), TENANT_ID, LINKS_STATS.topicName());
     var expectedReportsCount = cluster.readValues(ReadKeyValues.from(topic)).size() + 1;
+    var instanceId = AdditionalFieldsUtil.getValue(record, TAG_999, SUBFIELD_I)
+      .orElse(null);
 
     record.setId(INVALID_INSTANCE_ID);
     record.getExternalIdsHolder().setInstanceId(INVALID_INSTANCE_ID);
@@ -293,21 +326,28 @@ public class MarcBibUpdateKafkaHandlerTest {
     marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
-    var reports = cluster.observeValues(ObserveKeyValues.on(topic, expectedReportsCount)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
+    vertx.runOnContext(v -> {
+      List<String> reports;
+      try {
+        reports = cluster.observeValues(ObserveKeyValues.on(topic, expectedReportsCount)
+          .observeFor(30, TimeUnit.SECONDS)
+          .build());
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
 
-    var report = reports.stream()
-      .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
-      .filter(event -> payload.getJobId().equals(event.getJobId()))
-      .findAny()
-      .orElse(null);
+      var report = reports.stream()
+        .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
+        .filter(event -> payload.getJobId().equals(event.getJobId()))
+        .findAny()
+        .orElse(null);
 
-    Assert.assertNotNull(report);
-    Assert.assertEquals(record.getId(), report.getInstanceId());
-    Assert.assertEquals(FAIL, report.getStatus());
-    Assert.assertEquals(payload.getTenant(), report.getTenant());
-    Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());
-    Assert.assertEquals("Can't find Instance by id: " + record.getId(), report.getFailCause());
+      Assert.assertNotNull(report);
+      Assert.assertEquals(instanceId, report.getInstanceId());
+      Assert.assertEquals(FAIL, report.getStatus());
+      Assert.assertEquals(payload.getTenant(), report.getTenant());
+      Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());
+      Assert.assertEquals("Can't find Instance by id: " + record.getId(), report.getFailCause());
+    });
   }
 }

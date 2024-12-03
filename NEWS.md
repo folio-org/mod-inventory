@@ -1,3 +1,6 @@
+## 20.2.9-SNAPSHOT 2024-xx-xx
+* Provide consistent handling with concurrency two or more Marc Bib Update events for the same bib record [MODINV-1100](https://folio-org.atlassian.net/browse/MODINV-1100)
+
 ## 20.2.8 2024-10-28
 * [MODINV-1094](https://folio-org.atlassian.net/browse/MODINV-1094) Update suppressDiscovery in the MARC file when creating an instance with “suppressDiscovery=true” when importing data
 

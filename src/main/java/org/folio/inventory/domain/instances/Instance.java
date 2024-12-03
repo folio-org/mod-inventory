@@ -30,6 +30,7 @@ import org.folio.inventory.support.JsonHelper;
 
 public class Instance {
   // JSON property names
+  public static final String ID = "id";
   public static final String VERSION_KEY = "_version";
   public static final String HRID_KEY = "hrid";
   public static final String MATCH_KEY_KEY = "matchKey";
