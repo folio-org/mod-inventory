@@ -583,6 +583,24 @@ public class MarcInstanceSharingHandlerImplTest {
   }
 
   @Test
+  public void updateSourceRecordSuppressFromDiscoveryByInstanceIdFailedTestWhenResponseStatusIsNotOk() {
+
+    String instanceId = "991f37c8-cd22-4db7-9543-a4ec68735e95";
+
+    HttpResponse<Buffer> mockedResponse = mock(HttpResponse.class);
+
+    when(mockedResponse.statusCode()).thenReturn(HTTP_INTERNAL_SERVER_ERROR.toInt());
+    when(sourceStorageClient.putSourceStorageRecordsSuppressFromDiscoveryById(any(), any(), anyBoolean()))
+      .thenReturn(Future.succeededFuture(mockedResponse));
+
+    MarcInstanceSharingHandlerImpl handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
+    handler.updateSourceRecordSuppressFromDiscoveryByInstanceId(instanceId, true, sourceStorageClient)
+      .onComplete(result -> assertTrue(result.failed()));
+
+    verify(sourceStorageClient, times(1)).putSourceStorageRecordsSuppressFromDiscoveryById(instanceId, INSTANCE_ID_TYPE, true);
+  }
+
+  @Test
   public void shouldPopulateTargetInstanceWithNonMarcControlledFields(TestContext testContext) {
     //given
     Async async = testContext.async();
