@@ -1,3 +1,6 @@
+## 21.0.3 2024-12-05
+* suppressFromDiscovery value is not synchronized between member and centrlal tenants [MODINV-1123](https://issues.folio.org/browse/MODINV-1123)
+
 ## 21.0.2 2024-11-27
 * Update dependencies fixing vulnerabilities [MODINV-1124](https://folio-org.atlassian.net/browse/MODINV-1124)
 
