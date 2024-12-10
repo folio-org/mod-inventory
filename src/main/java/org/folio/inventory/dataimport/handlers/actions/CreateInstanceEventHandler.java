@@ -95,6 +95,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       }
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      LOGGER.info("CreateInstanceEventHandler.handle:: context: {} ", context);
       Record targetRecord = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
       var sourceContent = targetRecord.getParsedRecord().getContent().toString();
 
