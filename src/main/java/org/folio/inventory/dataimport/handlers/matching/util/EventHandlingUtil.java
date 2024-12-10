@@ -27,7 +27,7 @@ public final class EventHandlingUtil {
 
       @Override
       public String getToken() {
-        return token;
+        return isSystemUserEnabled() ? null : token;
       }
 
       @Override
@@ -83,4 +83,20 @@ public final class EventHandlingUtil {
       : JsonHelper.getNestedProperty(representation, propertyName, nestedPropertyName);
     return StringUtils.isNotEmpty(propertyValue);
   }
+
+  /**
+   * Checks if the system user is enabled based on a system property.
+   * <p>
+   * This method reads the `SYSTEM_USER_ENABLED` system property and parses
+   * its value as a boolean. If the property is not found or cannot be parsed,
+   * it defaults to `true`. The method then negates the parsed value and returns it.
+   * <p>
+   * Note: This functionality is specific to the Eureka environment.
+   *
+   * @return {@code true} if the system user is set for Eureka env; otherwise {@code false}.
+   */
+  public static boolean isSystemUserEnabled() {
+    return !Boolean.parseBoolean(System.getProperty("SYSTEM_USER_ENABLED", "true"));
+  }
+
 }
