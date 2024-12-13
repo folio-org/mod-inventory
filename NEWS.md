@@ -1,3 +1,6 @@
+## 21.X.X 2
+* Enable system user for data-import processes [MODINV-1115](https://folio-org.atlassian.net/browse/MODINV-1115)
+
 ## 21.0.0 2024-10-29
 * Existing "035" field is not retained the original position in imported record [MODINV-1049](https://folio-org.atlassian.net/browse/MODINV-1049)
 * Update Data Import logic to normalize OCLC 035 values [MODINV-949](https://folio-org.atlassian.net/browse/MODINV-949)
