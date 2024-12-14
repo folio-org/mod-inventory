@@ -1,5 +1,7 @@
 package org.folio.inventory.storage.external;
 
+import static api.ApiTestSuite.REQUEST_ID;
+import static api.ApiTestSuite.USER_ID;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -16,7 +18,7 @@ public class ExternalStorageModuleHoldingsRecordCollectionExamples extends Exter
 
   private final ExternalStorageModuleHoldingsRecordCollection storage =
     useHttpClient(client -> new ExternalStorageModuleHoldingsRecordCollection(
-      getStorageAddress(), TENANT_ID, TENANT_TOKEN, client));
+      getStorageAddress(), TENANT_ID, TENANT_TOKEN, USER_ID, REQUEST_ID, client));
 
   @Test
   public void shouldMapFromJson() {

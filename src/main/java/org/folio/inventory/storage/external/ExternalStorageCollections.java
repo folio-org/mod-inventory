@@ -20,38 +20,37 @@ public class ExternalStorageCollections implements CollectionProvider {
   }
 
   @Override
-  public ItemCollection getItemCollection(String tenantId, String token) {
-    return new ExternalStorageModuleItemCollection(baseAddress, tenantId, token,
-      client);
+  public ItemCollection getItemCollection(String tenantId, String token, String userId, String requestId) {
+    return new ExternalStorageModuleItemCollection(baseAddress, tenantId, token, userId, requestId, client);
   }
 
   @Override
-  public HoldingsRecordCollection getHoldingsRecordCollection(String tenantId, String token) {
+  public HoldingsRecordCollection getHoldingsRecordCollection(String tenantId, String token, String userId, String requestId) {
     return new ExternalStorageModuleHoldingsRecordCollection(baseAddress,
-      tenantId, token, client);
+      tenantId, token, userId, requestId, client);
   }
 
   @Override
-  public InstanceCollection getInstanceCollection(String tenantId, String token) {
+  public InstanceCollection getInstanceCollection(String tenantId, String token, String userId, String requestId) {
     return new ExternalStorageModuleInstanceCollection(baseAddress,
-      tenantId, token, client);
+      tenantId, token, userId, requestId, client);
   }
 
   @Override
-  public AuthorityRecordCollection getAuthorityCollection(String tenantId, String token) {
+  public AuthorityRecordCollection getAuthorityCollection(String tenantId, String token, String userId, String requestId) {
     return new ExternalStorageModuleAuthorityRecordCollection(baseAddress,
-        tenantId, token, client);
+        tenantId, token, userId, requestId, client);
   }
 
   @Override
-  public UserCollection getUserCollection(String tenantId, String token) {
+  public UserCollection getUserCollection(String tenantId, String token, String userId, String requestId) {
     return new ExternalStorageModuleUserCollection(baseAddress,
-      tenantId, token, client);
+      tenantId, token, userId, requestId, client);
   }
 
   @Override
-  public HoldingsRecordsSourceCollection getHoldingsRecordsSourceCollection(String tenantId, String token) {
+  public HoldingsRecordsSourceCollection getHoldingsRecordsSourceCollection(String tenantId, String token, String userId, String requestId) {
     return new ExternalStorageModuleHoldingsRecordsSourceCollection(baseAddress,
-      tenantId, token, client);
+      tenantId, token, userId, requestId, client);
   }
 }
