@@ -20,7 +20,6 @@ public class MarcBibUpdateConsumerVerticle extends KafkaConsumerVerticle {
 
     var marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertx, getMaxDistributionNumber(BASE_PROPERTY),
       getKafkaConfig(), instanceUpdateDelegate, getMappingMetadataCache());
-
     var marcBibUpdateConsumerWrapper = createConsumer(SRS_MARC_BIB_EVENT, BASE_PROPERTY, false);
 
     marcBibUpdateConsumerWrapper.start(marcBibUpdateKafkaHandler, constructModuleName())

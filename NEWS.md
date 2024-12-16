@@ -1,4 +1,5 @@
-## 21.X.X 2
+## 21.1.0-SNAPSHOT 2024-xx-xx
+* Provide consistent handling with concurrency two or more Marc Bib Update events for the same bib record [MODINV-1100](https://folio-org.atlassian.net/browse/MODINV-1100)
 * Enable system user for data-import processes [MODINV-1115](https://folio-org.atlassian.net/browse/MODINV-1115)
 
 ## 21.0.0 2024-10-29
