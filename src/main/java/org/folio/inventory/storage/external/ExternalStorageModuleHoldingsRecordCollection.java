@@ -30,10 +30,12 @@ class ExternalStorageModuleHoldingsRecordCollection
   ExternalStorageModuleHoldingsRecordCollection(String baseAddress,
                                          String tenant,
                                          String token,
+                                         String userId,
+                                         String requestId,
                                          HttpClient client) {
 
     super(String.format("%s/%s", baseAddress, "holdings-storage/holdings"),
-      tenant, token, "holdingsRecords", client);
+      tenant, token, userId, requestId, "holdingsRecords", client);
   }
 
   @Override

@@ -5,4 +5,5 @@ public interface Context {
   String getToken();
   String getOkapiLocation();
   String getUserId();
+  String getRequestId();
 }

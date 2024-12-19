@@ -22,10 +22,12 @@ public class ExternalStorageModuleAuthorityRecordCollection
     String baseAddress,
     String tenant,
     String token,
+    String userId,
+    String requestId,
     HttpClient client) {
 
     super(String.format("%s/%s", baseAddress, "authority-storage/authorities"),
-      tenant, token, "authorities", client);
+      tenant, token, userId, requestId,"authorities", client);
   }
 
   @Override

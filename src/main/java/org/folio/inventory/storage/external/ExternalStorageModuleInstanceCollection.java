@@ -48,10 +48,12 @@ class ExternalStorageModuleInstanceCollection
     String baseAddress,
     String tenant,
     String token,
+    String userId,
+    String requestId,
     HttpClient client) {
 
     super(format("%s/%s", baseAddress, "instance-storage/instances"),
-      tenant, token, "instances", client);
+      tenant, token, userId, requestId, "instances", client);
 
     batchAddress = format("%s/%s", baseAddress, "instance-storage/batch/instances");
   }

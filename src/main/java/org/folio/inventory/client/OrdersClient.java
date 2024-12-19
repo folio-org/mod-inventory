@@ -69,6 +69,6 @@ public class OrdersClient {
     @SneakyThrows
     private OkapiHttpClient createOkapiHttpClient(Context context) {
         return new OkapiHttpClient(webClient, new URL(context.getOkapiLocation()),
-                context.getTenantId(), context.getToken(), null, null, null);
+                context.getTenantId(), context.getToken(), context.getUserId(), context.getRequestId(), null);
     }
 }

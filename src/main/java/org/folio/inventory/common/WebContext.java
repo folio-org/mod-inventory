@@ -37,6 +37,7 @@ public class WebContext implements Context {
     return getHeader(OKAPI_USER_ID_HEADER, "");
   }
 
+  @Override
   public String getRequestId() {
     return getHeader(OKAPI_REQUEST_ID);
   }
