@@ -80,14 +80,14 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
       LOGGER.info("handle:: Processing {} modifying starting with jobExecutionId: {}.", modifiedEntityType(), payload.getJobExecutionId());
-      Context localTenantContext = EventHandlingUtil.constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl());
+      Context localTenantContext = EventHandlingUtil.constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(), payloadContext.get(EventHandlingUtil.USER_ID));
 
       mappingMetadataCache.get(payload.getJobExecutionId(), localTenantContext)
         .map(mapMappingMetaDataOrFail(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, payload.getJobExecutionId())))
         .compose(mappingMetadataDto -> modifyRecord(payload, getMappingParameters(mappingMetadataDto)).map(mappingMetadataDto))
         .compose(mappingMetadataDto -> {
           if (payloadContext.containsKey(relatedEntityType().value())) {
-            Context targetInstanceContext = EventHandlingUtil.constructContext(getTenant(payload), payload.getToken(), payload.getOkapiUrl());
+            Context targetInstanceContext = EventHandlingUtil.constructContext(getTenant(payload), payload.getToken(), payload.getOkapiUrl(), payloadContext.get(EventHandlingUtil.USER_ID));
             return updateRelatedEntity(payload, mappingMetadataDto, targetInstanceContext)
               .compose(v -> updateRecord(getRecord(payload.getContext()), targetInstanceContext));
           }

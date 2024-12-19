@@ -1,20 +1,20 @@
 package org.folio.inventory.dataimport.handlers.matching.util;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.DataImportEventPayload;
 import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.support.JsonHelper;
 
-import io.vertx.core.json.JsonObject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 public final class EventHandlingUtil {
+  public static final String USER_ID = "userId";
   private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
 
   private EventHandlingUtil() {}
