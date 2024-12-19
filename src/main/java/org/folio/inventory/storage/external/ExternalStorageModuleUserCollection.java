@@ -15,10 +15,12 @@ class ExternalStorageModuleUserCollection
     String baseAddress,
     String tenant,
     String token,
+    String userId,
+    String requestId,
     HttpClient client) {
 
     super(String.format("%s/%s", baseAddress, "users"),
-      tenant, token, "users", client);
+      tenant, token, userId, requestId, "users", client);
   }
 
   @Override

@@ -8,6 +8,8 @@ public class MessagingContext implements Context {
   public static final String TOKEN = "token";
   public static final String OKAPI_LOCATION = "okapiLocation";
   public static final String JOB_ID = "jobId";
+  public static final String USER_ID = "userId";
+  public static final String REQUEST_ID = "requestId";
 
   private final MultiMap headers;
 
@@ -32,7 +34,12 @@ public class MessagingContext implements Context {
 
   @Override
   public String getUserId() {
-    return null;
+    return getHeader(USER_ID);
+  }
+
+  @Override
+  public String getRequestId() {
+    return getHeader(REQUEST_ID);
   }
 
   private String getHeader(String header) {

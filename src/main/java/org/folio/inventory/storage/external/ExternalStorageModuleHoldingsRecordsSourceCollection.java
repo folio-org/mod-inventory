@@ -22,10 +22,12 @@ public class ExternalStorageModuleHoldingsRecordsSourceCollection
     String baseAddress,
     String tenant,
     String token,
+    String userId,
+    String requestId,
     HttpClient client) {
 
     super(String.format("%s/%s", baseAddress, "holdings-sources"),
-      tenant, token, "holdingsRecordsSources", client);
+      tenant, token, userId, requestId, "holdingsRecordsSources", client);
   }
 
   @Override
