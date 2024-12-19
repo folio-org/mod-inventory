@@ -1,5 +1,7 @@
 package org.folio.inventory.storage.external;
 
+import static api.ApiTestSuite.REQUEST_ID;
+import static api.ApiTestSuite.USER_ID;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -14,7 +16,7 @@ import io.vertx.core.json.JsonObject;
 public class ExternalStorageModuleHoldingsRecordsSourceCollectionExamples extends ExternalStorageTests {
   private final ExternalStorageModuleHoldingsRecordsSourceCollection storage =
     useHttpClient(client -> new ExternalStorageModuleHoldingsRecordsSourceCollection(
-      getStorageAddress(), TENANT_ID, TENANT_TOKEN, client));
+      getStorageAddress(), TENANT_ID, TENANT_TOKEN, USER_ID, REQUEST_ID, client));
 
   @Test
   public void shouldMapFromJson() {

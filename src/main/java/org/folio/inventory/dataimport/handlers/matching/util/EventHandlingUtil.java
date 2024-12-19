@@ -20,10 +20,10 @@ public final class EventHandlingUtil {
   private EventHandlingUtil() {}
 
   public static Context constructContext(String tenantId, String token, String okapiUrl) {
-    return constructContext(tenantId, token, okapiUrl, null);
+    return constructContext(tenantId, token, okapiUrl, null, null);
   }
 
-  public static Context constructContext(String tenantId, String token, String okapiUrl, String userId) {
+  public static Context constructContext(String tenantId, String token, String okapiUrl, String userId, String requestId) {
     return new Context() {
       @Override
       public String getTenantId() {
@@ -43,6 +43,11 @@ public final class EventHandlingUtil {
       @Override
       public String getUserId() {
         return Optional.ofNullable(userId).orElse("");
+      }
+
+      @Override
+      public String getRequestId() {
+        return Optional.ofNullable(requestId).orElse("");
       }
     };
   }

@@ -1,5 +1,7 @@
 package org.folio.inventory.storage.external.failure;
 
+import static api.ApiTestSuite.REQUEST_ID;
+import static api.ApiTestSuite.USER_ID;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.any;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
@@ -200,7 +202,7 @@ public class ExternalItemCollectionServerErrorExamples {
         it -> new ExternalStorageCollections(
           wireMockServer.baseUrl(),
           it.createHttpClient()))
-      .getItemCollection("test_tenant", "");
+      .getItemCollection("test_tenant", "", USER_ID, REQUEST_ID);
   }
 
   private void assertServerError(Failure failure) {

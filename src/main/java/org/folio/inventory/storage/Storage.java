@@ -47,32 +47,32 @@ public class Storage {
 
   public ItemCollection getItemCollection(Context context) {
     return providerFactory.apply(context).getItemCollection(
-      context.getTenantId(), context.getToken());
+      context.getTenantId(), context.getToken(), context.getUserId(), context.getRequestId());
   }
 
   public InstanceCollection getInstanceCollection(Context context) {
     return providerFactory.apply(context).getInstanceCollection(
-      context.getTenantId(), context.getToken());
+      context.getTenantId(), context.getToken(), context.getUserId(), context.getRequestId());
   }
 
   public HoldingsRecordCollection getHoldingsRecordCollection(Context context) {
     return providerFactory.apply(context).getHoldingsRecordCollection(
-      context.getTenantId(), context.getToken());
+      context.getTenantId(), context.getToken(), context.getUserId(), context.getRequestId());
   }
 
   public HoldingsRecordsSourceCollection getHoldingsRecordsSourceCollection (Context context){
     return providerFactory.apply(context).getHoldingsRecordsSourceCollection(
-      context.getTenantId(), context.getToken()
+      context.getTenantId(), context.getToken(), context.getUserId(), context.getRequestId()
     );
   }
 
   public AuthorityRecordCollection getAuthorityRecordCollection(Context context) {
     return providerFactory.apply(context).getAuthorityCollection(
-      context.getTenantId(), context.getToken());
+      context.getTenantId(), context.getToken(), context.getUserId(), context.getRequestId());
   }
 
   public UserCollection getUserCollection(Context context) {
     return providerFactory.apply(context).getUserCollection(
-      context.getTenantId(), context.getToken());
+      context.getTenantId(), context.getToken(), context.getUserId(), context.getRequestId());
   }
 }
