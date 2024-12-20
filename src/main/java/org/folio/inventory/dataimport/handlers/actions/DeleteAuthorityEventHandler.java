@@ -10,6 +10,7 @@ import org.folio.ActionProfile;
 import org.folio.Authority;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.dataimport.exceptions.DataImportException;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.handler.EventHandler;
@@ -54,7 +55,7 @@ public class DeleteAuthorityEventHandler implements EventHandler {
         throw new EventProcessingException(UNEXPECTED_PAYLOAD_MSG);
       }
 
-      var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl());
+      var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(), payload.getContext().get(EventHandlingUtil.USER_ID));
       AuthorityRecordCollection authorityRecordCollection = storage.getAuthorityRecordCollection(context);
       String id = payload.getContext().get(AUTHORITY_RECORD_ID);
       LOGGER.info("Delete authority with id: {}", id);

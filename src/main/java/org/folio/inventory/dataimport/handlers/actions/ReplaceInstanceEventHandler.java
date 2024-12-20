@@ -117,7 +117,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       LOGGER.info("handle:: Processing ReplaceInstanceEventHandler starting with jobExecutionId: {} and incomingRecordId: {}.",
         dataImportEventPayload.getJobExecutionId(), payloadContext.get(INCOMING_RECORD_ID));
 
-      Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), payloadContext.get(EventHandlingUtil.USER_ID));
       Instance instanceToUpdate = Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
 
       if (instanceToUpdate.getSource() != null && instanceToUpdate.getSource().equals(LINKED_DATA.getValue())) {
@@ -132,7 +132,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           .compose(consortiumConfigurationOptional -> {
             if (consortiumConfigurationOptional.isPresent()) {
               String centralTenantId = consortiumConfigurationOptional.get().getCentralTenantId();
-              Context centralTenantContext = EventHandlingUtil.constructContext(centralTenantId, context.getToken(), context.getOkapiLocation());
+              Context centralTenantContext = EventHandlingUtil.constructContext(centralTenantId, context.getToken(), context.getOkapiLocation(), payloadContext.get(EventHandlingUtil.USER_ID));
               InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
               InstanceUtil.findInstanceById(instanceToUpdate.getId(), instanceCollection)
                 .onSuccess(existedCentralTenantInstance -> {
@@ -154,7 +154,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           });
       } else {
         String targetInstanceTenantId = dataImportEventPayload.getContext().getOrDefault(CENTRAL_TENANT_ID, dataImportEventPayload.getTenant());
-        Context instanceUpdateContext = EventHandlingUtil.constructContext(targetInstanceTenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+        Context instanceUpdateContext = EventHandlingUtil.constructContext(targetInstanceTenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), payloadContext.get(EventHandlingUtil.USER_ID));
         InstanceCollection instanceCollection = storage.getInstanceCollection(instanceUpdateContext);
 
         InstanceUtil.findInstanceById(instanceToUpdate.getId(), instanceCollection)
@@ -262,7 +262,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       .withStatus(Snapshot.Status.COMMITTED)
       .withProcessingStartedDate(new Date());
 
-    var context = EventHandlingUtil.constructContext(tenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+    var context = EventHandlingUtil.constructContext(tenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getContext().get(EventHandlingUtil.USER_ID));
     return postSnapshotInSrsAndHandleResponse(context, snapshot);
   }
 

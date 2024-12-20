@@ -79,8 +79,8 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
       }
 
       record.setExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
-      Context localTenantContext = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
-      Context targetInstanceContext = EventHandlingUtil.constructContext(getTenant(dataImportEventPayload), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      Context localTenantContext = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), payloadContext.get(EventHandlingUtil.USER_ID));
+      Context targetInstanceContext = EventHandlingUtil.constructContext(getTenant(dataImportEventPayload), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), payloadContext.get(EventHandlingUtil.USER_ID));
       Promise<Instance> instanceUpdatePromise = Promise.promise();
 
       mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), localTenantContext)

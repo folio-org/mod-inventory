@@ -28,6 +28,7 @@ import org.folio.HoldingsRecord;
 import org.folio.MappingMetadataDto;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.HoldingsCollectionService;
@@ -99,7 +100,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
-      Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), payloadContext.get(EventHandlingUtil.USER_ID));
       Record targetRecord = new JsonObject(payloadContext.get(EntityType.MARC_HOLDINGS.value())).mapTo(Record.class);
       prepareEvent(dataImportEventPayload);
 
