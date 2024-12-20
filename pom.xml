@@ -321,7 +321,7 @@
     <liquibase.version>4.9.1</liquibase.version>
     <kafkaclients.version>3.1.0</kafkaclients.version>
     <junit.version>4.13.2</junit.version>
-    <data-import-processing-core.version>4.4.1-SNAPSHOT</data-import-processing-core.version>
+    <data-import-processing-core.version>4.4.0-SNAPSHOT</data-import-processing-core.version>
     <folio-module-descriptor-validator.version>1.0.0</folio-module-descriptor-validator.version>
   </properties>
 
