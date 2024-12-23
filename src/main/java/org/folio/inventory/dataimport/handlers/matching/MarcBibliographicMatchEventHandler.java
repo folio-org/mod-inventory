@@ -67,7 +67,7 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
       Record matchedRecord = records.get(0);
       String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(matchedRecord.getParsedRecord(), AdditionalSubfields.I);
       String matchedRecordTenantId = getTenant(eventPayload);
-      Context context = EventHandlingUtil.constructContext(matchedRecordTenantId, eventPayload.getToken(), eventPayload.getOkapiUrl());
+      Context context = EventHandlingUtil.constructContext(matchedRecordTenantId, eventPayload.getToken(), eventPayload.getOkapiUrl(), eventPayload.getContext().get(EventHandlingUtil.USER_ID));
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
       if (isBlank(instanceId)) {

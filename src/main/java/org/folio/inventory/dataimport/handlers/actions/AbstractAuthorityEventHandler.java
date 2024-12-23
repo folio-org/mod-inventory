@@ -28,6 +28,7 @@ import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
@@ -78,7 +79,7 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
 
       prepareEvent(payload);
 
-      var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl());
+      var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(), payload.getContext().get(EventHandlingUtil.USER_ID));
       var jobExecutionId = payload.getJobExecutionId();
       mappingMetadataCache.get(jobExecutionId, context)
         .map(mapMetadataOrFail())
