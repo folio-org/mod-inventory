@@ -34,26 +34,34 @@ import java.util.stream.Collectors;
 abstract class ExternalStorageModuleCollection<T> {
   private static final String TENANT_HEADER = "X-Okapi-Tenant";
   private static final String TOKEN_HEADER = "X-Okapi-Token";
+  private static final String USER_ID_HEADER = "X-Okapi-User-Id";
+  private static final String REQUEST_ID_HEADER = "X-Okapi-Request-Id";
 
   private static final Logger LOGGER = LogManager.getLogger(ExternalStorageModuleCollection.class);
 
 
-  private final String storageAddress;
-  private final String tenant;
-  private final String token;
-  private final String collectionWrapperPropertyName;
+  protected final String storageAddress;
+  protected final String tenant;
+  protected final String token;
+  protected final String collectionWrapperPropertyName;
   protected final WebClient webClient;
+  protected final String userId;
+  protected final String requestId;
 
   ExternalStorageModuleCollection(
     String storageAddress,
     String tenant,
     String token,
+    String userId,
+    String requestId,
     String collectionWrapperPropertyName,
     HttpClient client) {
 
     this.storageAddress = storageAddress;
     this.tenant = tenant;
     this.token = token;
+    this.userId = userId;
+    this.requestId = requestId;
     this.collectionWrapperPropertyName = collectionWrapperPropertyName;
     this.webClient = WebClient.wrap(client);
   }
@@ -193,7 +201,7 @@ abstract class ExternalStorageModuleCollection<T> {
     deleteLocation(individualRecordLocation(id), completionCallback, failureCallback);
   }
 
-  private String individualRecordLocation(String id) {
+  protected String individualRecordLocation(String id) {
     return String.format("%s/%s", storageAddress, id);
   }
 
@@ -211,7 +219,9 @@ abstract class ExternalStorageModuleCollection<T> {
     return request
       .putHeader(ACCEPT, "application/json, text/plain")
       .putHeader(TENANT_HEADER, tenant)
-      .putHeader(TOKEN_HEADER, token);
+      .putHeader(TOKEN_HEADER, token)
+      .putHeader(USER_ID_HEADER, userId)
+      .putHeader(REQUEST_ID_HEADER, requestId);
   }
 
   protected CompletionStage<Response> mapAsyncResultToCompletionStage(

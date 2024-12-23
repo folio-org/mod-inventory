@@ -1,5 +1,7 @@
 package org.folio.inventory.storage.external;
 
+import static api.ApiTestSuite.REQUEST_ID;
+import static api.ApiTestSuite.USER_ID;
 import static org.folio.inventory.common.FutureAssistance.fail;
 import static org.folio.inventory.common.FutureAssistance.getOnCompletion;
 import static org.folio.inventory.common.FutureAssistance.succeed;
@@ -35,7 +37,7 @@ public class ExternalInstanceCollectionExamples extends ExternalStorageTests {
 
   private final InstanceCollection collection =
     useHttpClient(client -> new ExternalStorageModuleInstanceCollection(
-      getStorageAddress(), TENANT_ID, TENANT_TOKEN, client));
+      getStorageAddress(), TENANT_ID, TENANT_TOKEN, USER_ID, REQUEST_ID, client));
 
   @Before
   @SneakyThrows

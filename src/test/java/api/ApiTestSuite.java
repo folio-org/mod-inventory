@@ -88,6 +88,7 @@ public class ApiTestSuite {
   public static final String USER_ID = "7e115dfb-d1d6-46ac-b2dc-2b3e74cda694";
   public static final String CENTRAL_TENANT_ID_FIELD = "centralTenantId";
   public static final String CONSORTIUM_ID_FIELD = "consortiumId";
+  public static final String REQUEST_ID = "test_request_1234";
 
   private static String bookMaterialTypeId;
   private static String dvdMaterialTypeId;

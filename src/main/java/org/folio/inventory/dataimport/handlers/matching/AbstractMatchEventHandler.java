@@ -12,6 +12,7 @@ import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.PreloadingFields;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.handlers.matching.util.MatchingParametersRelations;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -51,7 +52,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setEventType(getNotMatchedEventType());
     Context context = constructContext(dataImportEventPayload.getTenant(),
-      dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl());
+      dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getContext().get(EventHandlingUtil.USER_ID));
 
     mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
       .toCompletionStage()

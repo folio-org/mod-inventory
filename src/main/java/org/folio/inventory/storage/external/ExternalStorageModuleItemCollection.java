@@ -12,10 +12,10 @@ class ExternalStorageModuleItemCollection
   implements ItemCollection {
 
   ExternalStorageModuleItemCollection(String baseAddress, String tenant,
-    String token, HttpClient client) {
+    String token, String userId, String requestId, HttpClient client) {
 
     super(String.format("%s/%s", baseAddress, "item-storage/items"),
-      tenant, token, "items", client);
+      tenant, token, userId, requestId, "items", client);
   }
 
   @Override

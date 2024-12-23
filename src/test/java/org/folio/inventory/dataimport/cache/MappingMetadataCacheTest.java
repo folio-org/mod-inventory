@@ -1,11 +1,16 @@
 package org.folio.inventory.dataimport.cache;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
 import java.util.UUID;
 
 import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.exceptions.CacheLoadingException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.MappingMetadataDto;
 import org.junit.Before;
@@ -97,6 +102,41 @@ public class MappingMetadataCacheTest {
       async.complete();
     });
 
+  }
+
+  @Test
+  public void shouldReturnMappingMetadataByRecordTypeBlocking() {
+    var optionalMetadata = mappingMetadataCache
+      .getByRecordTypeBlocking(mappingMetadata.getJobExecutionId(), this.context, MARC_BIB_RECORD_TYPE);
+
+    assertTrue(optionalMetadata.isPresent());
+    var actualMappingMetadata = optionalMetadata.get();
+    assertEquals(mappingMetadata.getJobExecutionId(), actualMappingMetadata.getJobExecutionId());
+    assertNotNull(actualMappingMetadata.getMappingParams());
+    assertNotNull(actualMappingMetadata.getMappingRules());
+    assertEquals(mappingMetadata.getMappingParams(), actualMappingMetadata.getMappingParams());
+    assertEquals(mappingMetadata.getMappingRules(), actualMappingMetadata.getMappingRules());
+  }
+
+  @Test
+  public void shouldReturnNoMappingMetadataWhenGetNotFoundByRecordTypeBlocking() {
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
+      .willReturn(WireMock.notFound()));
+
+    var optionalMetadata = mappingMetadataCache
+      .getByRecordTypeBlocking(mappingMetadata.getJobExecutionId(), this.context, MARC_BIB_RECORD_TYPE);
+
+    assertTrue(optionalMetadata.isEmpty());
+  }
+
+  @Test
+  public void shouldThrowExceptionOnAttemptToGetByRecordTypeBlocking() {
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
+      .willReturn(WireMock.badRequest()));
+    var jobId = mappingMetadata.getJobExecutionId();
+
+    assertThrows(CacheLoadingException.class,
+      () -> mappingMetadataCache.getByRecordTypeBlocking(jobId, this.context, MARC_BIB_RECORD_TYPE));
   }
 
   @Test

@@ -78,7 +78,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
         return restDataImportHelper.importMarcRecord(marcRecord, sharingInstanceMetadata, kafkaHeaders)
           .compose(result -> {
             if ("COMMITTED".equals(result)) {
-              return updateTargetInstanceWithNonMarcControlledFields(instance, target)
+              return updateTargetInstanceWithNonMarcControlledFields(instance, target, kafkaHeaders)
                 // Delete source record by record ID if the result is "COMMITTED"
                 .compose(targetInstance -> deleteSourceRecordByRecordId(marcRecord.getId(), instanceId, sourceTenant, sourceStorageClient)
                   .map(targetInstance))
@@ -98,11 +98,22 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       });
   }
 
-  private Future<Instance> updateTargetInstanceWithNonMarcControlledFields(Instance sourceInstance, Target targetTenantProvider) {
+  private Future<Instance> updateTargetInstanceWithNonMarcControlledFields(Instance sourceInstance, Target targetTenantProvider,
+                                                                           Map<String, String> kafkaHeaders) {
     return instanceOperations.getInstanceById(sourceInstance.getId(), targetTenantProvider)
       .map(targetInstance -> populateTargetInstanceWithNonMarcControlledFields(targetInstance, sourceInstance))
-      .compose(targetInstance -> instanceOperations.updateInstance(targetInstance, targetTenantProvider)
-        .map(targetInstance));
+      .compose(targetInstance -> instanceOperations.updateInstance(targetInstance, targetTenantProvider).map(targetInstance))
+      .compose(targetInstance -> updateSuppressFromDiscoveryFlagIfNeeded(targetInstance, targetTenantProvider, kafkaHeaders));
+  }
+
+  private Future<Instance> updateSuppressFromDiscoveryFlagIfNeeded(Instance targetInstance, Target targetTenantProvider,
+                                                                   Map<String, String> kafkaHeaders) {
+    if (Boolean.TRUE.equals(targetInstance.getDiscoverySuppress())) {
+      SourceStorageRecordsClient sourceStorageClient = getSourceStorageRecordsClient(targetTenantProvider.getTenantId(), kafkaHeaders);
+      return updateSourceRecordSuppressFromDiscoveryByInstanceId(targetInstance.getId(), targetInstance.getDiscoverySuppress(), sourceStorageClient)
+        .map(targetInstance);
+    }
+    return Future.succeededFuture(targetInstance);
   }
 
   private Instance populateTargetInstanceWithNonMarcControlledFields(Instance targetInstance, Instance sourceInstance) {
@@ -242,6 +253,27 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
             recordId, instanceId, tenantId, response.statusCode(), response.bodyAsString());
           LOGGER.error("deleteSourceRecordByRecordId:: {}", msg);
           return Future.failedFuture(msg);
+        }
+      });
+  }
+
+  Future<String> updateSourceRecordSuppressFromDiscoveryByInstanceId(String instanceId, boolean suppress,
+                                                                     SourceStorageRecordsClient sourceStorageClient) {
+    LOGGER.info("updateSourceRecordSuppressFromDiscoveryByInstanceId:: Updating suppress from discovery flag for record in SRS, instanceId: {}, suppressFromDiscovery: {}",
+      instanceId, suppress);
+
+    return sourceStorageClient.putSourceStorageRecordsSuppressFromDiscoveryById(instanceId,
+        INSTANCE_ID_TYPE, suppress)
+      .compose(response -> {
+        if (response.statusCode() == org.folio.HttpStatus.HTTP_OK.toInt()) {
+          LOGGER.info("updateSourceRecordSuppressFromDiscoveryByInstanceId:: Suppress from discovery flag was successfully updated for record in SRS, instanceId: {}, suppressFromDiscovery: {}",
+            instanceId, suppress);
+          return Future.succeededFuture(instanceId);
+        } else {
+          String errorMessage = format("Cannot update suppress from discovery flag for SRS record, instanceId: %s, statusCode: %s, suppressFromDiscovery: %s",
+            instanceId, response.statusCode(), suppress);
+          LOGGER.warn(format("updateSourceRecordSuppressFromDiscoveryByInstanceId:: %s", errorMessage));
+          return Future.failedFuture(errorMessage);
         }
       });
   }

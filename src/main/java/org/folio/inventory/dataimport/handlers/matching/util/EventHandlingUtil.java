@@ -1,24 +1,33 @@
 package org.folio.inventory.dataimport.handlers.matching.util;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.DataImportEventPayload;
 import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.support.JsonHelper;
 
-import io.vertx.core.json.JsonObject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 public final class EventHandlingUtil {
+  public static final String USER_ID = "userId";
   private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
 
   private EventHandlingUtil() {}
 
   public static Context constructContext(String tenantId, String token, String okapiUrl) {
+    return constructContext(tenantId, token, okapiUrl, null, null);
+  }
+
+  public static Context constructContext(String tenantId, String token, String okapiUrl, String userId) {
+    return constructContext(tenantId, token, okapiUrl, userId, null);
+  }
+
+  public static Context constructContext(String tenantId, String token, String okapiUrl, String userId, String requestId) {
     return new Context() {
       @Override
       public String getTenantId() {
@@ -27,7 +36,7 @@ public final class EventHandlingUtil {
 
       @Override
       public String getToken() {
-        return token;
+        return isSystemUserEnabled() ? "" : token;
       }
 
       @Override
@@ -37,7 +46,12 @@ public final class EventHandlingUtil {
 
       @Override
       public String getUserId() {
-        return "";
+        return Optional.ofNullable(userId).orElse("");
+      }
+
+      @Override
+      public String getRequestId() {
+        return Optional.ofNullable(requestId).orElse("");
       }
     };
   }
@@ -83,4 +97,20 @@ public final class EventHandlingUtil {
       : JsonHelper.getNestedProperty(representation, propertyName, nestedPropertyName);
     return StringUtils.isNotEmpty(propertyValue);
   }
+
+  /**
+   * Checks if the system user is enabled based on a system property.
+   * <p>
+   * This method reads the `SYSTEM_USER_ENABLED` system property and parses
+   * its value as a boolean. If the property is not found or cannot be parsed,
+   * it defaults to `true`. The method then negates the parsed value and returns it.
+   * <p>
+   * Note: This functionality is specific to the Eureka environment.
+   *
+   * @return {@code true} if the system user is set for Eureka env; otherwise {@code false}.
+   */
+  public static boolean isSystemUserEnabled() {
+    return !Boolean.parseBoolean(System.getProperty("SYSTEM_USER_ENABLED", "true"));
+  }
+
 }
