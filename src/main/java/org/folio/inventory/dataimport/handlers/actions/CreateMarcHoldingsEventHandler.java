@@ -8,6 +8,7 @@ import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_HOLDINGS;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
@@ -28,7 +29,6 @@ import org.folio.HoldingsRecord;
 import org.folio.MappingMetadataDto;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.HoldingsCollectionService;
@@ -100,7 +100,8 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
-      Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), payloadContext.get(EventHandlingUtil.USER_ID));
+      Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
+        payloadContext.get(PAYLOAD_USER_ID));
       Record targetRecord = new JsonObject(payloadContext.get(EntityType.MARC_HOLDINGS.value())).mapTo(Record.class);
       prepareEvent(dataImportEventPayload);
 

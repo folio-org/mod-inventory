@@ -8,6 +8,7 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.reorderMarcRecordFields;
@@ -94,7 +95,8 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(format(ACTION_HAS_NO_MAPPING_MSG, jobExecutionId, recordId)));
       }
 
-      Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), payloadContext.get(EventHandlingUtil.USER_ID));
+      Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
+        payloadContext.get(PAYLOAD_USER_ID));
       Record targetRecord = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
       var sourceContent = targetRecord.getParsedRecord().getContent().toString();
 

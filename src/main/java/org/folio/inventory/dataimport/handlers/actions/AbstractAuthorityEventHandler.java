@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 import static io.vertx.core.json.JsonObject.mapFrom;
 import static java.lang.String.format;
 
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
@@ -28,7 +29,6 @@ import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
@@ -79,7 +79,7 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
 
       prepareEvent(payload);
 
-      var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(), payload.getContext().get(EventHandlingUtil.USER_ID));
+      var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(), payload.getContext().get(PAYLOAD_USER_ID));
       var jobExecutionId = payload.getJobExecutionId();
       mappingMetadataCache.get(jobExecutionId, context)
         .map(mapMetadataOrFail())

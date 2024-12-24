@@ -52,6 +52,7 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_PATH;
@@ -117,7 +118,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       LOGGER.info("handle:: Processing ReplaceInstanceEventHandler starting with jobExecutionId: {} and incomingRecordId: {}.",
         dataImportEventPayload.getJobExecutionId(), payloadContext.get(INCOMING_RECORD_ID));
 
-      Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), payloadContext.get(EventHandlingUtil.USER_ID));
+      Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
+        payloadContext.get(PAYLOAD_USER_ID));
       Instance instanceToUpdate = Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
 
       if (instanceToUpdate.getSource() != null && instanceToUpdate.getSource().equals(LINKED_DATA.getValue())) {
@@ -132,7 +134,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           .compose(consortiumConfigurationOptional -> {
             if (consortiumConfigurationOptional.isPresent()) {
               String centralTenantId = consortiumConfigurationOptional.get().getCentralTenantId();
-              Context centralTenantContext = EventHandlingUtil.constructContext(centralTenantId, context.getToken(), context.getOkapiLocation(), payloadContext.get(EventHandlingUtil.USER_ID));
+              Context centralTenantContext = EventHandlingUtil.constructContext(centralTenantId, context.getToken(), context.getOkapiLocation(), payloadContext.get(PAYLOAD_USER_ID));
               InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
               InstanceUtil.findInstanceById(instanceToUpdate.getId(), instanceCollection)
                 .onSuccess(existedCentralTenantInstance -> {
@@ -154,7 +156,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           });
       } else {
         String targetInstanceTenantId = dataImportEventPayload.getContext().getOrDefault(CENTRAL_TENANT_ID, dataImportEventPayload.getTenant());
-        Context instanceUpdateContext = EventHandlingUtil.constructContext(targetInstanceTenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), payloadContext.get(EventHandlingUtil.USER_ID));
+        Context instanceUpdateContext = EventHandlingUtil.constructContext(targetInstanceTenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), payloadContext.get(PAYLOAD_USER_ID));
         InstanceCollection instanceCollection = storage.getInstanceCollection(instanceUpdateContext);
 
         InstanceUtil.findInstanceById(instanceToUpdate.getId(), instanceCollection)
@@ -262,7 +264,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       .withStatus(Snapshot.Status.COMMITTED)
       .withProcessingStartedDate(new Date());
 
-    var context = EventHandlingUtil.constructContext(tenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getContext().get(EventHandlingUtil.USER_ID));
+    var context = EventHandlingUtil.constructContext(tenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getContext().get(PAYLOAD_USER_ID));
     return postSnapshotInSrsAndHandleResponse(context, snapshot);
   }
 
