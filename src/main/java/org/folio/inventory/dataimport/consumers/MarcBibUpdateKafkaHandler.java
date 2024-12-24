@@ -3,6 +3,8 @@ package org.folio.inventory.dataimport.consumers;
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
@@ -55,8 +57,6 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
-  private static final String OKAPI_USER_ID = "x-okapi-user-id";
-  private static final String OKAPI_REQUEST_ID = "x-okapi-request-id";
   private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
@@ -91,7 +91,8 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
         LOGGER.error(message);
         return Future.failedFuture(message);
       }
-      Context context = EventHandlingUtil.constructContext(instanceEvent.getTenant(), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER), headersMap.get(OKAPI_USER_ID), headersMap.get(OKAPI_REQUEST_ID));
+      Context context = EventHandlingUtil.constructContext(instanceEvent.getTenant(), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER),
+        headersMap.get(OKAPI_USER_ID), headersMap.get(OKAPI_REQUEST_ID));
       Record marcBibRecord = instanceEvent.getRecord();
 
       io.vertx.core.Context vertxContext = Vertx.currentContext();
