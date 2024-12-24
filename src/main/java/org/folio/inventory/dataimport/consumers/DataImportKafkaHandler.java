@@ -146,7 +146,8 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       eventPayload.getContext().put(CHUNK_ID_HEADER, chunkId);
       eventPayload.getContext().put(USER_ID_HEADER, userId);
 
-      Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
+      Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl(),
+        eventPayload.getContext().get(USER_ID_HEADER));
       String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
       profileSnapshotCache.get(jobProfileSnapshotId, context)
         .onFailure(e -> sendPayloadWithDiError(eventPayload))
