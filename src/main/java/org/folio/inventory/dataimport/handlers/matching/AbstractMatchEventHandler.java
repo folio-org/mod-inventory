@@ -23,9 +23,9 @@ import org.folio.rest.jaxrs.model.MatchExpression;
 
 import java.util.concurrent.CompletableFuture;
 
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.*;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.extractMatchProfile;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
 
