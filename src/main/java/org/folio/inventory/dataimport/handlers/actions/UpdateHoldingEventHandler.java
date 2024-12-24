@@ -19,7 +19,6 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.entities.PartialError;
-import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.dataimport.entities.OlHoldingsAccumulativeResults;
 import org.folio.inventory.domain.items.ItemCollection;
@@ -47,6 +46,7 @@ import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
 import static org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler.getItemFromJson;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
@@ -114,7 +114,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
         future.complete(dataImportEventPayload);
         return future;
       }
-      Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getContext().get(EventHandlingUtil.USER_ID));
+      Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
+        dataImportEventPayload.getContext().get(PAYLOAD_USER_ID));
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);

@@ -45,6 +45,7 @@ import java.util.stream.Stream;
 
 import static java.lang.String.format;
 import static org.apache.http.HttpStatus.SC_OK;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.processing.value.Value.ValueType.MISSING;
 import static org.folio.rest.jaxrs.model.Filter.*;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
@@ -323,7 +324,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
   private Future<List<Record>> matchCentralTenantIfNeededAndCombineWithLocalMatchedRecords(RecordMatchingDto recordMatchingDto, DataImportEventPayload payload,
                                                                                            Optional<Record> localMatchedRecord) {
-    Context context = EventHandlingUtil.constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(), payload.getContext().get(EventHandlingUtil.USER_ID));
+    Context context = EventHandlingUtil.constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(),
+      payload.getContext().get(PAYLOAD_USER_ID));
     return consortiumService.getConsortiumConfiguration(context)
       .compose(consortiumConfigurationOptional -> {
         if (consortiumConfigurationOptional.isPresent() && !consortiumConfigurationOptional.get().getCentralTenantId().equals(payload.getTenant())) {

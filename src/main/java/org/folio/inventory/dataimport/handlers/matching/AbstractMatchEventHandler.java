@@ -12,7 +12,6 @@ import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.PreloadingFields;
-import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.handlers.matching.util.MatchingParametersRelations;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -26,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.extractMatchProfile;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
 
@@ -52,7 +52,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setEventType(getNotMatchedEventType());
     Context context = constructContext(dataImportEventPayload.getTenant(),
-      dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getContext().get(EventHandlingUtil.USER_ID));
+      dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getContext().get(PAYLOAD_USER_ID));
 
     mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
       .toCompletionStage()

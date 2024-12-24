@@ -56,6 +56,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
@@ -134,7 +135,8 @@ public class CreateItemEventHandler implements EventHandler {
       Future<RecordToEntity> recordToItemFuture = idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
       recordToItemFuture.onSuccess(res -> {
         String deduplicationItemId = res.getEntityId();
-        Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), payloadContext.get(EventHandlingUtil.USER_ID));
+        Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
+          payloadContext.get(PAYLOAD_USER_ID));
         ItemCollection itemCollection = storage.getItemCollection(context);
 
         mappingMetadataCache.get(jobExecutionId, context)

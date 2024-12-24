@@ -3,6 +3,8 @@ package org.folio.inventory.dataimport.consumers;
 import static java.lang.String.format;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
@@ -89,7 +91,7 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
         }
 
         Context context = constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER),
-          headersMap.get(OKAPI_URL_HEADER));
+          headersMap.get(OKAPI_URL_HEADER), headersMap.get(OKAPI_USER_ID), headersMap.get(OKAPI_REQUEST_ID));
         Record marcRecord = Json.decodeValue(eventPayload.get(MARC_KEY), Record.class);
 
         mappingMetadataCache.get(jobExecutionId, context)

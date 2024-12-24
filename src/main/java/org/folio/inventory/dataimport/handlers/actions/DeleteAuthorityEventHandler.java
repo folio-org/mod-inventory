@@ -10,7 +10,6 @@ import org.folio.ActionProfile;
 import org.folio.Authority;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.dataimport.exceptions.DataImportException;
-import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.handler.EventHandler;
@@ -23,6 +22,7 @@ import static io.vertx.core.json.JsonObject.mapFrom;
 import static java.lang.String.format;
 import static org.folio.ActionProfile.Action.DELETE;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
@@ -55,7 +55,8 @@ public class DeleteAuthorityEventHandler implements EventHandler {
         throw new EventProcessingException(UNEXPECTED_PAYLOAD_MSG);
       }
 
-      var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(), payload.getContext().get(EventHandlingUtil.USER_ID));
+      var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(),
+        payload.getContext().get(PAYLOAD_USER_ID));
       AuthorityRecordCollection authorityRecordCollection = storage.getAuthorityRecordCollection(context);
       String id = payload.getContext().get(AUTHORITY_RECORD_ID);
       LOGGER.info("Delete authority with id: {}", id);

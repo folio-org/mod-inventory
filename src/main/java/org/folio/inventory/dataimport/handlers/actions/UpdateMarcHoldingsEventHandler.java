@@ -9,6 +9,7 @@ import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_HOLDINGS;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDINGS_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
@@ -42,7 +43,6 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.exceptions.DataImportException;
-import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
@@ -104,7 +104,8 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
 
       prepareEvent(payload);
 
-      var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(), payload.getContext().get(EventHandlingUtil.USER_ID));
+      var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(),
+        payload.getContext().get(PAYLOAD_USER_ID));
       var jobExecutionId = payload.getJobExecutionId();
       LOGGER.info("Update marc holding with jobExecutionId: {}, incomingRecordId: {}",
         jobExecutionId, payload.getContext().get(INCOMING_RECORD_ID));
