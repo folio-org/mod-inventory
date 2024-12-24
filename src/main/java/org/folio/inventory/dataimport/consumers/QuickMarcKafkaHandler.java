@@ -4,6 +4,7 @@ import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_ERROR;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_AUTHORITY_UPDATED;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_HOLDINGS_UPDATED;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_INSTANCE_UPDATED;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.kafka.KafkaHeaderUtils.kafkaHeadersFromMap;
 import static org.folio.kafka.KafkaHeaderUtils.kafkaHeadersToMap;
@@ -80,7 +81,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> record) {
     var params = new OkapiConnectionParams(kafkaHeadersToMap(record.headers()), vertx);
-    var context = constructContext(params.getTenantId(), params.getToken(), params.getOkapiUrl());
+    var context = constructContext(params.getTenantId(), params.getToken(), params.getOkapiUrl(), USER_ID);
     Event event = Json.decodeValue(record.value(), Event.class);
     LOGGER.info("Quick marc event payload has been received with event type: {}", event.getEventType());
     return getEventPayload(event)

@@ -2,6 +2,7 @@ package org.folio.inventory.dataimport.consumers;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.USER_ID;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
@@ -106,7 +107,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
 
   private Future<Instance> updateInstance(HashMap<String, String> eventPayload, Record marcRecord, Map<String, String> headersMap) {
     String tenantId = eventPayload.getOrDefault(CENTRAL_TENANT_ID_KEY, eventPayload.get(OKAPI_TENANT_HEADER));
-    Context context = EventHandlingUtil.constructContext(tenantId, headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
+    Context context = EventHandlingUtil.constructContext(tenantId, headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER), USER_ID);
     return instanceUpdateDelegate.handle(eventPayload, marcRecord, context);
   }
 
