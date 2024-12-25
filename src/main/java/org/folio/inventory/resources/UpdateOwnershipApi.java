@@ -135,7 +135,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           return CompletableFuture.failedFuture(new NotFoundException(errorMsg));
         }
         if (isInstanceShared(instance)) {
-          Context targetTenantContext = constructContext(holdingsUpdateOwnership.getTargetTenantId(), context.getToken(), context.getOkapiLocation());
+          Context targetTenantContext = constructContext(holdingsUpdateOwnership.getTargetTenantId(), context.getToken(), context.getOkapiLocation(), context.getUserId(), context.getRequestId());
           return updateOwnershipOfHoldingsRecords(holdingsUpdateOwnership, notUpdatedEntities, routingContext, context, targetTenantContext);
         } else {
           String errorMsg = format(INSTANCE_NOT_SHARED, holdingsUpdateOwnership.getToInstanceId());
@@ -183,7 +183,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .toCompletionStage().toCompletableFuture()
       .thenCompose(consortiumConfig -> {
         if (consortiumConfig.isPresent()) {
-          Context targetTenantContext = constructContext(itemsUpdateOwnership.getTargetTenantId(), context.getToken(), context.getOkapiLocation());
+          Context targetTenantContext = constructContext(itemsUpdateOwnership.getTargetTenantId(), context.getToken(), context.getOkapiLocation(), context.getUserId(), context.getRequestId());
           return processHoldingsRecord(targetTenantContext, itemsUpdateOwnership, notUpdatedEntities, routingContext, context);
         } else {
           String errorMsg = format(TENANT_NOT_IN_CONSORTIA, context.getTenantId());

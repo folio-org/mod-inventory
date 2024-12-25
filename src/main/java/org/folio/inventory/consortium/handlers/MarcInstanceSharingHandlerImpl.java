@@ -36,6 +36,8 @@ import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.SOURCE;
 import static org.folio.inventory.consortium.util.MarcRecordUtil.removeFieldFromMarcRecord;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.INSTANCE_ID_TYPE;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.domain.items.Item.HRID_KEY;
@@ -67,7 +69,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
     String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
 
     SourceStorageRecordsClient sourceStorageClient = getSourceStorageRecordsClient(sourceTenant, kafkaHeaders);
-    Context context = constructContext(sourceTenant, kafkaHeaders.get(OKAPI_TOKEN_HEADER), kafkaHeaders.get(OKAPI_URL_HEADER));
+    Context context = constructContext(sourceTenant, kafkaHeaders.get(OKAPI_TOKEN_HEADER), kafkaHeaders.get(OKAPI_URL_HEADER), kafkaHeaders.get(OKAPI_USER_ID), kafkaHeaders.get(OKAPI_REQUEST_ID));
 
     // Get source MARC by instance ID
     return getSourceMARCByInstanceId(instanceId, sourceTenant, sourceStorageClient)
@@ -168,7 +170,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
           /*
            * Updating instance-authority links to contain only links to shared authority, as far as instance will be shared
            */
-          Context targetTenantContext = constructContext(sharingInstanceMetadata.getTargetTenantId(), context.getToken(), context.getOkapiLocation());
+          Context targetTenantContext = constructContext(sharingInstanceMetadata.getTargetTenantId(), context.getToken(), context.getOkapiLocation(), context.getUserId(), context.getRequestId());
           LOGGER.debug("relinkAuthorities:: Linking shared authorities: {} to instance: {}, tenant: %s {}",
             sharedAuthorityLinks, instanceId, targetTenantContext.getTenantId());
           return entitiesLinksService.putInstanceAuthorityLinks(targetTenantContext, instanceId, sharedAuthorityLinks).map(marcRecord);

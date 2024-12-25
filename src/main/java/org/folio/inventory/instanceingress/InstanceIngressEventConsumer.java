@@ -1,5 +1,7 @@
 package org.folio.inventory.instanceingress;
 
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.InstanceIngressEvent.EventType.CREATE_INSTANCE;
 import static org.folio.rest.jaxrs.model.InstanceIngressEvent.EventType.UPDATE_INSTANCE;
@@ -48,7 +50,8 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
     var kafkaHeaders = KafkaHeaderUtils.kafkaHeadersToMap(consumerRecord.headers());
     var event = Json.decodeValue(consumerRecord.value(), InstanceIngressEvent.class);
     var context = constructContext(getTenantId(event, kafkaHeaders),
-      kafkaHeaders.get(OKAPI_TOKEN_HEADER), kafkaHeaders.get(OKAPI_URL_HEADER));
+      kafkaHeaders.get(OKAPI_TOKEN_HEADER), kafkaHeaders.get(OKAPI_URL_HEADER),
+      kafkaHeaders.get(OKAPI_USER_ID), kafkaHeaders.get(OKAPI_REQUEST_ID));
     LOGGER.info("Instance ingress event has been received with event type: {}", event.getEventType());
     return Future.succeededFuture(event.getEventPayload())
       .compose(eventPayload -> processEvent(event, context)

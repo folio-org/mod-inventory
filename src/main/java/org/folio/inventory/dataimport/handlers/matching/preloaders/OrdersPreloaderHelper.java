@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers.matching.preloaders;
 
 import static java.util.Objects.isNull;
 
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.support.CqlHelper.buildMultipleValuesCqlQuery;
 
@@ -51,7 +52,8 @@ public class OrdersPreloaderHelper {
     private CompletableFuture<Optional<List<String>>> getPoLineCollection(String cql,
                                                                 DataImportEventPayload eventPayload,
                                                                 Function<JsonArray, List<String>> convertPreloadResult) {
-        Context context = constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl());
+        Context context = constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl(),
+          eventPayload.getContext().get(PAYLOAD_USER_ID));
 
         return ordersClient.getPoLineCollection(cql, context)
                 .thenApply(poLines -> {

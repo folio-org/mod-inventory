@@ -52,7 +52,8 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setEventType(getNotMatchedEventType());
     Context context = constructContext(dataImportEventPayload.getTenant(),
-      dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getContext().get(PAYLOAD_USER_ID));
+      dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
+      dataImportEventPayload.getContext().get(PAYLOAD_USER_ID));
 
     mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
       .toCompletionStage()
