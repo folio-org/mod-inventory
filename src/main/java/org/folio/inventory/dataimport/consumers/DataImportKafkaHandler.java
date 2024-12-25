@@ -84,6 +84,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static java.lang.String.format;
+import static java.util.Objects.isNull;
 import static org.folio.DataImportEventTypes.DI_ERROR;
 
 public class DataImportKafkaHandler implements AsyncRecordHandler<String, String> {
@@ -139,9 +140,17 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
       String recordId = headersMap.get(RECORD_ID_HEADER);
       String chunkId = headersMap.get(CHUNK_ID_HEADER);
-      String userId = headersMap.get(USER_ID_HEADER);
+
+      String userId = isNull(headersMap.get(USER_ID_HEADER)) ?
+        String.valueOf(eventPayload.getAdditionalProperties().get(USER_ID_HEADER)) :
+        headersMap.get(USER_ID_HEADER);
+
       String jobExecutionId = eventPayload.getJobExecutionId();
       LOGGER.info("Data import event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", eventPayload.getEventType(), recordId, jobExecutionId, chunkId);
+
+      if (isNull(userId)) {
+        LOGGER.error("Data import event payload has been received with userId is null");
+      }
       eventPayload.getContext().put(RECORD_ID_HEADER, recordId);
       eventPayload.getContext().put(CHUNK_ID_HEADER, chunkId);
       eventPayload.getContext().put(USER_ID_HEADER, userId);
