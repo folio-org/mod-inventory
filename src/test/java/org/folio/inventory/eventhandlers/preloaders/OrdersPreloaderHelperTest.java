@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -132,9 +133,12 @@ public class OrdersPreloaderHelperTest {
     }
 
     private DataImportEventPayload createEventPayload() {
+      HashMap<String, String> context = new HashMap<>();
+      context.put("userId", "testUser");
         return new DataImportEventPayload()
                 .withOkapiUrl("http://localhost:9493")
                 .withTenant("diku")
-                .withToken("token");
+                .withToken("token")
+          .withContext(context);
     }
 }

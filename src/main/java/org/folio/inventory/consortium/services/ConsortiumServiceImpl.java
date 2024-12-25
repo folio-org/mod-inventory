@@ -38,7 +38,7 @@ public class ConsortiumServiceImpl implements ConsortiumService {
 
   @Override
   public Future<SharingInstance> createShadowInstance(Context context, String instanceId, ConsortiumConfiguration consortiumConfiguration) {
-    Context centralTenantContext = constructContext(consortiumConfiguration.getCentralTenantId(), context.getToken(), context.getOkapiLocation());
+    Context centralTenantContext = constructContext(consortiumConfiguration.getCentralTenantId(), context.getToken(), context.getOkapiLocation(), context.getUserId(), context.getRequestId());
     SharingInstance sharingInstance = new SharingInstance();
     sharingInstance.setSourceTenantId(consortiumConfiguration.getCentralTenantId());
     sharingInstance.setInstanceIdentifier(UUID.fromString(instanceId));
