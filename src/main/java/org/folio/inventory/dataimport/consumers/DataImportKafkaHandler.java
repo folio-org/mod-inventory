@@ -86,6 +86,7 @@ import java.util.concurrent.CompletableFuture;
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static org.folio.DataImportEventTypes.DI_ERROR;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
 
 public class DataImportKafkaHandler implements AsyncRecordHandler<String, String> {
 
@@ -131,6 +132,21 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     }
   }
 
+  // TODO: generalize userId header in events
+  String extractUserId(DataImportEventPayload eventPayload, Map<String, String> headersMap) {
+    String userId = headersMap.get(USER_ID_HEADER);
+    if (isNull(userId)) {
+      if (eventPayload.getAdditionalProperties().get(USER_ID_HEADER) != null) {
+        userId = String.valueOf(eventPayload.getAdditionalProperties().get(USER_ID_HEADER));
+      } else if (eventPayload.getContext().get("USER_ID") != null) {
+        userId = eventPayload.getContext().get("USER_ID");
+      } else {
+        userId = headersMap.get(OKAPI_USER_ID);
+      }
+    }
+    return userId;
+  }
+
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> record) {
     try {
@@ -141,9 +157,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       String recordId = headersMap.get(RECORD_ID_HEADER);
       String chunkId = headersMap.get(CHUNK_ID_HEADER);
 
-      String userId = isNull(headersMap.get(USER_ID_HEADER)) ?
-        String.valueOf(eventPayload.getAdditionalProperties().get(USER_ID_HEADER)) :
-        headersMap.get(USER_ID_HEADER);
+      String userId = extractUserId(eventPayload, headersMap);
 
       String jobExecutionId = eventPayload.getJobExecutionId();
       LOGGER.info("Data import event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", eventPayload.getEventType(), recordId, jobExecutionId, chunkId);

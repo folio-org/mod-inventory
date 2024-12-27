@@ -12,6 +12,7 @@ import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.FAIL;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.SUCCESS;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
+import static org.folio.rest.util.OkapiConnectionParams.USER_ID_HEADER;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.AsyncResult;
@@ -91,8 +92,12 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
         LOGGER.error(message);
         return Future.failedFuture(message);
       }
+      String userId = isNull(headersMap.get(OKAPI_USER_ID)) ?
+        headersMap.get(OKAPI_USER_ID) :
+        headersMap.get(USER_ID_HEADER);
+
       Context context = EventHandlingUtil.constructContext(instanceEvent.getTenant(), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER),
-        headersMap.get(OKAPI_USER_ID), headersMap.get(OKAPI_REQUEST_ID));
+        userId, headersMap.get(OKAPI_REQUEST_ID));
       Record marcBibRecord = instanceEvent.getRecord();
 
       io.vertx.core.Context vertxContext = Vertx.currentContext();
