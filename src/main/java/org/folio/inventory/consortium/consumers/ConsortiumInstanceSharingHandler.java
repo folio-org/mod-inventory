@@ -300,19 +300,15 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
   private List<KafkaHeader> convertKafkaHeadersMap(Map<String, String> kafkaHeaders) {
 
-    var headers = (kafkaHeaders.get(OKAPI_REQUEST_ID) != null) ?
-      List.of(
-        KafkaHeader.header(OKAPI_URL_HEADER, kafkaHeaders.get(OKAPI_URL_HEADER)),
-        KafkaHeader.header(OKAPI_TENANT_HEADER, kafkaHeaders.get(OKAPI_TENANT_HEADER)),
-        KafkaHeader.header(OKAPI_TOKEN_HEADER, kafkaHeaders.get(OKAPI_TOKEN_HEADER)),
-        KafkaHeader.header(OKAPI_USER_ID, kafkaHeaders.get(OKAPI_USER_ID)),
-        KafkaHeader.header(OKAPI_REQUEST_ID, kafkaHeaders.get(OKAPI_REQUEST_ID))) :
-      List.of(
-        KafkaHeader.header(OKAPI_URL_HEADER, kafkaHeaders.get(OKAPI_URL_HEADER)),
-        KafkaHeader.header(OKAPI_TENANT_HEADER, kafkaHeaders.get(OKAPI_TENANT_HEADER)),
-        KafkaHeader.header(OKAPI_TOKEN_HEADER, kafkaHeaders.get(OKAPI_TOKEN_HEADER)),
-        KafkaHeader.header(OKAPI_USER_ID, kafkaHeaders.get(OKAPI_USER_ID)));
-
-     return new ArrayList<>(headers);
+    List<KafkaHeader> headers = new ArrayList<>(List.of(
+      KafkaHeader.header(OKAPI_URL_HEADER, kafkaHeaders.get(OKAPI_URL_HEADER)),
+      KafkaHeader.header(OKAPI_TENANT_HEADER, kafkaHeaders.get(OKAPI_TENANT_HEADER)),
+      KafkaHeader.header(OKAPI_TOKEN_HEADER, kafkaHeaders.get(OKAPI_TOKEN_HEADER)),
+      KafkaHeader.header(OKAPI_USER_ID, kafkaHeaders.get(OKAPI_USER_ID))
+    ));
+    if (kafkaHeaders.get(OKAPI_REQUEST_ID) != null) {
+      headers.add(KafkaHeader.header(OKAPI_REQUEST_ID, kafkaHeaders.get(OKAPI_REQUEST_ID)));
+    }
+    return headers;
   }
 }
