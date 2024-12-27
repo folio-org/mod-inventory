@@ -31,6 +31,7 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
     String sourceTenantId = sharingInstanceMetadata.getSourceTenantId();
     String targetTenantId = sharingInstanceMetadata.getTargetTenantId();
 
+    // 4
     LOGGER.info("publishInstanceWithFolioSource :: Publishing instance with InstanceId={} from tenant={} to tenant={}.",
       instanceId, sourceTenantId, targetTenantId);
 

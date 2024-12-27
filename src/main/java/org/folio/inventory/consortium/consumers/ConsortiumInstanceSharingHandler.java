@@ -78,7 +78,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     Promise<String> promise = Promise.promise();
     try {
       SharingInstance sharingInstanceMetadata = parseSharingInstance(event.value());
-
+      LOGGER.info("kafkaHeaders {}", event.headers());
       Map<String, String> kafkaHeaders = KafkaHeaderUtils.kafkaHeadersToMap(event.headers());
       String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
 
@@ -88,6 +88,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       Future<String> eventToSharedInstanceFuture = eventIdStorageService.store(event.key(), sharingInstanceMetadata.getTargetTenantId());
       eventToSharedInstanceFuture.compose(r -> {
 
+        // 0
         publishInstanceIfNeeded(sharingInstanceMetadata, kafkaHeaders).onComplete(t -> {
           if (t.succeeded()) {
             LOGGER.info("handle:: Checking if Instance exists on target tenant - COMPLETED SUCCESSFULLY for instanceId: {}, sourceTenant: {}, targetTenant: {}",
@@ -128,6 +129,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     Source source = new Source(sourceTenant, getTenantSpecificSourceCollection(sourceTenant, kafkaHeaders));
     Target target = new Target(targetTenant, getTenantSpecificSourceCollection(targetTenant, kafkaHeaders));
 
+    // 1
     LOGGER.info("Checking if instance with InstanceId={} exists on target tenant={}", instanceId, targetTenant);
 
     return instanceOperations.getInstanceById(instanceId, target)
@@ -137,6 +139,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         return Future.succeededFuture(warningMessage);
       })
       .recover(throwable -> {
+        // 2
         if (throwable.getClass().equals(NotFoundException.class)) {
           LOGGER.info("Instance with InstanceId={} is not exists on target tenant: {}.", instanceId, targetTenant);
           return publishInstance(sharingInstanceMetadata, source, target, kafkaHeaders);
@@ -148,6 +151,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       });
   }
 
+  // 3
   private Future<String> publishInstance(SharingInstance sharingInstanceMetadata, Source source,
                                          Target target, Map<String, String> kafkaHeaders) {
 
@@ -245,6 +249,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
           LOGGER.info("Failed to sent event {} to kafka about sharing instance with InstanceId={}, cause: {}",
             eventType.value(), sharingInstance.getInstanceIdentifier(), cause);
         });
+
     } catch (Exception e) {
       LOGGER.error("Failed to send an event for eventType {} about sharing instance with InstanceId={}, cause {}",
         eventType.value(), sharingInstance.getInstanceIdentifier(), e);
@@ -288,6 +293,12 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private InstanceCollection getTenantSpecificSourceCollection(String tenantId, Map<String, String> kafkaHeaders) {
+    LOGGER.info("getTenantSpecificSourceCollection token: {}, url: {}, userId: {}, reqId: {}",
+      kafkaHeaders.get(OKAPI_TOKEN_HEADER),
+      kafkaHeaders.get(OKAPI_URL_HEADER),
+      kafkaHeaders.get(OKAPI_USER_ID),
+      kafkaHeaders.get(OKAPI_REQUEST_ID));
+
     return storage.getInstanceCollection(
       EventHandlingUtil.constructContext(
         tenantId,
