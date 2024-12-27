@@ -1,7 +1,8 @@
-## 21.0.4 2024-12-xx
+## 21.0.4 2024-12-27
 * Provide consistent handling with concurrency two or more Marc Bib Update events for the same bib record [MODINV-1100](https://folio-org.atlassian.net/browse/MODINV-1100)
 * Missing x-okapi-user-id header in communications with inventory-storage [MODINV-1134](https://folio-org.atlassian.net/browse/MODINV-1134)
 * Enable system user for data-import processes [MODINV-1115](https://folio-org.atlassian.net/browse/MODINV-1115)
+* Import of MARC records fails with "Invalid token" error [MODINV-1144](https://folio-org.atlassian.net/browse/MODINV-1144)
 
 ## 21.0.3 2024-12-05
 * suppressFromDiscovery value is not synchronized between member and centrlal tenants [MODINV-1123](https://issues.folio.org/browse/MODINV-1123)
