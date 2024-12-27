@@ -78,7 +78,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     Promise<String> promise = Promise.promise();
     try {
       SharingInstance sharingInstanceMetadata = parseSharingInstance(event.value());
-      LOGGER.info("kafkaHeaders {}", event.headers());
       Map<String, String> kafkaHeaders = KafkaHeaderUtils.kafkaHeadersToMap(event.headers());
       String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
 
@@ -88,7 +87,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       Future<String> eventToSharedInstanceFuture = eventIdStorageService.store(event.key(), sharingInstanceMetadata.getTargetTenantId());
       eventToSharedInstanceFuture.compose(r -> {
 
-        // 0
         publishInstanceIfNeeded(sharingInstanceMetadata, kafkaHeaders).onComplete(t -> {
           if (t.succeeded()) {
             LOGGER.info("handle:: Checking if Instance exists on target tenant - COMPLETED SUCCESSFULLY for instanceId: {}, sourceTenant: {}, targetTenant: {}",
@@ -129,7 +127,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     Source source = new Source(sourceTenant, getTenantSpecificSourceCollection(sourceTenant, kafkaHeaders));
     Target target = new Target(targetTenant, getTenantSpecificSourceCollection(targetTenant, kafkaHeaders));
 
-    // 1
     LOGGER.info("Checking if instance with InstanceId={} exists on target tenant={}", instanceId, targetTenant);
 
     return instanceOperations.getInstanceById(instanceId, target)
@@ -151,7 +148,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       });
   }
 
-  // 3
   private Future<String> publishInstance(SharingInstance sharingInstanceMetadata, Source source,
                                          Target target, Map<String, String> kafkaHeaders) {
 
@@ -249,7 +245,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
           LOGGER.info("Failed to sent event {} to kafka about sharing instance with InstanceId={}, cause: {}",
             eventType.value(), sharingInstance.getInstanceIdentifier(), cause);
         });
-
     } catch (Exception e) {
       LOGGER.error("Failed to send an event for eventType {} about sharing instance with InstanceId={}, cause {}",
         eventType.value(), sharingInstance.getInstanceIdentifier(), e);
@@ -293,29 +288,31 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private InstanceCollection getTenantSpecificSourceCollection(String tenantId, Map<String, String> kafkaHeaders) {
-    LOGGER.info("getTenantSpecificSourceCollection token: {}, url: {}, userId: {}, reqId: {}",
-      kafkaHeaders.get(OKAPI_TOKEN_HEADER),
-      kafkaHeaders.get(OKAPI_URL_HEADER),
-      kafkaHeaders.get(OKAPI_USER_ID),
-      kafkaHeaders.get(OKAPI_REQUEST_ID));
-    var context = EventHandlingUtil.constructContext(
-      tenantId,
-      kafkaHeaders.get(OKAPI_TOKEN_HEADER),
-      kafkaHeaders.get(OKAPI_URL_HEADER),
-      kafkaHeaders.get(OKAPI_USER_ID),
-      kafkaHeaders.get(OKAPI_REQUEST_ID));
-    LOGGER.info("context: token: {}, userId: {}, reqId: {}",
-      context.getToken(), context.getUserId(), context.getRequestId());
-    return storage.getInstanceCollection(context);
+    return storage.getInstanceCollection(
+      EventHandlingUtil.constructContext(
+        tenantId,
+        kafkaHeaders.get(OKAPI_TOKEN_HEADER),
+        kafkaHeaders.get(OKAPI_URL_HEADER),
+        kafkaHeaders.get(OKAPI_USER_ID),
+        kafkaHeaders.get(OKAPI_REQUEST_ID))
+    );
   }
 
   private List<KafkaHeader> convertKafkaHeadersMap(Map<String, String> kafkaHeaders) {
-    return new ArrayList<>(List.of(
-      KafkaHeader.header(OKAPI_URL_HEADER, kafkaHeaders.get(OKAPI_URL_HEADER)),
-      KafkaHeader.header(OKAPI_TENANT_HEADER, kafkaHeaders.get(OKAPI_TENANT_HEADER)),
-      KafkaHeader.header(OKAPI_TOKEN_HEADER, kafkaHeaders.get(OKAPI_TOKEN_HEADER)),
-      KafkaHeader.header(OKAPI_USER_ID, kafkaHeaders.get(OKAPI_USER_ID)),
-      KafkaHeader.header(OKAPI_REQUEST_ID, kafkaHeaders.get(OKAPI_REQUEST_ID)))
-    );
+
+    var headers = (kafkaHeaders.get(OKAPI_REQUEST_ID) != null) ?
+      List.of(
+        KafkaHeader.header(OKAPI_URL_HEADER, kafkaHeaders.get(OKAPI_URL_HEADER)),
+        KafkaHeader.header(OKAPI_TENANT_HEADER, kafkaHeaders.get(OKAPI_TENANT_HEADER)),
+        KafkaHeader.header(OKAPI_TOKEN_HEADER, kafkaHeaders.get(OKAPI_TOKEN_HEADER)),
+        KafkaHeader.header(OKAPI_USER_ID, kafkaHeaders.get(OKAPI_USER_ID)),
+        KafkaHeader.header(OKAPI_REQUEST_ID, kafkaHeaders.get(OKAPI_REQUEST_ID))) :
+      List.of(
+        KafkaHeader.header(OKAPI_URL_HEADER, kafkaHeaders.get(OKAPI_URL_HEADER)),
+        KafkaHeader.header(OKAPI_TENANT_HEADER, kafkaHeaders.get(OKAPI_TENANT_HEADER)),
+        KafkaHeader.header(OKAPI_TOKEN_HEADER, kafkaHeaders.get(OKAPI_TOKEN_HEADER)),
+        KafkaHeader.header(OKAPI_USER_ID, kafkaHeaders.get(OKAPI_USER_ID)));
+
+     return new ArrayList<>(headers);
   }
 }
