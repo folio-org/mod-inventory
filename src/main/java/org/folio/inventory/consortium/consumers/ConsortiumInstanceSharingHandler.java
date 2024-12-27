@@ -78,6 +78,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     Promise<String> promise = Promise.promise();
     try {
       SharingInstance sharingInstanceMetadata = parseSharingInstance(event.value());
+
       Map<String, String> kafkaHeaders = KafkaHeaderUtils.kafkaHeadersToMap(event.headers());
       String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
 
@@ -136,7 +137,6 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
         return Future.succeededFuture(warningMessage);
       })
       .recover(throwable -> {
-        // 2
         if (throwable.getClass().equals(NotFoundException.class)) {
           LOGGER.info("Instance with InstanceId={} is not exists on target tenant: {}.", instanceId, targetTenant);
           return publishInstance(sharingInstanceMetadata, source, target, kafkaHeaders);
