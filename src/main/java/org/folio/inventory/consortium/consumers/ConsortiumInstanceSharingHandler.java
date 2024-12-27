@@ -298,15 +298,15 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       kafkaHeaders.get(OKAPI_URL_HEADER),
       kafkaHeaders.get(OKAPI_USER_ID),
       kafkaHeaders.get(OKAPI_REQUEST_ID));
-
-    return storage.getInstanceCollection(
-      EventHandlingUtil.constructContext(
-        tenantId,
-        kafkaHeaders.get(OKAPI_TOKEN_HEADER),
-        kafkaHeaders.get(OKAPI_URL_HEADER),
-        kafkaHeaders.get(OKAPI_USER_ID),
-        kafkaHeaders.get(OKAPI_REQUEST_ID))
-    );
+    var context = EventHandlingUtil.constructContext(
+      tenantId,
+      kafkaHeaders.get(OKAPI_TOKEN_HEADER),
+      kafkaHeaders.get(OKAPI_URL_HEADER),
+      kafkaHeaders.get(OKAPI_USER_ID),
+      kafkaHeaders.get(OKAPI_REQUEST_ID));
+    LOGGER.info("context: token: {}, userId: {}, reqId: {}",
+      context.getToken(), context.getUserId(), context.getRequestId());
+    return storage.getInstanceCollection(context);
   }
 
   private List<KafkaHeader> convertKafkaHeadersMap(Map<String, String> kafkaHeaders) {
