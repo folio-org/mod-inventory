@@ -371,7 +371,7 @@ public final class AdditionalFieldsUtil {
   private static List<Subfield> get035oclcSubfields(VariableField field) {
     if (field instanceof DataField dataField) {
       return dataField.getSubfields().stream()
-        .filter(sf -> sf.getData().startsWith(OCLC_PREFIX))
+        .filter(sf -> sf.getData().trim().startsWith(OCLC_PREFIX))
         .toList();
     }
     return Collections.emptyList();
