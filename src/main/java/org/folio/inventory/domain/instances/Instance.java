@@ -180,6 +180,7 @@ public class Instance {
       .setModeOfIssuanceId(instanceJson.getString(MODE_OF_ISSUANCE_ID_KEY))
       .setCatalogedDate(instanceJson.getString(CATALOGED_DATE_KEY))
       .setPreviouslyHeld(instanceJson.getBoolean(PREVIOUSLY_HELD_KEY, false))
+      .setStaffSuppress(instanceJson.getBoolean(STAFF_SUPPRESS_KEY, false))
       .setDiscoverySuppress(instanceJson.getBoolean(DISCOVERY_SUPPRESS_KEY, false))
       .setStatisticalCodeIds(toListOfStrings(instanceJson.getJsonArray(STATISTICAL_CODE_IDS_KEY)))
       .setSourceRecordFormat(instanceJson.getString(SOURCE_RECORD_FORMAT_KEY))
