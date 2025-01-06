@@ -6,6 +6,7 @@ import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.ActionProfile.FolioRecord;
 import org.folio.Authority;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.DataImportException;
@@ -21,6 +22,7 @@ import org.folio.rest.jaxrs.model.Record;
 import java.util.Map;
 
 import static java.lang.String.format;
+import static org.folio.inventory.dataimport.handlers.actions.AbstractAuthorityEventHandler.isAuthorityExtended;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
 
 public class AuthorityUpdateDelegate {
@@ -48,7 +50,9 @@ public class AuthorityUpdateDelegate {
       JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
       String authorityId = marcRecord.getExternalIdsHolder().getAuthorityId();
       LOGGER.info("Authority update with authorityId: {}", authorityId);
-      RecordMapper<Authority> recordMapper = RecordMapperBuilder.buildMapper(MARC_FORMAT);
+      RecordMapper<Authority> recordMapper = isAuthorityExtended
+        ? RecordMapperBuilder.buildMapper(FolioRecord.MARC_AUTHORITY_EXTENDED.value())
+        : RecordMapperBuilder.buildMapper(MARC_FORMAT);
       var mappedAuthority = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       AuthorityRecordCollection authorityRecordCollection = storage.getAuthorityRecordCollection(context);
 
