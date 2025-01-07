@@ -358,6 +358,10 @@ public class CreateInstanceEventHandlerTest {
     assertEquals(title, createdInstance.getString("title"));
     assertEquals(instanceTypeId, createdInstance.getString("instanceTypeId"));
     assertEquals("MARC", createdInstance.getString("source"));
+    assertEquals("false", createdInstance.getString("staffSuppress"));
+    assertEquals("false", createdInstance.getString("discoverySuppress"));
+    assertEquals("false", createdInstance.getString("previouslyHeld"));
+    assertEquals("false", createdInstance.getString("isBoundWith"));
     assertThat(createdInstance.getJsonArray("precedingTitles").size(), is(1));
     assertThat(createdInstance.getJsonArray("succeedingTitles").size(), is(1));
     assertThat(createdInstance.getJsonArray("notes").size(), is(2));
