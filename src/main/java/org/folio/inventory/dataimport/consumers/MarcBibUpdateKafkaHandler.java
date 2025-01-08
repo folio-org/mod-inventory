@@ -57,7 +57,7 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
-  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
+  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "3"));
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final MappingMetadataCache mappingMetadataCache;
