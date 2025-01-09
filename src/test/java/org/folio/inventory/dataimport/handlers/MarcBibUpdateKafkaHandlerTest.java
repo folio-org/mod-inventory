@@ -13,7 +13,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -32,6 +31,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import lombok.SneakyThrows;
 import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import net.mguenther.kafka.junit.ObserveKeyValues;
 import net.mguenther.kafka.junit.ReadKeyValues;
@@ -116,6 +116,7 @@ public class MarcBibUpdateKafkaHandlerTest {
   }
 
   @Before
+  @SneakyThrows
   public void setUp() throws IOException {
     JsonObject mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     instance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
@@ -164,16 +165,13 @@ public class MarcBibUpdateKafkaHandlerTest {
       context.assertTrue(ar.succeeded());
       context.assertEquals(expectedKafkaRecordKey, ar.result());
 
-      context.verify(vo -> {
-        verify(mappingMetadataCache).getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
-        verify(mockedStorage).getInstanceCollection(any());
-        verify(mockedInstanceCollection).findByIdAndUpdate(anyString(), any(), any());
-      });
+      context.verify(vo -> verify(vo, 1));
       async.complete();
     });
   }
 
   @Test
+  @SneakyThrows
   public void shouldReturnSucceededFutureAfterHandlingOptimisticLockingError(TestContext context) {
     // given
     Async async = context.async();
@@ -195,9 +193,7 @@ public class MarcBibUpdateKafkaHandlerTest {
 
     // then
     future.onComplete(ar -> {
-      verify(mappingMetadataCache, times(2)).getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
-      verify(mockedStorage, times(2)).getInstanceCollection(any());
-      verify(mockedInstanceCollection, times(2)).findByIdAndUpdate(anyString(), any(), any());
+      verify(null, 2);
 
       async.complete();
     });
@@ -225,7 +221,7 @@ public class MarcBibUpdateKafkaHandlerTest {
       context.assertTrue(ar.failed());
       context.assertTrue(ar.cause().getMessage().contains("MappingParameters and mapping rules snapshots were not found by jobId"));
       verifyNoInteractions(mockedInstanceCollection);
-      verify(mappingMetadataCache).getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
+      Mockito.verify(mappingMetadataCache).getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
       async.complete();
     });
   }
@@ -350,5 +346,12 @@ public class MarcBibUpdateKafkaHandlerTest {
       Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());
       Assert.assertEquals("Can't find Instance by id: " + record.getId(), report.getFailCause());
     });
+  }
+
+  @SneakyThrows
+  private void verify(Void vo, int n) {
+    Mockito.verify(mappingMetadataCache, times(n)).getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
+    Mockito.verify(mockedStorage, times(n)).getInstanceCollection(any());
+    Mockito.verify(mockedInstanceCollection, times(n)).findByIdAndUpdate(anyString(), any(), any());
   }
 }

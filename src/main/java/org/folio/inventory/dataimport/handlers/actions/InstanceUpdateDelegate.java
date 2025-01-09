@@ -59,7 +59,7 @@ public class InstanceUpdateDelegate {
     }
   }
 
-  public Instance handleBlocking(Map<String, String> eventPayload, Record marcRecord, Context context) {
+  public Instance handleBlocking(Map<String, String> eventPayload, Record marcRecord, Context context) throws Exception {
     logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
     try {
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));

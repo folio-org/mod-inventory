@@ -24,6 +24,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.BatchResult;
 import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.Instance;
@@ -128,40 +129,40 @@ class ExternalStorageModuleInstanceCollection
   }
 
   @Override
-  public Instance findByIdAndUpdate(String id, JsonObject instance, Context inventoryContext) {
-    try {
-      SynchronousHttpClient client = getSynchronousHttpClient(inventoryContext);
-      var url = individualRecordLocation(id);
-      var response = client.get(url);
-      var responseBody = response.getBody();
+  public Instance findByIdAndUpdate(String id, JsonObject instance, Context inventoryContext) throws Exception {
+    SynchronousHttpClient client = getSynchronousHttpClient(inventoryContext);
+    var url = individualRecordLocation(id);
+    var response = client.get(url);
+    var responseBody = response.getBody();
 
-      if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
-        LOGGER.warn("Instance not found by id - {} : {}", id, responseBody);
-        throw new NotFoundException(format("Instance not found by id - %s : %s", id, responseBody));
-      } else if (response.getStatusCode() != HttpStatus.SC_OK) {
-        LOGGER.warn("Failed to fetch Instance by id - {} : {}, {}",
-          id, responseBody, response.getStatusCode());
-        throw new ExternalResourceFetchException("Failed to fetch Instance record",
-          responseBody, response.getStatusCode(), null);
-      }
-
-      var jsonInstance = new JsonObject(responseBody);
-      var existingInstance = mapFromJson(jsonInstance);
-      var modified = modifyInstance(existingInstance, instance);
-      var modifiedInstance = mapToRequest(modified);
-
-      response = client.put(url, modifiedInstance);
-      if (response.getStatusCode() != 204) {
-        var errorMessage = format("Failed to update Instance by id - %s : %s, %s",
-          id, response.getBody(), response.getStatusCode());
-        LOGGER.warn(errorMessage);
-        throw new InternalServerErrorException(errorMessage);
-      }
-      return modified;
-    } catch (Exception ex) {
-      throw new InternalServerErrorException(
-        format("Failed to find and update Instance by id - %s : %s", id, ex));
+    if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+      LOGGER.warn("Instance not found by id - {} : {}", id, responseBody);
+      throw new NotFoundException(format("Instance not found by id - %s : %s", id, responseBody));
+    } else if (response.getStatusCode() != HttpStatus.SC_OK) {
+      LOGGER.warn("Failed to fetch Instance by id - {} : {}, {}",
+        id, responseBody, response.getStatusCode());
+      throw new ExternalResourceFetchException("Failed to fetch Instance record",
+        responseBody, response.getStatusCode(), null);
     }
+
+    var jsonInstance = new JsonObject(responseBody);
+    var existingInstance = mapFromJson(jsonInstance);
+    var modified = modifyInstance(existingInstance, instance);
+    var modifiedInstance = mapToRequest(modified);
+
+    response = client.put(url, modifiedInstance);
+    var statusCode = response.getStatusCode();
+    if (statusCode != HttpStatus.SC_NO_CONTENT) {
+      var errorMessage = format("Failed to update Instance by id : %s, error : %s, status code %s",
+        id, response.getBody(), response.getStatusCode());
+      LOGGER.error(errorMessage);
+
+      if (statusCode == HttpStatus.SC_CONFLICT) {
+        throw new OptimisticLockingException(errorMessage);
+      }
+      throw new InternalServerErrorException(errorMessage);
+    }
+    return modified;
   }
 
   private Instance modifyInstance(Instance existingInstance, JsonObject instance) {
