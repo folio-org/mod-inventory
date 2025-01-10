@@ -1,3 +1,7 @@
+## 21.0.5 2025-01-10
+* $z and $a is not normalized in 035 field if value contains a leading space [MODINV-1141](https://folio-org.atlassian.net/browse/MODINV-1141)
+* The "discoverySuppress" instance attribute is not created in database when instance created by default mapping profile (MODINV-1136) [MODINV-1149](https://folio-org.atlassian.net/browse/MODINV-1149)
+
 ## 21.0.4 2024-12-27
 * Provide consistent handling with concurrency two or more Marc Bib Update events for the same bib record [MODINV-1100](https://folio-org.atlassian.net/browse/MODINV-1100)
 * Missing x-okapi-user-id header in communications with inventory-storage [MODINV-1134](https://folio-org.atlassian.net/browse/MODINV-1134)
@@ -5,7 +9,7 @@
 * Import of MARC records fails with "Invalid token" error [MODINV-1144](https://folio-org.atlassian.net/browse/MODINV-1144)
 
 ## 21.0.3 2024-12-05
-* suppressFromDiscovery value is not synchronized between member and centrlal tenants [MODINV-1123](https://issues.folio.org/browse/MODINV-1123)
+* suppressFromDiscovery value is not synchronized between member and central tenants [MODINV-1123](https://issues.folio.org/browse/MODINV-1123)
 
 ## 21.0.2 2024-11-27
 * Update dependencies fixing vulnerabilities [MODINV-1124](https://folio-org.atlassian.net/browse/MODINV-1124)
