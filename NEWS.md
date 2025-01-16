@@ -1,3 +1,6 @@
+## 20.2.10 2025-01-16
+* [MODINV-1136](https://folio-org.atlassian.net/browse/MODINV-1136) The "discoverySuppress" instance attribute is not created in database when instance created by default mapping profile
+
 ## 20.2.9 2024-12-30
 * [MODINV-1100](https://folio-org.atlassian.net/browse/MODINV-1100) Provide consistent handling with concurrency two or more Marc Bib Update events for the same bib record
 
