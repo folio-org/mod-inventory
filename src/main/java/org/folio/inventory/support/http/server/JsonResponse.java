@@ -30,6 +30,11 @@ public class JsonResponse {
     response(response, body, 200);
   }
 
+  public static void unprocessableEntity(HttpServerResponse response,
+                                         JsonObject body) {
+    response(response, body, 422);
+  }
+
   public static void unprocessableEntity(
     HttpServerResponse response,
     String message,
@@ -66,10 +71,6 @@ public class JsonResponse {
     JsonArray error = new JsonArray();
     error.add(errorMessage);
     response(response, new JsonObject().put("errors", error), 422);
-  }
-
-  public static void unprocessableEntity(HttpServerResponse response, JsonObject errors) {
-    response(response, new JsonObject().put("errors", errors), 422);
   }
 
   private static void response(HttpServerResponse response,

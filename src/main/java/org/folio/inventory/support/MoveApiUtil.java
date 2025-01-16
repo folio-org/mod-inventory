@@ -122,18 +122,16 @@ public final class MoveApiUtil {
 
   public static void respond(RoutingContext routingContext, List<NotUpdatedEntity> notUpdatedEntities) {
     HttpServerResponse response = routingContext.response();
-    var errors = extractErrors(notUpdatedEntities);
-    if (errors.isEmpty()) {
-      success(response, JsonObject.mapFrom(new UpdateOwnershipResponse().withNotUpdatedEntities(notUpdatedEntities)));
+    var body = JsonObject.mapFrom(new UpdateOwnershipResponse().withNotUpdatedEntities(notUpdatedEntities));
+    if (containsError(notUpdatedEntities)) {
+      unprocessableEntity(response, body);
     } else {
-      unprocessableEntity(response, JsonObject.mapFrom(errors));
+      success(response, body);
     }
   }
 
-  private static List<String> extractErrors(List<NotUpdatedEntity> entities) {
+  private static boolean containsError(List<NotUpdatedEntity> entities) {
     return entities.stream()
-      .map(NotUpdatedEntity::getErrorMessage)
-      .filter(StringUtils::isNotEmpty)
-      .toList();
+      .anyMatch(it -> StringUtils.isNotEmpty(it.getErrorMessage()));
   }
 }
