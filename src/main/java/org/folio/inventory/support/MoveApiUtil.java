@@ -6,6 +6,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
 import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.NotUpdatedEntity;
 import org.folio.UpdateOwnershipResponse;
 import org.folio.inventory.common.WebContext;
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.folio.inventory.support.http.server.JsonResponse.success;
+import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 
 public final class MoveApiUtil {
   public static final String HOLDINGS_STORAGE = "/holdings-storage/holdings";
@@ -120,6 +122,18 @@ public final class MoveApiUtil {
 
   public static void respond(RoutingContext routingContext, List<NotUpdatedEntity> notUpdatedEntities) {
     HttpServerResponse response = routingContext.response();
-    success(response, JsonObject.mapFrom(new UpdateOwnershipResponse().withNotUpdatedEntities(notUpdatedEntities)));
+    var errors = extractErrors(notUpdatedEntities);
+    if (errors.isEmpty()) {
+      success(response, JsonObject.mapFrom(new UpdateOwnershipResponse().withNotUpdatedEntities(notUpdatedEntities)));
+    } else {
+      unprocessableEntity(response, JsonObject.mapFrom(errors));
+    }
+  }
+
+  private static List<String> extractErrors(List<NotUpdatedEntity> entities) {
+    return entities.stream()
+      .map(NotUpdatedEntity::getErrorMessage)
+      .filter(StringUtils::isNotEmpty)
+      .toList();
   }
 }

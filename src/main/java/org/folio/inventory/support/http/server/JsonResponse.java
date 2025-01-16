@@ -68,6 +68,10 @@ public class JsonResponse {
     response(response, new JsonObject().put("errors", error), 422);
   }
 
+  public static void unprocessableEntity(HttpServerResponse response, JsonObject errors) {
+    response(response, new JsonObject().put("errors", errors), 422);
+  }
+
   private static void response(HttpServerResponse response,
                                JsonObject body,
                                int statusCode) {
