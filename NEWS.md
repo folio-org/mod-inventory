@@ -1,3 +1,6 @@
+## 21.0.6 2025-01-17
+* Update data-import-processing-core to v4.3.4 [MODINV-1154](https://folio-org.atlassian.net/browse/MODINV-1154)
+
 ## 21.0.5 2025-01-10
 * $z and $a is not normalized in 035 field if value contains a leading space [MODINV-1141](https://folio-org.atlassian.net/browse/MODINV-1141)
 * The "discoverySuppress" instance attribute is not created in database when instance created by default mapping profile (MODINV-1136) [MODINV-1149](https://folio-org.atlassian.net/browse/MODINV-1149)
