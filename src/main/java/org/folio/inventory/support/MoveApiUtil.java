@@ -21,8 +21,8 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.folio.inventory.support.http.server.JsonResponse.badRequest;
 import static org.folio.inventory.support.http.server.JsonResponse.success;
-import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 
 public final class MoveApiUtil {
   public static final String HOLDINGS_STORAGE = "/holdings-storage/holdings";
@@ -124,7 +124,7 @@ public final class MoveApiUtil {
     HttpServerResponse response = routingContext.response();
     var body = JsonObject.mapFrom(new UpdateOwnershipResponse().withNotUpdatedEntities(notUpdatedEntities));
     if (containsError(notUpdatedEntities)) {
-      unprocessableEntity(response, body);
+      badRequest(response, body);
     } else {
       success(response, body);
     }
