@@ -155,7 +155,7 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(200));
+    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(400));
     assertThat(postItemsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
 
     JsonArray notUpdatedEntitiesIds = postItemsUpdateOwnershipResponse.getJson()
@@ -209,7 +209,7 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(200));
+    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(400));
     assertThat(postItemsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
 
     JsonArray notFoundIds = postItemsUpdateOwnershipResponse.getJson()
@@ -270,7 +270,7 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
 
     collegeItemsClient.disableFailureEmulation();
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(200));
+    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(400));
     JsonArray notUpdatedEntitiesIds = postItemsUpdateOwnershipResponse.getJson()
       .getJsonArray("notUpdatedEntities");
 
@@ -323,7 +323,7 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
 
     collegeItemsClient.disableFailureEmulation();
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(200));
+    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(400));
     JsonArray notUpdatedEntitiesIds = postItemsUpdateOwnershipResponse.getJson()
       .getJsonArray("notUpdatedEntities");
 
@@ -480,7 +480,7 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(200));
+    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(400));
 
     JsonArray notUpdatedEntitiesIds = postItemsUpdateOwnershipResponse.getJson()
       .getJsonArray("notUpdatedEntities");

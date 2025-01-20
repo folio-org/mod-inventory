@@ -6,6 +6,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
 import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.NotUpdatedEntity;
 import org.folio.UpdateOwnershipResponse;
 import org.folio.inventory.common.WebContext;
@@ -20,6 +21,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.folio.inventory.support.http.server.JsonResponse.badRequest;
 import static org.folio.inventory.support.http.server.JsonResponse.success;
 
 public final class MoveApiUtil {
@@ -120,6 +122,16 @@ public final class MoveApiUtil {
 
   public static void respond(RoutingContext routingContext, List<NotUpdatedEntity> notUpdatedEntities) {
     HttpServerResponse response = routingContext.response();
-    success(response, JsonObject.mapFrom(new UpdateOwnershipResponse().withNotUpdatedEntities(notUpdatedEntities)));
+    var body = JsonObject.mapFrom(new UpdateOwnershipResponse().withNotUpdatedEntities(notUpdatedEntities));
+    if (containsError(notUpdatedEntities)) {
+      badRequest(response, body);
+    } else {
+      success(response, body);
+    }
+  }
+
+  private static boolean containsError(List<NotUpdatedEntity> entities) {
+    return entities.stream()
+      .anyMatch(it -> StringUtils.isNotEmpty(it.getErrorMessage()));
   }
 }
