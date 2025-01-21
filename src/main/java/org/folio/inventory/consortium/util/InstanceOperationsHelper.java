@@ -13,7 +13,7 @@ import org.folio.kafka.exception.DuplicateEventException;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
-import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
+import static org.folio.inventory.dataimport.util.DataImportConstants.ALREADY_EXISTS_ERROR_MSG;
 
 public class InstanceOperationsHelper {
 
@@ -29,7 +29,7 @@ public class InstanceOperationsHelper {
       insertFailure -> {
         try {
           //This is a temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
-          if (isNotBlank(insertFailure.getReason()) && insertFailure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+          if (isNotBlank(insertFailure.getReason()) && insertFailure.getReason().contains(String.format(ALREADY_EXISTS_ERROR_MSG, instance.getId()))) {
             LOGGER.info("addInstance :: Duplicated event received by InstanceId={}. Ignoring...", instance.getId());
             promise.fail(new DuplicateEventException(format("Duplicated event by InstanceId=%s", instance.getId())));
           } else {
