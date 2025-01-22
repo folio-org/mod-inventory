@@ -15,6 +15,7 @@ import org.folio.inventory.support.JsonHelper;
 import io.vertx.core.json.JsonObject;
 
 public final class EventHandlingUtil {
+  public static final String OKAPI_USER_ID = "x-okapi-user-id";
   private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
 
   private EventHandlingUtil() {}

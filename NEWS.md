@@ -1,3 +1,6 @@
+## 20.2.11 2025-01-27
+* [MODINV-1125](https://folio-org.atlassian.net/browse/MODINV-1125) Fix handling optimistic locking behavior for instance update when consuming Marc Bib update event
+
 ## 20.2.10 2025-01-16
 * [MODINV-1136](https://folio-org.atlassian.net/browse/MODINV-1136) The "discoverySuppress" instance attribute is not created in database when instance created by default mapping profile
 
