@@ -606,6 +606,18 @@
   ],
   "requires": [
     {
+      "id": "circulation-bff-ecs-request-external",
+      "version": "1.1"
+    },
+    {
+      "id": "circulation-bff-requests",
+      "version": "1.1"
+    },
+    {
+      "id": "staging-users",
+      "version": "1.1"
+    },
+    {
       "id": "holdings-sources",
       "version": "1.0"
     },
