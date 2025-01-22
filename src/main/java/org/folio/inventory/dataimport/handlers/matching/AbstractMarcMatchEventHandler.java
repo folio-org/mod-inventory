@@ -74,6 +74,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   private static final String FIELD_999 = "999";
   private static final String INDICATOR_F = "f";
   private static final String SUBFIELD_I = "i";
+  private static final String SUBFIELD_S = "s";
 
   protected final ConsortiumService consortiumService;
   private final DataImportEventTypes matchedEventType;
@@ -235,12 +236,21 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       .withReturnTotalRecordsCount(true);
     recordMatchingDto.getFilters().add(matchCriteriaFilter);
 
-    if (containsMultiMatchResult(payload)) {
+    buildFilterBasedOnPreviousMatchResult(payload).ifPresent(filter -> {
       recordMatchingDto.setLogicalOperator(RecordMatchingDto.LogicalOperator.AND);
-      recordMatchingDto.getFilters().add(buildFilterForMultiMatchResult(payload));
-    }
+      recordMatchingDto.getFilters().add(filter);
+    });
 
     return recordMatchingDto;
+  }
+
+  private Optional<Filter> buildFilterBasedOnPreviousMatchResult(DataImportEventPayload payload) {
+    if (containsMultiMatchResult(payload)) {
+      return Optional.of(buildFilterForMultiMatchResult(payload));
+    } else if (payload.getContext().containsKey(getMatchedMarcKey())) {
+      return Optional.of(buildFilterBasedOnPreviouslyMatchedRecord(payload));
+    }
+    return Optional.empty();
   }
 
   private boolean containsMultiMatchResult(DataImportEventPayload payload) {
@@ -248,22 +258,28 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   }
 
   private Filter buildFilterForMultiMatchResult(DataImportEventPayload payload) {
-    return new Filter()
-      .withValues(extractMultiMatchResult(payload))
-      .withField(FIELD_999)
-      .withIndicator1(INDICATOR_F)
-      .withIndicator2(INDICATOR_F)
-      .withSubfield(SUBFIELD_I);
-  }
-
-  private List<String> extractMultiMatchResult(DataImportEventPayload payload) {
-    List<String> multiMatchResult = new JsonArray(payload.getContext().get(getMultiMatchResultKey()))
+    List<String> ids = new JsonArray(payload.getContext().get(getMultiMatchResultKey()))
       .stream()
       .map(String.class::cast)
       .toList();
 
     payload.getContext().remove(getMultiMatchResultKey());
-    return multiMatchResult;
+    return buildFilter(ids, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I);
+  }
+
+  private Filter buildFilterBasedOnPreviouslyMatchedRecord(DataImportEventPayload payload) {
+    Record previouslyMatchedRecord = Json.decodeValue(payload.getContext().get(getMatchedMarcKey()), Record.class);
+    String matchedId = previouslyMatchedRecord.getMatchedId();
+    return buildFilter(List.of(matchedId), FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_S);
+  }
+
+  private Filter buildFilter(List<String> values, String field, String ind1, String ind2, String subfield) {
+    return new Filter()
+      .withValues(values)
+      .withField(field)
+      .withIndicator1(ind1)
+      .withIndicator2(ind2)
+      .withSubfield(subfield);
   }
 
   private Future<Optional<Record>> retrieveMarcRecords(RecordMatchingDto recordMatchingDto, String tenantId,
@@ -448,7 +464,6 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         || nextMatchProfile.getExistingRecordType() == INSTANCE
         || nextMatchProfile.getExistingRecordType() == HOLDINGS;
     }
-
     return false;
   }
 
