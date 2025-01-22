@@ -5,9 +5,11 @@ import static java.util.Objects.isNull;
 import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
+import static org.folio.kafka.KafkaHeaderUtils.kafkaHeadersToMap;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.FAIL;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.SUCCESS;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
@@ -35,12 +37,10 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
-import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
-import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.SimpleKafkaProducerManager;
 import org.folio.kafka.services.KafkaProducerRecordBuilder;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -57,7 +57,7 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
-  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
+  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "3"));
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final MappingMetadataCache mappingMetadataCache;
@@ -78,11 +78,9 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> consumerRecord) {
     try {
-      Promise<Instance> promise = Promise.promise();
-      MarcBibUpdate instanceEvent = OBJECT_MAPPER.readValue(consumerRecord.value(), MarcBibUpdate.class);
-      Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(consumerRecord.headers());
-      HashMap<String, String> metaDataPayload = new HashMap<>();
-      var jobId = instanceEvent.getJobId();
+      var instanceEvent = OBJECT_MAPPER.readValue(consumerRecord.value(), MarcBibUpdate.class);
+      var headers = kafkaHeadersToMap(consumerRecord.headers());
+      Map<String, String> metaDataPayload = new HashMap<>();
 
       LOGGER.info("Event payload has been received with event type: {} by jobId: {}", instanceEvent.getType(), instanceEvent.getJobId());
 
@@ -91,38 +89,10 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
         LOGGER.error(message);
         return Future.failedFuture(message);
       }
-      Context context = EventHandlingUtil.constructContext(instanceEvent.getTenant(), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER),
-        headersMap.get(OKAPI_USER_ID), headersMap.get(OKAPI_REQUEST_ID));
-      Record marcBibRecord = instanceEvent.getRecord();
-
-      io.vertx.core.Context vertxContext = Vertx.currentContext();
-
-      if(vertxContext == null) {
-        return Future.failedFuture("handle:: operation must be executed by a Vertx thread");
-      }
-
-      vertxContext.owner().executeBlocking(
-        () -> {
-          var mappingMetadataDto =
-            mappingMetadataCache.getByRecordTypeBlocking(jobId, context, MARC_BIB_RECORD_TYPE)
-              .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobId)));
-          ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto);
-          return instanceUpdateDelegate.handleBlocking(metaDataPayload, marcBibRecord, context);
-        },
-        r -> {
-          if (r.failed()) {
-            LOGGER.warn("handle:: Error during instance update", r.cause());
-            promise.fail(r.cause());
-          } else {
-            LOGGER.debug("handle:: Instance update was successful");
-            promise.complete(r.result());
-          }
-        }
-      );
 
       Promise<String> finalPromise = Promise.promise();
-      promise.future()
-        .onComplete(ar -> processUpdateResult(ar, metaDataPayload, finalPromise, consumerRecord, instanceEvent));
+      processEvent(instanceEvent, headers, metaDataPayload)
+        .onComplete(ar -> processUpdateResult(ar, consumerRecord, instanceEvent, metaDataPayload, finalPromise));
       return finalPromise.future();
     } catch (Exception ex) {
       LOGGER.error(format("Failed to process kafka record from topic %s", consumerRecord.topic()), ex);
@@ -130,13 +100,48 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
     }
   }
 
+  private Future<Instance> processEvent(MarcBibUpdate instanceEvent, Map<String, String> headers, Map<String, String> metaDataPayload) {
+    Context context = constructContext(instanceEvent.getTenant(), headers.get(OKAPI_TOKEN_HEADER), headers.get(OKAPI_URL_HEADER),
+      headers.get(OKAPI_USER_ID), headers.get(OKAPI_REQUEST_ID));
+    Record marcBibRecord = instanceEvent.getRecord();
+    var jobId = instanceEvent.getJobId();
+    Promise<Instance> promise = Promise.promise();
+    io.vertx.core.Context vertxContext = Vertx.currentContext();
+
+    if(vertxContext == null) {
+      return Future.failedFuture("handle:: operation must be executed by a Vertx thread");
+    }
+
+    vertxContext.owner().executeBlocking(
+      () -> {
+        var mappingMetadataDto =
+          mappingMetadataCache.getByRecordTypeBlocking(jobId, context, MARC_BIB_RECORD_TYPE)
+            .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobId)));
+        ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto);
+        return instanceUpdateDelegate.handleBlocking(metaDataPayload, marcBibRecord, context);
+      },
+      r -> {
+        if (r.failed()) {
+          LOGGER.warn("handle:: Error during instance update", r.cause());
+          promise.fail(r.cause());
+        } else {
+          LOGGER.debug("handle:: Instance update was successful");
+          promise.complete(r.result());
+        }
+      }
+    );
+
+    return promise.future();
+  }
+
   private void processUpdateResult(AsyncResult<Instance> result,
-                                   HashMap<String, String> eventPayload,
-                                   Promise<String> promise,
                                    KafkaConsumerRecord<String, String> consumerRecord,
-                                   MarcBibUpdate instanceEvent) {
+                                   MarcBibUpdate instanceEvent,
+                                   Map<String, String> eventPayload,
+                                   Promise<String> promise) {
     if (result.failed() && result.cause() instanceof OptimisticLockingException) {
-      processOLError(consumerRecord, promise, eventPayload, instanceEvent.getJobId(), result);
+      var headers = kafkaHeadersToMap(consumerRecord.headers());
+      processOLError(consumerRecord, instanceEvent, promise, eventPayload, headers);
       return;
     }
 
@@ -147,7 +152,6 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
     } else {
       var errorCause = result.cause();
       LOGGER.error("Failed to update instance by jobId {}:{}", instanceEvent.getJobId(), errorCause);
-      eventPayload.remove(CURRENT_RETRY_NUMBER);
       linkUpdateReport = mapToLinkReport(instanceEvent, errorCause.getMessage());
       promise.fail(errorCause);
     }
@@ -155,30 +159,30 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
     sendEventToKafka(linkUpdateReport, consumerRecord.headers());
   }
 
-  private void processOLError(KafkaConsumerRecord<String, String> value,
+  private void processOLError(KafkaConsumerRecord<String, String> consumerRecord,
+                              MarcBibUpdate instanceEvent,
                               Promise<String> promise,
-                              HashMap<String, String> eventPayload,
-                              String jobId,
-                              AsyncResult<Instance> ar) {
-    int currentRetryNumber = Optional.ofNullable(eventPayload.get(CURRENT_RETRY_NUMBER))
-      .map(Integer::parseInt).orElse(0);
-    if (currentRetryNumber < MAX_RETRIES_COUNT) {
-      eventPayload.put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn("Error updating Instance: {}, jobId: {},  Retry MarcBibUpdateKafkaHandler handler...",
-        ar.cause().getMessage(), jobId);
-      handle(value).onComplete(result -> {
-        if (result.succeeded()) {
-          promise.complete(value.key());
-        } else {
-          promise.fail(result.cause());
-        }
-      });
-    } else {
-      eventPayload.remove(CURRENT_RETRY_NUMBER);
-      String errMessage = format("Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
-      LOGGER.error(errMessage);
-      promise.fail(new OptimisticLockingException(errMessage));
+                              Map<String, String> eventPayload,
+                              Map<String, String> headers) {
+    int retryNumber = Optional.ofNullable(eventPayload.get(CURRENT_RETRY_NUMBER))
+      .map(Integer::parseInt)
+      .orElse(0);
+    if (retryNumber < MAX_RETRIES_COUNT) {
+      eventPayload.put(CURRENT_RETRY_NUMBER, String.valueOf(retryNumber + 1));
+      LOGGER.warn("Optimistic Locking Error on updating Instance, jobId: {},  Retry Instance update", instanceEvent.getJobId());
+
+      processEvent(instanceEvent, headers, eventPayload)
+        .onComplete(ar -> processUpdateResult(ar, consumerRecord, instanceEvent, eventPayload, promise));
+      return;
     }
+
+    eventPayload.remove(CURRENT_RETRY_NUMBER);
+    String errMessage = format("Optimistic Locking Error, current retry number: %s exceeded the given max retry attempt of %s for Instance update", retryNumber, MAX_RETRIES_COUNT);
+    LOGGER.error(errMessage);
+    promise.fail(errMessage);
+
+    var linkUpdateReport = mapToLinkReport(instanceEvent, errMessage);
+    sendEventToKafka(linkUpdateReport, consumerRecord.headers());
   }
 
   private void sendEventToKafka(LinkUpdateReport linkUpdateReport, List<KafkaHeader> kafkaHeaders) {
@@ -216,7 +220,7 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
     return String.join(".", env, tenant, eventType);
   }
 
-  private void ensureEventPayloadWithMappingMetadata(HashMap<String, String> eventPayload, MappingMetadataDto mappingMetadataDto) {
+  private void ensureEventPayloadWithMappingMetadata(Map<String, String> eventPayload, MappingMetadataDto mappingMetadataDto) {
     eventPayload.put(MAPPING_RULES_KEY, mappingMetadataDto.getMappingRules());
     eventPayload.put(MAPPING_PARAMS_KEY, mappingMetadataDto.getMappingParams());
   }
