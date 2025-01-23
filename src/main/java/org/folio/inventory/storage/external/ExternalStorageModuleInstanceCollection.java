@@ -56,7 +56,7 @@ class ExternalStorageModuleInstanceCollection
     super(format("%s/%s", baseAddress, "instance-storage/instances"),
       tenant, token, userId, requestId, "instances", client);
 
-    batchAddress = format("%s/%s", baseAddress, "instance-storage/batch/instances");
+    batchAddress = format("%s/%s", baseAddress, "/instance-storage/batch/synchronous");
   }
 
   @Override
