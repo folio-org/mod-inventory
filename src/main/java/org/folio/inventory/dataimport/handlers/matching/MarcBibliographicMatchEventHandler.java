@@ -6,6 +6,7 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
+import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.consortium.services.ConsortiumService;
@@ -15,6 +16,7 @@ import org.folio.inventory.dataimport.util.ParsedRecordUtil.AdditionalSubfields;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
+import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.jaxrs.model.RecordMatchingDto;
 
@@ -60,6 +62,13 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
   @Override
   protected String getMultiMatchResultKey() {
     return INSTANCES_IDS_KEY;
+  }
+
+  @Override
+  protected boolean canSubMatchProfileProcessMultiMatchResult(MatchProfile matchProfile) {
+    return matchProfile.getExistingRecordType() == EntityType.MARC_BIBLIOGRAPHIC
+      || matchProfile.getExistingRecordType() == EntityType.INSTANCE
+      || matchProfile.getExistingRecordType() == EntityType.HOLDINGS;
   }
 
   @Override

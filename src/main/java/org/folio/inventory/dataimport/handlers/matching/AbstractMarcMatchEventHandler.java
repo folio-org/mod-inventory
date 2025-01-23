@@ -50,9 +50,6 @@ import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.processing.value.Value.ValueType.MISSING;
-import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
-import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
-import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.Filter.ComparisonPartType;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
 import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
@@ -149,6 +146,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   protected abstract boolean isMatchingOnCentralTenantRequired();
 
   protected abstract String getMultiMatchResultKey();
+
+  protected abstract boolean canSubMatchProfileProcessMultiMatchResult(MatchProfile matchProfile);
 
   @SuppressWarnings("squid:S1172")
   protected Future<Void> ensureRelatedEntities(List<Record> records, DataImportEventPayload eventPayload) {
@@ -247,14 +246,10 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   private Optional<Filter> buildFilterBasedOnPreviousMatchResult(DataImportEventPayload payload) {
     if (containsMultiMatchResult(payload)) {
       return Optional.of(buildFilterForMultiMatchResult(payload));
-    } else if (payload.getContext().containsKey(getMatchedMarcKey())) {
+    } else if (StringUtils.isNotEmpty(payload.getContext().get(getMatchedMarcKey()))) {
       return Optional.of(buildFilterBasedOnPreviouslyMatchedRecord(payload));
     }
     return Optional.empty();
-  }
-
-  private boolean containsMultiMatchResult(DataImportEventPayload payload) {
-    return payload.getContext().containsKey(getMultiMatchResultKey());
   }
 
   private Filter buildFilterForMultiMatchResult(DataImportEventPayload payload) {
@@ -435,16 +430,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         payload.getJobExecutionId(), payload.getTenant());
       return Future.failedFuture(new MatchingException(FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE));
     }
-    if (payload.getContext().containsKey(getMultiMatchResultKey())) {
-      if (canNextProfileProcessMultiMatchResult(payload)) {
-        LOG.info("processSucceededResult:: Multiple records were found which match criteria, jobExecutionId: '{}', tenantId: '{}'",
-          payload.getJobExecutionId(), payload.getTenant());
-        payload.setEventType(matchedEventType.toString());
-        return Future.succeededFuture(payload);
-      }
-      LOG.warn("processSucceededResult:: Matched multiple records, jobExecutionId: '{}', tenantId: '{}'",
-        payload.getJobExecutionId(), payload.getTenant());
-      return Future.failedFuture(new MatchingException(FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE));
+    if (containsMultiMatchResult(payload)) {
+      return handlePayloadWithMultiMatchResult(payload);
     }
     LOG.info("processSucceededResult:: {}, jobExecutionId: '{}', tenantId: '{}'",
       RECORDS_NOT_FOUND_MESSAGE, payload.getJobExecutionId(), payload.getTenant());
@@ -455,14 +442,28 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     return format(MATCH_RESULT_KEY_PREFIX, getMarcType());
   }
 
+  private boolean containsMultiMatchResult(DataImportEventPayload payload) {
+    return payload.getContext().containsKey(getMultiMatchResultKey());
+  }
+
+  private Future<DataImportEventPayload> handlePayloadWithMultiMatchResult(DataImportEventPayload payload) {
+    if (canNextProfileProcessMultiMatchResult(payload)) {
+      LOG.info("processSucceededResult:: Multiple records were found which match criteria, jobExecutionId: '{}', tenantId: '{}'",
+        payload.getJobExecutionId(), payload.getTenant());
+      payload.setEventType(matchedEventType.toString());
+      return Future.succeededFuture(payload);
+    }
+    LOG.warn("processSucceededResult:: Matched multiple records, jobExecutionId: '{}', tenantId: '{}'",
+      payload.getJobExecutionId(), payload.getTenant());
+    return Future.failedFuture(new MatchingException(FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE));
+  }
+
   private boolean canNextProfileProcessMultiMatchResult(DataImportEventPayload eventPayload) {
     List<ProfileSnapshotWrapper> childProfiles = eventPayload.getCurrentNode().getChildSnapshotWrappers();
     if (isNotEmpty(childProfiles) && ReactToType.MATCH.equals(childProfiles.get(0).getReactTo())
       && MATCH_PROFILE.equals(childProfiles.get(0).getContentType())) {
       MatchProfile nextMatchProfile = JsonObject.mapFrom(childProfiles.get(0).getContent()).mapTo(MatchProfile.class);
-      return nextMatchProfile.getExistingRecordType() == MARC_BIBLIOGRAPHIC
-        || nextMatchProfile.getExistingRecordType() == INSTANCE
-        || nextMatchProfile.getExistingRecordType() == HOLDINGS;
+      return canSubMatchProfileProcessMultiMatchResult(nextMatchProfile);
     }
     return false;
   }
