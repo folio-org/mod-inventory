@@ -1,3 +1,6 @@
+## 21.0.8 2025-01-23
+* Make dependencies on circulation interfaces optional [MODINV-1159](https://folio-org.atlassian.net/browse/MODINV-1159)
+
 ## 21.0.7 2025-01-23
 * Fix Update Ownership error response [MODINV-1152](https://folio-org.atlassian.net/browse/MODINV-1152)
 * Add missing required interfaces to Module Descriptor [MODINV-1155](https://folio-org.atlassian.net/browse/MODINV-1155)
