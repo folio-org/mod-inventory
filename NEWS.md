@@ -1,3 +1,7 @@
+## 21.0.7 2025-01-23
+* Fix Update Ownership error response [MODINV-1152](https://folio-org.atlassian.net/browse/MODINV-1152)
+* Add missing required interfaces to Module Descriptor [MODINV-1155](https://folio-org.atlassian.net/browse/MODINV-1155)
+
 ## 21.0.6 2025-01-17
 * Update data-import-processing-core to v4.3.4 [MODINV-1154](https://folio-org.atlassian.net/browse/MODINV-1154)
 
