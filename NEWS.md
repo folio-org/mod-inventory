@@ -1,3 +1,6 @@
+## 21.0.9 2025-01-23
+* Fix handling optimistic locking behavior for instance update when consuming Marc Bib update event  [MODINV-1125](https://folio-org.atlassian.net/browse/MODINV-1125)
+
 ## 21.0.8 2025-01-23
 * Make dependencies on circulation interfaces optional [MODINV-1159](https://folio-org.atlassian.net/browse/MODINV-1159)
 
