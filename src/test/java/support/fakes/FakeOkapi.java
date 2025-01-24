@@ -80,7 +80,7 @@ public class FakeOkapi extends AbstractVerticle {
         StorageRecordPreProcessors.setHridProcessor("in")
       ).create();
     fakeInstanceStorageModule.register(router);
-    fakeInstanceStorageModule.registerBatch(router, "/instance-storage/batch/instances");
+    fakeInstanceStorageModule.registerBatch(router, "/instance-storage/batch/synchronous");
 
     new FakeStorageModuleBuilder()
       .withRecordName("instance relationship")

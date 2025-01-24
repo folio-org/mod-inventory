@@ -3,6 +3,7 @@
 * Enable system user for data-import processes [MODINV-1115](https://folio-org.atlassian.net/browse/MODINV-1115)
 * Missing x-okapi-user-id header in communications with inventory-storage [MODINV-1134](https://folio-org.atlassian.net/browse/MODINV-1134)
 * Fix handling optimistic locking behavior for instance update when consuming Marc Bib update event  [MODINV-1125](https://folio-org.atlassian.net/browse/MODINV-1125)
+* Replace usage of deprecated instance-storage-batch API  [MODINV-1101](https://folio-org.atlassian.net/browse/MODINV-1101Л)
 
 ## 21.0.0 2024-10-29
 * Existing "035" field is not retained the original position in imported record [MODINV-1049](https://folio-org.atlassian.net/browse/MODINV-1049)
