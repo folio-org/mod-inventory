@@ -21,6 +21,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.folio.ActionProfile;
+import org.folio.ActionProfile.FolioRecord;
 import org.folio.Authority;
 import org.folio.DataImportEventPayload;
 import org.folio.MappingMetadataDto;
@@ -54,9 +55,11 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
 
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
+  public static final String AUTHORITY_EXTENDED = "AUTHORITY_EXTENDED";
 
   private final Storage storage;
   private final MappingMetadataCache mappingMetadataCache;
+  public static boolean isAuthorityExtended = isAuthorityExtendedMode();
 
   protected AbstractAuthorityEventHandler(Storage storage, MappingMetadataCache mappingMetadataCache) {
     this.storage = storage;
@@ -161,7 +164,9 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
       var mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
       var parsedRecord = new JsonObject((String) new JsonObject(payload.getContext().get(sourceRecordType().value()))
         .mapTo(Record.class).getParsedRecord().getContent());
-      RecordMapper<Authority> recordMapper = RecordMapperBuilder.buildMapper(sourceRecordType().value());
+      RecordMapper<Authority> recordMapper = isAuthorityExtended
+        ? RecordMapperBuilder.buildMapper(FolioRecord.MARC_AUTHORITY_EXTENDED.value())
+        : RecordMapperBuilder.buildMapper(sourceRecordType().value());
       var authority = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       authority.setSource(Authority.Source.MARC);
       return Future.succeededFuture(authority);
@@ -214,5 +219,22 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
       getRecordIdHeader(payload),
       getChunkIdHeader(payload)
     );
+  }
+
+  private static boolean isAuthorityExtendedMode() {
+    return Boolean.parseBoolean(
+      System.getenv().getOrDefault(AUTHORITY_EXTENDED, "false"));
+  }
+
+  /**
+   * For test usage only.
+   *
+   * @param newIsAuthoritiesExtended New value for the env to set.
+   */
+  public static void setAuthorityExtendedMode(boolean newIsAuthoritiesExtended) {
+    isAuthorityExtended = newIsAuthoritiesExtended;
+  }
+   public static boolean getIsAuthorityExtended() {
+    return isAuthorityExtended;
   }
 }
