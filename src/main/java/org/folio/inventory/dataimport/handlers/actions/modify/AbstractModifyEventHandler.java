@@ -12,6 +12,7 @@ import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
+import org.folio.inventory.client.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
@@ -266,7 +267,8 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
   }
 
   public SourceStorageRecordsClient getSourceStorageRecordsClient(Context context) {
-    return new SourceStorageRecordsClient(context.getOkapiLocation(), context.getTenantId(), context.getToken(), client);
+    return new SourceStorageRecordsClientWrapper(context.getOkapiLocation(), context.getTenantId(),
+      context.getToken(), context.getUserId(), client);
   }
 
   private void preparePayload(DataImportEventPayload dataImportEventPayload) {

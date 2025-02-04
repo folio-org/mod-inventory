@@ -14,6 +14,7 @@ import static org.folio.rest.jaxrs.model.InstanceIngressPayload.SourceType.LINKE
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
@@ -63,6 +64,10 @@ import org.mockito.junit.MockitoRule;
 public class CreateInstanceIngressEventHandlerUnitTest {
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String BIB_RECORD_PATH = "src/test/resources/handlers/bib-record.json";
+  public static final String TOKEN = "token";
+  public static final String OKAPI_URL = "okapiUrl";
+  public static final String TENANT = "tenant";
+  public static final String USER_ID = "userId";
 
   @Rule
   public MockitoRule initRule = MockitoJUnit.rule();
@@ -88,9 +93,10 @@ public class CreateInstanceIngressEventHandlerUnitTest {
 
   @Before
   public void setUp() {
-    doReturn("tenant").when(context).getTenantId();
-    doReturn("okapiUrl").when(context).getOkapiLocation();
-    doReturn("token").when(context).getToken();
+    doReturn(TENANT).when(context).getTenantId();
+    doReturn(OKAPI_URL).when(context).getOkapiLocation();
+    doReturn(TOKEN).when(context).getToken();
+    doReturn(USER_ID).when(context).getUserId();
     doReturn(instanceCollection).when(storage).getInstanceCollection(context);
     handler = spy(new CreateInstanceIngressEventHandler(precedingSucceedingTitlesHelper,
       mappingMetadataCache, idStorageService, httpClient, context, storage));
@@ -313,7 +319,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       return null;
     }).when(instanceCollection).add(any(), any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
-    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
     doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).postSourceStorageRecords(any());
 
@@ -356,7 +362,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       return null;
     }).when(instanceCollection).add(any(), any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
-    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Record())), HttpStatus.SC_CREATED);
     doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).postSourceStorageRecords(any());
 
@@ -370,6 +376,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
     assertThat(instance.getId()).isEqualTo(instanceId);
     assertThat(instance.getSource()).isEqualTo("LINKED_DATA");
     assertThat(instance.getIdentifiers().stream().anyMatch(i -> i.value.equals("(ld) " + linkedDataId))).isTrue();
+    verify(handler).getSourceStorageRecordsClient(any(), any(), argThat(TENANT::equals), argThat(USER_ID::equals));
 
     var recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
