@@ -25,10 +25,10 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
   private final WebClient webClient;
 
   public SourceStorageRecordsClientWrapper(String okapiUrl, String tenantId, String token, String userId, HttpClient httpClient) {
-    super(tenantId, token, okapiUrl, httpClient);
+    super(okapiUrl, tenantId, token, httpClient);
+    this.okapiUrl = okapiUrl;
     this.tenantId = tenantId;
     this.token = token;
-    this.okapiUrl = okapiUrl;
     this.userId = userId;
     this.webClient = WebClient.wrap(httpClient);
   }
