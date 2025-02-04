@@ -48,7 +48,7 @@ public class SourceStorageRecordsClientWrapperTest {
 
   @Before
   public void setUp() {
-    sourceStorageRecordsClientWrapper = new SourceStorageRecordsClientWrapper(TENANT_ID, TOKEN, mockServer.baseUrl(), USER_ID,
+    sourceStorageRecordsClientWrapper = new SourceStorageRecordsClientWrapper(mockServer.baseUrl(), TENANT_ID, TOKEN, USER_ID,
       vertx.createHttpClient());
 
     stubRecord = new Record().withId(UUID.randomUUID().toString());
