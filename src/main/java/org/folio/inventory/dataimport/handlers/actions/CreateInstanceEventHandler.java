@@ -76,6 +76,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+    LOGGER.info("handle:: SYSTEM_USER_ENABLED: {}", System.getProperty("SYSTEM_USER_ENABLED"));
     logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
@@ -97,6 +98,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
         payloadContext.get(PAYLOAD_USER_ID));
+      LOGGER.info("handle:: CONTEXT: {}", JsonObject.mapFrom(context).encodePrettily());
       Record targetRecord = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
       var sourceContent = targetRecord.getParsedRecord().getContent().toString();
 
