@@ -1,4 +1,4 @@
-package org.folio.inventory.client.wrappers;
+package org.folio.inventory.client.util;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.HttpRequest;
