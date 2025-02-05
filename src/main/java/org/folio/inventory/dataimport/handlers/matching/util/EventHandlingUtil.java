@@ -15,6 +15,9 @@ import java.util.Optional;
 
 public final class EventHandlingUtil {
   public static final String PAYLOAD_USER_ID = "userId";
+  public static final String OKAPI_TENANT = "x-okapi-tenant";
+  public static final String OKAPI_TOKEN = "x-okapi-token";
+  public static final String OKAPI_URL = "x-okapi-url";
   public static final String OKAPI_USER_ID = "x-okapi-user-id";
   public static final String OKAPI_REQUEST_ID = "x-okapi-request-id";
   private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";

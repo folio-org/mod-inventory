@@ -12,6 +12,7 @@ import org.folio.DataImportEventPayload;
 import org.folio.DataImportEventTypes;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
+import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
@@ -47,7 +48,6 @@ import static java.lang.String.format;
 import static org.apache.http.HttpStatus.SC_OK;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.processing.value.Value.ValueType.MISSING;
-import static org.folio.rest.jaxrs.model.Filter.*;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
 import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
 
@@ -95,8 +95,9 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         LOG.warn("handle:: {}", PAYLOAD_HAS_NO_DATA_MESSAGE);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MESSAGE));
       }
+      String userId = context.get(USER_ID_HEADER);
       payload.getEventsChain().add(payload.getEventType());
-      payload.setAdditionalProperty(USER_ID_HEADER, context.get(USER_ID_HEADER));
+      payload.setAdditionalProperty(USER_ID_HEADER, userId);
 
       String recordAsString = context.get(getMarcType());
       MatchDetail matchDetail = retrieveMatchDetail(payload);
@@ -114,7 +115,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       }
 
       RecordMatchingDto recordMatchingDto = buildRecordsMatchingRequest(matchDetail, value);
-      return retrieveMarcRecords(recordMatchingDto, payload.getTenant(), payload)
+      return retrieveMarcRecords(recordMatchingDto, payload.getTenant(), userId, payload)
         .compose(localMatchedRecords -> {
           if (isMatchingOnCentralTenantRequired()) {
             return matchCentralTenantIfNeededAndCombineWithLocalMatchedRecords(recordMatchingDto, payload, localMatchedRecords);
@@ -198,7 +199,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
     Qualifier qualifier = matchDetail.getExistingMatchExpression().getQualifier();
     Filter.Qualifier qualifierFilterType = null;
-    ComparisonPartType comparisonPartType = null;
+    Filter.ComparisonPartType comparisonPartType = null;
     String qualifierValue = null;
 
     if (qualifier != null) {
@@ -208,7 +209,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         Filter.Qualifier.valueOf(qualifier.getQualifierType().toString()) : null;
       comparisonPartType =
         qualifier.getComparisonPart() != null ?
-        ComparisonPartType.valueOf(qualifier.getComparisonPart().toString()) : null;
+        Filter.ComparisonPartType.valueOf(qualifier.getComparisonPart().toString()) : null;
     }
 
     return new RecordMatchingDto()
@@ -225,10 +226,10 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       .withReturnTotalRecordsCount(true);
   }
 
-  private Future<Optional<Record>> retrieveMarcRecords(RecordMatchingDto recordMatchingDto, String tenantId,
+  private Future<Optional<Record>> retrieveMarcRecords(RecordMatchingDto recordMatchingDto, String tenantId, String userId,
                                                        DataImportEventPayload payload) {
     SourceStorageRecordsClient sourceStorageRecordsClient =
-      new SourceStorageRecordsClient(payload.getOkapiUrl(), tenantId, payload.getToken(), httpClient);
+      new SourceStorageRecordsClientWrapper(payload.getOkapiUrl(), tenantId, payload.getToken(), userId, httpClient);
 
     return getAllMatchedRecordsIdentifiers(recordMatchingDto, payload, sourceStorageRecordsClient)
       .compose(recordsIdentifiersCollection -> {
@@ -332,7 +333,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
           LOG.debug("matchCentralTenantIfNeededAndCombineWithLocalMatchedRecords:: Matching on centralTenant with id: {}",
             consortiumConfigurationOptional.get().getCentralTenantId());
 
-          return retrieveMarcRecords(recordMatchingDto, consortiumConfigurationOptional.get().getCentralTenantId(), payload)
+          return retrieveMarcRecords(recordMatchingDto, consortiumConfigurationOptional.get().getCentralTenantId(), context.getUserId(), payload)
             .map(centralRecordOptional -> {
               centralRecordOptional.ifPresent(r -> payload.getContext().put(CENTRAL_TENANT_ID_KEY, consortiumConfigurationOptional.get().getCentralTenantId()));
               return Stream.concat(localMatchedRecord.stream(), centralRecordOptional.stream()).toList();

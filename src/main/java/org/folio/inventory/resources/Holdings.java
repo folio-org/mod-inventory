@@ -29,6 +29,7 @@ import org.apache.logging.log4j.Logger;
 
 import org.folio.HoldingsRecord;
 import org.folio.HttpStatus;
+import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
@@ -38,7 +39,6 @@ import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.server.FailureResponseConsumer;
-import org.folio.rest.client.SourceStorageRecordsClient;
 
 public class Holdings {
 
@@ -163,7 +163,8 @@ public class Holdings {
 
   private void updateSuppressFromDiscoveryFlag(WebContext wContext, RoutingContext rContext, HoldingsRecord updatedHoldings) {
     try {
-      new SourceStorageRecordsClient(wContext.getOkapiLocation(), wContext.getTenantId(), wContext.getToken(), client)
+      new SourceStorageRecordsClientWrapper(wContext.getOkapiLocation(), wContext.getTenantId(),
+        wContext.getToken(), wContext.getUserId(), client)
         .putSourceStorageRecordsSuppressFromDiscoveryById(updatedHoldings.getId(), HOLDING_ID_TYPE, updatedHoldings.getDiscoverySuppress(), httpClientResponse -> {
           if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_OK.toInt()) {
             LOGGER.info(format("Suppress from discovery flag was updated for record in SRS. Holding id: %s",

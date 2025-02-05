@@ -93,6 +93,7 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY
 import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.ACTION_HAS_NO_MAPPING_MSG;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.MARC_BIB_RECORD_CREATED;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.MARC;
@@ -114,7 +115,6 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -137,6 +137,7 @@ public class ReplaceInstanceEventHandlerTest {
   private static final String INSTANCE_VERSION_AS_STRING = "1";
   private static final String MARC_INSTANCE_SOURCE = "MARC";
   private static final String LINKED_DATA_INSTANCE_SOURCE = "LINKED_DATA";
+  public static final String USER_ID = "userId";
   private final String localTenant = "tenant";
   private final String consortiumTenant = "consortiumTenant";
   private final UUID instanceId = UUID.randomUUID();
@@ -318,8 +319,8 @@ public class ReplaceInstanceEventHandlerTest {
       return null;
     }).when(instanceRecordCollection).update(any(), any(Consumer.class), any(Consumer.class));
 
-    doReturn(sourceStorageClient).when(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageClient).when(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
 
     doAnswer(invocationOnMock -> completedStage(createResponse(201, null)))
       .when(mockedClient).post(any(URL.class), any(JsonObject.class));
@@ -546,9 +547,9 @@ public class ReplaceInstanceEventHandlerTest {
     assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(),eq(INSTANCE.value()));
-    verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
+    verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
     verify(sourceStorageSnapshotsClient).postSourceStorageSnapshots(argThat(snapshot -> snapshot.getJobExecutionId().equals(record.getSnapshotId())));
-    verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
+    verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
     verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
@@ -640,6 +641,7 @@ public class ReplaceInstanceEventHandlerTest {
 
     HashMap<String, String> context = new HashMap<>();
     context.put(CENTRAL_TENANT_ID_KEY, consortiumTenant);
+    context.put(PAYLOAD_USER_ID, USER_ID);
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", UUID.randomUUID().toString())
@@ -685,8 +687,8 @@ public class ReplaceInstanceEventHandlerTest {
 
     ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
-    verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
-    verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
+    verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), argThat(USER_ID::equals));
+    verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), argThat(USER_ID::equals));
     verify(sourceStorageSnapshotsClient).postSourceStorageSnapshots(argThat(snapshot -> snapshot.getJobExecutionId().equals(record.getSnapshotId())));
     assertNotNull(recordId, recordCaptor.getValue().getMatchedId());
   }
@@ -754,8 +756,8 @@ public class ReplaceInstanceEventHandlerTest {
 
     ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
-    verify(replaceInstanceEventHandler, times(2)).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
-    verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
+    verify(replaceInstanceEventHandler, times(2)).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
+    verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
     verify(sourceStorageSnapshotsClient).postSourceStorageSnapshots(argThat(snapshot -> snapshot.getJobExecutionId().equals(record.getSnapshotId())));
   }
 
