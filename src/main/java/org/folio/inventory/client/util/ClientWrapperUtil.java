@@ -15,6 +15,8 @@ public final class ClientWrapperUtil {
   public static final String ACCEPT = "Accept";
   public static final String APPLICATION_JSON_TEXT_PLAIN = "application/json,text/plain";
 
+  private ClientWrapperUtil() {}
+
   public static void populateOkapiHeaders(HttpRequest<Buffer> request, String okapiUrl, String tenantId, String token, String userId) {
     if (tenantId != null) {
       request.putHeader(OKAPI_TOKEN, token);
