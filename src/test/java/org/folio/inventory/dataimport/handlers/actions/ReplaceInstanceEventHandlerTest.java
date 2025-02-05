@@ -320,7 +320,7 @@ public class ReplaceInstanceEventHandlerTest {
     }).when(instanceRecordCollection).update(any(), any(Consumer.class), any(Consumer.class));
 
     doReturn(sourceStorageClient).when(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
 
     doAnswer(invocationOnMock -> completedStage(createResponse(201, null)))
       .when(mockedClient).post(any(URL.class), any(JsonObject.class));
@@ -547,7 +547,7 @@ public class ReplaceInstanceEventHandlerTest {
     assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(),eq(INSTANCE.value()));
-    verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
+    verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
     verify(sourceStorageSnapshotsClient).postSourceStorageSnapshots(argThat(snapshot -> snapshot.getJobExecutionId().equals(record.getSnapshotId())));
     verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
@@ -688,7 +688,7 @@ public class ReplaceInstanceEventHandlerTest {
     ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
     verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), argThat(USER_ID::equals));
-    verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
+    verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), argThat(USER_ID::equals));
     verify(sourceStorageSnapshotsClient).postSourceStorageSnapshots(argThat(snapshot -> snapshot.getJobExecutionId().equals(record.getSnapshotId())));
     assertNotNull(recordId, recordCaptor.getValue().getMatchedId());
   }
@@ -757,7 +757,7 @@ public class ReplaceInstanceEventHandlerTest {
     ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
     verify(replaceInstanceEventHandler, times(2)).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
-    verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)));
+    verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
     verify(sourceStorageSnapshotsClient).postSourceStorageSnapshots(argThat(snapshot -> snapshot.getJobExecutionId().equals(record.getSnapshotId())));
   }
 

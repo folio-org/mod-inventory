@@ -29,7 +29,7 @@ import org.apache.logging.log4j.Logger;
 
 import org.folio.HoldingsRecord;
 import org.folio.HttpStatus;
-import org.folio.inventory.client.SourceStorageRecordsClientWrapper;
+import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;

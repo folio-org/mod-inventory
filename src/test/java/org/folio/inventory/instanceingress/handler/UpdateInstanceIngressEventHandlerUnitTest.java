@@ -338,7 +338,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
     doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     var expectedMessage = "Failed to create snapshot in SRS, snapshot id: ";
@@ -381,7 +381,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
     doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
@@ -427,7 +427,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
     doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"id\":\"5e525f1e-d373-4a07-9aff-b80856bacfef\"}"), HttpStatus.SC_OK);
@@ -474,7 +474,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
     doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"id\":\"5e525f1e-d373-4a07-9aff-b80856bacfef\"}"), HttpStatus.SC_OK);
@@ -528,7 +528,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
     doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"matchedId\":\"" + initialSrsId + "\"}"), HttpStatus.SC_OK);
@@ -552,6 +552,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     var recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
     verify(handler).getSourceStorageRecordsClient(any(), any(), argThat(TENANT::equals), argThat(USER_ID::equals));
+    verify(handler).getSourceStorageSnapshotsClient(any(), any(), argThat(TENANT::equals), argThat(USER_ID::equals));
     var recordSentToSRS = recordCaptor.getValue();
     assertThat(recordSentToSRS.getId()).isNotNull();
     assertThat(recordSentToSRS.getId()).isNotEqualTo(initialSrsId);

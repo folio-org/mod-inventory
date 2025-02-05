@@ -176,7 +176,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
 
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), argThat(USER_ID::equals));
     var snapshotHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Snapshot())), HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
 
@@ -206,7 +206,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), argThat(USER_ID::equals));
     var snapshotHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Snapshot())), HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
 
@@ -240,7 +240,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), argThat(USER_ID::equals));
     var snapshotHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Snapshot())), HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     doAnswer(i -> {
@@ -274,14 +274,13 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), argThat(USER_ID::equals));
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
       successHandler.accept(new Success<>(i.getArgument(0)));
       return null;
     }).when(instanceCollection).add(any(), any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
 
@@ -310,7 +309,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), argThat(USER_ID::equals));
     var snapshotHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Snapshot())), HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     doAnswer(i -> {
@@ -353,7 +352,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), argThat(USER_ID::equals));
     var snapshotHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Snapshot())), HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     doAnswer(i -> {

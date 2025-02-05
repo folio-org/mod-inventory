@@ -24,7 +24,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.HttpStatus;
-import org.folio.inventory.client.SourceStorageRecordsClientWrapper;
+import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
+import org.folio.inventory.client.wrappers.SourceStorageSnapshotsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
@@ -143,7 +144,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
 
   protected Future<Snapshot> postSnapshotInSrsAndHandleResponse(Context context, Snapshot snapshot) {
     Promise<Snapshot> promise = Promise.promise();
-    getSourceStorageSnapshotsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId()).postSourceStorageSnapshots(snapshot)
+    getSourceStorageSnapshotsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId(), context.getUserId()).postSourceStorageSnapshots(snapshot)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
@@ -209,8 +210,8 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     return new SourceStorageRecordsClientWrapper(okapiUrl, tenantId, token, userId, getHttpClient());
   }
 
-  public SourceStorageSnapshotsClient getSourceStorageSnapshotsClient(String okapiUrl, String token, String tenantId) {
-    return new SourceStorageSnapshotsClient(okapiUrl, tenantId, token, getHttpClient());
+  public SourceStorageSnapshotsClient getSourceStorageSnapshotsClient(String okapiUrl, String token, String tenantId, String userId) {
+    return new SourceStorageSnapshotsClientWrapper(okapiUrl, tenantId, token, userId, getHttpClient());
   }
 
   private Record encodeParsedRecordContent(Record srcRecord) {

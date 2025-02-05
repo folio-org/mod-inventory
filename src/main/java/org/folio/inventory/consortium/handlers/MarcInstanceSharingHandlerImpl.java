@@ -12,7 +12,7 @@ import org.folio.Authority;
 import org.folio.Link;
 import org.folio.LinkingRuleDto;
 import org.folio.Record;
-import org.folio.inventory.client.SourceStorageRecordsClientWrapper;
+import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.consortium.entities.SharingInstance;

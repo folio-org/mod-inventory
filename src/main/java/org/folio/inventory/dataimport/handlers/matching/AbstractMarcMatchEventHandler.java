@@ -12,7 +12,7 @@ import org.folio.DataImportEventPayload;
 import org.folio.DataImportEventTypes;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
-import org.folio.inventory.client.SourceStorageRecordsClientWrapper;
+import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;

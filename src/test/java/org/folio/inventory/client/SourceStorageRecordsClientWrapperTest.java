@@ -12,6 +12,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.HttpResponse;
+import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.Before;
 import org.junit.Rule;
@@ -29,6 +30,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_TENANT;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_TOKEN;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_URL;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
 
 @RunWith(VertxUnitRunner.class)
@@ -54,18 +56,21 @@ public class SourceStorageRecordsClientWrapperTest {
     stubRecord = new Record().withId(UUID.randomUUID().toString());
 
     WireMock.stubFor(post(new UrlPathPattern(new RegexPattern("/source-storage/records"), true))
+      .withHeader(OKAPI_URL, equalTo(mockServer.baseUrl()))
       .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
       .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
       .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
       .willReturn(WireMock.created()));
 
     WireMock.stubFor(put(new UrlPathPattern(new RegexPattern("/source-storage/records/" + stubRecord.getId()), true))
+      .withHeader(OKAPI_URL, equalTo(mockServer.baseUrl()))
       .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
       .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
       .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
       .willReturn(WireMock.ok()));
 
     WireMock.stubFor(put(new UrlPathPattern(new RegexPattern("/source-storage/records/" + stubRecord.getId() + "/generation"), true))
+      .withHeader(OKAPI_URL, equalTo(mockServer.baseUrl()))
       .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
       .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
       .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
@@ -74,6 +79,7 @@ public class SourceStorageRecordsClientWrapperTest {
     WireMock.stubFor(put(new UrlPathPattern(new RegexPattern("/source-storage/records/" + stubRecord.getId() + "/suppress-from-discovery"), true))
       .withQueryParam("idType", equalTo(RECORD))
       .withQueryParam("suppress", equalTo("true"))
+      .withHeader(OKAPI_URL, equalTo(mockServer.baseUrl()))
       .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
       .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
       .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
