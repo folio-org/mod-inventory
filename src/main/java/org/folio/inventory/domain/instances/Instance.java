@@ -63,6 +63,7 @@ public class Instance {
   public static final String PREVIOUSLY_HELD_KEY = "previouslyHeld";
   public static final String STAFF_SUPPRESS_KEY = "staffSuppress";
   public static final String DISCOVERY_SUPPRESS_KEY = "discoverySuppress";
+  public static final String DELETED_KEY = "deleted";
   public static final String STATISTICAL_CODE_IDS_KEY = "statisticalCodeIds";
   public static final String ADMININSTRATIVE_NOTES_KEY = "administrativeNotes";
   public static final String SOURCE_RECORD_FORMAT_KEY = "sourceRecordFormat";
@@ -109,6 +110,7 @@ public class Instance {
   private Boolean previouslyHeld;
   private Boolean staffSuppress;
   private Boolean discoverySuppress;
+  private Boolean deleted;
   private List<String> statisticalCodeIds = new ArrayList<>();
   private String sourceRecordFormat;
   private String statusId;
@@ -182,6 +184,7 @@ public class Instance {
       .setPreviouslyHeld(instanceJson.getBoolean(PREVIOUSLY_HELD_KEY, false))
       .setStaffSuppress(instanceJson.getBoolean(STAFF_SUPPRESS_KEY, false))
       .setDiscoverySuppress(instanceJson.getBoolean(DISCOVERY_SUPPRESS_KEY, false))
+      .setDeleted(instanceJson.getBoolean(DELETED_KEY, false))
       .setStatisticalCodeIds(toListOfStrings(instanceJson.getJsonArray(STATISTICAL_CODE_IDS_KEY)))
       .setSourceRecordFormat(instanceJson.getString(SOURCE_RECORD_FORMAT_KEY))
       .setStatusId(instanceJson.getString(STATUS_ID_KEY))
@@ -230,6 +233,7 @@ public class Instance {
     json.put(PREVIOUSLY_HELD_KEY, previouslyHeld);
     json.put(STAFF_SUPPRESS_KEY, staffSuppress);
     json.put(DISCOVERY_SUPPRESS_KEY, discoverySuppress);
+    json.put(DELETED_KEY, deleted);
     json.put(STATISTICAL_CODE_IDS_KEY, statisticalCodeIds);
     if (sourceRecordFormat != null) json.put(SOURCE_RECORD_FORMAT_KEY, sourceRecordFormat);
     json.put(STATUS_ID_KEY, statusId);
@@ -282,6 +286,7 @@ public class Instance {
     putIfNotNull(json, PREVIOUSLY_HELD_KEY, getPreviouslyHeld());
     putIfNotNull(json, STAFF_SUPPRESS_KEY, getStaffSuppress());
     putIfNotNull(json, DISCOVERY_SUPPRESS_KEY, getDiscoverySuppress());
+    putIfNotNull(json, DELETED_KEY, getDeleted());
     putIfNotNull(json, STATISTICAL_CODE_IDS_KEY, getStatisticalCodeIds());
     putIfNotNull(json, SOURCE_RECORD_FORMAT_KEY, getSourceRecordFormat());
     putIfNotNull(json, STATUS_ID_KEY, getStatusId());
@@ -516,6 +521,11 @@ public class Instance {
     return this;
   }
 
+  public Instance setDeleted(Boolean deleted) {
+    this.deleted = deleted;
+    return this;
+  }
+
   public Instance setStatisticalCodeIds(List<String> statisticalCodeIds) {
     this.statisticalCodeIds = statisticalCodeIds;
     return this;
@@ -691,6 +701,10 @@ public class Instance {
 
   public Boolean getDiscoverySuppress() {
     return discoverySuppress;
+  }
+
+  public Boolean getDeleted() {
+    return deleted;
   }
 
   public List<String> getStatisticalCodeIds() {
