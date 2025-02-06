@@ -611,6 +611,7 @@ public class MarcInstanceSharingHandlerImplTest {
     Instance localSourceInstance = new Instance(instanceId, "1", "001", "MARC", "testTitle", UUID.randomUUID().toString())
       .setDiscoverySuppress(Boolean.TRUE)
       .setStaffSuppress(Boolean.TRUE)
+      .setDeleted(Boolean.TRUE)
       .setCatalogedDate("1970-01-01")
       .setStatusId(UUID.randomUUID().toString())
       .setStatisticalCodeIds(List.of(UUID.randomUUID().toString()))
@@ -654,6 +655,7 @@ public class MarcInstanceSharingHandlerImplTest {
       testContext.assertEquals(targetInstanceHrid, targetInstanceWithNonMarcData.getHrid());
       testContext.assertEquals(localSourceInstance.getDiscoverySuppress(), targetInstanceWithNonMarcData.getDiscoverySuppress());
       testContext.assertEquals(localSourceInstance.getStaffSuppress(), targetInstanceWithNonMarcData.getStaffSuppress());
+      testContext.assertEquals(localSourceInstance.getDeleted(), targetInstanceWithNonMarcData.getDeleted());
       testContext.assertEquals(localSourceInstance.getCatalogedDate(), targetInstanceWithNonMarcData.getCatalogedDate());
       testContext.assertEquals(localSourceInstance.getStatusId(), targetInstanceWithNonMarcData.getStatusId());
       testContext.assertEquals(localSourceInstance.getStatisticalCodeIds(), targetInstanceWithNonMarcData.getStatisticalCodeIds());

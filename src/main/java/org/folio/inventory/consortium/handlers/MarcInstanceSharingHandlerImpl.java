@@ -121,6 +121,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
   private Instance populateTargetInstanceWithNonMarcControlledFields(Instance targetInstance, Instance sourceInstance) {
     targetInstance.setStaffSuppress(sourceInstance.getStaffSuppress());
     targetInstance.setDiscoverySuppress(sourceInstance.getDiscoverySuppress());
+    targetInstance.setDeleted(sourceInstance.getDeleted());
     targetInstance.setCatalogedDate(sourceInstance.getCatalogedDate());
     targetInstance.setStatusId(sourceInstance.getStatusId());
     targetInstance.setStatisticalCodeIds(sourceInstance.getStatisticalCodeIds());
