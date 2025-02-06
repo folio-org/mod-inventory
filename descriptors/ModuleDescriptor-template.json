@@ -606,18 +606,6 @@
   ],
   "requires": [
     {
-      "id": "circulation-bff-ecs-request-external",
-      "version": "1.1"
-    },
-    {
-      "id": "circulation-bff-requests",
-      "version": "1.1"
-    },
-    {
-      "id": "staging-users",
-      "version": "1.1"
-    },
-    {
       "id": "holdings-sources",
       "version": "1.0"
     },
@@ -634,7 +622,7 @@
       "version": "11.0"
     },
     {
-      "id": "instance-storage-batch",
+      "id": "instance-storage-batch-sync",
       "version": "3.0"
     },
     {
@@ -710,6 +698,18 @@
     {
       "id": "consortia",
       "version": "1.0"
+    },
+    {
+      "id": "circulation-bff-ecs-request-external",
+      "version": "1.1"
+    },
+    {
+      "id": "circulation-bff-requests",
+      "version": "1.1"
+    },
+    {
+      "id": "staging-users",
+      "version": "1.1"
     }
   ],
   "permissionSets": [
