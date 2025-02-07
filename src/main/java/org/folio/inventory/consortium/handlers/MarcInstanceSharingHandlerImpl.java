@@ -12,6 +12,7 @@ import org.folio.Authority;
 import org.folio.Link;
 import org.folio.LinkingRuleDto;
 import org.folio.Record;
+import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.consortium.entities.SharingInstance;
@@ -282,10 +283,11 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
   public SourceStorageRecordsClient getSourceStorageRecordsClient(String tenant, Map<String, String> kafkaHeaders) {
     LOGGER.info("getSourceStorageRecordsClient :: Creating SourceStorageRecordsClient for tenant={}", tenant);
-    return new SourceStorageRecordsClient(
+    return new SourceStorageRecordsClientWrapper(
       kafkaHeaders.get(OKAPI_URL_HEADER),
       tenant,
       kafkaHeaders.get(OKAPI_TOKEN_HEADER),
+      kafkaHeaders.get(OKAPI_USER_ID),
       vertx.createHttpClient());
   }
 
