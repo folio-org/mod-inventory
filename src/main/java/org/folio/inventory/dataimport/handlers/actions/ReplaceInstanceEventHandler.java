@@ -229,7 +229,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           .compose(instance -> {
             if (instanceToUpdate.getSource().equals(FOLIO.getValue())) {
               executeFieldsManipulation(instance, targetRecord);
-              return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection, tenantId);
+              return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection,
+                tenantId, context.getUserId());
             }
             if (instanceToUpdate.getSource().equals(MARC.getValue())) {
               setExternalIds(targetRecord, instance);
@@ -238,7 +239,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
               JsonObject jsonInstance = new JsonObject(instance.getJsonForStorage().encode());
 
               setSuppressFormDiscovery(targetRecord, jsonInstance.getBoolean(DISCOVERY_SUPPRESS_KEY, false));
-              return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, targetRecord.getMatchedId(), tenantId);
+              return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance,
+                targetRecord.getMatchedId(), tenantId, context.getUserId());
             }
             return Future.succeededFuture(instance);
           }).compose(ar -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(ar))
@@ -332,7 +334,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
                                                List<MarcFieldProtectionSetting> marcFieldProtectionSettings,
                                                Instance instance, MappingParameters mappingParameters, String tenantId) {
     if (MARC_INSTANCE_SOURCE.equals(instance.getSource()) || CONSORTIUM_MARC.getValue().equals(instance.getSource())) {
-      SourceStorageRecordsClient client = getSourceStorageRecordsClient(dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getToken(), tenantId);
+      SourceStorageRecordsClient client = getSourceStorageRecordsClient(dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getToken(), tenantId, null);
       return getRecordByInstanceId(client, instance.getId())
         .compose(existingRecord -> {
           Record incomingRecord = Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);

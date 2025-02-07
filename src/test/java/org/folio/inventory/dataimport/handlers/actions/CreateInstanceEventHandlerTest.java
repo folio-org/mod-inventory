@@ -87,6 +87,7 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.dateTime005Formatter;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
@@ -101,7 +102,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -119,6 +119,7 @@ public class CreateInstanceEventHandlerTest {
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
   private static final String TENANT_ID = "diku";
+  private static final String USER_ID = "userId";
   private static final String TOKEN = "dummy";
 
   @Mock
@@ -279,7 +280,7 @@ public class CreateInstanceEventHandlerTest {
       new PrecedingSucceedingTitlesHelper(context -> mockedClient), MappingMetadataCache.getInstance(vertx,
       httpClient, true), instanceIdStorageService, orderHelperService, httpClient));
 
-    doReturn(sourceStorageClient).when(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), any());
+    doReturn(sourceStorageClient).when(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), any(), any());
     doAnswer(invocationOnMock -> {
       Instance instanceRecord = invocationOnMock.getArgument(0);
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -329,6 +330,7 @@ public class CreateInstanceEventHandlerTest {
 
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put("acceptInstanceId", acceptInstanceId);
+    context.put(PAYLOAD_USER_ID, USER_ID);
 
     Buffer buffer = BufferImpl.buffer("{\"parsedRecord\":{" +
       "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
@@ -369,7 +371,8 @@ public class CreateInstanceEventHandlerTest {
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(0).getString("instanceNoteTypeId"), notNullValue());
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
-    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(TENANT_ID)));
+    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(),
+      argThat(tenantId -> tenantId.equals(TENANT_ID)), argThat(USER_ID::equals));
   }
 
   @Test
@@ -453,6 +456,7 @@ public class CreateInstanceEventHandlerTest {
 
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put("acceptInstanceId", "true");
+    context.put(PAYLOAD_USER_ID, USER_ID);
 
     Buffer buffer = BufferImpl.buffer("{\"parsedRecord\":{" +
       "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
@@ -487,7 +491,7 @@ public class CreateInstanceEventHandlerTest {
     assertEquals("MARC", createdInstance.getString("source"));
     assertThat(createdInstance.getString("discoverySuppress"), is("true"));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
-    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(TENANT_ID)));
+    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(TENANT_ID)), argThat(USER_ID::equals));
   }
 
   @Test(expected = ExecutionException.class)
