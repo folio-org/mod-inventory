@@ -4,20 +4,18 @@ import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.util.PercentCodec;
 
-import static org.folio.inventory.client.util.ClientWrapperUtil.ACCEPT;
-import static org.folio.inventory.client.util.ClientWrapperUtil.APPLICATION_JSON;
-import static org.folio.inventory.client.util.ClientWrapperUtil.APPLICATION_JSON_TEXT_PLAIN;
-import static org.folio.inventory.client.util.ClientWrapperUtil.CONTENT_TYPE;
+import static org.folio.inventory.client.util.ClientWrapperUtil.createRequest;
 import static org.folio.inventory.client.util.ClientWrapperUtil.getBuffer;
-import static org.folio.inventory.client.util.ClientWrapperUtil.populateOkapiHeaders;
 
+/**
+ * Wrapper class for SourceStorageRecordsClient to handle POST and PUT HTTP requests with x-okapi-user-id header.
+ */
 public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClient {
   private final String tenantId;
   private final String token;
@@ -37,33 +35,21 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
 
   @Override
   public Future<HttpResponse<Buffer>> postSourceStorageRecords(Record aRecord) {
-    HttpRequest<Buffer> request = webClient.requestAbs(HttpMethod.POST, okapiUrl + "/source-storage/records");
-    request.putHeader(CONTENT_TYPE, APPLICATION_JSON);
-    request.putHeader(ACCEPT, APPLICATION_JSON_TEXT_PLAIN);
-
-    populateOkapiHeaders(request, okapiUrl, tenantId, token, userId);
-
-    return request.sendBuffer(getBuffer(aRecord));
+    return createRequest(HttpMethod.POST, okapiUrl + "/source-storage/records", okapiUrl, tenantId, token, userId, webClient)
+      .sendBuffer(getBuffer(aRecord));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putSourceStorageRecordsById(String id, Record aRecord) {
-    HttpRequest<Buffer> request = webClient.requestAbs(HttpMethod.PUT, okapiUrl + SOURCE_STORAGE_RECORDS + id);
-    request.putHeader(CONTENT_TYPE, APPLICATION_JSON);
-    request.putHeader(ACCEPT, APPLICATION_JSON_TEXT_PLAIN);
-    populateOkapiHeaders(request, okapiUrl, tenantId, token, userId);
-
-    return request.sendBuffer(getBuffer(aRecord));
+    return createRequest(HttpMethod.PUT, okapiUrl + SOURCE_STORAGE_RECORDS + id, okapiUrl, tenantId, token, userId, webClient)
+      .sendBuffer(getBuffer(aRecord));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putSourceStorageRecordsGenerationById(String id, Record aRecord) {
-    HttpRequest<Buffer> request = webClient.requestAbs(HttpMethod.PUT, okapiUrl + SOURCE_STORAGE_RECORDS + id + "/generation");
-    request.putHeader(CONTENT_TYPE, APPLICATION_JSON);
-    request.putHeader(ACCEPT, APPLICATION_JSON);
-    populateOkapiHeaders(request, okapiUrl, tenantId, token, userId);
-
-    return request.sendBuffer(getBuffer(aRecord));
+    return createRequest(HttpMethod.PUT, okapiUrl + SOURCE_STORAGE_RECORDS + id + "/generation",
+      okapiUrl, tenantId, token, userId, webClient)
+      .sendBuffer(getBuffer(aRecord));
   }
 
   @Override
@@ -77,10 +63,9 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
 
     queryParams.append("suppress=");
     queryParams.append(suppress);
-    HttpRequest<Buffer> request = webClient.requestAbs(HttpMethod.PUT, okapiUrl + SOURCE_STORAGE_RECORDS + id + "/suppress-from-discovery" + queryParams);
-    request.putHeader(ACCEPT, APPLICATION_JSON_TEXT_PLAIN);
-    populateOkapiHeaders(request, okapiUrl, tenantId, token, userId);
 
-    return request.send();
+    return createRequest(HttpMethod.PUT, okapiUrl + SOURCE_STORAGE_RECORDS + id + "/suppress-from-discovery" + queryParams,
+      okapiUrl, tenantId, token, userId, webClient)
+      .send();
   }
 }

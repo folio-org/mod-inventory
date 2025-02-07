@@ -4,19 +4,17 @@ import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpMethod;
-import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import org.folio.rest.client.SourceStorageSnapshotsClient;
 import org.folio.rest.jaxrs.model.Snapshot;
 
-import static org.folio.inventory.client.util.ClientWrapperUtil.ACCEPT;
-import static org.folio.inventory.client.util.ClientWrapperUtil.APPLICATION_JSON;
-import static org.folio.inventory.client.util.ClientWrapperUtil.APPLICATION_JSON_TEXT_PLAIN;
-import static org.folio.inventory.client.util.ClientWrapperUtil.CONTENT_TYPE;
+import static org.folio.inventory.client.util.ClientWrapperUtil.createRequest;
 import static org.folio.inventory.client.util.ClientWrapperUtil.getBuffer;
-import static org.folio.inventory.client.util.ClientWrapperUtil.populateOkapiHeaders;
 
+/**
+ * Wrapper class for SourceStorageSnapshotsClient to handle POST and PUT HTTP requests with x-okapi-user-id header.
+ */
 public class SourceStorageSnapshotsClientWrapper extends SourceStorageSnapshotsClient {
   private final String tenantId;
   private final String token;
@@ -35,21 +33,14 @@ public class SourceStorageSnapshotsClientWrapper extends SourceStorageSnapshotsC
 
   @Override
   public Future<HttpResponse<Buffer>> postSourceStorageSnapshots(Snapshot snapshot) {
-    HttpRequest<Buffer> request = webClient.requestAbs(HttpMethod.POST, okapiUrl + "/source-storage/snapshots");
-    request.putHeader(CONTENT_TYPE, APPLICATION_JSON);
-    request.putHeader(ACCEPT, APPLICATION_JSON_TEXT_PLAIN);
-    populateOkapiHeaders(request, okapiUrl, tenantId, token, userId);
-
-    return request.sendBuffer(getBuffer(snapshot));
+    return createRequest(HttpMethod.POST, okapiUrl + "/source-storage/snapshots", okapiUrl, tenantId, token, userId, webClient)
+      .sendBuffer(getBuffer(snapshot));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putSourceStorageSnapshotsByJobExecutionId(String jobExecutionId, Snapshot snapshot) {
-    HttpRequest<Buffer> request = webClient.requestAbs(HttpMethod.PUT, okapiUrl + "/source-storage/snapshots/" + jobExecutionId);
-    request.putHeader(CONTENT_TYPE, APPLICATION_JSON);
-    request.putHeader(ACCEPT, APPLICATION_JSON_TEXT_PLAIN);
-    populateOkapiHeaders(request, okapiUrl, tenantId, token, userId);
-
-    return request.sendBuffer(getBuffer(snapshot));
+    return createRequest(HttpMethod.PUT, okapiUrl + "/source-storage/snapshots/" + jobExecutionId,
+      okapiUrl, tenantId, token, userId, webClient)
+      .sendBuffer(getBuffer(snapshot));
   }
 }
