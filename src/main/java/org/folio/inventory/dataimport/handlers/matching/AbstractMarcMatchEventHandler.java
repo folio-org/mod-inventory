@@ -124,8 +124,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       RecordMatchingDto recordMatchingDto = buildRecordsMatchingRequest(matchDetail, value, payload);
       return createRecordsMatchingContext(payload)
         .compose(recordsMatchingContext -> matchRecords(recordMatchingDto, recordsMatchingContext, payload))
-        .compose(recordList -> ensureRelatedEntities(recordList, payload).map(recordList))
-        .compose(recordList -> processSucceededResult(recordList, payload))
+        .compose(recordOptional -> ensureRelatedEntities(recordOptional, payload).map(recordOptional))
+        .compose(recordOptional -> processSucceededResult(recordOptional, payload))
         .onFailure(e -> LOG.warn("handle:: Failed to process event for MARC record matching, jobExecutionId: '{}'", payload.getJobExecutionId(), e))
         .toCompletionStage().toCompletableFuture();
     } catch (Exception e) {
@@ -146,7 +146,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   protected abstract boolean canSubMatchProfileProcessMultiMatchResult(MatchProfile matchProfile);
 
   @SuppressWarnings("squid:S1172")
-  protected Future<Void> ensureRelatedEntities(List<Record> records, DataImportEventPayload eventPayload) {
+  protected Future<Void> ensureRelatedEntities(Optional<Record> recordOptional, DataImportEventPayload eventPayload) {
     return Future.succeededFuture();
   }
 
@@ -296,7 +296,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     });
   }
 
-  private Future<List<Record>> matchRecords(RecordMatchingDto recordMatchingDto,
+  private Future<Optional<Record>> matchRecords(RecordMatchingDto recordMatchingDto,
                                             RecordsMatchingContext recordsMatchingContext,
                                             DataImportEventPayload payload) {
     SourceStorageRecordsClient localTenantStorageRecordsClient = recordsMatchingContext.getLocalTenantRecordsClient();
@@ -311,17 +311,17 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       RecordsIdentifiersCollection centralMatchingRes = centralMatchingFuture.result();
 
       if (localMatchingRes.getTotalRecords() == 1 && centralMatchingRes.getIdentifiers().isEmpty()) {
-        return getRecordById(localMatchingRes.getIdentifiers().get(0), localTenantStorageRecordsClient, payload).map(List::of);
+        return getRecordById(localMatchingRes.getIdentifiers().get(0), localTenantStorageRecordsClient, payload).map(Optional::of);
       } else if (localMatchingRes.getIdentifiers().isEmpty() && centralMatchingRes.getTotalRecords() == 1) {
         payload.getContext().put(CENTRAL_TENANT_ID_KEY, recordsMatchingContext.getCentralTenantId());
-        return getRecordById(centralMatchingRes.getIdentifiers().get(0), recordsMatchingContext.getCentralTenantRecordsClient(), payload).map(List::of);
+        return getRecordById(centralMatchingRes.getIdentifiers().get(0), recordsMatchingContext.getCentralTenantRecordsClient(), payload).map(Optional::of);
       } else if (localMatchingRes.getIdentifiers().isEmpty() && centralMatchingRes.getIdentifiers().isEmpty()) {
         LOG.info("matchRecords:: {}, jobExecutionId: '{}', tenantId: '{}'",
           RECORDS_NOT_FOUND_MESSAGE, payload.getJobExecutionId(), payload.getTenant());
-        return Future.succeededFuture(List.of());
+        return Future.succeededFuture(Optional.empty());
       } else {
         populatePayloadWithExternalIdentifiers(localMatchingRes, centralMatchingRes, payload);
-        return Future.succeededFuture(List.of());
+        return Future.succeededFuture(Optional.empty());
       }
     });
   }
@@ -438,14 +438,14 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
    * Prepares {@link DataImportEventPayload} for the further processing
    * based on the number of specified records in {@code records} list
    *
-   * @param records records retrieved during matching processing
+   * @param recordOptional matched record retrieved during matching processing
    * @param payload event payload to prepare
    * @return Future of {@link DataImportEventPayload} with result of matching
    */
-  private Future<DataImportEventPayload> processSucceededResult(List<Record> records, DataImportEventPayload payload) {
-    if (records.size() == 1) {
+  private Future<DataImportEventPayload> processSucceededResult(Optional<Record> recordOptional, DataImportEventPayload payload) {
+    if (recordOptional.isPresent()) {
       payload.setEventType(matchedEventType.toString());
-      payload.getContext().put(getMatchedMarcKey(), Json.encode(records.get(0)));
+      payload.getContext().put(getMatchedMarcKey(), Json.encode(recordOptional.get()));
       LOG.debug("processSucceededResult:: Matched 1 record for jobExecutionId: '{}', tenantId: '{}'",
         payload.getJobExecutionId(), payload.getTenant());
       return Future.succeededFuture(payload);
@@ -468,13 +468,13 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
   private Future<DataImportEventPayload> handlePayloadWithMultiMatchResult(DataImportEventPayload payload) {
     if (canNextProfileProcessMultiMatchResult(payload)) {
-      LOG.info("processSucceededResult:: Multiple records were found which match criteria, jobExecutionId: '{}', tenantId: '{}'",
+      LOG.info("handlePayloadWithMultiMatchResult:: Multiple records were found which match criteria, jobExecutionId: '{}', tenantId: '{}'",
         payload.getJobExecutionId(), payload.getTenant());
       payload.setEventType(matchedEventType.toString());
       return Future.succeededFuture(payload);
     }
 
-    LOG.warn("processSucceededResult:: Matched multiple records, jobExecutionId: '{}', tenantId: '{}'",
+    LOG.warn("handlePayloadWithMultiMatchResult:: Matched multiple records, jobExecutionId: '{}', tenantId: '{}'",
       payload.getJobExecutionId(), payload.getTenant());
     return Future.failedFuture(new MatchingException(FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE));
   }
