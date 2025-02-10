@@ -223,7 +223,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     return srcRecord;
   }
 
-  protected void setSuppressFormDiscovery(Record srcRecord, boolean suppressFromDiscovery) {
+  protected void setSuppressFromDiscovery(Record srcRecord, boolean suppressFromDiscovery) {
     AdditionalInfo info = srcRecord.getAdditionalInfo();
     if (info != null) {
       info.setSuppressDiscovery(suppressFromDiscovery);
