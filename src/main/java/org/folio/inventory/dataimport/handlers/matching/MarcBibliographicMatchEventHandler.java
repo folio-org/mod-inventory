@@ -22,6 +22,7 @@ import org.folio.rest.jaxrs.model.RecordMatchingDto;
 
 import java.io.UnsupportedEncodingException;
 import java.util.List;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -72,9 +73,9 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
   }
 
   @Override
-  protected Future<Void> ensureRelatedEntities(List<Record> records, DataImportEventPayload eventPayload) {
-    if (records.size() == 1) {
-      Record matchedRecord = records.get(0);
+  protected Future<Void> ensureRelatedEntities(Optional<Record> recordOptional, DataImportEventPayload eventPayload) {
+    if (recordOptional.isPresent()) {
+      Record matchedRecord = recordOptional.get();
       String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(matchedRecord.getParsedRecord(), AdditionalSubfields.I);
       String matchedRecordTenantId = getTenant(eventPayload);
       Context context = EventHandlingUtil.constructContext(matchedRecordTenantId, eventPayload.getToken(), eventPayload.getOkapiUrl(),
