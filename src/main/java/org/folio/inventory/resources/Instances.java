@@ -343,6 +343,7 @@ public class Instances extends AbstractInstances {
   private void updateVisibility(Instance instance, RoutingContext routingContext,  InstanceCollection instanceCollection) {
     instance.setDiscoverySuppress(true);
     instance.setStaffSuppress(true);
+    instance.setDeleted(true);
     instanceCollection.update(instance, v -> {
       log.info("staffSuppress and discoverySuppress properties are set to true for instance {}",
         instance.getId());
