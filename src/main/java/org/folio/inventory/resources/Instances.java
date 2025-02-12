@@ -345,7 +345,7 @@ public class Instances extends AbstractInstances {
     instance.setStaffSuppress(true);
     instance.setDeleted(true);
     instanceCollection.update(instance, v -> {
-      log.info("staffSuppress and discoverySuppress properties are set to true for instance {}",
+      log.info("staffSuppress, discoverySuppress and deleted properties are set to true for instance {}",
         instance.getId());
       noContent(routingContext.response());
       },
