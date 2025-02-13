@@ -143,6 +143,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                 return Future.failedFuture(msg);
               }
 
+              markInstanceAndRecordAsDeletedIfNeeded(mappedInstance, targetRecord);
               return addInstance(mappedInstance, instanceCollection)
                 .compose(createdInstance -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
                 .compose(createdInstance -> executeFieldsManipulation(createdInstance, targetRecord))

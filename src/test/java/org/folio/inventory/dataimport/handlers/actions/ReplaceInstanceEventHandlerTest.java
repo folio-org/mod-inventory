@@ -31,6 +31,7 @@ import org.folio.inventory.consortium.entities.SharingStatus;
 import org.folio.inventory.consortium.services.ConsortiumServiceImpl;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
@@ -94,6 +95,7 @@ import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.ACTION_HAS_NO_MAPPING_MSG;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.MARC_BIB_RECORD_CREATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
+import static org.folio.inventory.dataimport.util.ParsedRecordUtil.LEADER_STATUS_DELETED;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.MARC;
@@ -284,6 +286,34 @@ public class ReplaceInstanceEventHandlerTest {
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfileWithNatureOfContentTerm).getMap())))));
 
+  private MappingProfile mappingProfileWithDeleted = new MappingProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Prelim item from MARC")
+    .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+    .withExistingRecordType(EntityType.INSTANCE)
+    .withMappingDetails(new MappingDetail()
+      .withMappingFields(Lists.newArrayList(
+        new MappingRule().withPath("instance.instanceTypeId").withValue("\"instanceTypeIdExpression\"").withEnabled("true"),
+        new MappingRule().withPath("instance.title").withValue("\"titleExpression\"").withEnabled("true"),
+        new MappingRule().withPath("instance.deleted").withValue("\"deletedExpression\"").withEnabled("true")
+      )));
+
+  private ProfileSnapshotWrapper profileSnapshotWrapperWithDeleted = new ProfileSnapshotWrapper()
+    .withId(UUID.randomUUID().toString())
+    .withProfileId(jobProfile.getId())
+    .withContentType(JOB_PROFILE)
+    .withContent(jobProfile)
+    .withChildSnapshotWrappers(Collections.singletonList(
+      new ProfileSnapshotWrapper()
+        .withProfileId(actionProfile.getId())
+        .withContentType(ACTION_PROFILE)
+        .withContent(actionProfile)
+        .withChildSnapshotWrappers(Collections.singletonList(
+          new ProfileSnapshotWrapper()
+            .withProfileId(mappingProfileWithDeleted.getId())
+            .withContentType(MAPPING_PROFILE)
+            .withContent(JsonObject.mapFrom(mappingProfileWithDeleted).getMap())))));
+
   private ReplaceInstanceEventHandler replaceInstanceEventHandler;
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
 
@@ -400,7 +430,7 @@ public class ReplaceInstanceEventHandlerTest {
   }
 
   @Test
-  public void shouldProcessEventAndUpdateStaffSuppressAndDiscoverySuppressIfLeaderIsDeleted() throws InterruptedException, ExecutionException, TimeoutException {
+  public void shouldProcessEventAndMarkInstanceAndRecordAsDeletedIfLeaderIsDeleted() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
 
     String instanceTypeId = UUID.randomUUID().toString();
@@ -460,13 +490,172 @@ public class ReplaceInstanceEventHandlerTest {
     assertThat(createdInstance.getJsonArray("succeedingTitles").size(), is(1));
     assertEquals(createdInstance.getString("staffSuppress"), "true");
     assertEquals(createdInstance.getString("discoverySuppress"), "true");
+    assertEquals(createdInstance.getString("deleted"), "true");
     assertThat(createdInstance.getJsonArray("notes").size(), is(2));
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(0).getString("instanceNoteTypeId"), notNullValue());
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
     assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
-    verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), argThat(r -> r.getAdditionalInfo().getSuppressDiscovery()));
+    verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), argThat(r -> {
+      Optional<Character> leader = ParsedRecordUtil.getLeaderStatus(r.getParsedRecord());
+      return r.getState() == Record.State.DELETED && r.getAdditionalInfo().getSuppressDiscovery() &&
+        r.getDeleted() && leader.isPresent() && leader.get().equals(LEADER_STATUS_DELETED);
+    }));
+    verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
+  }
+
+  @Test
+  public void shouldProcessEventAndMarkInstanceAndRecordAsDeletedIfLeaderIsDeletedAndInstanceIsNotDeleted() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String instanceTypeId = UUID.randomUUID().toString();
+    String title = "titleValue";
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId),
+      StringValue.of(title), BooleanValue.of(MappingRule.BooleanFieldAction.ALL_FALSE));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_DELETED_05));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", instanceId)
+      .put("hrid", UUID.randomUUID().toString())
+      .put("source", MARC_INSTANCE_SOURCE)
+      .put("_version", INSTANCE_VERSION)
+      .put("discoverySuppress", false)
+      .encode());
+
+    mockInstance(MARC_INSTANCE_SOURCE);
+
+    Buffer buffer = BufferImpl.buffer("{\"parsedRecord\":{" +
+      "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
+      "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\"" +
+      "}}");
+    HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
+    when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(Future.succeededFuture(respForPass));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapperWithDeleted.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString());
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
+
+    assertEquals(DI_INVENTORY_INSTANCE_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    JsonObject createdInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    assertNotNull(createdInstance.getString("id"));
+    assertEquals(title, createdInstance.getString("title"));
+    assertEquals(instanceTypeId, createdInstance.getString("instanceTypeId"));
+    assertEquals(MARC_INSTANCE_SOURCE, createdInstance.getString("source"));
+    assertTrue(actualDataImportEventPayload.getContext().containsKey(MARC_BIB_RECORD_CREATED));
+    assertFalse(Boolean.parseBoolean(actualDataImportEventPayload.getContext().get(MARC_BIB_RECORD_CREATED)));
+    assertThat(createdInstance.getJsonArray("precedingTitles").size(), is(1));
+    assertThat(createdInstance.getJsonArray("succeedingTitles").size(), is(1));
+    assertEquals(createdInstance.getString("staffSuppress"), "true");
+    assertEquals(createdInstance.getString("discoverySuppress"), "true");
+    assertEquals(createdInstance.getString("deleted"), "true");
+    assertThat(createdInstance.getJsonArray("notes").size(), is(2));
+    assertThat(createdInstance.getJsonArray("notes").getJsonObject(0).getString("instanceNoteTypeId"), notNullValue());
+    assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
+    assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
+    verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
+    verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
+    verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), argThat(r -> {
+      Optional<Character> leader = ParsedRecordUtil.getLeaderStatus(r.getParsedRecord());
+      return r.getState() == Record.State.DELETED && r.getAdditionalInfo().getSuppressDiscovery() &&
+        r.getDeleted() && leader.isPresent() && leader.get().equals(LEADER_STATUS_DELETED);
+    }));
+    verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
+  }
+
+  @Test
+  public void shouldProcessEventAndMarkInstanceAndRecordAsDeletedIfInstanceIsDeleted() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String instanceTypeId = UUID.randomUUID().toString();
+    String title = "titleValue";
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId),
+      StringValue.of(title), BooleanValue.of(MappingRule.BooleanFieldAction.ALL_TRUE));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", instanceId)
+      .put("hrid", UUID.randomUUID().toString())
+      .put("source", MARC_INSTANCE_SOURCE)
+      .put("_version", INSTANCE_VERSION)
+      .put("discoverySuppress", false)
+      .encode());
+
+    mockInstance(MARC_INSTANCE_SOURCE);
+
+    Buffer buffer = BufferImpl.buffer("{\"parsedRecord\":{" +
+      "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
+      "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\"" +
+      "}}");
+    HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
+    when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(Future.succeededFuture(respForPass));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapperWithDeleted.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString());
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
+
+    assertEquals(DI_INVENTORY_INSTANCE_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    JsonObject createdInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    assertNotNull(createdInstance.getString("id"));
+    assertEquals(title, createdInstance.getString("title"));
+    assertEquals(instanceTypeId, createdInstance.getString("instanceTypeId"));
+    assertEquals(MARC_INSTANCE_SOURCE, createdInstance.getString("source"));
+    assertTrue(actualDataImportEventPayload.getContext().containsKey(MARC_BIB_RECORD_CREATED));
+    assertFalse(Boolean.parseBoolean(actualDataImportEventPayload.getContext().get(MARC_BIB_RECORD_CREATED)));
+    assertThat(createdInstance.getJsonArray("precedingTitles").size(), is(1));
+    assertThat(createdInstance.getJsonArray("succeedingTitles").size(), is(1));
+    assertEquals(createdInstance.getString("staffSuppress"), "true");
+    assertEquals(createdInstance.getString("discoverySuppress"), "true");
+    assertEquals(createdInstance.getString("deleted"), "true");
+    assertThat(createdInstance.getJsonArray("notes").size(), is(2));
+    assertThat(createdInstance.getJsonArray("notes").getJsonObject(0).getString("instanceNoteTypeId"), notNullValue());
+    assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
+    assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
+    verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
+    verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
+    verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), argThat(r -> {
+      Optional<Character> leader = ParsedRecordUtil.getLeaderStatus(r.getParsedRecord());
+      return r.getState() == Record.State.DELETED && r.getAdditionalInfo().getSuppressDiscovery() &&
+        r.getDeleted() && leader.isPresent() && leader.get().equals(LEADER_STATUS_DELETED);
+    }));
     verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 

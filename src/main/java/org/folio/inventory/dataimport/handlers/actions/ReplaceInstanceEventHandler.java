@@ -213,6 +213,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           return Future.failedFuture(msg);
         }
 
+        markInstanceAndRecordAsDeletedIfNeeded(mappedInstance, targetRecord);
         return updateInstanceAndRetryIfOlExists(mappedInstance, instanceCollection, dataImportEventPayload)
           .compose(updatedInstance -> getPrecedingSucceedingTitlesHelper().getExistingPrecedingSucceedingTitles(mappedInstance, context))
           .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
