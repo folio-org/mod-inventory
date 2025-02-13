@@ -151,7 +151,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                   var targetContent = targetRecord.getParsedRecord().getContent().toString();
                   var content = reorderMarcRecordFields(sourceContent, targetContent);
                   targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(content));
-                  setSuppressFromDiscovery(targetRecord, instanceAsJson.getBoolean(DISCOVERY_SUPPRESS_PROPERTY, false));
+                  setSuppressFromDiscovery(targetRecord, createdInstance.getDiscoverySuppress());
                   return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection,
                     dataImportEventPayload.getTenant(), context.getUserId());
                 });
