@@ -12,7 +12,7 @@ import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECO
 import static org.folio.rest.jaxrs.model.InstanceIngressPayload.SourceType.LINKED_DATA;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
@@ -62,6 +62,10 @@ import org.mockito.junit.MockitoRule;
 public class UpdateInstanceIngressEventHandlerUnitTest {
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String BIB_RECORD_PATH = "src/test/resources/handlers/bib-record.json";
+  public static final String TENANT = "tenant";
+  public static final String OKAPI_URL = "okapiUrl";
+  public static final String TOKEN = "token";
+  public static final String USER_ID = "userId";
 
   @Rule
   public MockitoRule initRule = MockitoJUnit.rule();
@@ -85,9 +89,10 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
 
   @Before
   public void setUp() {
-    doReturn("tenant").when(context).getTenantId();
-    doReturn("okapiUrl").when(context).getOkapiLocation();
-    doReturn("token").when(context).getToken();
+    doReturn(TENANT).when(context).getTenantId();
+    doReturn(OKAPI_URL).when(context).getOkapiLocation();
+    doReturn(TOKEN).when(context).getToken();
+    doReturn(USER_ID).when(context).getUserId();
     doReturn(instanceCollection).when(storage).getInstanceCollection(context);
     handler = spy(new UpdateInstanceIngressEventHandler(precedingSucceedingTitlesHelper,
       mappingMetadataCache, httpClient, context, storage));
@@ -332,8 +337,8 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     var titles = List.of(JsonObject.of("id", "123"));
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
-    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     var expectedMessage = "Failed to create snapshot in SRS, snapshot id: ";
@@ -375,8 +380,8 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     var titles = List.of(JsonObject.of("id", "123"));
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
-    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
@@ -421,8 +426,8 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     var titles = List.of(JsonObject.of("id", "123"));
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
-    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"id\":\"5e525f1e-d373-4a07-9aff-b80856bacfef\"}"), HttpStatus.SC_OK);
@@ -468,8 +473,8 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     var titles = List.of(JsonObject.of("id", "123"));
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
-    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"id\":\"5e525f1e-d373-4a07-9aff-b80856bacfef\"}"), HttpStatus.SC_OK);
@@ -522,8 +527,8 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     var titles = List.of(JsonObject.of("id", "123"));
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
-    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"matchedId\":\"" + initialSrsId + "\"}"), HttpStatus.SC_OK);
@@ -546,6 +551,8 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
 
     var recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
+    verify(handler).getSourceStorageRecordsClient(any(), any(), argThat(TENANT::equals), argThat(USER_ID::equals));
+    verify(handler).getSourceStorageSnapshotsClient(any(), any(), argThat(TENANT::equals), argThat(USER_ID::equals));
     var recordSentToSRS = recordCaptor.getValue();
     assertThat(recordSentToSRS.getId()).isNotNull();
     assertThat(recordSentToSRS.getId()).isNotEqualTo(initialSrsId);
