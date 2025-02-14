@@ -781,6 +781,7 @@ public class InstancesApiExamples extends ApiTests {
 
     assertTrue(getResponse.getJson().getBoolean("staffSuppress"));
     assertTrue(getResponse.getJson().getBoolean("discoverySuppress"));
+    assertTrue(getResponse.getJson().getBoolean("deleted"));
 
     Response getDeletedSourceRecordResponse = sourceRecordStorageClient.getById(instanceId);
     assertEquals(getDeletedSourceRecordResponse.getStatusCode(), HttpStatus.HTTP_NOT_FOUND.toInt());

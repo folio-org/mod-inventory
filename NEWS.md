@@ -6,6 +6,7 @@
 * Replace usage of deprecated instance-storage-batch API  [MODINV-1101](https://folio-org.atlassian.net/browse/MODINV-1101Л)
 * Update the snapshot status from PROCESSING_FINISHED to COMMITTED in the InstanceIngressEventHandler [MODINV-1161](https://folio-org.atlassian.net/browse/MODINV-1161)
 * Add "deleted" field to Instance schema [MODINVSTOR-1342](https://folio-org.atlassian.net/browse/MODINVSTOR-1342)
+* Adjust /mark-deleted endpoint behavior to set the "deleted" flag [MODINV-1138](https://folio-org.atlassian.net/browse/MODINV-1138)
 
 ## 21.0.0 2024-10-29
 * Existing "035" field is not retained the original position in imported record [MODINV-1049](https://folio-org.atlassian.net/browse/MODINV-1049)
