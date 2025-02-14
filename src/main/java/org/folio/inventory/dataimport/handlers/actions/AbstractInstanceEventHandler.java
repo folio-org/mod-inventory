@@ -228,7 +228,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
 
   protected void markInstanceAndRecordAsDeletedIfNeeded(Instance instance, Record srsRecord) {
     Optional<Character> leaderStatus = ParsedRecordUtil.getLeaderStatus(srsRecord.getParsedRecord());
-    if (instance.getDeleted() || (leaderStatus.isPresent() && LEADER_STATUS_DELETED == leaderStatus.get())) {
+    if (Boolean.TRUE.equals(instance.getDeleted()) || (leaderStatus.isPresent() && LEADER_STATUS_DELETED == leaderStatus.get())) {
       instance.setDeleted(true);
       instance.setDiscoverySuppress(true);
       instance.setStaffSuppress(true);

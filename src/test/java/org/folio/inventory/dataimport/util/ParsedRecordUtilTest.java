@@ -161,10 +161,10 @@ public class ParsedRecordUtilTest {
     // given
     String content = "{\"leader\":\"01240cvs a2200397   4500\",\"fields\":[{\"001\":\"value001\"},{\"003\":\"value003\"}]}";
     ParsedRecord parsedRecord = new ParsedRecord().withContent(content);
-    Record record = new Record().withParsedRecord(parsedRecord);
+    Record srsRecord = new Record().withParsedRecord(parsedRecord);
 
     // when
-    String result = ParsedRecordUtil.getControlFieldValue(record, "001");
+    String result = ParsedRecordUtil.getControlFieldValue(srsRecord, "001");
 
     // then
     assertEquals("value001", result);
@@ -175,10 +175,10 @@ public class ParsedRecordUtilTest {
     // given
     String content = "{\"leader\":\"01240cvs a2200397   4500\",\"fields\":[{\"001\":\"value001\"},{\"003\":\"value003\"}]}";
     ParsedRecord parsedRecord = new ParsedRecord().withContent(content);
-    Record record = new Record().withParsedRecord(parsedRecord);
+    Record srsRecord = new Record().withParsedRecord(parsedRecord);
 
     // when
-    String result = ParsedRecordUtil.getControlFieldValue(record, "002");
+    String result = ParsedRecordUtil.getControlFieldValue(srsRecord, "002");
 
     // then
     assertNull(result);
@@ -187,10 +187,10 @@ public class ParsedRecordUtilTest {
   @Test
   public void shouldReturnNullWhenParsedRecordIsNull() {
     // given
-    Record record = new Record().withParsedRecord(null);
+    Record srsRecord = new Record().withParsedRecord(null);
 
     // when
-    String result = ParsedRecordUtil.getControlFieldValue(record, "001");
+    String result = ParsedRecordUtil.getControlFieldValue(srsRecord, "001");
 
     // then
     assertNull(result);
@@ -200,10 +200,10 @@ public class ParsedRecordUtilTest {
   public void shouldReturnNullWhenContentIsNull() {
     // given
     ParsedRecord parsedRecord = new ParsedRecord().withContent(null);
-    Record record = new Record().withParsedRecord(parsedRecord);
+    Record srsRecord = new Record().withParsedRecord(parsedRecord);
 
     // when
-    String result = ParsedRecordUtil.getControlFieldValue(record, "001");
+    String result = ParsedRecordUtil.getControlFieldValue(srsRecord, "001");
 
     // then
     assertNull(result);
@@ -213,10 +213,10 @@ public class ParsedRecordUtilTest {
   public void shouldReturnNullWhenContentIsInvalidJson() {
     // given
     ParsedRecord parsedRecord = new ParsedRecord().withContent("invalid json");
-    Record record = new Record().withParsedRecord(parsedRecord);
+    Record srsRecord = new Record().withParsedRecord(parsedRecord);
 
     // when
-    String result = ParsedRecordUtil.getControlFieldValue(record, "001");
+    String result = ParsedRecordUtil.getControlFieldValue(srsRecord, "001");
 
     // then
     assertNull(result);

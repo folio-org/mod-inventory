@@ -669,10 +669,10 @@ public class CreateInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     HashMap<String, String> context = new HashMap<>();
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_DELETED_05));
-    record.setId(recordId);
+    Record srsRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_DELETED_05));
+    srsRecord.setId(recordId);
 
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(srsRecord));
     context.put(PAYLOAD_USER_ID, USER_ID);
 
     Buffer buffer = BufferImpl.buffer("{\"parsedRecord\":{" +
@@ -738,10 +738,10 @@ public class CreateInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     HashMap<String, String> context = new HashMap<>();
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_DELETED_05));
-    record.setId(recordId);
+    Record srsRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_DELETED_05));
+    srsRecord.setId(recordId);
 
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(srsRecord));
     context.put(PAYLOAD_USER_ID, USER_ID);
 
     Buffer buffer = BufferImpl.buffer("{\"parsedRecord\":{" +
@@ -807,10 +807,10 @@ public class CreateInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     HashMap<String, String> context = new HashMap<>();
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
-    record.setId(recordId);
+    Record srsRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    srsRecord.setId(recordId);
 
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(srsRecord));
     context.put(PAYLOAD_USER_ID, USER_ID);
 
     Buffer buffer = BufferImpl.buffer("{\"parsedRecord\":{" +

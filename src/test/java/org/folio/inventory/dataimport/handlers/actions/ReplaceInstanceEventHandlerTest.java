@@ -446,8 +446,8 @@ public class ReplaceInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     HashMap<String, String> context = new HashMap<>();
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_DELETED_05));
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    Record srsRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_DELETED_05));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(srsRecord));
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", instanceId)
       .put("hrid", UUID.randomUUID().toString())
@@ -488,9 +488,9 @@ public class ReplaceInstanceEventHandlerTest {
     assertFalse(Boolean.parseBoolean(actualDataImportEventPayload.getContext().get(MARC_BIB_RECORD_CREATED)));
     assertThat(createdInstance.getJsonArray("precedingTitles").size(), is(1));
     assertThat(createdInstance.getJsonArray("succeedingTitles").size(), is(1));
-    assertEquals(createdInstance.getString("staffSuppress"), "true");
-    assertEquals(createdInstance.getString("discoverySuppress"), "true");
-    assertEquals(createdInstance.getString("deleted"), "true");
+    assertEquals("true", createdInstance.getString("staffSuppress"));
+    assertEquals("true", createdInstance.getString("discoverySuppress"));
+    assertEquals("true", createdInstance.getString("deleted"));
     assertThat(createdInstance.getJsonArray("notes").size(), is(2));
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(0).getString("instanceNoteTypeId"), notNullValue());
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
@@ -523,8 +523,8 @@ public class ReplaceInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     HashMap<String, String> context = new HashMap<>();
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_DELETED_05));
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    Record srsRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_DELETED_05));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(srsRecord));
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", instanceId)
       .put("hrid", UUID.randomUUID().toString())
@@ -565,9 +565,9 @@ public class ReplaceInstanceEventHandlerTest {
     assertFalse(Boolean.parseBoolean(actualDataImportEventPayload.getContext().get(MARC_BIB_RECORD_CREATED)));
     assertThat(createdInstance.getJsonArray("precedingTitles").size(), is(1));
     assertThat(createdInstance.getJsonArray("succeedingTitles").size(), is(1));
-    assertEquals(createdInstance.getString("staffSuppress"), "true");
-    assertEquals(createdInstance.getString("discoverySuppress"), "true");
-    assertEquals(createdInstance.getString("deleted"), "true");
+    assertEquals("true", createdInstance.getString("staffSuppress"));
+    assertEquals("true", createdInstance.getString("discoverySuppress"));
+    assertEquals("true", createdInstance.getString("deleted"));
     assertThat(createdInstance.getJsonArray("notes").size(), is(2));
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(0).getString("instanceNoteTypeId"), notNullValue());
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
@@ -600,8 +600,8 @@ public class ReplaceInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     HashMap<String, String> context = new HashMap<>();
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    Record srsRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(srsRecord));
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", instanceId)
       .put("hrid", UUID.randomUUID().toString())
@@ -642,9 +642,9 @@ public class ReplaceInstanceEventHandlerTest {
     assertFalse(Boolean.parseBoolean(actualDataImportEventPayload.getContext().get(MARC_BIB_RECORD_CREATED)));
     assertThat(createdInstance.getJsonArray("precedingTitles").size(), is(1));
     assertThat(createdInstance.getJsonArray("succeedingTitles").size(), is(1));
-    assertEquals(createdInstance.getString("staffSuppress"), "true");
-    assertEquals(createdInstance.getString("discoverySuppress"), "true");
-    assertEquals(createdInstance.getString("deleted"), "true");
+    assertEquals("true", createdInstance.getString("staffSuppress"));
+    assertEquals("true", createdInstance.getString("discoverySuppress"));
+    assertEquals("true", createdInstance.getString("deleted"));
     assertThat(createdInstance.getJsonArray("notes").size(), is(2));
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(0).getString("instanceNoteTypeId"), notNullValue());
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
