@@ -208,12 +208,10 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
     if (qualifier != null) {
       qualifierValue = qualifier.getQualifierValue();
-      qualifierFilterType =
-        qualifier.getQualifierType() != null ?
-        Filter.Qualifier.valueOf(qualifier.getQualifierType().toString()) : null;
-      comparisonPartType =
-        qualifier.getComparisonPart() != null ?
-        ComparisonPartType.valueOf(qualifier.getComparisonPart().toString()) : null;
+      qualifierFilterType = qualifier.getQualifierType() != null
+        ? Filter.Qualifier.valueOf(qualifier.getQualifierType().toString()) : null;
+      comparisonPartType = qualifier.getComparisonPart() != null
+        ? ComparisonPartType.valueOf(qualifier.getComparisonPart().toString()) : null;
     }
 
     Filter matchCriteriaFilter = new Filter()
