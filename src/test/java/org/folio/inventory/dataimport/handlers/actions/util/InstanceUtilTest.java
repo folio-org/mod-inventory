@@ -65,6 +65,7 @@ public class InstanceUtilTest {
     existing.setStatisticalCodeIds(statisticalCodeIds);
     existing.setDiscoverySuppress(true);
     existing.setStaffSuppress(true);
+    existing.setDeleted(true);
     existing.setPreviouslyHeld(true);
     existing.setCatalogedDate("");
     existing.setStatusId("30773a27-b485-4dab-aeb6-b8c04fa3cb26");
@@ -85,6 +86,7 @@ public class InstanceUtilTest {
     assertEquals(statisticalCodeIds, instance.getStatisticalCodeIds());
     assertTrue(instance.getDiscoverySuppress());
     assertTrue(instance.getStaffSuppress());
+    assertTrue(instance.getDeleted());
     assertTrue(instance.getPreviouslyHeld());
     assertEquals("", instance.getCatalogedDate());
     assertEquals("30773a27-b485-4dab-aeb6-b8c04fa3cb26", instance.getStatusId());
