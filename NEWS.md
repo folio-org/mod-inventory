@@ -1,3 +1,6 @@
+## 21.0.10 2025-02-17
+* Ensure "Source" value in QuickMarc editor equals to the name of a user who imported the record [MODINV-1162](https://folio-org.atlassian.net/browse/MODINV-1162)
+
 ## 21.0.9 2025-01-23
 * Fix handling optimistic locking behavior for instance update when consuming Marc Bib update event  [MODINV-1125](https://folio-org.atlassian.net/browse/MODINV-1125)
 
