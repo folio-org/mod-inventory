@@ -38,6 +38,7 @@ import org.folio.inventory.services.InstanceIdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
+import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.reader.Reader;
@@ -54,6 +55,7 @@ import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
+import org.hamcrest.junit.internal.ThrowableCauseMatcher;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -81,6 +83,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static java.lang.String.format;
 import static java.util.concurrent.CompletableFuture.completedStage;
 import static org.apache.http.HttpStatus.SC_CREATED;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
@@ -94,15 +97,18 @@ import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.dateTime005Formatter;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.LEADER_STATUS_DELETED;
+import static org.folio.inventory.dataimport.util.DataImportConstants.ALREADY_EXISTS_ERROR_MSG;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -1186,9 +1192,8 @@ public class CreateInstanceEventHandlerTest {
     future.get(5, TimeUnit.SECONDS);
   }
 
-
-  @Test(expected = Exception.class)
-  public void shouldNotProcessEventEvenIfDuplicatedInventoryStorageErrorExists() throws InterruptedException, ExecutionException, TimeoutException {
+  @Test()
+  public void shouldNotProcessEventEvenIfDuplicatedInventoryStorageErrorExists() {
     Reader fakeReader = Mockito.mock(Reader.class);
 
     String instanceTypeId = "fe19bae4-da28-472b-be90-d442e2428ead";
@@ -1206,7 +1211,7 @@ public class CreateInstanceEventHandlerTest {
     when(instanceIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToInstance));
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure(UNIQUE_ID_ERROR_MESSAGE, 400));
+      failureHandler.accept(new Failure(format(ALREADY_EXISTS_ERROR_MSG, instanceId), 400));
       return null;
     }).when(instanceRecordCollection).add(any(), any(), any());
 
@@ -1230,7 +1235,8 @@ public class CreateInstanceEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
 
-    future.get(5, TimeUnit.SECONDS);
+    ExecutionException actualException = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    assertThat(actualException, ThrowableCauseMatcher.hasCause(instanceOf(DuplicateEventException.class)));
   }
 
   @Test(expected = Exception.class)
