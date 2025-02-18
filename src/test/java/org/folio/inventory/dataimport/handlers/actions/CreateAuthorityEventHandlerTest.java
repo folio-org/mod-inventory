@@ -2,9 +2,8 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static java.util.concurrent.CompletableFuture.completedStage;
-import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
+import static org.folio.inventory.dataimport.handlers.actions.CreateAuthorityEventHandler.ID_UNIQUENESS_ERROR;
 import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING;
-import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -26,10 +25,10 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
@@ -39,8 +38,6 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -53,6 +50,8 @@ import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.IdStorageService;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.processing.exceptions.EventProcessingException;
+import org.folio.rest.jaxrs.model.Error;
+import org.folio.rest.jaxrs.model.Errors;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -212,12 +211,17 @@ public class CreateAuthorityEventHandlerTest {
   }
 
   @Test
-  public void shouldNotProcessEventEvenIfDuplicatedInventoryStorageErrorExists(TestContext testContext) throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  public void shouldNotProcessEventEvenIfDuplicatedInventoryStorageErrorExists(TestContext testContext) throws IOException {
     Async async = testContext.async();
+    Errors errorResponse = new Errors().withErrors(List.of(new Error()
+      .withMessage(ID_UNIQUENESS_ERROR)
+      .withType("validation")
+      .withCode("109")));
+
     when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure(UNIQUE_ID_ERROR_MESSAGE, 400));
+      failureHandler.accept(new Failure(Json.encode(errorResponse), 422));
       return null;
     }).when(authorityCollection).add(any(), any(), any());
 

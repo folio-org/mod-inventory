@@ -5,7 +5,6 @@ import static org.apache.commons.lang.StringUtils.isNotBlank;
 import static org.folio.ActionProfile.FolioRecord.AUTHORITY;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED;
-import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.rest.jaxrs.model.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 
@@ -25,6 +24,7 @@ import org.folio.rest.jaxrs.model.ProfileType;
 
 public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
 
+  static final String ID_UNIQUENESS_ERROR = "Authority with the given 'id' already exists";
   protected static final String FAILED_CREATING_AUTHORITY_MSG_TEMPLATE =
     "Failed creating Authority. Cause: %s, status: '%s'";
   private static final String CREATING_RELATIONSHIP_ERROR =
@@ -48,7 +48,7 @@ public class CreateAuthorityEventHandler extends AbstractAuthorityEventHandler {
     authorityCollection.add(authority, success -> promise.complete(success.getResult()),
       failure -> {
         //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
-        if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+        if (isNotBlank(failure.getReason()) && failure.getReason().contains(ID_UNIQUENESS_ERROR)) {
           LOGGER.info("Duplicated event received by AuthorityId: {}. Ignoring...", authority.getId());
           promise.fail(new DuplicateEventException(format("Duplicated event by Authority id: %s", authority.getId())));
         } else {
