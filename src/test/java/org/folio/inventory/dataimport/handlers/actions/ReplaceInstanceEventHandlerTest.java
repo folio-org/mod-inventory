@@ -660,6 +660,83 @@ public class ReplaceInstanceEventHandlerTest {
   }
 
   @Test
+  public void shouldProcessEventAndUnMarkInstanceAndRecordAsDeleted() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String instanceTypeId = UUID.randomUUID().toString();
+    String title = "titleValue";
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record srsRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(srsRecord));
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", instanceId)
+      .put("hrid", UUID.randomUUID().toString())
+      .put("source", MARC_INSTANCE_SOURCE)
+      .put("_version", INSTANCE_VERSION)
+      .put("discoverySuppress", true)
+      .put("staffSuppress", true)
+      .encode());
+
+    mockInstance(MARC_INSTANCE_SOURCE, true);
+
+    Buffer buffer = BufferImpl.buffer("{\"parsedRecord\":{" +
+      "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
+      "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\"" +
+      "}}");
+    HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
+    when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(Future.succeededFuture(respForPass));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString());
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
+
+    assertEquals(DI_INVENTORY_INSTANCE_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    JsonObject createdInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    assertNotNull(createdInstance.getString("id"));
+    assertEquals(title, createdInstance.getString("title"));
+    assertEquals(instanceTypeId, createdInstance.getString("instanceTypeId"));
+    assertEquals(MARC_INSTANCE_SOURCE, createdInstance.getString("source"));
+    assertTrue(actualDataImportEventPayload.getContext().containsKey(MARC_BIB_RECORD_CREATED));
+    assertFalse(Boolean.parseBoolean(actualDataImportEventPayload.getContext().get(MARC_BIB_RECORD_CREATED)));
+    assertThat(createdInstance.getJsonArray("precedingTitles").size(), is(1));
+    assertThat(createdInstance.getJsonArray("succeedingTitles").size(), is(1));
+    assertEquals("true", createdInstance.getString("staffSuppress"));
+    assertEquals("true", createdInstance.getString("discoverySuppress"));
+    assertEquals("false", createdInstance.getString("deleted"));
+    assertThat(createdInstance.getJsonArray("notes").size(), is(2));
+    assertThat(createdInstance.getJsonArray("notes").getJsonObject(0).getString("instanceNoteTypeId"), notNullValue());
+    assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
+    assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
+    verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
+    verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
+    verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), argThat(r -> {
+      Optional<Character> leader = ParsedRecordUtil.getLeaderStatus(r.getParsedRecord());
+      return r.getState() == Record.State.ACTUAL && r.getAdditionalInfo().getSuppressDiscovery() &&
+        !r.getDeleted() && leader.isPresent() && !leader.get().equals(LEADER_STATUS_DELETED);
+    }));
+    verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
+  }
+
+  @Test
   public void shouldReplaceExistingPrecedingTitleOnInstanceUpdate() throws InterruptedException, ExecutionException {
     JsonObject existingPrecedingTitle = new JsonObject()
       .put("id", UUID.randomUUID().toString())
@@ -1708,9 +1785,15 @@ public class ReplaceInstanceEventHandlerTest {
   }
 
   private void mockInstance(String sourceType) {
+    mockInstance(sourceType, false);
+  }
+
+  private void mockInstance(String sourceType, boolean deleted) {
     Instance returnedInstance = new Instance(UUID.randomUUID().toString(), String.valueOf(INSTANCE_VERSION),
-      UUID.randomUUID().toString(), sourceType, "title", "instanceTypeId")
-      .setDiscoverySuppress(false);
+      UUID.randomUUID().toString(), sourceType, "title", "instanceTypeId");
+    returnedInstance.setDeleted(deleted);
+    returnedInstance.setDiscoverySuppress(deleted);
+    returnedInstance.setStaffSuppress(deleted);
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
