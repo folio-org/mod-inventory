@@ -16,6 +16,7 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
@@ -47,6 +48,8 @@ import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.jaxrs.model.Snapshot;
+
+import static org.folio.inventory.dataimport.util.ParsedRecordUtil.LEADER_STATUS_DELETED;
 
 public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);
@@ -223,7 +226,22 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     return srcRecord;
   }
 
-  protected void setSuppressFormDiscovery(Record srcRecord, boolean suppressFromDiscovery) {
+  protected void markInstanceAndRecordAsDeletedIfNeeded(Instance instance, Record srsRecord) {
+    Optional<Character> leaderStatus = ParsedRecordUtil.getLeaderStatus(srsRecord.getParsedRecord());
+    if (Boolean.TRUE.equals(instance.getDeleted()) || (leaderStatus.isPresent() && LEADER_STATUS_DELETED == leaderStatus.get())) {
+      LOGGER.debug("markInstanceAndRecordAsDeletedIfNeeded:: Mark Instance with id: '{}' as deleted", instance.getId());
+      instance.setDeleted(true);
+      instance.setDiscoverySuppress(true);
+      instance.setStaffSuppress(true);
+
+      srsRecord.withState(Record.State.DELETED);
+      srsRecord.setDeleted(true);
+      setSuppressFromDiscovery(srsRecord, true);
+      ParsedRecordUtil.updateLeaderStatus(srsRecord.getParsedRecord(), LEADER_STATUS_DELETED);
+    }
+  }
+
+  protected void setSuppressFromDiscovery(Record srcRecord, boolean suppressFromDiscovery) {
     AdditionalInfo info = srcRecord.getAdditionalInfo();
     if (info != null) {
       info.setSuppressDiscovery(suppressFromDiscovery);
