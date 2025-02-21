@@ -142,6 +142,7 @@ Default value for all partitions is 1
 Default value for `AUTHORITY_EXTENDED` is `false`.
 The mapping itself is implemented in [data-import-processing-core](https://github.com/folio-org/data-import-processing-core).
 
+If `AUTHORITY_EXTENDED`=true then data import process and quickmarc edit start to use extended version of authority record mapping which can produce additional elements `saftBroaderTerm`, `saftNarrowerTerm`, `saftEarlierHeading`, `saftLaterHeading`, `saftPersonalNameTrunc`, `saftPersonalNameTitleTrunc`, `saftGenreTermTrunc`, `saftGeographicNameTrunc`, `saftCorporateNameTrunc`, `saftCorporateNameTitleTrunc`, `saftMeetingNameTrunc`, `saftMeetingNameTitleTrunc`, `saftUniformTitleTrunc`, `saftTopicalTermTrunc` in json for mapped records and kafka messages, module mod-entitied-links starts to convert extended `AuthorityDto` to db entity and adds `"relationshipType"` and truncated versions of saft headings to the entry in `"authority"` and `"authority_archive"` tables in `"saft_headings"` column.
 
 # Making Requests
 
