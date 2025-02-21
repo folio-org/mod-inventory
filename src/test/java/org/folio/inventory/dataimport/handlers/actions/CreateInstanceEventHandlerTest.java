@@ -269,6 +269,35 @@ public class CreateInstanceEventHandlerTest {
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfileWithNatureOfContentTerm).getMap())))));
 
+  private MappingProfile mappingProfileWithSuppressFalse = new MappingProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Prelim item from MARC")
+    .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+    .withExistingRecordType(EntityType.INSTANCE)
+    .withMappingDetails(new MappingDetail()
+      .withMappingFields(Lists.newArrayList(
+        new MappingRule().withPath("instance.instanceTypeId").withValue("\"instanceTypeIdExpression\"").withEnabled("true"),
+        new MappingRule().withPath("instance.title").withValue("\"titleExpression\"").withEnabled("true"),
+        new MappingRule().withPath("instance.discoverySuppress").withValue("false").withEnabled("true"),
+        new MappingRule().withPath("instance.staffSuppress").withValue("false").withEnabled("true")
+      )));
+
+  private ProfileSnapshotWrapper profileSnapshotWrapperWithSuppressFalse = new ProfileSnapshotWrapper()
+    .withId(UUID.randomUUID().toString())
+    .withProfileId(jobProfile.getId())
+    .withContentType(JOB_PROFILE)
+    .withContent(jobProfile)
+    .withChildSnapshotWrappers(Collections.singletonList(
+      new ProfileSnapshotWrapper()
+        .withProfileId(actionProfile.getId())
+        .withContentType(ACTION_PROFILE)
+        .withContent(actionProfile)
+        .withChildSnapshotWrappers(Collections.singletonList(
+          new ProfileSnapshotWrapper()
+            .withProfileId(mappingProfileWithSuppressFalse.getId())
+            .withContentType(MAPPING_PROFILE)
+            .withContent(JsonObject.mapFrom(mappingProfileWithSuppressFalse).getMap())))));
+
   private CreateInstanceEventHandler createInstanceEventHandler;
 
   @Before
@@ -663,6 +692,77 @@ public class CreateInstanceEventHandlerTest {
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl());
+
+    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
+
+    assertEquals(DI_INVENTORY_INSTANCE_CREATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    JsonObject createdInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    String actualInstanceId = createdInstance.getString("id");
+    assertNotNull(actualInstanceId);
+    assertEquals(instanceId, actualInstanceId);
+    assertEquals(title, createdInstance.getString("title"));
+    assertEquals(instanceTypeId, createdInstance.getString("instanceTypeId"));
+    assertEquals("MARC", createdInstance.getString("source"));
+    assertEquals("true", createdInstance.getString("staffSuppress"));
+    assertEquals("true", createdInstance.getString("discoverySuppress"));
+    assertEquals("true", createdInstance.getString("deleted"));
+    verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
+    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(),
+      argThat(tenantId -> tenantId.equals(TENANT_ID)), argThat(USER_ID::equals));
+    verify(sourceStorageClient).postSourceStorageRecords(argThat(r -> {
+      Optional<Character> leader = ParsedRecordUtil.getLeaderStatus(r.getParsedRecord());
+      return r.getState() == Record.State.DELETED && r.getAdditionalInfo().getSuppressDiscovery() &&
+        r.getDeleted() && leader.isPresent() && leader.get().equals(LEADER_STATUS_DELETED);
+    }));
+  }
+
+  @Test
+  public void shouldProcessEventAndMarkInstanceAndRecordAsDeletedIfLeaderIsDeletedAndSuppressFalse() throws InterruptedException, ExecutionException, TimeoutException {
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String instanceTypeId = "fe19bae4-da28-472b-be90-d442e2428ead";
+    String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
+    String instanceId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
+    String title = "titleValue";
+    RecordToEntity recordToInstance = RecordToEntity.builder().recordId(recordId).entityId(instanceId).build();
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title),
+      BooleanValue.of(MappingRule.BooleanFieldAction.ALL_FALSE), BooleanValue.of(MappingRule.BooleanFieldAction.ALL_FALSE));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    when(instanceIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToInstance));
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record srsRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_DELETED_05));
+    srsRecord.setId(recordId);
+
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(srsRecord));
+    context.put(PAYLOAD_USER_ID, USER_ID);
+
+    Buffer buffer = BufferImpl.buffer("{\"parsedRecord\":{" +
+      "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
+      "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\"" +
+      "}}");
+    HttpResponse<Buffer> resp = buildHttpResponseWithBuffer(buffer, SC_CREATED);
+    when(sourceStorageClient.postSourceStorageRecords(any())).thenReturn(Future.succeededFuture(resp));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapperWithSuppressFalse.getChildSnapshotWrappers().get(0))
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
