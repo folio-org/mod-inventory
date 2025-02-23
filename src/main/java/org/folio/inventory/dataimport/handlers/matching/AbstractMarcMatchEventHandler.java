@@ -414,7 +414,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         recordsMatchingContext.getCentralTenantId());
       return getAllMatchedRecordsIdentifiers(recordMatchingDto, payload, recordsMatchingContext.getCentralTenantRecordsClient());
     }
-    return Future.succeededFuture(new RecordsIdentifiersCollection());
+    return Future.succeededFuture(new RecordsIdentifiersCollection().withTotalRecords(0));
   }
 
   @Override

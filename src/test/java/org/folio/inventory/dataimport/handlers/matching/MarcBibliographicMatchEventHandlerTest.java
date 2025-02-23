@@ -211,8 +211,34 @@ public class MarcBibliographicMatchEventHandlerTest {
   }
 
   @Test
-  public void shouldNotMatchMarcBibIfNoRecordsMatchingCriteria(TestContext context) {
+  public void shouldNotMatchMarcBibIfNoRecordsMatchingCriteriaAtLocalAndCentralTenants(TestContext context) {
     Async async = context.async();
+    WireMock.stubFor(post(RECORDS_MATCHING_PATH).willReturn(WireMock.ok()
+      .withBody(Json.encode(new RecordsIdentifiersCollection()
+        .withIdentifiers(List.of())
+        .withTotalRecords(0)))));
+
+    DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
+
+    CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
+
+    future.whenComplete((payload, throwable) -> {
+      context.assertNull(throwable);
+      context.assertEquals(DI_SRS_MARC_BIB_RECORD_NOT_MATCHED.value(), payload.getEventType());
+      context.assertNull(payload.getContext().get(MATCHED_MARC_BIB_KEY));
+      context.assertEquals(1, payload.getEventsChain().size());
+      context.assertNull(payload.getContext().get(INSTANCE.value()));
+      context.assertNull(payload.getContext().get(HOLDINGS.value()));
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldNotMatchMarcBibIfNoRecordsMatchingCriteriaAtNonConsortiumTenant(TestContext context) {
+    Async async = context.async();
+    when(consortiumService.getConsortiumConfiguration(any(Context.class)))
+      .thenReturn(Future.succeededFuture(Optional.empty()));
+
     WireMock.stubFor(post(RECORDS_MATCHING_PATH).willReturn(WireMock.ok()
       .withBody(Json.encode(new RecordsIdentifiersCollection()
         .withIdentifiers(List.of())
