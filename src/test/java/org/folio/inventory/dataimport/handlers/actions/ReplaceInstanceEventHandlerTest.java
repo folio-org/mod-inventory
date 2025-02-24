@@ -1230,7 +1230,8 @@ public class ReplaceInstanceEventHandlerTest {
     assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
-    verify(sourceStorageClient, times(1)).postSourceStorageRecords(argThat(r -> r.getMatchedId() == null));
+    verify(sourceStorageClient, times(1))
+      .postSourceStorageRecords(argThat(r -> r.getMatchedId() != null && r.getId() != null));
     verify(sourceStorageClient, times(0)).putSourceStorageRecordsGenerationById(any(), any());
     verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }

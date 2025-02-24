@@ -40,6 +40,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -241,8 +242,9 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
               setSuppressFormDiscovery(targetRecord, jsonInstance.getBoolean(DISCOVERY_SUPPRESS_KEY, false));
 
               if (targetRecord.getMatchedId() == null) {
-                return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection,
-                  tenantId, context.getUserId());
+                String matchedId = UUID.randomUUID().toString();
+                return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord.withId(matchedId).withMatchedId(matchedId),
+                  instance, instanceCollection, tenantId, context.getUserId());
               }
               return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, targetRecord.getMatchedId(),
                 tenantId, context.getUserId());
