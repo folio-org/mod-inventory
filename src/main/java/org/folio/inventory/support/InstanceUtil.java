@@ -52,7 +52,6 @@ public class InstanceUtil {
       .withVersion(asIntegerOrNull(existing.getVersion()))
       .withDiscoverySuppress(existing.getDiscoverySuppress())
       .withStaffSuppress(existing.getStaffSuppress())
-      .withDeleted(existing.getDeleted())
       .withPreviouslyHeld(existing.getPreviouslyHeld())
       .withCatalogedDate(existing.getCatalogedDate())
       .withStatusId(existing.getStatusId())
