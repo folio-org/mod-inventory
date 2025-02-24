@@ -239,8 +239,13 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
               JsonObject jsonInstance = new JsonObject(instance.getJsonForStorage().encode());
 
               setSuppressFormDiscovery(targetRecord, jsonInstance.getBoolean(DISCOVERY_SUPPRESS_KEY, false));
-              return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance,
-                targetRecord.getMatchedId(), tenantId, context.getUserId());
+
+              if (targetRecord.getMatchedId() == null) {
+                return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection,
+                  tenantId, context.getUserId());
+              }
+              return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, targetRecord.getMatchedId(),
+                tenantId, context.getUserId());
             }
             return Future.succeededFuture(instance);
           }).compose(ar -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(ar))
