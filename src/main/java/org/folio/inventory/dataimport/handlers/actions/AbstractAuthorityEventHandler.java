@@ -225,7 +225,7 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
 
   private static boolean isAuthorityExtendedMode() {
     return Boolean.parseBoolean(
-      System.getenv().getOrDefault(AUTHORITY_EXTENDED, "false"));
+      System.getenv().getOrDefault(AUTHORITY_EXTENDED, "true"));
   }
 
   /**
