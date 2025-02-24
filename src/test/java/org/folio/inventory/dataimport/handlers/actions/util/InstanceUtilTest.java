@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions.util;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -39,6 +40,9 @@ public class InstanceUtilTest {
       .withHrid("in000000001")
       .withModeOfIssuanceId("30773a27-b485-4dab-aeb6-b8c04fa3cb18")
       .withAlternativeTitles(alternativeTitles)
+      .withDiscoverySuppress(false)
+      .withDeleted(false)
+      .withStaffSuppress(false)
       .withContributors(contributors);
 
     List<String> statisticalCodeIds = new ArrayList<>();
@@ -86,7 +90,7 @@ public class InstanceUtilTest {
     assertEquals(statisticalCodeIds, instance.getStatisticalCodeIds());
     assertTrue(instance.getDiscoverySuppress());
     assertTrue(instance.getStaffSuppress());
-    assertTrue(instance.getDeleted());
+    assertFalse(instance.getDeleted());
     assertTrue(instance.getPreviouslyHeld());
     assertEquals("", instance.getCatalogedDate());
     assertEquals("30773a27-b485-4dab-aeb6-b8c04fa3cb26", instance.getStatusId());

@@ -213,6 +213,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           return Future.failedFuture(msg);
         }
 
+        markInstanceAndRecordAsDeletedIfNeeded(mappedInstance, targetRecord);
         return updateInstanceAndRetryIfOlExists(mappedInstance, instanceCollection, dataImportEventPayload)
           .compose(updatedInstance -> getPrecedingSucceedingTitlesHelper().getExistingPrecedingSucceedingTitles(mappedInstance, context))
           .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
@@ -236,15 +237,13 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
               setExternalIds(targetRecord, instance);
               AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(targetRecord);
 
-              JsonObject jsonInstance = new JsonObject(instance.getJsonForStorage().encode());
-
-              setSuppressFormDiscovery(targetRecord, jsonInstance.getBoolean(DISCOVERY_SUPPRESS_KEY, false));
+              setSuppressFromDiscovery(targetRecord, instance.getDiscoverySuppress());
               return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance,
                 targetRecord.getMatchedId(), tenantId, context.getUserId());
             }
             return Future.succeededFuture(instance);
           }).compose(ar -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(ar))
-          .map(instanceAsJson);
+          .map(Json::encode);
       })
       .onComplete(ar -> {
         if (ar.succeeded()) {
@@ -437,7 +436,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       });
   }
 
-  private void prepareSucceededResultPayload(DataImportEventPayload dataImportEventPayload, JsonObject updatedInstanceJson, Instance instanceToUpdate) {
+  private void prepareSucceededResultPayload(DataImportEventPayload dataImportEventPayload, String updatedInstanceAsString, Instance instanceToUpdate) {
     if (dataImportEventPayload.getContext().containsKey(CENTRAL_TENANT_ID)) {
       dataImportEventPayload.getContext().put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, Boolean.TRUE.toString());
     }
@@ -448,7 +447,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       dataImportEventPayload.getContext().put(MARC_BIB_RECORD_CREATED, Boolean.FALSE.toString());
     }
 
-    dataImportEventPayload.getContext().put(INSTANCE.value(), updatedInstanceJson.encode());
+    dataImportEventPayload.getContext().put(INSTANCE.value(), updatedInstanceAsString);
     dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
   }
 
