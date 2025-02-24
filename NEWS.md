@@ -1,3 +1,6 @@
+## 21.0.11 2025-02-17
+* Actualize condition of deduplication logic for Authority creation [MODINV-1168](https://issues.folio.org/browse/MODINV-1168)
+
 ## 21.0.10 2025-02-17
 * Ensure "Source" value in QuickMarc editor equals to the name of a user who imported the record [MODINV-1162](https://folio-org.atlassian.net/browse/MODINV-1162)
 
