@@ -229,20 +229,24 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           })
           .compose(instance -> {
             if (instanceToUpdate.getSource().equals(FOLIO.getValue())) {
+              LOGGER.debug("processInstanceUpdate:: processing FOLIO Instance with id: {}", instance.getId());
               executeFieldsManipulation(instance, targetRecord);
               return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection,
                 tenantId, context.getUserId());
             }
             if (instanceToUpdate.getSource().equals(MARC.getValue())) {
+              LOGGER.debug("processInstanceUpdate:: processing MARC Instance with id: {}", instance.getId());
               setExternalIds(targetRecord, instance);
               AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(targetRecord);
 
               setSuppressFromDiscovery(targetRecord, instance.getDiscoverySuppress());
               if (targetRecord.getMatchedId() == null) {
+                LOGGER.debug("processInstanceUpdate:: Instance with id: {} has no related marc bib. Creating new record in SRS", instance.getId());
                 String matchedId = UUID.randomUUID().toString();
                 return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord.withId(matchedId).withMatchedId(matchedId),
                   instance, instanceCollection, tenantId, context.getUserId());
               }
+              LOGGER.debug("processInstanceUpdate:: Instance with id: {} has related marc bib with id: {}. Updating record in SRS", instance.getId(), targetRecord.getMatchedId());
               return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance,
                 targetRecord.getMatchedId(), tenantId, context.getUserId());
             }

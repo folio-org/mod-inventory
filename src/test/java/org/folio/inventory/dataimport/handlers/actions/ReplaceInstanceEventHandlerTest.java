@@ -1338,8 +1338,8 @@ public class ReplaceInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     HashMap<String, String> context = new HashMap<>();
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    Record srsRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(srsRecord));
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", instanceId)
       .put("hrid", UUID.randomUUID().toString())
