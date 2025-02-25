@@ -143,6 +143,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                 return Future.failedFuture(msg);
               }
 
+              markInstanceAndRecordAsDeletedIfNeeded(mappedInstance, targetRecord);
               return addInstance(mappedInstance, instanceCollection)
                 .compose(createdInstance -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
                 .compose(createdInstance -> executeFieldsManipulation(createdInstance, targetRecord))
@@ -150,7 +151,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                   var targetContent = targetRecord.getParsedRecord().getContent().toString();
                   var content = reorderMarcRecordFields(sourceContent, targetContent);
                   targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(content));
-                  setSuppressFormDiscovery(targetRecord, instanceAsJson.getBoolean(DISCOVERY_SUPPRESS_PROPERTY, false));
+                  setSuppressFromDiscovery(targetRecord, createdInstance.getDiscoverySuppress());
                   return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection,
                     dataImportEventPayload.getTenant(), context.getUserId());
                 });
