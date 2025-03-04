@@ -40,6 +40,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -228,17 +229,26 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           })
           .compose(instance -> {
             if (instanceToUpdate.getSource().equals(FOLIO.getValue())) {
+              LOGGER.debug("processInstanceUpdate:: processing FOLIO Instance with id: {}", instance.getId());
               executeFieldsManipulation(instance, targetRecord);
               return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection,
                 tenantId, context.getUserId());
             }
             if (instanceToUpdate.getSource().equals(MARC.getValue())) {
+              LOGGER.debug("processInstanceUpdate:: processing MARC Instance with id: {}", instance.getId());
               setExternalIds(targetRecord, instance);
               AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(targetRecord);
 
               JsonObject jsonInstance = new JsonObject(instance.getJsonForStorage().encode());
 
               setSuppressFormDiscovery(targetRecord, jsonInstance.getBoolean(DISCOVERY_SUPPRESS_KEY, false));
+              if (targetRecord.getMatchedId() == null) {
+                LOGGER.debug("processInstanceUpdate:: Instance with id: {} has no related marc bib. Creating new record in SRS", instance.getId());
+                String matchedId = UUID.randomUUID().toString();
+                return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord.withId(matchedId).withMatchedId(matchedId),
+                  instance, instanceCollection, tenantId, context.getUserId());
+              }
+              LOGGER.debug("processInstanceUpdate:: Instance with id: {} has related marc bib with id: {}. Updating record in SRS", instance.getId(), targetRecord.getMatchedId());
               return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance,
                 targetRecord.getMatchedId(), tenantId, context.getUserId());
             }
