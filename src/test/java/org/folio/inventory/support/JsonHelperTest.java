@@ -15,7 +15,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -41,13 +41,13 @@ public class JsonHelperTest {
   @Test
   public void shouldNotIncludeIfKeyIsNull() {
     includeIfPresent(representation, null, "value");
-    verifyZeroInteractions(representation);
+    verifyNoInteractions(representation);
   }
 
   @Test
   public void shouldNotIncludeIfValueIsNull() {
     includeIfPresent(representation, "key", null);
-    verifyZeroInteractions(representation);
+    verifyNoInteractions(representation);
   }
 
   @Test

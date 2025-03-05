@@ -11,6 +11,7 @@
 * Actualize condition of deduplication logic for Authority creation [MODINV-1168](https://issues.folio.org/browse/MODINV-1168)
 * Make changes to PUT instances endpoint to update MARC with "deleted" markers [MODINV-1139](https://folio-org.atlassian.net/browse/MODINV-1139)
 * Update MARC-Instance mapping to account for Leader 05 value [MODINV-1140](https://issues.folio.org/browse/MODINV-1140)
+* Update to mod-inventory Java 21 [MODINV-1167](https://issues.folio.org/browse/MODINV-1167)
 
 ## 21.0.0 2024-10-29
 * Existing "035" field is not retained the original position in imported record [MODINV-1049](https://folio-org.atlassian.net/browse/MODINV-1049)
