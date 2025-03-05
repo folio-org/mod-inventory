@@ -417,6 +417,8 @@
             "inventory-storage.instances.item.get",
             "inventory-storage.instances.item.post",
             "inventory-storage.instances.item.delete",
+            "source-storage.records.delete",
+            "source-storage.records.undelete.item.post",
             "source-storage.records.update",
             "inventory-storage.preceding-succeeding-titles.collection.get",
             "inventory-storage.preceding-succeeding-titles.item.post",
@@ -671,7 +673,7 @@
     },
     {
       "id": "source-storage-records",
-      "version": "3.3"
+      "version": "3.4"
     },
     {
       "id": "bound-with-parts-storage",
