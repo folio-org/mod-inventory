@@ -3,6 +3,9 @@ package org.folio.inventory.resources;
 import static io.netty.util.internal.StringUtil.COMMA;
 import static java.lang.String.format;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.apache.commons.lang3.BooleanUtils.isFalse;
+import static org.apache.commons.lang3.BooleanUtils.isTrue;
+import static org.apache.commons.lang3.ObjectUtils.notEqual;
 import static org.folio.inventory.support.CompletableFutures.failedFuture;
 import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
 import static org.folio.inventory.support.EndpointFailureHandler.getKnownException;
@@ -23,7 +26,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.inventory.common.WebContext;
@@ -184,20 +186,19 @@ public class Instances extends AbstractInstances {
       .thenCompose(existingInstance -> fetchPrecedingSucceedingTitles(new Success<>(existingInstance), rContext, wContext))
       .thenCompose(existingInstance -> refuseWhenBlockedFieldsChanged(existingInstance, updatedInstance))
       .thenCompose(existingInstance -> refuseWhenHridChanged(existingInstance, updatedInstance))
-      .thenAccept(existingInstance -> updateInstance(updatedInstance, rContext, wContext))
+      .thenAccept(existingInstance -> updateInstance(existingInstance, updatedInstance, rContext, wContext))
       .exceptionally(doExceptionally(rContext));
   }
 
   /**
    * Call Source record storage to update suppress from discovery flag in underlying record
    *
-   * @param wContext        - webContext
+   * @param srsClient       - SourceStorageRecordsClient
    * @param updatedInstance - Updated instance entity
    */
-  private void updateSuppressFromDiscoveryFlag(WebContext wContext, Instance updatedInstance) {
+  private void updateSuppressFromDiscoveryFlag(SourceStorageRecordsClient srsClient, Instance updatedInstance) {
     try {
-      SourceStorageRecordsClient client = getSourceStorageRecordsClient(wContext);
-      client.putSourceStorageRecordsSuppressFromDiscoveryById(updatedInstance.getId(), INSTANCE_ID_TYPE, updatedInstance.getDiscoverySuppress(), httpClientResponse -> {
+      srsClient.putSourceStorageRecordsSuppressFromDiscoveryById(updatedInstance.getId(), INSTANCE_ID_TYPE, updatedInstance.getDiscoverySuppress(), httpClientResponse -> {
         if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_OK.toInt()) {
           log.info(format("Suppress from discovery flag was successfully updated for record in SRS. InstanceID: %s",
             updatedInstance.getId()));
@@ -226,6 +227,22 @@ public class Instances extends AbstractInstances {
     }
   }
 
+  private void unDeleteSourceStorageRecord(SourceStorageRecordsClient srsClient, Instance updatedInstance) {
+    var id = updatedInstance.getId();
+    try {
+      srsClient.postSourceStorageRecordsUnDeleteById(id, INSTANCE_ID_TYPE, httpClientResponse -> {
+        if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_OK.toInt()) {
+          log.info(format("The instance was successfully undeleted in SRS. InstanceID: %s", id));
+        } else {
+          log.error(format("The instance wasn't undeleted in SRS. InstanceID: %s, SC: %s", id,
+            httpClientResponse.result().statusCode()));
+        }
+      });
+    } catch (Exception e) {
+      log.error(format("Error during undelete operation for the instance: %s", id), e);
+    }
+  }
+
   private SourceStorageRecordsClient getSourceStorageRecordsClient(WebContext wContext) {
     return new SourceStorageRecordsClient(wContext.getOkapiLocation(), wContext.getTenantId(), wContext.getToken(), client);
   }
@@ -243,16 +260,20 @@ public class Instances extends AbstractInstances {
   /**
    * Updates given Instance
    *
-   * @param instance instance for update
-   * @param rContext routing context
-   * @param wContext web context
+   * @param existingInstance existing instance
+   * @param updatedInstance  instance for update
+   * @param rContext         routing context
+   * @param wContext         web context
    */
-  private void updateInstance(Instance instance, RoutingContext rContext, WebContext wContext) {
+  private void updateInstance(Instance existingInstance,
+                              Instance updatedInstance,
+                              RoutingContext rContext,
+                              WebContext wContext) {
     InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
     instanceCollection.update(
-      instance,
+      updatedInstance,
       v -> {
-        updateRelatedRecords(rContext, wContext, instance)
+        updateRelatedRecords(rContext, wContext, updatedInstance)
           .whenComplete((result, ex) -> {
             if (ex != null) {
               log.warn("Exception occurred", ex);
@@ -261,11 +282,26 @@ public class Instances extends AbstractInstances {
               noContent(rContext.response());
             }
           });
-        if (isInstanceControlledByRecord(instance)) {
-          updateSuppressFromDiscoveryFlag(wContext, instance);
-        }
+        updateVisibilityFlagsInSrs(existingInstance, updatedInstance, wContext);
       },
       FailureResponseConsumer.serverError(rContext.response()));
+  }
+
+  private void updateVisibilityFlagsInSrs(Instance existing, Instance updated, WebContext wContext) {
+    if (!isInstanceControlledByRecord(updated)) {
+      return;
+    }
+    if (isTrue(updated.getDeleted()) && notEqual(existing.getDeleted(), updated.getDeleted())) {
+      deleteSourceStorageRecord(wContext, updated.getId());
+    } else if (isFalse(updated.getDeleted())) {
+      var srsClient = getSourceStorageRecordsClient(wContext);
+      if (notEqual(existing.getDiscoverySuppress(), updated.getDiscoverySuppress())) {
+        updateSuppressFromDiscoveryFlag(srsClient, updated);
+      }
+      if (notEqual(existing.getDeleted(), updated.getDeleted())) {
+        unDeleteSourceStorageRecord(srsClient, updated);
+      }
+    }
   }
 
   /**
@@ -292,7 +328,7 @@ public class Instances extends AbstractInstances {
       existingBlockedFields.put(blockedFieldCode, existingInstanceJson.getValue(blockedFieldCode));
       updatedBlockedFields.put(blockedFieldCode, updatedInstanceJson.getValue(blockedFieldCode));
     }
-    return ObjectUtils.notEqual(existingBlockedFields, updatedBlockedFields);
+    return notEqual(existingBlockedFields, updatedBlockedFields);
   }
 
   private void zeroingField(JsonArray precedingSucceedingTitles, String precedingSucceedingInstanceId) {
