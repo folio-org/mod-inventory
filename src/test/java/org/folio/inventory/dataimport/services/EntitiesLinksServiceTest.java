@@ -22,7 +22,8 @@ import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;;import java.net.MalformedURLException;
+import org.junit.runner.RunWith;
+import java.net.MalformedURLException;
 import java.util.List;
 import java.util.UUID;
 
