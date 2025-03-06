@@ -214,6 +214,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         }
 
         markInstanceAndRecordAsDeletedIfNeeded(mappedInstance, targetRecord);
+        LOGGER.info("processInstanceUpdate:: Starting updating instance , jobExecutionId: '{}', instance '{}'",jobExecutionId, instanceAsJson);
         return updateInstanceAndRetryIfOlExists(mappedInstance, instanceCollection, dataImportEventPayload)
           .compose(updatedInstance -> getPrecedingSucceedingTitlesHelper().getExistingPrecedingSucceedingTitles(mappedInstance, context))
           .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
@@ -332,8 +333,15 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     return prepareRecordForMapping(dataImportEventPayload, mappingParameters.getMarcFieldProtectionSettings(), instanceToUpdate, mappingParameters, tenantId)
       .onSuccess(v -> {
         org.folio.Instance mapped = defaultMapRecordToInstance(dataImportEventPayload, mappingRules, mappingParameters);
+        LOGGER.info("prepareAndExecuteMapping:: instance was mapped by default rules, jobExecutionId: '{}', mapped instance '{}'",
+          dataImportEventPayload.getJobExecutionId(), mapped);
+        LOGGER.info("prepareAndExecuteMapping:: mapping rules for instance jobExecutionId: '{}', mappingRules: '{}'",
+          dataImportEventPayload.getJobExecutionId(), mappingRules);
+
         Instance mergedInstance = InstanceUtil.mergeFieldsWhichAreNotControlled(instanceToUpdate, mapped);
         dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(mergedInstance))));
+        LOGGER.info("prepareAndExecuteMapping:: instance fields were merged , jobExecutionId: '{}', merged instance '{}'",
+          dataImportEventPayload.getJobExecutionId(), mergedInstance);
         MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
       });
   }
@@ -361,6 +369,9 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
             AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
             AdditionalFieldsUtil.normalize035(targetRecord);
             dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
+            LOGGER.info("prepareRecordForMapping:: modified existing record with incoming, jobExecutionId: '{}', modifiedContent: {}",
+              dataImportEventPayload.getJobExecutionId(), updatedContent);
+
           } else {
             dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
           }
