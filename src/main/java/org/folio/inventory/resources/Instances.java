@@ -231,7 +231,7 @@ public class Instances extends AbstractInstances {
     var id = updatedInstance.getId();
     try {
       srsClient.postSourceStorageRecordsUnDeleteById(id, INSTANCE_ID_TYPE, httpClientResponse -> {
-        if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_OK.toInt()) {
+        if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_NO_CONTENT.toInt()) {
           log.info(format("The instance was successfully undeleted in SRS. InstanceID: %s", id));
         } else {
           log.error(format("The instance wasn't undeleted in SRS. InstanceID: %s, SC: %s", id,
