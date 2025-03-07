@@ -184,9 +184,11 @@ abstract class ExternalStorageModuleCollection<T> {
     String location = individualRecordLocation(getId(item));
 
     final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
-
+    LOGGER.info("update:: location: {}", location);
+    LOGGER.info("update:: item: {}", item);
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.putAbs(location));
-
+    LOGGER.info("update:: request.headers(): {}", request.headers());
+    LOGGER.info("update:: mapToRequest(item): {}", mapToRequest(item));
     request.sendJsonObject(mapToRequest(item), futureResponse::complete);
 
     futureResponse
