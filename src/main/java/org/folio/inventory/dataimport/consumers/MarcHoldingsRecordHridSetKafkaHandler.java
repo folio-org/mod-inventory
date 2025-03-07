@@ -89,11 +89,11 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
           LOGGER.error(message);
           return Future.failedFuture(message);
         }
-
+        LOGGER.info("handle: headersMap {}", headersMap);
         Context context = constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER),
           headersMap.get(OKAPI_URL_HEADER), headersMap.get(OKAPI_USER_ID), headersMap.get(OKAPI_REQUEST_ID));
         Record marcRecord = Json.decodeValue(eventPayload.get(MARC_KEY), Record.class);
-
+        LOGGER.info("handle: context {}", context);
         mappingMetadataCache.get(jobExecutionId, context)
           .map(metadataOptional -> metadataOptional.orElseThrow(() ->
             new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId))))

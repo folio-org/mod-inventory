@@ -102,7 +102,7 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
 
   private Future<Instance> processEvent(MarcBibUpdate instanceEvent, Map<String, String> headers, Map<String, String> metaDataPayload) {
     Context context = constructContext(instanceEvent.getTenant(), headers.get(OKAPI_TOKEN_HEADER), headers.get(OKAPI_URL_HEADER),
-      "b52fa581-42d5-4044-b7af-2eccdb97dfba", headers.get(OKAPI_REQUEST_ID));
+      headers.get(OKAPI_USER_ID), headers.get(OKAPI_REQUEST_ID));
     Record marcBibRecord = instanceEvent.getRecord();
     var jobId = instanceEvent.getJobId();
     Promise<Instance> promise = Promise.promise();

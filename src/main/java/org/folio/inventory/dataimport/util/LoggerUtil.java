@@ -12,12 +12,12 @@ public class LoggerUtil {
   public static final String INCOMING_RECORD_ID = "INCOMING_RECORD_ID";
   public static void logParametersEventHandler(Logger LOGGER, DataImportEventPayload dataImportEventPayload) {
     HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
-    LOGGER.debug("handle:: parameters jobExecutionId: {}, eventType: {} and incomingRecordId: {} ", dataImportEventPayload.getJobExecutionId(), dataImportEventPayload.getEventType(),
+    LOGGER.info("handle:: parameters jobExecutionId: {}, eventType: {} and incomingRecordId: {} ", dataImportEventPayload.getJobExecutionId(), dataImportEventPayload.getEventType(),
       payloadContext != null ? payloadContext.get(INCOMING_RECORD_ID) : null);
-    LOGGER.trace("handle:: parameter dataImportEventPayload: {}", dataImportEventPayload);
+    LOGGER.info("handle:: parameter dataImportEventPayload: {}", dataImportEventPayload);
   }
 
   public static void logParametersUpdateDelegate(Logger LOGGER, Map<String, String> eventPayload, Record marcRecord, Context context) {
-    LOGGER.trace("handle:: parameters eventPayload: {} , marcRecord: {} , context: {}", eventPayload, marcRecord, context);
+    LOGGER.info("handle:: parameters eventPayload: {} , marcRecord: {} , context: {}", eventPayload, marcRecord, context);
   }
 }

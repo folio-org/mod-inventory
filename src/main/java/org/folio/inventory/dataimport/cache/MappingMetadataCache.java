@@ -90,6 +90,7 @@ public class MappingMetadataCache {
       .toCompletableFuture()
       .thenCompose(httpResponse -> {
         if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
+          LOGGER.info("loadJobProfileSnapshot:: MappingMetadataDto {}", Json.decodeValue(httpResponse.getBody(), MappingMetadataDto.class));
           LOGGER.info("MappingMetadata was loaded by jobExecutionId '{}'", jobExecutionId);
           return CompletableFuture.completedFuture(Optional.of(Json.decodeValue(httpResponse.getBody(), MappingMetadataDto.class)));
         } else if (httpResponse.getStatusCode() == HttpStatus.SC_NOT_FOUND) {

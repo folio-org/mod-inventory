@@ -130,14 +130,20 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
                 return holdingJson;
               }))
             .compose(holdingJson -> {
+              LOGGER.info("holdingJson {}", holdingJson);
               dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingJson.encode());
+              LOGGER.info("dataImportEventPayload.getContext() {}", dataImportEventPayload.getContext());
+              LOGGER.info("getHoldingsRecordCollection context {}", context);
               var holdingsRecords = storage.getHoldingsRecordCollection(context);
               HoldingsRecord holding = Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
+              LOGGER.info("handle:: holdingsRecords {}", holdingsRecords);
+              LOGGER.info("handle:: holding {}", holding);
               return addHoldings(holding, holdingsRecords);
             })
             .onSuccess(createdHoldings -> {
               LOGGER.info("Created Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ", jobExecutionId,
                 recordId, chunkId);
+              LOGGER.info("handle:: createdHoldings {}", createdHoldings);
               dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encodePrettily(createdHoldings));
               future.complete(dataImportEventPayload);
             })

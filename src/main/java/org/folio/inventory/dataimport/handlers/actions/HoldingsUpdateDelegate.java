@@ -53,12 +53,13 @@ public class HoldingsUpdateDelegate {
         new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
 
       JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
+      LOGGER.info("handle parsedRecord {}", parsedRecord);
       String holdingsId = marcRecord.getExternalIdsHolder().getHoldingsId();
       LOGGER.info("Holdings update with holdingId: {}", holdingsId);
       RecordMapper<Holdings> recordMapper = RecordMapperBuilder.buildMapper(MARC_FORMAT);
       var mappedHoldings = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
-
+      LOGGER.info("holdingsRecordCollection: {}", holdingsRecordCollection);
       return getHoldingsRecordById(holdingsId, holdingsRecordCollection)
         .onSuccess(existingHoldingsRecord -> fillVersion(existingHoldingsRecord, eventPayload))
         .compose(existingHoldingsRecord -> findSourceId(context)
@@ -108,9 +109,12 @@ public class HoldingsUpdateDelegate {
     try {
       mappedRecord.setId(existingRecord.getId());
       JsonObject existing = JsonObject.mapFrom(existingRecord);
+      LOGGER.info("existing record {}", existing);
       JsonObject mapped = JsonObject.mapFrom(mappedRecord);
+      LOGGER.info("mapped record {}", mapped);
       JsonObject merged = existing.mergeIn(mapped);
       HoldingsRecord mergedHoldingsRecord = merged.mapTo(HoldingsRecord.class);
+      LOGGER.info("mergedHoldingsRecord record {}", mergedHoldingsRecord.getMetadata());
       updateCellNumberFields(mergedHoldingsRecord, mappedRecord);
       return Future.succeededFuture(mergedHoldingsRecord);
     } catch (Exception e) {
