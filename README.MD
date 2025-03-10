@@ -1,6 +1,6 @@
 # mod-inventory
 
-Copyright (C) 2016-2023 The Open Library Foundation
+Copyright (C) 2016-2025 The Open Library Foundation
 
 This software is distributed under the terms of the Apache License,
 Version 2.0. See the file "[LICENSE](LICENSE)" for more information.
@@ -21,8 +21,8 @@ This readme is intended to get these modules up and running. For further informa
 
 ## Required
 
-- Java 11 JDK
-- Maven 3.5.0
+- Java 21 JDK
+- Maven 3.8.0 or later
 
 ## Optional
 
