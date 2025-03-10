@@ -187,7 +187,6 @@ abstract class ExternalStorageModuleCollection<T> {
     LOGGER.info("update:: location: {}", location);
     LOGGER.info("update:: item: {}", item);
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.putAbs(location));
-    request.putHeader(USER_ID_HEADER, "b77e990b-4eeb-4d60-bb25-79348eaa98cd");
     LOGGER.info("update:: request.headers(): {}", request.headers());
     LOGGER.info("update:: mapToRequest(item): {}", mapToRequest(item));
     request.sendJsonObject(mapToRequest(item), futureResponse::complete);
