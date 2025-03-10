@@ -22,7 +22,7 @@ This readme is intended to get these modules up and running. For further informa
 ## Required
 
 - Java 21 JDK
-- Maven 3.5.0
+- Maven 3.8.0 or later
 
 ## Optional
 
