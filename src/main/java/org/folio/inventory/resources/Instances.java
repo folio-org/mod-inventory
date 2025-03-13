@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
+import io.vertx.core.json.Json;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.inventory.common.WebContext;
@@ -295,6 +296,7 @@ public class Instances extends AbstractInstances {
       deleteSourceStorageRecord(wContext, updated.getId());
     } else if (isFalse(updated.getDeleted())) {
       var srsClient = getSourceStorageRecordsClient(wContext);
+      log.info("updateVisibilityFlagsInSrs:: existingInstance: '{}', updatedInstance: '{}'", Json.encode(existing), Json.encode(updated));
       if (notEqual(existing.getDiscoverySuppress(), updated.getDiscoverySuppress())) {
         updateSuppressFromDiscoveryFlag(srsClient, updated);
       }
