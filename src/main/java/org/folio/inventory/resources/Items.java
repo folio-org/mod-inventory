@@ -36,6 +36,7 @@ import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.domain.items.CQLQueryRequestDto;
 import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
@@ -97,6 +98,7 @@ public class Items extends AbstractInventoryResource {
     router.put(RELATIVE_ITEMS_PATH + "*").handler(BodyHandler.create());
 
     router.get(RELATIVE_ITEMS_PATH).handler(this::getAll);
+    router.post(RELATIVE_ITEMS_PATH + "/fetch").handler(this::getAllByCQLBody);
     router.post(RELATIVE_ITEMS_PATH).handler(this::create);
     router.delete(RELATIVE_ITEMS_PATH).handler(this::deleteAll);
 
@@ -145,6 +147,10 @@ public class Items extends AbstractInventoryResource {
       return;
     }
 
+    fetchItems(routingContext, search, context, pagingParameters);
+  }
+
+  private void fetchItems(RoutingContext routingContext, String search, WebContext context, PagingParameters pagingParameters) {
     if(search == null) {
       storage.getItemCollection(context).findAll(
         pagingParameters,
@@ -161,6 +167,17 @@ public class Items extends AbstractInventoryResource {
         ServerErrorResponse.internalError(routingContext.response(), e.toString());
       }
     }
+  }
+
+  private void getAllByCQLBody(RoutingContext routingContext) {
+    WebContext context = new WebContext(routingContext);
+
+    CQLQueryRequestDto cqlQueryRequestDto = routingContext.body().asPojo(CQLQueryRequestDto.class);
+    String search = cqlQueryRequestDto.getQuery();
+
+    PagingParameters pagingParameters = PagingParameters.from(cqlQueryRequestDto);
+
+    fetchItems(routingContext, search, context, pagingParameters);
   }
 
   private void deleteAll(RoutingContext routingContext) {
