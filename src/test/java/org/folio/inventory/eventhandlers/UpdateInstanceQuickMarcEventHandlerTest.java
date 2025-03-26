@@ -249,9 +249,6 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
   @Test
   public void shouldSetInstanceSuppressedIfRecordLeaderUpdatedToDeleted() {
     HashMap<String, String> eventPayload = new HashMap<>();
-    JsonObject deletedRecord = JsonObject.mapFrom(this.deletedRecord.mapTo(Record.class)
-      .withAdditionalInfo(new AdditionalInfo().withSuppressDiscovery(true))
-      .withDeleted(true));
 
     eventPayload.put("RECORD_TYPE", "MARC_BIB");
     eventPayload.put("MARC_BIB", deletedRecord.encode());
@@ -289,9 +286,6 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
   @Test
   public void shouldKeepSuppressedFlagsIfRecordWithDeletedLeaderUpdated() {
     HashMap<String, String> eventPayload = new HashMap<>();
-    JsonObject deletedRecord = JsonObject.mapFrom(this.deletedRecord.mapTo(Record.class)
-      .withAdditionalInfo(new AdditionalInfo().withSuppressDiscovery(true))
-      .withDeleted(true));
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);

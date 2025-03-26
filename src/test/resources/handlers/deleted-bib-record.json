@@ -430,13 +430,13 @@
       "leader": "01418dam a2200361 i 4500"
     }
   },
-  "deleted": false,
+  "deleted": true,
   "order": 2,
   "externalIdsHolder": {
     "instanceId": "ddd266ef-07ac-4117-be13-d418b8cd6902"
   },
   "additionalInfo": {
-    "suppressDiscovery": false
+    "suppressDiscovery": true
   },
   "state": "ACTUAL",
   "metadata": {
