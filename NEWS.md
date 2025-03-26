@@ -1,3 +1,6 @@
+## 21.0.12 2025-03-26
+* Instance records with source MARC not linked to SRS record cannot be overlayed [MODINV-1178](https://folio-org.atlassian.net/browse/MODINV-1178)
+
 ## 21.0.11 2025-02-25
 * Actualize condition of deduplication logic for Authority creation [MODINV-1168](https://issues.folio.org/browse/MODINV-1168)
 
