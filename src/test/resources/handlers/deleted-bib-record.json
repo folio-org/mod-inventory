@@ -1,0 +1,448 @@
+{
+  "id": "4ce19d38-9f8b-4faa-89c0-aa7a7b41e8a7",
+  "snapshotId": "a32de245-aa4f-4e24-aa36-ff2370beb083",
+  "matchedId": "69afc410-ea05-4530-9847-e8f3b2b734d3",
+  "generation": 3,
+  "recordType": "MARC_BIB",
+  "parsedRecord": {
+    "id": "64deac7f-b6b4-46c9-a357-3e80dc8f52c8",
+    "content": {
+      "fields": [
+        {
+          "001": "in00000000003"
+        },
+        {
+          "003": "OCoLC"
+        },
+        {
+          "005": "20190710064447.6"
+        },
+        {
+          "008": "190517s2019    sz a     b    001 0 eng d"
+        },
+        {
+          "020": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "9783030140410"
+              },
+              {
+                "q": "hardback"
+              }
+            ]
+          }
+        },
+        {
+          "020": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "z": "9783030140427 (PDF ebook)"
+              }
+            ]
+          }
+        },
+        {
+          "035": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "(OCoLC)1103977579"
+              }
+            ]
+          }
+        },
+        {
+          "035": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "1103977579"
+              }
+            ]
+          }
+        },
+        {
+          "035": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "(OCoLC)1060180367"
+              }
+            ]
+          }
+        },
+        {
+          "040": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "UKMGB"
+              },
+              {
+                "b": "eng"
+              },
+              {
+                "e": "rda"
+              },
+              {
+                "c": "UKMGB"
+              },
+              {
+                "d": "OCLCO"
+              },
+              {
+                "d": "BDX"
+              },
+              {
+                "d": "EYM"
+              },
+              {
+                "d": "YDX"
+              }
+            ]
+          }
+        },
+        {
+          "050": {
+            "ind1": " ",
+            "ind2": "4",
+            "subfields": [
+              {
+                "a": "PR468.E34"
+              },
+              {
+                "b": "V53 2019"
+              }
+            ]
+          }
+        },
+        {
+          "082": {
+            "ind1": "0",
+            "ind2": "4",
+            "subfields": [
+              {
+                "a": "820.93609034"
+              },
+              {
+                "2": "23"
+              }
+            ]
+          }
+        },
+        {
+          "245": {
+            "ind1": "0",
+            "ind2": "0",
+            "subfields": [
+              {
+                "a": "Victorian environmental nightmares and something else/"
+              },
+              {
+                "c": "Laurence W. Mazzeno, Ronald D. Morrison, editors."
+              }
+            ]
+          }
+        },
+        {
+          "255": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "Adding a note"
+              }
+            ]
+          }
+        },
+        {
+          "264": {
+            "ind1": " ",
+            "ind2": "1",
+            "subfields": [
+              {
+                "a": "Cham, Switzerland :"
+              },
+              {
+                "b": "Palgrave Macmillan,"
+              },
+              {
+                "c": "[2019]"
+              }
+            ]
+          }
+        },
+        {
+          "300": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "xii, 273 pages :"
+              },
+              {
+                "b": "illustrations (black and white) ;"
+              },
+              {
+                "c": "21 cm"
+              }
+            ]
+          }
+        },
+        {
+          "336": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "still image"
+              },
+              {
+                "b": "sti"
+              },
+              {
+                "2": "rdacontent"
+              }
+            ]
+          }
+        },
+        {
+          "336": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "text"
+              },
+              {
+                "b": "txt"
+              },
+              {
+                "2": "rdacontent"
+              }
+            ]
+          }
+        },
+        {
+          "337": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "unmediated"
+              },
+              {
+                "b": "n"
+              },
+              {
+                "2": "rdamedia"
+              }
+            ]
+          }
+        },
+        {
+          "338": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "volume"
+              },
+              {
+                "b": "nc"
+              },
+              {
+                "2": "rdacarrier"
+              }
+            ]
+          }
+        },
+        {
+          "504": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "Includes bibliographical references and index."
+              }
+            ]
+          }
+        },
+        {
+          "650": {
+            "ind1": " ",
+            "ind2": "0",
+            "subfields": [
+              {
+                "a": "English literature"
+              },
+              {
+                "y": "19th century"
+              },
+              {
+                "x": "History and criticism."
+              },
+              {
+                "z": "additional subfield"
+              }
+            ]
+          }
+        },
+        {
+          "700": {
+            "ind1": "1",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "Mazzeno, Laurence W., 1234566"
+              },
+              {
+                "e": "editor."
+              }
+            ]
+          }
+        },
+        {
+          "700": {
+            "ind1": "1",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "Morrison, Ronald D.,"
+              },
+              {
+                "e": "editor."
+              }
+            ]
+          }
+        },
+        {
+          "776": {
+            "ind1": "0",
+            "ind2": "8",
+            "subfields": [
+              {
+                "i": "ebook version :"
+              },
+              {
+                "z": "9783030140427"
+              }
+            ]
+          }
+        },
+        {
+          "935": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "10001-1"
+              }
+            ]
+          }
+        },
+        {
+          "935": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "10001-2"
+              }
+            ]
+          }
+        },
+        {
+          "949": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "BC-12834629734012"
+              }
+            ]
+          }
+        },
+        {
+          "980": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "40029162881"
+              },
+              {
+                "b": "USHIST"
+              },
+              {
+                "d": "KU/CC/DI/M"
+              },
+              {
+                "e": "YBP"
+              },
+              {
+                "g": "509541"
+              },
+              {
+                "h": "98990"
+              },
+              {
+                "i": "190715"
+              },
+              {
+                "j": "89.09"
+              },
+              {
+                "l": "Cloth"
+              },
+              {
+                "m": "109.99"
+              },
+              {
+                "q": "1"
+              }
+            ]
+          }
+        },
+        {
+          "999": {
+            "ind1": "f",
+            "ind2": "f",
+            "subfields": [
+              {
+                "s": "69afc410-ea05-4530-9847-e8f3b2b734d3"
+              },
+              {
+                "i": "ddd266ef-07ac-4117-be13-d418b8cd6902"
+              }
+            ]
+          }
+        }
+      ],
+      "leader": "01418dam a2200361 i 4500"
+    }
+  },
+  "deleted": false,
+  "order": 2,
+  "externalIdsHolder": {
+    "instanceId": "ddd266ef-07ac-4117-be13-d418b8cd6902"
+  },
+  "additionalInfo": {
+    "suppressDiscovery": false
+  },
+  "state": "ACTUAL",
+  "metadata": {
+    "createdDate": "2020-05-18T14:42:50.229+0000",
+    "createdByUserId": "85de4107-9988-5ae8-972a-0df5295d5af8",
+    "updatedDate": "2020-05-18T14:42:50.229+0000",
+    "updatedByUserId": "85de4107-9988-5ae8-972a-0df5295d5af8"
+  }
+}
