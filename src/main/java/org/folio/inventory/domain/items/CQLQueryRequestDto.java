@@ -6,9 +6,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-
 
 /**
  * DTO for fetching inventory items record by POST request
@@ -106,21 +103,4 @@ public class CQLQueryRequestDto {
         this.query = query;
         return this;
     }
-
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder().append(limit).append(offset).append(query).toHashCode();
-    }
-
-    @Override
-    public boolean equals(Object other) {
-        if (other == this) {
-            return true;
-        }
-        if (!(other instanceof CQLQueryRequestDto rhs)) {
-            return false;
-        }
-        return new EqualsBuilder().append(limit, rhs.limit).append(offset, rhs.offset).append(query, rhs.query).isEquals();
-    }
-
 }
