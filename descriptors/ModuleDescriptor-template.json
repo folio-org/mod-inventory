@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "14.1",
+      "version": "14.2",
       "handlers": [
         {
           "methods": ["GET"],
@@ -12,6 +12,27 @@
           "permissionsRequired": ["inventory.items.collection.get"],
           "modulePermissions": [
             "inventory-storage.items.collection.get",
+            "inventory-storage.material-types.item.get",
+            "inventory-storage.material-types.collection.get",
+            "inventory-storage.loan-types.item.get",
+            "inventory-storage.loan-types.collection.get",
+            "inventory-storage.locations.item.get",
+            "inventory-storage.locations.collection.get",
+            "inventory-storage.holdings.collection.get",
+            "inventory-storage.holdings.item.get",
+            "inventory-storage.instances.collection.get",
+            "inventory-storage.instances.item.get",
+            "inventory-storage.bound-with-parts.collection.get",
+            "inventory-storage.holdings.retrieve.collection.post",
+            "inventory-storage.instances.retrieve.collection.post"
+          ]
+        },
+        {
+          "methods": ["POST"],
+          "pathPattern": "/inventory/items/fetch",
+          "permissionsRequired": ["inventory.items.collection.get.via.post"],
+          "modulePermissions": [
+            "inventory-storage.items.collection.get.via.post",
             "inventory-storage.material-types.item.get",
             "inventory-storage.material-types.collection.get",
             "inventory-storage.loan-types.item.get",
@@ -721,6 +742,11 @@
       "description": "Get item collection"
     },
     {
+      "permissionName": "inventory.items.collection.get.via.post",
+      "displayName": "Inventory - get item collection via post method",
+      "description": "Get item collection"
+    },
+    {
       "permissionName": "inventory.tenant-items.collection.get",
       "displayName": "Inventory - get item collection from multiple tenants",
       "description": "Get item collection from multiple tenants"
@@ -876,6 +902,7 @@
       "description": "Entire set of permissions needed to use the inventory",
       "subPermissions": [
         "inventory.items.collection.get",
+        "inventory.items.collection.get.via.post",
         "inventory.tenant-items.collection.get",
         "inventory.items.item.get",
         "inventory.items.item.post",
