@@ -71,6 +71,12 @@ public class ApiRoot {
     return new URL(String.format("%s/items?%s", inventory(), query));
   }
 
+  public static URL itemsFetch()
+          throws MalformedURLException {
+
+    return new URL(String.format("%s/items/fetch", inventory()));
+  }
+
   public static URL tenantItems()
     throws MalformedURLException {
 
