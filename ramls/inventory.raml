@@ -58,7 +58,7 @@ resourceTypes:
           body:
             text/plain:
               example: "Internal server error, contact administrator"
-    /fetch:
+    /retrieve:
       post:
         is: [ validate ]
         body:
@@ -68,7 +68,7 @@ resourceTypes:
               strict: false
               value: !include examples/cqlQueryRequestDto.json
         description: |
-          Get Inventory item by POST request
+          Fetch inventory items collection by POST request
     /{itemId}:
       type:
         collection-item:

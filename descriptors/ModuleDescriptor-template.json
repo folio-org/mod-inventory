@@ -30,9 +30,9 @@
         {
           "methods": ["POST"],
           "pathPattern": "/inventory/items/fetch",
-          "permissionsRequired": ["inventory.items.collection.get.via.post"],
+          "permissionsRequired": ["inventory.items.retrieve.collection.post"],
           "modulePermissions": [
-            "inventory-storage.items.collection.get.via.post",
+            "inventory-storage.items.retrieve.collection.post",
             "inventory-storage.material-types.item.get",
             "inventory-storage.material-types.collection.get",
             "inventory-storage.loan-types.item.get",
@@ -742,9 +742,9 @@
       "description": "Get item collection"
     },
     {
-      "permissionName": "inventory.items.collection.get.via.post",
-      "displayName": "Inventory - get item collection via post method",
-      "description": "Get item collection"
+      "permissionName": "inventory.items.retrieve.collection.post",
+      "displayName": "Inventory - retrieve item collection via post method",
+      "description": "retrieve item collection"
     },
     {
       "permissionName": "inventory.tenant-items.collection.get",
@@ -902,7 +902,7 @@
       "description": "Entire set of permissions needed to use the inventory",
       "subPermissions": [
         "inventory.items.collection.get",
-        "inventory.items.collection.get.via.post",
+        "inventory.items.retrieve.collection.post",
         "inventory.tenant-items.collection.get",
         "inventory.items.item.get",
         "inventory.items.item.post",

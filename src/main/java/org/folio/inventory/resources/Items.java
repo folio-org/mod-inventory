@@ -98,7 +98,7 @@ public class Items extends AbstractInventoryResource {
     router.put(RELATIVE_ITEMS_PATH + "*").handler(BodyHandler.create());
 
     router.get(RELATIVE_ITEMS_PATH).handler(this::getAll);
-    router.post(RELATIVE_ITEMS_PATH + "/fetch").handler(this::getAllByCQLBody);
+    router.post(RELATIVE_ITEMS_PATH + "/retrieve").handler(this::retrieveAllByCQLBody);
     router.post(RELATIVE_ITEMS_PATH).handler(this::create);
     router.delete(RELATIVE_ITEMS_PATH).handler(this::deleteAll);
 
@@ -169,7 +169,7 @@ public class Items extends AbstractInventoryResource {
     }
   }
 
-  private void getAllByCQLBody(RoutingContext routingContext) {
+  private void retrieveAllByCQLBody(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
     CQLQueryRequestDto cqlQueryRequestDto = routingContext.body().asPojo(CQLQueryRequestDto.class);

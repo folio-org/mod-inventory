@@ -807,14 +807,14 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void canSearchForItemsByPostFetchAPI()
+  public void canSearchForItemsByPostRetrieve()
           throws InterruptedException,
           MalformedURLException,
           TimeoutException,
           ExecutionException {
 
     List<String> itemIdz = new ArrayList<>();
-    int numOfItemsToCreate = 20;
+    int numOfItemsToCreate = 5;
     for (int i = 1; i <= numOfItemsToCreate; i++) {
       JsonObject smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
@@ -835,17 +835,67 @@ public class ItemApiExamples extends ApiTests {
     CQLQueryRequestDto cqlQueryRequestDto = new CQLQueryRequestDto();
     cqlQueryRequestDto.setQuery(idzWithOrDelimiter);
     cqlQueryRequestDto.setLimit(2000);
-    final var postCompleted = okapiClient.post(ApiRoot.itemsFetch(), JsonObject.mapFrom(cqlQueryRequestDto));
+    final var postCompleted = okapiClient.post(ApiRoot.itemsRetrieve(), JsonObject.mapFrom(cqlQueryRequestDto));
 
-    Response searchGetResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
+    Response retrievePostResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(searchGetResponse.getStatusCode(), is(200));
+    assertThat(retrievePostResponse.getStatusCode(), is(200));
 
     List<JsonObject> items = JsonArrayHelper.toList(
-            searchGetResponse.getJson().getJsonArray("items"));
+            retrievePostResponse.getJson().getJsonArray("items"));
 
     assertThat(items.size(), is(numOfItemsToCreate));
-    assertThat(searchGetResponse.getJson().getInteger("totalRecords"), is(numOfItemsToCreate));
+    assertThat(retrievePostResponse.getJson().getInteger("totalRecords"), is(numOfItemsToCreate));
+  }
+
+  @Test
+  public void canPageAllIRetrieveItemsViaPost()
+          throws InterruptedException,
+          MalformedURLException,
+          TimeoutException,
+          ExecutionException {
+
+    int numOfItemsToCreate = 5;
+    for (int i = 1; i <= numOfItemsToCreate; i++) {
+      JsonObject smallAngryInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+      UUID smallAngryHoldingId = holdingsStorageClient.create(
+                      new HoldingRequestBuilder()
+                              .forInstance(UUID.fromString(smallAngryInstance.getString("id"))))
+              .getId();
+
+      itemsClient.create(new ItemRequestBuilder()
+              .forHolding(smallAngryHoldingId)
+              .book()
+              .canCirculate()
+              .withBarcode(RandomStringUtils.random(10)));
+    }
+
+    CQLQueryRequestDto cqlQueryRequestDto = new CQLQueryRequestDto();
+    cqlQueryRequestDto.setLimit(3);
+    final var retrievePostCompletedFirstPage = okapiClient.post(ApiRoot.itemsRetrieve(), JsonObject.mapFrom(cqlQueryRequestDto));
+
+    cqlQueryRequestDto.setLimit(3);
+    cqlQueryRequestDto.setOffset(3);
+    final var retrievePostCompletedSecondPage = okapiClient.post(ApiRoot.itemsRetrieve(),
+            JsonObject.mapFrom(cqlQueryRequestDto));
+
+    Response retrievePostPageResponseFirst = retrievePostCompletedFirstPage.toCompletableFuture().get(5, SECONDS);
+    Response retrievePostPageResponseSecond = retrievePostCompletedSecondPage.toCompletableFuture().get(5, SECONDS);
+
+    assertThat(retrievePostPageResponseFirst.getStatusCode(), is(200));
+    assertThat(retrievePostPageResponseSecond.getStatusCode(), is(200));
+
+    List<JsonObject> firstPageItems = JsonArrayHelper.toList(
+            retrievePostPageResponseFirst.getJson().getJsonArray("items"));
+    List<JsonObject> secondPageItems = JsonArrayHelper.toList(
+            retrievePostPageResponseSecond.getJson().getJsonArray("items"));
+
+    assertThat(firstPageItems.size(), is(3));
+    assertThat(retrievePostPageResponseFirst.getJson().getInteger("totalRecords"), is(numOfItemsToCreate));
+
+    assertThat(secondPageItems.size(), is(2));
+    assertThat(retrievePostPageResponseSecond.getJson().getInteger("totalRecords"), is(numOfItemsToCreate));
   }
 
   @Test
