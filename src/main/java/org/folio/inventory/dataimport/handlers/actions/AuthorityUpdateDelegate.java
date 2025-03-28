@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile.FolioRecord;
 import org.folio.Authority;
+import org.folio.AuthorityExtended;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.DataImportException;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
@@ -109,7 +110,9 @@ public class AuthorityUpdateDelegate {
       mappedRecord.setId(existingRecord.getId());
       mappedRecord.setVersion(existingRecord.getVersion());
       JsonObject mapped = JsonObject.mapFrom(mappedRecord);
-      Authority mergedAuthorityRecord = mapped.mapTo(Authority.class);
+      Authority mergedAuthorityRecord = getIsAuthorityExtended()
+        ? mapped.mapTo(AuthorityExtended.class)
+        : mapped.mapTo(Authority.class);
       mergedAuthorityRecord.setSource(Authority.Source.MARC);
       return Future.succeededFuture(mergedAuthorityRecord);
     } catch (Exception e) {

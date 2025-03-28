@@ -11,6 +11,8 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import org.folio.ActionProfile;
 import org.folio.Authority;
 import org.folio.DataImportEventPayload;
@@ -80,6 +82,7 @@ public class UpdateAuthorityEventHandlerTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/marc-authority-rules.json";
   private static final String PARSED_AUTHORITY_RECORD = "src/test/resources/marc/authority/parsed-authority-record.json";
+  private static final String PARSED_AUTHORITY_EXTENDED_RECORD = "src/test/resources/marc/authority/parsed-authority-extended-record.json";
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
   private final boolean isAuthorityExtended;
 
@@ -407,5 +410,40 @@ public class UpdateAuthorityEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.SECONDS);
+  }
+
+  @Test
+  public void shouldProcessAuthorityExtendedEvent() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    AbstractAuthorityEventHandler.setAuthorityExtendedMode(true);
+    when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
+    when(authorityCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new Authority().withVersion(1)));
+
+    var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_EXTENDED_RECORD));
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_AUTHORITY.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_AUTHORITY_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
+
+    verify(publisher, times(1)).publish(dataImportEventPayload);
+
+    assertEquals(DI_INVENTORY_AUTHORITY_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(AUTHORITY.value()));
+    JsonObject authority = new JsonObject(actualDataImportEventPayload.getContext().get(AUTHORITY.value()));
+    assertNotNull(authority.getString("id"));
+    assertEquals("1", authority.getString("_version"));
+    assertEquals(List.of("Editor:   C. W. Dugmore."), authority.getJsonArray("saftPersonalNameTrunc").getList());
+    assertEquals(List.of("e Church history--linkText"), authority.getJsonArray("saftCorporateNameTrunc").getList());
+    assertEquals(List.of("Church history", "nga Broader-earlier - 511", "h Some narrower term - 511"), authority.getJsonArray("saftMeetingNameTrunc").getList());
+    assertEquals(List.of(Map.of("headingRef", "nga Broader-earlier - 511", "headingType", "meetingNameTrunc")), authority.getJsonArray("saftBroaderTerm").getList());
+    assertEquals(List.of(Map.of("headingRef", "h Some narrower term - 511", "headingType", "meetingNameTrunc")), authority.getJsonArray("saftNarrowerTerm").getList());
   }
 }
