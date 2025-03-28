@@ -16,6 +16,7 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import java.util.HashMap;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
@@ -24,6 +25,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.HttpStatus;
+import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
+import org.folio.inventory.client.wrappers.SourceStorageSnapshotsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
@@ -45,6 +48,8 @@ import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.jaxrs.model.Snapshot;
+
+import static org.folio.inventory.dataimport.util.ParsedRecordUtil.LEADER_STATUS_DELETED;
 
 public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);
@@ -94,9 +99,10 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   protected Future<Instance> saveRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record srcRecord,
-                                                            Instance instance, InstanceCollection instanceCollection, String tenantId) {
+                                                              Instance instance, InstanceCollection instanceCollection,
+                                                              String tenantId, String userId) {
     Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId).postSourceStorageRecords(srcRecord)
+    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId).postSourceStorageRecords(srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
@@ -117,9 +123,10 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   protected Future<Instance> putRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record srcRecord,
-                                                             Instance instance, String matchedId, String tenantId) {
+                                                             Instance instance, String matchedId, String tenantId, String userId) {
     Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId).putSourceStorageRecordsGenerationById(matchedId ,srcRecord)
+    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId)
+      .putSourceStorageRecordsGenerationById(matchedId ,srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_OK.toInt()) {
@@ -140,7 +147,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
 
   protected Future<Snapshot> postSnapshotInSrsAndHandleResponse(Context context, Snapshot snapshot) {
     Promise<Snapshot> promise = Promise.promise();
-    getSourceStorageSnapshotsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId()).postSourceStorageSnapshots(snapshot)
+    getSourceStorageSnapshotsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId(), context.getUserId()).postSourceStorageSnapshots(snapshot)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
@@ -202,12 +209,12 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     promise.future();
   }
 
-  public SourceStorageRecordsClient getSourceStorageRecordsClient(String okapiUrl, String token, String tenantId) {
-    return new SourceStorageRecordsClient(okapiUrl, tenantId, token, getHttpClient());
+  public SourceStorageRecordsClient getSourceStorageRecordsClient(String okapiUrl, String token, String tenantId, String userId) {
+    return new SourceStorageRecordsClientWrapper(okapiUrl, tenantId, token, userId, getHttpClient());
   }
 
-  public SourceStorageSnapshotsClient getSourceStorageSnapshotsClient(String okapiUrl, String token, String tenantId) {
-    return new SourceStorageSnapshotsClient(okapiUrl, tenantId, token, getHttpClient());
+  public SourceStorageSnapshotsClient getSourceStorageSnapshotsClient(String okapiUrl, String token, String tenantId, String userId) {
+    return new SourceStorageSnapshotsClientWrapper(okapiUrl, tenantId, token, userId, getHttpClient());
   }
 
   private Record encodeParsedRecordContent(Record srcRecord) {
@@ -219,7 +226,22 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     return srcRecord;
   }
 
-  protected void setSuppressFormDiscovery(Record srcRecord, boolean suppressFromDiscovery) {
+  protected void markInstanceAndRecordAsDeletedIfNeeded(Instance instance, Record srsRecord) {
+    Optional<Character> leaderStatus = ParsedRecordUtil.getLeaderStatus(srsRecord.getParsedRecord());
+    if (Boolean.TRUE.equals(instance.getDeleted()) || (leaderStatus.isPresent() && LEADER_STATUS_DELETED == leaderStatus.get())) {
+      LOGGER.debug("markInstanceAndRecordAsDeletedIfNeeded:: Mark Instance with id: '{}' as deleted", instance.getId());
+      instance.setDeleted(true);
+      instance.setDiscoverySuppress(true);
+      instance.setStaffSuppress(true);
+
+      srsRecord.withState(Record.State.DELETED);
+      srsRecord.setDeleted(true);
+      setSuppressFromDiscovery(srsRecord, true);
+      ParsedRecordUtil.updateLeaderStatus(srsRecord.getParsedRecord(), LEADER_STATUS_DELETED);
+    }
+  }
+
+  protected void setSuppressFromDiscovery(Record srcRecord, boolean suppressFromDiscovery) {
     AdditionalInfo info = srcRecord.getAdditionalInfo();
     if (info != null) {
       info.setSuppressDiscovery(suppressFromDiscovery);

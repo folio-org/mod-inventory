@@ -39,8 +39,9 @@ public class InstanceUtil {
    * @return - result Instance
    */
   public static Instance mergeFieldsWhichAreNotControlled(Instance existing, org.folio.Instance mapped) {
-
     mapped.setId(existing.getId());
+    mapped.setDiscoverySuppress(existing.getDiscoverySuppress());
+    mapped.setStaffSuppress(existing.getStaffSuppress());
 
     List<ParentInstance> parentInstances = constructParentInstancesList(existing);
 
@@ -52,6 +53,7 @@ public class InstanceUtil {
       .withVersion(asIntegerOrNull(existing.getVersion()))
       .withDiscoverySuppress(existing.getDiscoverySuppress())
       .withStaffSuppress(existing.getStaffSuppress())
+      .withDeleted(existing.getDeleted())
       .withPreviouslyHeld(existing.getPreviouslyHeld())
       .withCatalogedDate(existing.getCatalogedDate())
       .withStatusId(existing.getStatusId())

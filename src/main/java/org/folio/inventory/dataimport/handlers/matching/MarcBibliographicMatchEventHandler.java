@@ -6,6 +6,7 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
+import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.consortium.services.ConsortiumService;
@@ -15,11 +16,13 @@ import org.folio.inventory.dataimport.util.ParsedRecordUtil.AdditionalSubfields;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
+import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.jaxrs.model.RecordMatchingDto;
 
 import java.io.UnsupportedEncodingException;
 import java.util.List;
+import java.util.Optional;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isBlank;
@@ -63,9 +66,16 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
   }
 
   @Override
-  protected Future<Void> ensureRelatedEntities(List<Record> records, DataImportEventPayload eventPayload) {
-    if (records.size() == 1) {
-      Record matchedRecord = records.get(0);
+  protected boolean canSubMatchProfileProcessMultiMatchResult(MatchProfile matchProfile) {
+    return matchProfile.getExistingRecordType() == EntityType.MARC_BIBLIOGRAPHIC
+      || matchProfile.getExistingRecordType() == EntityType.INSTANCE
+      || matchProfile.getExistingRecordType() == EntityType.HOLDINGS;
+  }
+
+  @Override
+  protected Future<Void> ensureRelatedEntities(Optional<Record> recordOptional, DataImportEventPayload eventPayload) {
+    if (recordOptional.isPresent()) {
+      Record matchedRecord = recordOptional.get();
       String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(matchedRecord.getParsedRecord(), AdditionalSubfields.I);
       String matchedRecordTenantId = getTenant(eventPayload);
       Context context = EventHandlingUtil.constructContext(matchedRecordTenantId, eventPayload.getToken(), eventPayload.getOkapiUrl(),

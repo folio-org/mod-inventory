@@ -10,6 +10,7 @@ import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.Record;
+import org.folio.inventory.client.wrappers.ChangeManagerClientWrapper;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.kafka.SimpleConfigurationReader;
 import org.folio.rest.client.ChangeManagerClient;
@@ -290,10 +291,11 @@ public class RestDataImportHelper {
   }
 
   public ChangeManagerClient getChangeManagerClient(Map<String, String> kafkaHeaders) {
-    return new ChangeManagerClient(
+    return new ChangeManagerClientWrapper(
       kafkaHeaders.get(URL.toLowerCase()),
       kafkaHeaders.get(TENANT.toLowerCase()),
       kafkaHeaders.get(TOKEN.toLowerCase()),
+      kafkaHeaders.get(USER_ID.toLowerCase()),
       vertx.createHttpClient());
   }
 

@@ -40,6 +40,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -57,7 +58,6 @@ import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_PATH;
 import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_REQUIRED_FIELDS;
-import static org.folio.inventory.domain.instances.Instance.DISCOVERY_SUPPRESS_KEY;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.METADATA_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
@@ -213,6 +213,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           return Future.failedFuture(msg);
         }
 
+        markInstanceAndRecordAsDeletedIfNeeded(mappedInstance, targetRecord);
         return updateInstanceAndRetryIfOlExists(mappedInstance, instanceCollection, dataImportEventPayload)
           .compose(updatedInstance -> getPrecedingSucceedingTitlesHelper().getExistingPrecedingSucceedingTitles(mappedInstance, context))
           .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
@@ -228,21 +229,30 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           })
           .compose(instance -> {
             if (instanceToUpdate.getSource().equals(FOLIO.getValue())) {
+              LOGGER.debug("processInstanceUpdate:: processing FOLIO Instance with id: {}", instance.getId());
               executeFieldsManipulation(instance, targetRecord);
-              return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection, tenantId);
+              return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection,
+                tenantId, context.getUserId());
             }
             if (instanceToUpdate.getSource().equals(MARC.getValue())) {
+              LOGGER.debug("processInstanceUpdate:: processing MARC Instance with id: {}", instance.getId());
               setExternalIds(targetRecord, instance);
               AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(targetRecord);
 
-              JsonObject jsonInstance = new JsonObject(instance.getJsonForStorage().encode());
-
-              setSuppressFormDiscovery(targetRecord, jsonInstance.getBoolean(DISCOVERY_SUPPRESS_KEY, false));
-              return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, targetRecord.getMatchedId(), tenantId);
+              setSuppressFromDiscovery(targetRecord, instance.getDiscoverySuppress());
+              if (targetRecord.getMatchedId() == null) {
+                LOGGER.debug("processInstanceUpdate:: Instance with id: {} has no related marc bib. Creating new record in SRS", instance.getId());
+                String matchedId = UUID.randomUUID().toString();
+                return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord.withId(matchedId).withMatchedId(matchedId),
+                  instance, instanceCollection, tenantId, context.getUserId());
+              }
+              LOGGER.debug("processInstanceUpdate:: Instance with id: {} has related marc bib with id: {}. Updating record in SRS", instance.getId(), targetRecord.getMatchedId());
+              return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance,
+                targetRecord.getMatchedId(), tenantId, context.getUserId());
             }
             return Future.succeededFuture(instance);
           }).compose(ar -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(ar))
-          .map(instanceAsJson);
+          .map(Json::encode);
       })
       .onComplete(ar -> {
         if (ar.succeeded()) {
@@ -332,7 +342,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
                                                List<MarcFieldProtectionSetting> marcFieldProtectionSettings,
                                                Instance instance, MappingParameters mappingParameters, String tenantId) {
     if (MARC_INSTANCE_SOURCE.equals(instance.getSource()) || CONSORTIUM_MARC.getValue().equals(instance.getSource())) {
-      SourceStorageRecordsClient client = getSourceStorageRecordsClient(dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getToken(), tenantId);
+      SourceStorageRecordsClient client = getSourceStorageRecordsClient(dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getToken(), tenantId, null);
       return getRecordByInstanceId(client, instance.getId())
         .compose(existingRecord -> {
           Record incomingRecord = Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
@@ -435,7 +445,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       });
   }
 
-  private void prepareSucceededResultPayload(DataImportEventPayload dataImportEventPayload, JsonObject updatedInstanceJson, Instance instanceToUpdate) {
+  private void prepareSucceededResultPayload(DataImportEventPayload dataImportEventPayload, String updatedInstanceAsString, Instance instanceToUpdate) {
     if (dataImportEventPayload.getContext().containsKey(CENTRAL_TENANT_ID)) {
       dataImportEventPayload.getContext().put(CENTRAL_TENANT_INSTANCE_UPDATED_FLAG, Boolean.TRUE.toString());
     }
@@ -446,7 +456,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       dataImportEventPayload.getContext().put(MARC_BIB_RECORD_CREATED, Boolean.FALSE.toString());
     }
 
-    dataImportEventPayload.getContext().put(INSTANCE.value(), updatedInstanceJson.encode());
+    dataImportEventPayload.getContext().put(INSTANCE.value(), updatedInstanceAsString);
     dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
   }
 

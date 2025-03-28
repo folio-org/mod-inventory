@@ -12,7 +12,7 @@ import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlin
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.reorderMarcRecordFields;
-import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
+import static org.folio.inventory.dataimport.util.DataImportConstants.ALREADY_EXISTS_ERROR_MSG;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_PATH;
 import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_REQUIRED_FIELDS;
@@ -143,6 +143,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                 return Future.failedFuture(msg);
               }
 
+              markInstanceAndRecordAsDeletedIfNeeded(mappedInstance, targetRecord);
               return addInstance(mappedInstance, instanceCollection)
                 .compose(createdInstance -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(createdInstance))
                 .compose(createdInstance -> executeFieldsManipulation(createdInstance, targetRecord))
@@ -150,8 +151,9 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                   var targetContent = targetRecord.getParsedRecord().getContent().toString();
                   var content = reorderMarcRecordFields(sourceContent, targetContent);
                   targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(content));
-                  setSuppressFormDiscovery(targetRecord, instanceAsJson.getBoolean(DISCOVERY_SUPPRESS_PROPERTY, false));
-                  return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection, dataImportEventPayload.getTenant());
+                  setSuppressFromDiscovery(targetRecord, createdInstance.getDiscoverySuppress());
+                  return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance, instanceCollection,
+                    dataImportEventPayload.getTenant(), context.getUserId());
                 });
             })
             .onSuccess(ar -> {
@@ -228,7 +230,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     instanceCollection.add(instance, success -> promise.complete(success.getResult()),
       failure -> {
         //This is temporary solution (verify by error message). It will be improved via another solution by https://issues.folio.org/browse/RMB-899.
-        if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+        if (isNotBlank(failure.getReason()) && failure.getReason().contains(String.format(ALREADY_EXISTS_ERROR_MSG, instance.getId()))) {
           LOGGER.info("Duplicated event received by InstanceId: {}. Ignoring...", instance.getId());
           promise.fail(new DuplicateEventException(format("Duplicated event by Instance id: %s", instance.getId())));
         } else {

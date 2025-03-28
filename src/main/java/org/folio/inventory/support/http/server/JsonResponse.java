@@ -30,6 +30,11 @@ public class JsonResponse {
     response(response, body, 200);
   }
 
+  public static void badRequest(HttpServerResponse response,
+                                JsonObject body) {
+    response(response, body, 400);
+  }
+
   public static void unprocessableEntity(
     HttpServerResponse response,
     String message,

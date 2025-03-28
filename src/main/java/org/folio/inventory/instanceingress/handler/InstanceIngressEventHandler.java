@@ -12,7 +12,7 @@ import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECO
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.Record.RecordType.MARC_BIB;
-import static org.folio.rest.jaxrs.model.Snapshot.Status.PROCESSING_FINISHED;
+import static org.folio.rest.jaxrs.model.Snapshot.Status.COMMITTED;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
@@ -21,7 +21,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
@@ -159,7 +158,7 @@ public interface InstanceIngressEventHandler {
     var snapshot = new Snapshot()
       .withJobExecutionId(id)
       .withProcessingStartedDate(new Date())
-      .withStatus(PROCESSING_FINISHED);
+      .withStatus(COMMITTED);
     return postSnapshotFunction.apply(context, snapshot);
   }
 }

@@ -413,8 +413,8 @@ public class InstancesApiExamples extends ApiTests {
       .put("natureOfContentTermIds",
         new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()))
       .put("subjects", new JsonArray().add(
-        new Subject(null,  null, sourceId, typeId)
-      ));
+        new Subject(null,  null, sourceId, typeId)))
+      .put("deleted", true);
 
     URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(),
       newInstance.getString("id")));
@@ -434,6 +434,7 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(updatedInstance.getString("id"), is(newInstance.getString("id")));
     assertThat(updatedInstance.getString("title"), is("The Long Way to a Small, Angry Planet"));
     assertThat(updatedInstance.getJsonArray("identifiers").size(), is(1));
+    assertTrue(updatedInstance.getBoolean("deleted"));
 
     assertTrue(updatedInstance.containsKey(TAGS_KEY));
     final JsonObject tags = updatedInstance.getJsonObject(TAGS_KEY);
@@ -781,6 +782,7 @@ public class InstancesApiExamples extends ApiTests {
 
     assertTrue(getResponse.getJson().getBoolean("staffSuppress"));
     assertTrue(getResponse.getJson().getBoolean("discoverySuppress"));
+    assertTrue(getResponse.getJson().getBoolean("deleted"));
 
     Response getDeletedSourceRecordResponse = sourceRecordStorageClient.getById(instanceId);
     assertEquals(getDeletedSourceRecordResponse.getStatusCode(), HttpStatus.HTTP_NOT_FOUND.toInt());

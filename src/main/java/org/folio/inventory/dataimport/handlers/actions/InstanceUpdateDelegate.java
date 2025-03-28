@@ -51,7 +51,7 @@ public class InstanceUpdateDelegate {
 
       return InstanceUtil.findInstanceById(instanceId, instanceCollection)
         .onSuccess(existingInstance -> fillVersion(existingInstance, eventPayload))
-        .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
+        .compose(existingInstance -> updateInstance(existingInstance, mappedInstance, marcRecord))
         .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection));
     } catch (Exception e) {
       LOGGER.error("Error updating inventory instance", e);
@@ -59,7 +59,7 @@ public class InstanceUpdateDelegate {
     }
   }
 
-  public Instance handleBlocking(Map<String, String> eventPayload, Record marcRecord, Context context) {
+  public Instance handleBlocking(Map<String, String> eventPayload, Record marcRecord, Context context) throws Exception {
     logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
     try {
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
@@ -91,9 +91,14 @@ public class InstanceUpdateDelegate {
       : JsonObject.mapFrom(parsedRecord.getContent());
   }
 
-  private Future<Instance> updateInstance(Instance existingInstance, org.folio.Instance mappedInstance) {
+  private Future<Instance> updateInstance(Instance existingInstance, org.folio.Instance mappedInstance, Record marcRecord) {
     try {
       mappedInstance.setId(existingInstance.getId());
+      if (marcRecord.getAdditionalInfo().getSuppressDiscovery()) {
+        mappedInstance.withStaffSuppress(true);
+        mappedInstance.withDiscoverySuppress(true);
+      }
+
       JsonObject existing = JsonObject.mapFrom(existingInstance);
       JsonObject mapped = JsonObject.mapFrom(mappedInstance);
       JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, mapped);

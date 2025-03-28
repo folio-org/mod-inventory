@@ -20,6 +20,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.folio.rest.jaxrs.model.AdditionalInfo;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Before;
@@ -130,6 +131,8 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
     Assert.assertNotNull(updatedInstance.getNotes());
     Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
+    Assert.assertEquals(false, updatedInstance.getDiscoverySuppress());
+    Assert.assertEquals(false, updatedInstance.getStaffSuppress());
 
     ArgumentCaptor<Context> argument = ArgumentCaptor.forClass(Context.class);
     verify(instanceUpdateDelegate).handle(any(), any(), argument.capture());
@@ -186,6 +189,44 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     Assert.assertEquals("SAIS review of international affairs",
       updatedInstance.getSucceedingTitles().get(0).toSucceedingTitleJson().getString(TITLE_KEY));
     verify(precedingSucceedingTitlesHelper).updatePrecedingSucceedingTitles(any(Instance.class), any(Context.class));
+  }
+
+  @Test
+  public void shouldSetSuppressedIfRecordStaffSuppressed() {
+    HashMap<String, String> eventPayload = new HashMap<>();
+    JsonObject staffSuppressedRecord = JsonObject.mapFrom(record.mapTo(Record.class)
+      .withAdditionalInfo(new AdditionalInfo().withSuppressDiscovery(true)));
+    eventPayload.put("RECORD_TYPE", "MARC_BIB");
+    eventPayload.put("MARC_BIB", staffSuppressedRecord.encode());
+    eventPayload.put("MAPPING_RULES", mappingRules.encode());
+    eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+    eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
+
+    Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
+    Instance updatedInstance = future.result();
+
+    Assert.assertNotNull(updatedInstance);
+    Assert.assertEquals(INSTANCE_ID, updatedInstance.getId());
+    Assert.assertEquals(INSTANCE_VERSION, updatedInstance.getVersion());
+    Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
+    Assert.assertNotNull(
+      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().orElse(null));
+    Assert.assertNotNull(
+      updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst()
+        .orElse(null));
+    Assert.assertNotNull(updatedInstance.getSubjects());
+    Assert.assertEquals(1, updatedInstance.getSubjects().size());
+    assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
+    Assert.assertNotNull(updatedInstance.getNotes());
+    Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
+    Assert.assertEquals(true, updatedInstance.getDiscoverySuppress());
+    Assert.assertEquals(true, updatedInstance.getStaffSuppress());
+
+    ArgumentCaptor<Context> argument = ArgumentCaptor.forClass(Context.class);
+    verify(instanceUpdateDelegate).handle(any(), any(), argument.capture());
+    Assert.assertEquals("token", argument.getValue().getToken());
+    Assert.assertEquals("dummy", argument.getValue().getTenantId());
+    Assert.assertEquals("http://localhost", argument.getValue().getOkapiLocation());
   }
 
   @Test

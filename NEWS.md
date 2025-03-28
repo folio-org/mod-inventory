@@ -1,7 +1,17 @@
-## 21.1.0-SNAPSHOT 2024-xx-xx
-* Provide consistent handling with concurrency two or more Marc Bib Update events for the same bib record [MODINV-1100](https://folio-org.atlassian.net/browse/MODINV-1100)
-* Enable system user for data-import processes [MODINV-1115](https://folio-org.atlassian.net/browse/MODINV-1115)
-* Missing x-okapi-user-id header in communications with inventory-storage [MODINV-1134](https://folio-org.atlassian.net/browse/MODINV-1134)
+## 21.1.0 2025-03-13
+* Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)
+* Replace usage of deprecated instance-storage-batch API  [MODINV-1101](https://folio-org.atlassian.net/browse/MODINV-1101)
+* Update the snapshot status from PROCESSING_FINISHED to COMMITTED in the InstanceIngressEventHandler [MODINV-1161](https://folio-org.atlassian.net/browse/MODINV-1161)
+* Add "deleted" field to Instance schema [MODINVSTOR-1342](https://folio-org.atlassian.net/browse/MODINVSTOR-1342)
+* "Source" value in QuickMarc editor is not equal to the name of a user who imported the record [MODINV-1162](https://folio-org.atlassian.net/browse/MODINV-1162)
+* Adjust /mark-deleted endpoint behavior to set the "deleted" flag [MODINV-1138](https://folio-org.atlassian.net/browse/MODINV-1138)
+* Implement marc bib submatch [MODINV-1114](https://issues.folio.org/browse/MODINV-1114)
+* Actualize condition of deduplication logic for Authority creation [MODINV-1168](https://issues.folio.org/browse/MODINV-1168)
+* Make changes to PUT instances endpoint to update MARC with "deleted" markers [MODINV-1139](https://folio-org.atlassian.net/browse/MODINV-1139)
+* Update MARC-Instance mapping to account for Leader 05 value [MODINV-1140](https://issues.folio.org/browse/MODINV-1140)
+* Allow update of instance without related Marc record [MODINV-1173](https://issues.folio.org/browse/MODINV-1173)
+* Keep staffSuppressed and discoverySuppressed true if delete leader changed using QuickMarc [MODSOURCE-760](https://issues.folio.org/browse/MODSOURCE-760)
+* Update to mod-inventory Java 21 [MODINV-1167](https://issues.folio.org/browse/MODINV-1167)
 
 ## 21.0.0 2024-10-29
 * Existing "035" field is not retained the original position in imported record [MODINV-1049](https://folio-org.atlassian.net/browse/MODINV-1049)
