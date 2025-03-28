@@ -147,10 +147,6 @@ public class Items extends AbstractInventoryResource {
       return;
     }
 
-    fetchItems(routingContext, search, context, pagingParameters);
-  }
-
-  private void fetchItems(RoutingContext routingContext, String search, WebContext context, PagingParameters pagingParameters) {
     if(search == null) {
       storage.getItemCollection(context).findAll(
         pagingParameters,
@@ -177,7 +173,18 @@ public class Items extends AbstractInventoryResource {
 
     PagingParameters pagingParameters = PagingParameters.from(cqlQueryRequestDto);
 
-    fetchItems(routingContext, search, context, pagingParameters);
+    if(search == null) {
+      storage.getItemCollection(context).findAll(
+              pagingParameters,
+              success -> respondWithManyItems(routingContext, context, success.getResult()),
+              FailureResponseConsumer.serverError(routingContext.response()));
+    }
+    else {
+      storage.getItemCollection(context).retrieveByCqlBody(cqlQueryRequestDto,
+              success ->
+                      respondWithManyItems(routingContext, context, success.getResult()),
+              FailureResponseConsumer.serverError(routingContext.response()));
+    }
   }
 
   private void deleteAll(RoutingContext routingContext) {
