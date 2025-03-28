@@ -29,7 +29,7 @@
         },
         {
           "methods": ["POST"],
-          "pathPattern": "/inventory/items/fetch",
+          "pathPattern": "/inventory/items/retrieve",
           "permissionsRequired": ["inventory.items.retrieve.collection.post"],
           "modulePermissions": [
             "inventory-storage.items.retrieve.collection.post",
