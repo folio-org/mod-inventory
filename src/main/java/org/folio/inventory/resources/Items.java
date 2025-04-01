@@ -36,6 +36,7 @@ import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.domain.items.CQLQueryRequestDto;
 import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
@@ -97,6 +98,7 @@ public class Items extends AbstractInventoryResource {
     router.put(RELATIVE_ITEMS_PATH + "*").handler(BodyHandler.create());
 
     router.get(RELATIVE_ITEMS_PATH).handler(this::getAll);
+    router.post(RELATIVE_ITEMS_PATH + "/retrieve").handler(this::retrieveAllByCQLBody);
     router.post(RELATIVE_ITEMS_PATH).handler(this::create);
     router.delete(RELATIVE_ITEMS_PATH).handler(this::deleteAll);
 
@@ -160,6 +162,28 @@ public class Items extends AbstractInventoryResource {
       } catch (UnsupportedEncodingException e) {
         ServerErrorResponse.internalError(routingContext.response(), e.toString());
       }
+    }
+  }
+
+  private void retrieveAllByCQLBody(RoutingContext routingContext) {
+    WebContext context = new WebContext(routingContext);
+
+    CQLQueryRequestDto cqlQueryRequestDto = routingContext.body().asPojo(CQLQueryRequestDto.class);
+    String search = cqlQueryRequestDto.getQuery();
+
+    PagingParameters pagingParameters = PagingParameters.from(cqlQueryRequestDto);
+
+    if(search == null) {
+      storage.getItemCollection(context).findAll(
+              pagingParameters,
+              success -> respondWithManyItems(routingContext, context, success.getResult()),
+              FailureResponseConsumer.serverError(routingContext.response()));
+    }
+    else {
+      storage.getItemCollection(context).retrieveByCqlBody(cqlQueryRequestDto,
+              success ->
+                      respondWithManyItems(routingContext, context, success.getResult()),
+              FailureResponseConsumer.serverError(routingContext.response()));
     }
   }
 
