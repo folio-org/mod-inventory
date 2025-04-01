@@ -12,6 +12,7 @@ types:
   errors: !include raml-util/schemas/errors.schema
   item: !include item.json
   items: !include items.json
+  cqlQueryRequestDto: !include CQLQueryRequestDto.json
   holdings: !include holdings-record.json
   instance: !include instance.json
   instances: !include instances.json
@@ -57,6 +58,17 @@ resourceTypes:
           body:
             text/plain:
               example: "Internal server error, contact administrator"
+    /retrieve:
+      post:
+        is: [ validate ]
+        body:
+          application/json:
+            type: cqlQueryRequestDto
+            example:
+              strict: false
+              value: !include examples/cqlQueryRequestDto.json
+        description: |
+          Fetch inventory items collection by POST request
     /{itemId}:
       type:
         collection-item:
