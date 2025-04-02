@@ -278,7 +278,7 @@
     <dependency>
       <groupId>net.mguenther.kafka</groupId>
       <artifactId>kafka-junit</artifactId>
-      <version>${kafkaclients.version}</version>
+      <version>3.6.0</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -319,13 +319,13 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <vertx.version>4.5.11</vertx.version>
+    <vertx.version>4.5.13</vertx.version>
     <jsonschema2pojo_output_dir>${project.build.directory}/generated-sources/jsonschema2pojo</jsonschema2pojo_output_dir>
     <httpcomponents.version>4.5.14</httpcomponents.version>
     <lombok.version>1.18.30</lombok.version>
     <postgres.version>42.7.2</postgres.version>
     <liquibase.version>4.9.1</liquibase.version>
-    <kafkaclients.version>3.1.0</kafkaclients.version>
+    <kafkaclients.version>3.9.0</kafkaclients.version>
     <junit.version>4.13.2</junit.version>
     <data-import-processing-core.version>4.4.0</data-import-processing-core.version>
     <folio-module-descriptor-validator.version>1.0.0</folio-module-descriptor-validator.version>
