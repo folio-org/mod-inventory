@@ -53,6 +53,7 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
+  private static final String DELETED_RECORD_PATH = "src/test/resources/handlers/deleted-bib-record.json";
   private static final String INSTANCE_ID = "ddd266ef-07ac-4117-be13-d418b8cd6902";
   private static final String INSTANCE_VERSION = "1";
 
@@ -70,11 +71,18 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private JsonObject mappingRules;
   private JsonObject record;
+  private JsonObject deletedRecord;
   private Instance existingInstance;
+  private Instance deletedInstance;
 
   @Before
   public void setUp() throws IOException {
     existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
+    deletedInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)))
+      .setDeleted(true)
+      .setDiscoverySuppress(true)
+      .setStaffSuppress(true);
+
     instanceUpdateDelegate = Mockito.spy(new InstanceUpdateDelegate(storage));
     precedingSucceedingTitlesHelper = Mockito.spy(new PrecedingSucceedingTitlesHelper(ctxt -> okapiHttpClient));
     updateInstanceEventHandler =
@@ -103,6 +111,7 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
 
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     record = new JsonObject(TestUtil.readFileFromPath(RECORD_PATH));
+    deletedRecord = new JsonObject(TestUtil.readFileFromPath(DELETED_RECORD_PATH));
   }
 
   @Test
@@ -192,10 +201,18 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
   }
 
   @Test
-  public void shouldSetSuppressedIfRecordStaffSuppressed() {
+  public void shouldKeepInstanceSuppressedIfRecordLeaderUpdatedToNotDeleted() {
     HashMap<String, String> eventPayload = new HashMap<>();
     JsonObject staffSuppressedRecord = JsonObject.mapFrom(record.mapTo(Record.class)
-      .withAdditionalInfo(new AdditionalInfo().withSuppressDiscovery(true)));
+      .withAdditionalInfo(new AdditionalInfo().withSuppressDiscovery(true))
+      .withDeleted(false));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(deletedInstance));
+      return null;
+    }).when(instanceRecordCollection).findById(anyString(), any(), any());
+
     eventPayload.put("RECORD_TYPE", "MARC_BIB");
     eventPayload.put("MARC_BIB", staffSuppressedRecord.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
@@ -221,6 +238,88 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
     Assert.assertEquals(true, updatedInstance.getDiscoverySuppress());
     Assert.assertEquals(true, updatedInstance.getStaffSuppress());
+
+    ArgumentCaptor<Context> argument = ArgumentCaptor.forClass(Context.class);
+    verify(instanceUpdateDelegate).handle(any(), any(), argument.capture());
+    Assert.assertEquals("token", argument.getValue().getToken());
+    Assert.assertEquals("dummy", argument.getValue().getTenantId());
+    Assert.assertEquals("http://localhost", argument.getValue().getOkapiLocation());
+  }
+
+  @Test
+  public void shouldSetInstanceSuppressedIfRecordLeaderUpdatedToDeleted() {
+    HashMap<String, String> eventPayload = new HashMap<>();
+
+    eventPayload.put("RECORD_TYPE", "MARC_BIB");
+    eventPayload.put("MARC_BIB", deletedRecord.encode());
+    eventPayload.put("MAPPING_RULES", mappingRules.encode());
+    eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+    eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
+
+    Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
+    Instance updatedInstance = future.result();
+
+    Assert.assertNotNull(updatedInstance);
+    Assert.assertEquals(INSTANCE_ID, updatedInstance.getId());
+    Assert.assertEquals(INSTANCE_VERSION, updatedInstance.getVersion());
+    Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
+    Assert.assertNotNull(
+      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().orElse(null));
+    Assert.assertNotNull(
+      updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst()
+        .orElse(null));
+    Assert.assertNotNull(updatedInstance.getSubjects());
+    Assert.assertEquals(1, updatedInstance.getSubjects().size());
+    assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
+    Assert.assertNotNull(updatedInstance.getNotes());
+    Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
+    Assert.assertEquals(true, updatedInstance.getDiscoverySuppress());
+    Assert.assertEquals(true, updatedInstance.getStaffSuppress());
+
+    ArgumentCaptor<Context> argument = ArgumentCaptor.forClass(Context.class);
+    verify(instanceUpdateDelegate).handle(any(), any(), argument.capture());
+    Assert.assertEquals("token", argument.getValue().getToken());
+    Assert.assertEquals("dummy", argument.getValue().getTenantId());
+    Assert.assertEquals("http://localhost", argument.getValue().getOkapiLocation());
+  }
+
+  @Test
+  public void shouldKeepSuppressedFlagsIfRecordWithDeletedLeaderUpdated() {
+    HashMap<String, String> eventPayload = new HashMap<>();
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(deletedInstance.copyInstance()
+        .setStaffSuppress(false)
+        .setDiscoverySuppress(true)));
+      return null;
+    }).when(instanceRecordCollection).findById(anyString(), any(), any());
+
+    eventPayload.put("RECORD_TYPE", "MARC_BIB");
+    eventPayload.put("MARC_BIB", deletedRecord.encode());
+    eventPayload.put("MAPPING_RULES", mappingRules.encode());
+    eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+    eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
+
+    Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
+    Instance updatedInstance = future.result();
+
+    Assert.assertNotNull(updatedInstance);
+    Assert.assertEquals(INSTANCE_ID, updatedInstance.getId());
+    Assert.assertEquals(INSTANCE_VERSION, updatedInstance.getVersion());
+    Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
+    Assert.assertNotNull(
+      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().orElse(null));
+    Assert.assertNotNull(
+      updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst()
+        .orElse(null));
+    Assert.assertNotNull(updatedInstance.getSubjects());
+    Assert.assertEquals(1, updatedInstance.getSubjects().size());
+    assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
+    Assert.assertNotNull(updatedInstance.getNotes());
+    Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
+    Assert.assertEquals(true, updatedInstance.getDiscoverySuppress());
+    Assert.assertEquals(false, updatedInstance.getStaffSuppress());
 
     ArgumentCaptor<Context> argument = ArgumentCaptor.forClass(Context.class);
     verify(instanceUpdateDelegate).handle(any(), any(), argument.capture());
