@@ -51,7 +51,7 @@ public class InstanceUpdateDelegate {
 
       return InstanceUtil.findInstanceById(instanceId, instanceCollection)
         .onSuccess(existingInstance -> fillVersion(existingInstance, eventPayload))
-        .compose(existingInstance -> updateInstance(existingInstance, mappedInstance, marcRecord))
+        .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
         .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection));
     } catch (Exception e) {
       LOGGER.error("Error updating inventory instance", e);
@@ -91,12 +91,15 @@ public class InstanceUpdateDelegate {
       : JsonObject.mapFrom(parsedRecord.getContent());
   }
 
-  private Future<Instance> updateInstance(Instance existingInstance, org.folio.Instance mappedInstance, Record marcRecord) {
+  private Future<Instance> updateInstance(Instance existingInstance, org.folio.Instance mappedInstance) {
     try {
       mappedInstance.setId(existingInstance.getId());
-      if (marcRecord.getAdditionalInfo().getSuppressDiscovery()) {
-        mappedInstance.withStaffSuppress(true);
+      if (!existingInstance.getDeleted() && mappedInstance.getDeleted()) {
         mappedInstance.withDiscoverySuppress(true);
+        mappedInstance.withStaffSuppress(true);
+      } else {
+        mappedInstance.withStaffSuppress(existingInstance.getStaffSuppress());
+        mappedInstance.withDiscoverySuppress(existingInstance.getDiscoverySuppress());
       }
 
       JsonObject existing = JsonObject.mapFrom(existingInstance);
