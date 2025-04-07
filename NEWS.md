@@ -1,3 +1,6 @@
+## 21.0.13 2025-04-07
+* Introduce new post retrieve api to fetch inventory item [MODINV-1177](https://folio-org.atlassian.net/browse/MODINV-1177)
+
 ## 21.0.12 2025-03-26
 * Instance records with source MARC not linked to SRS record cannot be overlayed [MODINV-1178](https://folio-org.atlassian.net/browse/MODINV-1178)
 
