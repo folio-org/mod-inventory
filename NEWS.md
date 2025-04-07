@@ -1,3 +1,8 @@
+## 21.1.1 2025-04-07
+* Suppressing from discovery MARC instances makes records also staff suppressed [MODINV-1180](https://folio-org.atlassian.net/browse/MODINV-1180)
+* Missing module permissions on mark-missing endpoints [MODINV-1174](https://folio-org.atlassian.net/browse/MODINV-1174)
+* Introduce new post retrieve api to fetch inventory item [MODINV-1188](https://folio-org.atlassian.net/browse/MODINV-1188)
+
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)
 * Replace usage of deprecated instance-storage-batch API  [MODINV-1101](https://folio-org.atlassian.net/browse/MODINV-1101)
