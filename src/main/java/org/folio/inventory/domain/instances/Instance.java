@@ -793,6 +793,7 @@ public class Instance {
             .setPreviouslyHeld(previouslyHeld)
             .setStaffSuppress(staffSuppress)
             .setDiscoverySuppress(discoverySuppress)
+            .setDeleted(deleted)
             .setStatisticalCodeIds(statisticalCodeIds)
             .setSourceRecordFormat(sourceRecordFormat)
             .setStatusId(statusId)

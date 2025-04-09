@@ -20,6 +20,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.rest.jaxrs.model.AdditionalInfo;
 import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.ParsedRecord;
@@ -210,6 +211,53 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
     Assert.assertNotNull(updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst().get());
     Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().get(0));
     Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf", updatedInstance.getNatureOfContentTermIds().get(0));
+    Assert.assertNotNull(updatedInstance.getSubjects());
+    Assert.assertEquals(1, updatedInstance.getSubjects().size());
+    assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
+    Assert.assertNotNull(updatedInstance.getNotes());
+    Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
+  }
+
+  @Test
+  public void shouldUpdateInstanceWithDiscoverySuppressedAndNotSetStaffSuppressed() throws InterruptedException, ExecutionException, TimeoutException, IOException {
+    // given
+    HashMap<String, String> payloadContext = new HashMap<>();
+    Record discoverySuppressedRecord = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class)
+      .withAdditionalInfo(new AdditionalInfo().withSuppressDiscovery(true));
+
+    Instance deletedInstance = existingInstance.copyInstance().setDiscoverySuppress(true);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(deletedInstance));
+      return null;
+    }).when(mockedInstanceCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
+
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(discoverySuppressedRecord));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withOkapiUrl(OKAPI_URL)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = marcBibModifiedEventHandler.handle(dataImportEventPayload);
+
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
+    Instance updatedInstance = Instance.fromJson(instanceJson);
+
+    // then
+    Assert.assertEquals(existingInstance.getId(), instanceJson.getString("id"));
+    Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
+    Assert.assertNotNull(updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
+    Assert.assertNotNull(updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst().get());
+    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().get(0));
+    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf", updatedInstance.getNatureOfContentTermIds().get(0));
+    Assert.assertTrue(updatedInstance.getDiscoverySuppress());
+    Assert.assertFalse(updatedInstance.getStaffSuppress());
     Assert.assertNotNull(updatedInstance.getSubjects());
     Assert.assertEquals(1, updatedInstance.getSubjects().size());
     assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));

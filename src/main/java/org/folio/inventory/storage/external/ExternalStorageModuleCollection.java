@@ -20,6 +20,7 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.domain.items.CQLQueryRequestDto;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.util.PercentCodec;
@@ -175,6 +176,21 @@ abstract class ExternalStorageModuleCollection<T> {
           pagingParameters.offset);
 
     find(location, resultCallback, failureCallback);
+  }
+
+  public void retrieveByCqlBody(CQLQueryRequestDto cqlQueryRequestDto,
+                                Consumer<Success<MultipleRecords<T>>> resultCallback,
+                                Consumer<Failure> failureCallback) {
+    final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
+
+    final HttpRequest<Buffer> request = withStandardHeaders(webClient.postAbs(storageAddress + "/retrieve"));
+
+    request.sendJsonObject(JsonObject.mapFrom(cqlQueryRequestDto), futureResponse::complete);
+
+    futureResponse
+            .thenCompose(this::mapAsyncResultToCompletionStage)
+            .thenAccept(response ->
+                    interpretMultipleRecordResponse(resultCallback, failureCallback, response));
   }
 
   public void update(T item,

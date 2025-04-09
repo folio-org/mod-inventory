@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>mod-inventory</artifactId>
   <groupId>org.folio</groupId>
-  <version>21.1.0-SNAPSHOT</version>
+  <version>21.2.0-SNAPSHOT</version>
   <licenses>
     <license>
       <name>Apache License 2.0</name>
@@ -123,7 +123,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>folio-isbn-util</artifactId>
-      <version>1.8.0-SNAPSHOT</version>
+      <version>1.8.0</version>
     </dependency>
 
     <dependency>
@@ -133,7 +133,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>folio-kafka-wrapper</artifactId>
-      <version>3.3.0-SNAPSHOT</version>
+      <version>3.3.1</version>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -177,7 +177,7 @@
     <dependency>
       <groupId>io.rest-assured</groupId>
       <artifactId>rest-assured</artifactId>
-      <version>4.3.1</version>
+      <version>4.3.3</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -225,7 +225,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>mod-source-record-storage-client</artifactId>
-      <version>5.10.0-SNAPSHOT</version>
+      <version>5.10.0</version>
       <exclusions>
         <!-- This is provided by JDK >= 9 causing a compile error (Eclipse doesn't suppress this compile error):
              "The package org.xml.sax is accessible from more than one module: <unnamed>, java.xml"
@@ -241,7 +241,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>mod-source-record-manager-client</artifactId>
-      <version>3.10.0-SNAPSHOT</version>
+      <version>3.10.0</version>
       <exclusions>
         <!-- This is provided by JDK >= 9 causing a compile error (Eclipse doesn't suppress this compile error):
              "The package org.xml.sax is accessible from more than one module: <unnamed>, java.xml"
@@ -327,7 +327,7 @@
     <liquibase.version>4.9.1</liquibase.version>
     <kafkaclients.version>3.1.0</kafkaclients.version>
     <junit.version>4.13.2</junit.version>
-    <data-import-processing-core.version>4.4.0-SNAPSHOT</data-import-processing-core.version>
+    <data-import-processing-core.version>4.4.0</data-import-processing-core.version>
     <folio-module-descriptor-validator.version>1.0.0</folio-module-descriptor-validator.version>
   </properties>
 
