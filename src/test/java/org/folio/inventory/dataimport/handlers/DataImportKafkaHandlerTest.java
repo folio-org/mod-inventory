@@ -7,7 +7,6 @@ import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -16,24 +15,21 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
-import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
+import org.folio.inventory.KafkaTest;
 import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.dataimport.consumers.DataImportKafkaHandler;
 import org.folio.inventory.storage.Storage;
-import org.folio.kafka.KafkaConfig;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -48,8 +44,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
@@ -62,14 +56,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
-public class DataImportKafkaHandlerTest {
-
+public class DataImportKafkaHandlerTest extends KafkaTest {
   private static final String TENANT_ID = "diku";
   private static final String JOB_PROFILE_URL = "/data-import-profiles/jobProfileSnapshots";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
-
-  public static EmbeddedKafkaCluster cluster;
 
   @Mock
   private Storage mockedStorage;
@@ -83,28 +74,26 @@ public class DataImportKafkaHandlerTest {
       .dynamicPort()
       .notifier(new Slf4jNotifier(true)));
 
-  private static Vertx vertx;
-  private static KafkaConfig kafkaConfig;
   private DataImportKafkaHandler dataImportKafkaHandler;
 
-  private JobProfile jobProfile = new JobProfile()
+  private final JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Create instance")
     .withDataType(org.folio.JobProfile.DataType.MARC);
 
-  private ActionProfile actionProfile = new ActionProfile()
+  private final ActionProfile actionProfile = new ActionProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Create instance")
     .withAction(CREATE)
     .withFolioRecord(ActionProfile.FolioRecord.INSTANCE);
 
-  private MappingProfile mappingProfile = new MappingProfile()
+  private final MappingProfile mappingProfile = new MappingProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Create instance")
     .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
     .withExistingRecordType(INSTANCE);
 
-  private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+  private final ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
     .withProfileId(jobProfile.getId())
     .withContentType(JOB_PROFILE)
@@ -121,33 +110,6 @@ public class DataImportKafkaHandlerTest {
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
 
-  @BeforeClass
-  public static void setUpClass() {
-    vertx = Vertx.vertx();
-    cluster = provisionWith(defaultClusterConfig());
-    cluster.start();
-    String[] hostAndPort = cluster.getBrokerList().split(":");
-
-    kafkaConfig = KafkaConfig.builder()
-      .kafkaHost(hostAndPort[0])
-      .kafkaPort(hostAndPort[1])
-      .maxRequestSize(1048576)
-      .build();
-  }
-
-  @AfterClass
-  public static void tearDownClass(TestContext context) {
-    Async async = context.async();
-    vertx.close(ar -> {
-      if (ar.succeeded()) {
-        cluster.stop();
-        async.complete();
-      } else {
-        context.fail(ar.cause());
-      }
-    });
-  }
-
   @Before
   public void setUp() {
     MockitoAnnotations.openMocks(this);
@@ -155,15 +117,15 @@ public class DataImportKafkaHandlerTest {
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
-    HttpClient client = vertx.createHttpClient();
-    dataImportKafkaHandler = new DataImportKafkaHandler(vertx, mockedStorage, client,
-      new ProfileSnapshotCache(vertx, client, 3600),
+    HttpClient client = vertxAssistant.getVertx().createHttpClient();
+    dataImportKafkaHandler = new DataImportKafkaHandler(vertxAssistant.getVertx(), mockedStorage, client,
+      new ProfileSnapshotCache(vertxAssistant.getVertx(), client, 3600),
       kafkaConfig,
-      MappingMetadataCache.getInstance(vertx, client),
-      new ConsortiumDataCache(vertx, client));
+      MappingMetadataCache.getInstance(vertxAssistant.getVertx(), client),
+      new ConsortiumDataCache(vertxAssistant.getVertx(), client));
 
     EventManager.clearEventHandlers();
-    EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
+    EventManager.registerKafkaEventPublisher(kafkaConfig, vertxAssistant.getVertx(), 1);
   }
 
   @Test
@@ -228,6 +190,5 @@ public class DataImportKafkaHandlerTest {
       async.complete();
     });
   }
-
 }
 
