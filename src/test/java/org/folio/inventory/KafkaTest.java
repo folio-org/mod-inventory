@@ -19,12 +19,14 @@ import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_POR
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
 
 public abstract class KafkaTest {
-  protected static VertxAssistant vertxAssistant = new VertxAssistant();
+  protected static VertxAssistant vertxAssistant;
   protected static KafkaConfig kafkaConfig;
   protected static DeploymentOptions deploymentOptions;
 
   @BeforeClass
   public static void beforeAll() {
+    vertxAssistant = new VertxAssistant();
+
     startKafka();
     vertxAssistant.start();
 
