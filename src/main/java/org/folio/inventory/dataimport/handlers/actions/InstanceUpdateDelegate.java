@@ -20,6 +20,8 @@ import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang3.BooleanUtils.isNotTrue;
+import static org.apache.commons.lang3.BooleanUtils.isTrue;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
 
@@ -94,7 +96,7 @@ public class InstanceUpdateDelegate {
   private Future<Instance> updateInstance(Instance existingInstance, org.folio.Instance mappedInstance) {
     try {
       mappedInstance.setId(existingInstance.getId());
-      if (!existingInstance.getDeleted() && mappedInstance.getDeleted()) {
+      if (isNotTrue(existingInstance.getDeleted()) && isTrue(mappedInstance.getDeleted())) {
         mappedInstance.withDiscoverySuppress(true);
         mappedInstance.withStaffSuppress(true);
       } else {
