@@ -1,9 +1,10 @@
 package org.folio.inventory.eventhandlers;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -51,6 +52,7 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
   private static final String PARSED_CONTENT_WITH_PRECEDING_SUCCEEDING_TITLES =
     "{\"leader\": \"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"ybp7406411\"},{\"780\": {\"ind1\":\"0\",\"ind2\":\"0\", \"subfields\":[{\"t\":\"Houston oil directory\"}]}},{ \"785\": { \"ind1\": \"0\", \"ind2\": \"0\", \"subfields\": [ { \"t\": \"SAIS review of international affairs\" }, {\"x\": \"1945-4724\" }]}}]}";
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
+  private static final String MAPPING_RULES_WITHOUT_DELETED_FIELD_MAPPING = "{\"245\": [{\"target\": \"title\", \"description\": \"Resource Title\", \"applyRulesOnConcatenatedData\": true, \"subfield\": [\"a\", \"n\", \"p\", \"b\", \"c\", \"f\", \"g\", \"h\", \"k\", \"s\"]}, {\"target\": \"indexTitle\", \"description\": \"Index title\", \"applyRulesOnConcatenatedData\": true, \"subfield\": [\"a\", \"n\", \"p\", \"b\"], \"rules\": [{\"conditions\": [{\"type\": \"remove_prefix_by_indicator, capitalize\"}]}]}]}";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
   private static final String DELETED_RECORD_PATH = "src/test/resources/handlers/deleted-bib-record.json";
@@ -326,6 +328,32 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     Assert.assertEquals("token", argument.getValue().getToken());
     Assert.assertEquals("dummy", argument.getValue().getTenantId());
     Assert.assertEquals("http://localhost", argument.getValue().getOkapiLocation());
+  }
+
+  @Test
+  public void shouldUpdateInstanceIfMappingRulesHasNoRuleForDeletedField() {
+    JsonObject mappingRules = new JsonObject(MAPPING_RULES_WITHOUT_DELETED_FIELD_MAPPING);
+
+    HashMap<String, String> eventPayload = new HashMap<>();
+    eventPayload.put("RECORD_TYPE", "MARC_BIB");
+    eventPayload.put("MARC_BIB", record.encode());
+    eventPayload.put("MAPPING_RULES", mappingRules.encode());
+    eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
+    eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
+
+    Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
+    Instance updatedInstance = future.result();
+
+    assertNotNull(updatedInstance);
+    assertEquals(INSTANCE_ID, updatedInstance.getId());
+    assertEquals(INSTANCE_VERSION, updatedInstance.getVersion());
+    assertEquals("Victorian environmental nightmares and something else/ Laurence W. Mazzeno, Ronald D. Morrison, editors.", updatedInstance.getTitle());
+
+    ArgumentCaptor<Context> argument = ArgumentCaptor.forClass(Context.class);
+    verify(instanceUpdateDelegate).handle(any(), any(), argument.capture());
+    assertEquals("token", argument.getValue().getToken());
+    assertEquals("dummy", argument.getValue().getTenantId());
+    assertEquals("http://localhost", argument.getValue().getOkapiLocation());
   }
 
   @Test
