@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import static org.apache.commons.lang3.ObjectUtils.anyNotNull;
+import static org.folio.inventory.domain.instances.Instance.DATES_KEY;
+import static org.folio.inventory.domain.instances.Instance.JSON_FOR_STORAGE_KEY;
 import static org.folio.inventory.support.JsonHelper.includeIfPresent;
 
 @Getter
@@ -30,13 +32,26 @@ public class Dates {
     return json;
   }
 
-  public static Dates datesFromJson(JsonObject datesJson) {
-    if (datesJson == null) {
+  public static JsonObject retrieveDatesFromJson(JsonObject targetInstance) {
+    JsonObject dates;
+    dates = targetInstance.getJsonObject(DATES_KEY);
+    if (dates == null) {
+      JsonObject jsonForStorage = targetInstance.getJsonObject(JSON_FOR_STORAGE_KEY);
+      if (jsonForStorage != null) {
+        dates = jsonForStorage.getJsonObject(DATES_KEY);
+      }
+    }
+    return dates;
+  }
+
+  public static Dates convertToDates(JsonObject datesAsJson) {
+    if (datesAsJson == null) {
       return null;
     }
-    var dateTypeId = datesJson.getString(DATE_TYPE_ID_KEY);
-    var date1 = datesJson.getString(DATE1_KEY);
-    var date2 = datesJson.getString(DATE2_KEY);
+
+    var dateTypeId = datesAsJson.getString(DATE_TYPE_ID_KEY);
+    var date1 = datesAsJson.getString(DATE1_KEY);
+    var date2 = datesAsJson.getString(DATE2_KEY);
     return anyNotNull(dateTypeId, date1, date2) ? new Dates(dateTypeId, date1, date2) : null;
   }
 }
