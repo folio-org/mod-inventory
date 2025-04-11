@@ -1,12 +1,11 @@
 package org.folio.inventory.quickmarc.consumers;
 
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
+import org.folio.inventory.KafkaTest;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+
+import static org.folio.inventory.KafkaUtility.checkKafkaEventSent;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -16,8 +15,6 @@ import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_ERROR;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_AUTHORITY_UPDATED;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_HOLDINGS_UPDATED;
 import static org.folio.inventory.dataimport.handlers.QMEventTypes.QM_INVENTORY_INSTANCE_UPDATED;
-import static org.folio.kafka.KafkaTopicNameHelper.formatTopicName;
-import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,11 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -38,8 +33,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
-import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
-import net.mguenther.kafka.junit.ObserveKeyValues;
+
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.junit.runner.RunWith;
@@ -62,7 +56,6 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
-import org.folio.kafka.KafkaConfig;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.Event;
@@ -70,7 +63,7 @@ import org.folio.rest.jaxrs.model.ParsedRecordDto;
 import org.folio.rest.jaxrs.model.Record;
 
 @RunWith(VertxUnitRunner.class)
-public class QuickMarcKafkaHandlerTest {
+public class QuickMarcKafkaHandlerTest extends KafkaTest {
 
   private static final String TENANT_ID = "test";
   private static final String OKAPI_URL = "http://localhost";
@@ -83,11 +76,6 @@ public class QuickMarcKafkaHandlerTest {
   private static final String AUTHORITY_MAPPING_RULES_PATH = "src/test/resources/handlers/authority-rules.json";
   private static final String AUTHORITY_RECORD_PATH = "src/test/resources/handlers/authority-record.json";
   private static final String AUTHORITY_PATH = "src/test/resources/handlers/authority.json";
-
-  private static EmbeddedKafkaCluster cluster;
-  private static KafkaConfig kafkaConfig;
-
-  private static final Vertx vertx = Vertx.vertx();
 
   @Mock
   private Storage mockedStorage;
@@ -120,28 +108,6 @@ public class QuickMarcKafkaHandlerTest {
 
   private QuickMarcKafkaHandler handler;
   private AutoCloseable mocks;
-
-  @BeforeClass
-  public static void beforeClass() {
-    cluster = provisionWith(defaultClusterConfig());
-    cluster.start();
-    String[] hostAndPort = cluster.getBrokerList().split(":");
-    kafkaConfig = KafkaConfig.builder()
-      .envId("env")
-      .kafkaHost(hostAndPort[0])
-      .kafkaPort(hostAndPort[1])
-      .maxRequestSize(1048576)
-      .build();
-  }
-
-  @AfterClass
-  public static void tearDownClass(TestContext context) {
-    Async async = context.async();
-    vertx.close(ar -> {
-      cluster.stop();
-      async.complete();
-    });
-  }
 
   @Before
   public void setUp() throws IOException {
@@ -212,7 +178,7 @@ public class QuickMarcKafkaHandlerTest {
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper =
       new PrecedingSucceedingTitlesHelper(context -> okapiHttpClient);
     handler =
-      new QuickMarcKafkaHandler(vertx, mockedStorage, 100, kafkaConfig, precedingSucceedingTitlesHelper, holdingsCollectionService);
+      new QuickMarcKafkaHandler(vertxAssistant.getVertx(), mockedStorage, 100, kafkaConfig, precedingSucceedingTitlesHelper, holdingsCollectionService);
 
     when(kafkaRecord.headers()).thenReturn(List.of(
       KafkaHeader.header(XOkapiHeaders.TENANT.toLowerCase(), TENANT_ID),
@@ -225,7 +191,7 @@ public class QuickMarcKafkaHandlerTest {
   }
 
   @Test
-  public void shouldSendInstanceUpdatedEvent(TestContext context) throws InterruptedException {
+  public void shouldSendInstanceUpdatedEvent(TestContext context) {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
@@ -246,20 +212,19 @@ public class QuickMarcKafkaHandlerTest {
     Future<String> future = handler.handle(kafkaRecord);
 
     // then
-    String observeTopic =
-      formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, QM_INVENTORY_INSTANCE_UPDATED.name());
-    cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
+      var events = checkKafkaEventSent(TENANT_ID, QM_INVENTORY_INSTANCE_UPDATED.name());
+      context.assertNotNull(events);
+      context.assertEquals(1, events.size());
+
       context.assertEquals(expectedKafkaRecordKey, ar.result());
       async.complete();
     });
   }
 
   @Test
-  public void shouldSendHoldingsUpdatedEvent(TestContext context) throws InterruptedException {
+  public void shouldSendHoldingsUpdatedEvent(TestContext context) {
 
     List<HoldingsType> holdings = new ArrayList<>();
     holdings.add(new HoldingsType().withName("testingnote$a"));
@@ -285,20 +250,19 @@ public class QuickMarcKafkaHandlerTest {
     Future<String> future = handler.handle(kafkaRecord);
 
     // then
-    String observeTopic =
-      formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, QM_INVENTORY_HOLDINGS_UPDATED.name());
-    cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
+      var events = checkKafkaEventSent(TENANT_ID, QM_INVENTORY_HOLDINGS_UPDATED.name());
+      context.assertNotNull(events);
+      context.assertEquals(1, events.size());
+
       context.assertEquals(expectedKafkaRecordKey, ar.result());
       async.complete();
     });
   }
 
   @Test
-  public void shouldSendAuthorityUpdatedEvent(TestContext context) throws InterruptedException {
+  public void shouldSendAuthorityUpdatedEvent(TestContext context) {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
@@ -325,20 +289,19 @@ public class QuickMarcKafkaHandlerTest {
     Future<String> future = handler.handle(kafkaRecord);
 
     // then
-    String observeTopic =
-      formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, QM_INVENTORY_AUTHORITY_UPDATED.name());
-    cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
+      var events = checkKafkaEventSent(TENANT_ID, QM_INVENTORY_AUTHORITY_UPDATED.name());
+      context.assertNotNull(events);
+      context.assertEquals(1, events.size());
+
       context.assertEquals(expectedKafkaRecordKey, ar.result());
       async.complete();
     });
   }
 
   @Test
-  public void shouldSendErrorEventWhenRecordIsNotExistInStorage(TestContext context) throws InterruptedException {
+  public void shouldSendErrorEventWhenRecordIsNotExistInStorage(TestContext context) {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
@@ -365,20 +328,19 @@ public class QuickMarcKafkaHandlerTest {
     Future<String> future = handler.handle(kafkaRecord);
 
     // then
-    String observeTopic =
-      formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, QM_ERROR.name());
-    cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
+      var events = checkKafkaEventSent(TENANT_ID, QM_ERROR.name());
+      context.assertNotNull(events);
+      context.assertEquals(1, events.size());
+
       context.assertEquals(expectedKafkaRecordKey, ar.result());
       async.complete();
     });
   }
 
   @Test
-  public void shouldSendErrorEventWhenFailedToFetchRecordFromStorage(TestContext context) throws InterruptedException {
+  public void shouldSendErrorEventWhenFailedToFetchRecordFromStorage(TestContext context) {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
@@ -405,20 +367,19 @@ public class QuickMarcKafkaHandlerTest {
     Future<String> future = handler.handle(kafkaRecord);
 
     // then
-    String observeTopic =
-      formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, QM_ERROR.name());
-    cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
+      var events = checkKafkaEventSent(TENANT_ID, QM_ERROR.name());
+      context.assertNotNull(events);
+      context.assertEquals(1, events.size());
+
       context.assertEquals(expectedKafkaRecordKey, ar.result());
       async.complete();
     });
   }
 
   @Test
-  public void shouldSendErrorEventWhenPayloadHasNoMarcRecord(TestContext context) throws InterruptedException {
+  public void shouldSendErrorEventWhenPayloadHasNoMarcRecord(TestContext context) {
     // given
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
@@ -435,13 +396,12 @@ public class QuickMarcKafkaHandlerTest {
     Future<String> future = handler.handle(kafkaRecord);
 
     // then
-    String observeTopic =
-      formatTopicName(kafkaConfig.getEnvId(), getDefaultNameSpace(), TENANT_ID, QM_ERROR.name());
-    cluster.observeValues(ObserveKeyValues.on(observeTopic, 1)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
     future.onComplete(ar -> {
       context.assertTrue(ar.succeeded());
+      var events = checkKafkaEventSent(TENANT_ID, QM_ERROR.name());
+      context.assertNotNull(events);
+      context.assertEquals(1, events.size());
+
       context.assertEquals(expectedKafkaRecordKey, ar.result());
       async.complete();
     });
