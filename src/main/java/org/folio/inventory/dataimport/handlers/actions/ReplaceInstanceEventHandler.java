@@ -242,10 +242,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
               LOGGER.info("processInstanceUpdate:: processing MARC Instance with id: {}, instance: {}",
                 instance.getId(), JsonObject.mapFrom(instance).encodePrettily());
               setExternalIds(targetRecord, instance);
-              LOGGER.info("processInstanceUpdate:: MARC Instance after setExternalIds: {}", JsonObject.mapFrom(instance).encodePrettily());
-              AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(targetRecord);
-              LOGGER.info("processInstanceUpdate:: MARC Instance after remove035Field: {}", JsonObject.mapFrom(instance).encodePrettily());
-
 
               setSuppressFromDiscovery(targetRecord, instance.getDiscoverySuppress());
               if (targetRecord.getMatchedId() == null) {
@@ -368,9 +364,10 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
             String updatedIncomingRecord = Json.encode(incomingRecord);
             org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(updatedIncomingRecord, org.folio.rest.jaxrs.model.Record.class);
 
+            LOGGER.info("prepareRecordForMapping:: marc before normalization: {}", JsonObject.mapFrom(targetRecord).encodePrettily());
             AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
-            AdditionalFieldsUtil.move001To035(targetRecord);
             AdditionalFieldsUtil.normalize035(targetRecord);
+            AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(targetRecord);
             LOGGER.info("prepareRecordForMapping:: marc after normalization: {}", JsonObject.mapFrom(targetRecord).encodePrettily());
             dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
           } else {
