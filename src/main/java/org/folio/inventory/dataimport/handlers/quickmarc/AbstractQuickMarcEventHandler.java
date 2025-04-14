@@ -17,9 +17,9 @@ public abstract class AbstractQuickMarcEventHandler<T> {
 
   private static final Logger LOGGER = LogManager.getLogger(AbstractQuickMarcEventHandler.class);
 
+  public static final String RECORD_TYPE_KEY = "RECORD_TYPE";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
-  private static final String RECORD_TYPE_KEY = "RECORD_TYPE";
 
   public Future<T> handle(Map<String, String> eventPayload) {
     Promise<T> promise = Promise.promise();
