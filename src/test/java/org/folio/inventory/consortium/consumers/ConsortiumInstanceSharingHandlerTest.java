@@ -11,7 +11,7 @@ import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
-import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
+import org.folio.inventory.KafkaTest;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
@@ -23,15 +23,12 @@ import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.times;
 import org.folio.inventory.services.EventIdStorageService;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.inventory.storage.Storage;
-import org.folio.kafka.KafkaConfig;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -61,13 +58,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
-public class ConsortiumInstanceSharingHandlerTest {
-
+public class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
-  private static Vertx vertx;
   private static HttpClient httpClient;
-  private static EmbeddedKafkaCluster cluster;
-  private static KafkaConfig kafkaConfig;
 
   @Mock
   private Storage storage;
@@ -85,17 +78,7 @@ public class ConsortiumInstanceSharingHandlerTest {
 
   @BeforeClass
   public static void setUpClass() {
-    vertx = Vertx.vertx();
-    httpClient = vertx.createHttpClient();
-    cluster = provisionWith(defaultClusterConfig());
-    cluster.start();
-    String[] hostAndPort = cluster.getBrokerList().split(":");
-    kafkaConfig = KafkaConfig.builder()
-      .envId("env")
-      .kafkaHost(hostAndPort[0])
-      .kafkaPort(hostAndPort[1])
-      .maxRequestSize(1048576)
-      .build();
+    httpClient = vertxAssistant.getVertx().createHttpClient();
   }
 
   @Before
@@ -166,7 +149,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -231,7 +214,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -281,7 +264,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -331,7 +314,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -386,7 +369,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -458,7 +441,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     //when
-    consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService));
+    consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig, eventIdStorageService));
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -529,7 +512,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
 
     //when
-    consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService));
+    consortiumInstanceSharingHandler = spy(new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig, eventIdStorageService));
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -569,7 +552,7 @@ public class ConsortiumInstanceSharingHandlerTest {
     when(eventIdStorageService.store(any(), any())).thenReturn(Future.failedFuture(new DuplicateEventException("SQL Unique constraint violation prevented repeatedly saving the record")));
 
     // when
-    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx, httpClient, storage, kafkaConfig, eventIdStorageService);
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig, eventIdStorageService);
 
     //then
     Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
@@ -589,17 +572,7 @@ public class ConsortiumInstanceSharingHandlerTest {
   }
 
   @AfterClass
-  public static void tearDownClass(TestContext context) {
-    Async async = context.async();
-    vertx.close(ar -> {
-      cluster.stop();
-      async.complete();
-    });
+  public static void tearDownClass() {
+    httpClient.close();
   }
-
-  private final static String recordJson = "{\"id\":\"5e525f1e-d373-4a07-9aff-b80856bacfef\",\"snapshotId\":\"7376bb73-845e-44ce-ade4-53394f7526a6\",\"matchedId\":\"0ecd6e9f-f02f-47b7-8326-2743bfa3fc43\",\"generation\":1,\"recordType\":\"MARC_BIB\"," +
-    "\"parsedRecord\":{\"id\":\"5e525f1e-d373-4a07-9aff-b80856bacfef\",\"content\":{\"fields\":[{\"001\":\"in00000000001\"},{\"006\":\"m     o  d        \"},{\"007\":\"cr cnu||||||||\"},{\"008\":\"060504c20069999txufr pso     0   a0eng c\"},{\"005\":\"20230915131710.4\"},{\"010\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"  2006214613\"}]}},{\"019\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"1058285745\"}]}},{\"022\":{\"ind1\":\"0\",\"ind2\":\" \"," +
-    "\"subfields\":[{\"a\":\"1931-7603\"},{\"l\":\"1931-7603\"},{\"2\":\"1\"}]}},{\"035\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"(OCoLC)68188263\"},{\"z\":\"(OCoLC)1058285745\"}]}},{\"040\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"NSD\"},{\"b\":\"eng\"},{\"c\":\"NSD\"},{\"d\":\"WAU\"},{\"d\":\"DLC\"},{\"d\":\"HUL\"},{\"d\":\"OCLCQ\"},{\"d\":\"OCLCF\"},{\"d\":\"OCL\"},{\"d\":\"AU@\"}]}},{\"042\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"pcc\"},{\"a\":\"nsdp\"}]}},{\"049\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"ILGA\"}]}},{\"050\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"ISSN RECORD\"}]}},{\"050\":{\"ind1\":\"1\",\"ind2\":\"4\",\"subfields\":[{\"a\":\"QL640\"}]}},{\"082\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"598.1\"},{\"2\":\"14\"}]}},{\"130\":{\"ind1\":\"0\",\"ind2\":\" \",\"subfields\":[{\"a\":\"Herpetological conservation and biology (Online)\"}]}},{\"210\":{\"ind1\":\"0\",\"ind2\":\" \",\"subfields\":[{\"a\":\"Herpetol. conserv. biol.\"},{\"b\":\"(Online)\"}]}},{\"222\":{\"ind1\":\" \",\"ind2\":\"0\",\"subfields\":[{\"a\":\"Herpetological conservation and biology\"},{\"b\":\"(Online)\"}]}},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"Biology!!!!!\"}]}},{\"246\":{\"ind1\":\"1\",\"ind2\":\"3\",\"subfields\":[{\"a\":\"HCBBBB\"}]}},{\"260\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"[Texarkana, Tex.] :\"},{\"b\":\"[publisher not identified],\"},{\"c\":\"[2006]\"}]}},{\"310\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Semiannual\"}]}},{\"336\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"text\"},{\"b\":\"txt\"},{\"2\":\"rdacontent\"}]}},{\"337\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"computer\"},{\"b\":\"c\"},{\"2\":\"rdamedia\"}]}},{\"338\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"online resource\"},{\"b\":\"cr\"},{\"2\":\"rdacarrier\"}]}},{\"362\":{\"ind1\":\"1\",\"ind2\":\" \",\"subfields\":[{\"a\":\"Began with: Vol. 1, issue 1 (Sept. 2006).\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Published in partnership with: Partners in Amphibian & Reptile Conservation (PARC), World Congress of Herpetology, Las Vegas Springs Preserve.\"}]}},{\"650\":{\"ind1\":\" \",\"ind2\":\"0\",\"subfields\":[{\"a\":\"Herpetology\"},{\"x\":\"Conservation\"},{\"v\":\"Periodicals.\"}]}},{\"650\":{\"ind1\":\" \",\"ind2\":\"0\",\"subfields\":[{\"a\":\"Amphibians\"},{\"x\":\"Conservation\"},{\"v\":\"Periodicals.\"}]}},{\"650\":{\"ind1\":\" \",\"ind2\":\"0\",\"subfields\":[{\"a\":\"Reptiles\"},{\"x\":\"Conservation\"},{\"v\":\"Periodicals.\"}]}},{\"655\":{\"ind1\":\" \",\"ind2\":\"0\",\"subfields\":[{\"a\":\"Electronic journals.\"}]}},{\"710\":{\"ind1\":\"2\",\"ind2\":\" \",\"subfields\":[{\"a\":\"Partners in Amphibian and Reptile Conservation.\"}]}},{\"711\":{\"ind1\":\"2\",\"ind2\":\" \",\"subfields\":[{\"a\":\"World Congress of Herpetology.\"}]}},{\"776\":{\"ind1\":\"1\",\"ind2\":\" \",\"subfields\":[{\"t\":\"Herpetological conservation and biology (Print)\"},{\"x\":\"2151-0733\"},{\"w\":\"(DLC)  2009202029\"},{\"w\":\"(OCoLC)427887140\"}]}},{\"841\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"v.1- (1992-)\"}]}},{\"856\":{\"ind1\":\"4\",\"ind2\":\"0\",\"subfields\":[{\"u\":\"http://www.herpconbio.org\"},{\"z\":\"Available to Lehigh users\"}]}},{\"999\":{\"ind1\":\"f\",\"ind2\":\"f\",\"subfields\":[{\"s\":\"0ecd6e9f-f02f-47b7-8326-2743bfa3fc43\"},{\"i\":\"fea6477b-d8f5-4d22-9e86-6218407c780b\"}]}}],\"leader\":\"01819cas a2200469 a 4500\"},\"formattedContent\":\"LEADER 01819cas a2200469 a 4500\\n001 in00000000001\\n006 m     o  d        \\n007 cr cnu||||||||\\n008 060504c20069999txufr pso     0   a0eng c\\n005 20230915131710.4\\n010   $a  2006214613\\n019   $a1058285745\\n022 0 $a1931-7603$l1931-7603$21\\n035   $a(OCoLC)68188263$z(OCoLC)1058285745\\n040   $aNSD$beng$cNSD$dWAU$dDLC$dHUL$dOCLCQ$dOCLCF$dOCL$dAU@\\n042   $apcc$ansdp\\n049   $aILGA\\n050 10$aISSN RECORD\\n050 14$aQL640\\n082 10$a598.1$214\\n130 0 $aHerpetological conservation and biology (Online)\\n210 0 $aHerpetol. conserv. biol.$b(Online)\\n222  0$aHerpetological conservation and biology$b(Online)\\n245 10$aBiology!!!!!\\n246 13$aHCBBBB\\n260   $a[Texarkana, Tex.] :$b[publisher not identified],$c[2006]\\n310   $aSemiannual\\n336   $atext$btxt$2rdacontent\\n337   $acomputer$bc$2rdamedia\\n338   $aonline resource$bcr$2rdacarrier\\n362 1 $aBegan with: Vol. 1, issue 1 (Sept. 2006).\\n500   $aPublished in partnership with: Partners in Amphibian & Reptile Conservation (PARC), World Congress of Herpetology, Las Vegas Springs Preserve.\\n650  0$aHerpetology$xConservation$vPeriodicals.\\n650  0$aAmphibians$xConservation$vPeriodicals.\\n650  0$aReptiles$xConservation$vPeriodicals.\\n655  0$aElectronic journals.\\n710 2 $aPartners in Amphibian and Reptile Conservation.\\n711 2 $aWorld Congress of Herpetology.\\n776 1 $tHerpetological conservation and biology (Print)$x2151-0733$w(DLC)  2009202029$w(OCoLC)427887140\\n841   $av.1- (1992-)\\n856 40$uhttp://www.herpconbio.org$zAvailable to Lehigh users\\n999 ff$s0ecd6e9f-f02f-47b7-8326-2743bfa3fc43$ifea6477b-d8f5-4d22-9e86-6218407c780b\\n\\n\"}," +
-    "\"deleted\":false,\"order\":0,\"externalIdsHolder\":{\"instanceId\":\"fea6477b-d8f5-4d22-9e86-6218407c780b\",\"instanceHrid\":\"in00000000001\"},\"additionalInfo\":{\"suppressDiscovery\":false},\"state\":\"ACTUAL\",\"leaderRecordStatus\":\"c\",\"metadata\":{\"createdDate\":\"2023-09-15T13:17:10.571+00:00\",\"updatedDate\":\"2023-09-15T13:17:10.571+00:00\"}}";
-
 }

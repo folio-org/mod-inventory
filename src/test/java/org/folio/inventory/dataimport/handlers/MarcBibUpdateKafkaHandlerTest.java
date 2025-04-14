@@ -1,8 +1,7 @@
 package org.folio.inventory.dataimport.handlers;
 
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
 import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
+import static org.folio.inventory.KafkaUtility.checkKafkaEventSent;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
@@ -17,7 +16,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -29,13 +27,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import lombok.SneakyThrows;
-import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
-import net.mguenther.kafka.junit.ObserveKeyValues;
-import net.mguenther.kafka.junit.ReadKeyValues;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.folio.MappingMetadataDto;
+import org.folio.inventory.KafkaTest;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
@@ -46,16 +42,13 @@ import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
-import org.folio.kafka.KafkaConfig;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.LinkUpdateReport;
 import org.folio.rest.jaxrs.model.MarcBibUpdate;
 import org.folio.rest.jaxrs.model.Record;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -64,16 +57,13 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 @RunWith(VertxUnitRunner.class)
-public class MarcBibUpdateKafkaHandlerTest {
+public class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
   private static final String INVALID_INSTANCE_ID = "02e54bce-9588-11ed-a1eb-0242ac120002";
   private static final String TENANT_ID = "test";
-  private static Vertx vertx;
-  private static EmbeddedKafkaCluster cluster;
-  private static KafkaConfig kafkaConfig;
 
   @ClassRule
   public static RunTestOnContext rule = new RunTestOnContext();
@@ -90,30 +80,6 @@ public class MarcBibUpdateKafkaHandlerTest {
   private Instance instance;
   private MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler;
   private AutoCloseable mocks;
-
-  @BeforeClass
-  public static void beforeClass() {
-    vertx = rule.vertx();
-
-    cluster = provisionWith(defaultClusterConfig());
-    cluster.start();
-    String[] hostAndPort = cluster.getBrokerList().split(":");
-    kafkaConfig = KafkaConfig.builder()
-      .envId("env")
-      .kafkaHost(hostAndPort[0])
-      .kafkaPort(hostAndPort[1])
-      .maxRequestSize(1048576)
-      .build();
-  }
-
-  @AfterClass
-  public static void tearDownClass(TestContext context) {
-    Async async = context.async();
-    vertx.close(ar -> {
-      cluster.stop();
-      async.complete();
-    });
-  }
 
   @Before
   @SneakyThrows
@@ -134,7 +100,7 @@ public class MarcBibUpdateKafkaHandlerTest {
         .withMappingRules(mappingRules.encode())
         .withMappingParams(Json.encode(new MappingParameters()))));
 
-    marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertx, 100, kafkaConfig, new InstanceUpdateDelegate(mockedStorage), mappingMetadataCache);
+    marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertxAssistant.getVertx(), 100, kafkaConfig, new InstanceUpdateDelegate(mockedStorage), mappingMetadataCache);
   }
 
   @After
@@ -165,7 +131,7 @@ public class MarcBibUpdateKafkaHandlerTest {
       context.assertTrue(ar.succeeded());
       context.assertEquals(expectedKafkaRecordKey, ar.result());
 
-      context.verify(vo -> verify(vo, 1));
+      context.verify(vo -> verify(1));
       async.complete();
     });
   }
@@ -193,7 +159,7 @@ public class MarcBibUpdateKafkaHandlerTest {
 
     // then
     future.onComplete(ar -> {
-      verify(null, 2);
+      verify(2);
 
       async.complete();
     });
@@ -251,10 +217,9 @@ public class MarcBibUpdateKafkaHandlerTest {
   }
 
   @Test
-  public void shouldSendSuccessLinkReportEvent() throws InterruptedException {
+  public void shouldSendSuccessLinkReportEvent() {
     // given
-    var topic = String.join(".", kafkaConfig.getEnvId(), TENANT_ID, LINKS_STATS.topicName());
-    var expectedReportsCount = cluster.readValues(ReadKeyValues.from(topic)).size() + 1;
+    var expectedReportsCount = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName()).size() + 1;
     var instanceId = AdditionalFieldsUtil.getValue(record, TAG_999, SUBFIELD_I)
       .orElse(null);
 
@@ -273,15 +238,10 @@ public class MarcBibUpdateKafkaHandlerTest {
     marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
-    vertx.runOnContext(v -> {
-      List<String> reports;
-      try {
-        reports = cluster.observeValues(ObserveKeyValues.on(topic, expectedReportsCount)
-          .observeFor(30, TimeUnit.SECONDS)
-          .build());
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
+    vertxAssistant.getVertx().runOnContext(v -> {
+      List<String> reports = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName())
+        .stream().map(ConsumerRecord::value).toList();
+      Assert.assertEquals(expectedReportsCount, reports.size());
 
       var report = reports.stream()
         .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
@@ -299,10 +259,9 @@ public class MarcBibUpdateKafkaHandlerTest {
   }
 
   @Test
-  public void shouldSendFailedLinkReportEvent() throws InterruptedException {
+  public void shouldSendFailedLinkReportEvent() {
     // given
-    var topic = String.join(".", kafkaConfig.getEnvId(), TENANT_ID, LINKS_STATS.topicName());
-    var expectedReportsCount = cluster.readValues(ReadKeyValues.from(topic)).size() + 1;
+    var expectedReportsCount = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName()).size() + 1;
     var instanceId = AdditionalFieldsUtil.getValue(record, TAG_999, SUBFIELD_I)
       .orElse(null);
 
@@ -323,15 +282,10 @@ public class MarcBibUpdateKafkaHandlerTest {
     marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
-    vertx.runOnContext(v -> {
-      List<String> reports;
-      try {
-        reports = cluster.observeValues(ObserveKeyValues.on(topic, expectedReportsCount)
-          .observeFor(30, TimeUnit.SECONDS)
-          .build());
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
+    vertxAssistant.getVertx().runOnContext(v -> {
+      List<String> reports = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName())
+        .stream().map(ConsumerRecord::value).toList();
+      Assert.assertEquals(expectedReportsCount, reports.size());
 
       var report = reports.stream()
         .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
@@ -349,7 +303,7 @@ public class MarcBibUpdateKafkaHandlerTest {
   }
 
   @SneakyThrows
-  private void verify(Void vo, int n) {
+  private void verify(int n) {
     Mockito.verify(mappingMetadataCache, times(n)).getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
     Mockito.verify(mockedStorage, times(n)).getInstanceCollection(any());
     Mockito.verify(mockedInstanceCollection, times(n)).findByIdAndUpdate(anyString(), any(), any());
