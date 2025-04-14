@@ -121,6 +121,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
         payloadContext.get(PAYLOAD_USER_ID));
       Instance instanceToUpdate = Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
+      LOGGER.info("ReplaceInstanceEventHandler.handle:: Instance to update: {}.", JsonObject.mapFrom(instanceToUpdate).encodePrettily());
 
       if (instanceToUpdate.getSource() != null && instanceToUpdate.getSource().equals(LINKED_DATA.getValue())) {
         String msg = format("handle:: Failed to update Instance with id = %s. Instance with source=LINKED_DATA cannot be updated using Data Import. Please use Linked Data Editor.", instanceToUpdate.getId());
@@ -205,6 +206,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         String marcBibAsJson = payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value());
         org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(marcBibAsJson, org.folio.rest.jaxrs.model.Record.class);
         Instance mappedInstance = Instance.fromJson(instanceAsJson);
+        LOGGER.info("processInstanceUpdate:: mapped instance: {}", JsonObject.mapFrom(mappedInstance).encodePrettily());
         List<String> invalidUUIDsErrors = ValidationUtil.validateUUIDs(mappedInstance);
         if (!invalidUUIDsErrors.isEmpty()) {
           String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", invalidUUIDsErrors,
@@ -229,15 +231,21 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           })
           .compose(instance -> {
             if (instanceToUpdate.getSource().equals(FOLIO.getValue())) {
-              LOGGER.debug("processInstanceUpdate:: processing FOLIO Instance with id: {}", instance.getId());
+              LOGGER.info("processInstanceUpdate:: processing FOLIO Instance" +
+                " with id: {}, instance: {}", instance.getId(), JsonObject.mapFrom(instance).encodePrettily());
               executeFieldsManipulation(instance, targetRecord);
+              LOGGER.info("processInstanceUpdate:: FOLIO Instance after fields manipulation: {}", JsonObject.mapFrom(instance).encodePrettily());
               return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection,
                 tenantId, context.getUserId());
             }
             if (instanceToUpdate.getSource().equals(MARC.getValue())) {
-              LOGGER.debug("processInstanceUpdate:: processing MARC Instance with id: {}", instance.getId());
+              LOGGER.info("processInstanceUpdate:: processing MARC Instance with id: {}, instance: {}",
+                instance.getId(), JsonObject.mapFrom(instance).encodePrettily());
               setExternalIds(targetRecord, instance);
+              LOGGER.info("processInstanceUpdate:: MARC Instance after setExternalIds: {}", JsonObject.mapFrom(instance).encodePrettily());
               AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(targetRecord);
+              LOGGER.info("processInstanceUpdate:: MARC Instance after remove035Field: {}", JsonObject.mapFrom(instance).encodePrettily());
+
 
               setSuppressFromDiscovery(targetRecord, instance.getDiscoverySuppress());
               if (targetRecord.getMatchedId() == null) {

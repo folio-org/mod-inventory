@@ -90,6 +90,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
         .mapTo(Record.class).getParsedRecord().getContent());
       RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_BIB_RECORD_FORMAT);
       var instance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
+      LOGGER.info("defaultMapRecordToInstance:: mapped instance: {}", JsonObject.mapFrom(instance).encodePrettily());
       dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(instance))));
       return instance;
     } catch (Exception e) {
@@ -186,6 +187,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     }
     String externalId = srcRecord.getExternalIdsHolder().getInstanceId();
     String externalHrid = srcRecord.getExternalIdsHolder().getInstanceHrid();
+    LOGGER.info("setExternalIds:: process for hrId: {}", externalHrid);
     if (isNotEmpty(externalId) || isNotEmpty(externalHrid)) {
       if (AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance)) {
         executeHrIdManipulation(srcRecord, instance.getJsonForStorage());
@@ -259,6 +261,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     var externalId = externalEntity.getString(ID);
     var externalHrId = extractHridForInstance(externalEntity);
     var externalIdsHolder = srcRecord.getExternalIdsHolder();
+    LOGGER.info("executeHrIdManipulation:: process for hrId: {}", externalHrId);
     setExternalIdsForInstance(externalIdsHolder, externalId, externalHrId);
     boolean isAddedField = AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, TAG_999, 'i', externalId);
     if (IS_HRID_FILLING_NEEDED_FOR_INSTANCE) {
