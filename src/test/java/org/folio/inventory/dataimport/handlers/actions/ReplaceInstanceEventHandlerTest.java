@@ -15,6 +15,8 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpStatus;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
@@ -66,6 +68,7 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Collections;
@@ -1547,6 +1550,84 @@ public class ReplaceInstanceEventHandlerTest {
     verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
+  @Test
+  public void shouldRemove035FieldWhenRecordContainsHrId() throws Exception {
+    String hrId = "in00000000052";
+    String marcRecord = readFileFromPath("src/test/resources/marc/record_with_001_in_035.json");
+
+    Reader fakeReader = Mockito.mock(Reader.class);
+
+    String instanceTypeId = UUID.randomUUID().toString();
+    String recordId = UUID.randomUUID().toString();
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), BooleanValue.of(MappingRule.BooleanFieldAction.ALL_TRUE));
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord()
+      .withContent(marcRecord))
+      .withRecordType(Record.RecordType.MARC_BIB)
+      .withId(recordId);
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", instanceId)
+      .put("hrid", hrId)
+      .put("source", MARC_INSTANCE_SOURCE)
+      .put("_version", INSTANCE_VERSION)
+      .put("discoverySuppress", false)
+      .encode());
+
+    mockInstance(MARC_INSTANCE_SOURCE);
+
+    Buffer buffer = BufferImpl.buffer(JsonObject.mapFrom(record).encode());
+    HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
+    when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(Future.succeededFuture(respForPass));
+
+    Instance returnedInstance = new Instance(instanceTypeId, String.valueOf(INSTANCE_VERSION),
+      hrId, MARC_INSTANCE_SOURCE, "title", "instanceTypeId");
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(returnedInstance));
+      return null;
+    }).when(instanceRecordCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapperWithSuppressFromDiscovery.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString());
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
+
+    verify(sourceStorageClient).putSourceStorageRecordsGenerationById(anyString(), recordCaptor.capture());
+    Record capturedRecord = recordCaptor.getValue();
+    // check that only one hrid is presented in marc file, only in hrid field but not in 035
+    assertEquals(1, StringUtils.countMatches(capturedRecord.getParsedRecord().getContent().toString(), hrId));
+    assertEquals(DI_INVENTORY_INSTANCE_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    JsonObject updatedInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    assertNotNull(updatedInstance.getString("id"));
+    assertEquals(MARC_INSTANCE_SOURCE, updatedInstance.getString("source"));
+    assertTrue(actualDataImportEventPayload.getContext().containsKey(MARC_BIB_RECORD_CREATED));
+    assertFalse(Boolean.parseBoolean(actualDataImportEventPayload.getContext().get(MARC_BIB_RECORD_CREATED)));
+    assertThat(updatedInstance.getString("hrid"), is(hrId));
+    // incoming marc file had 2 035 fields, check that only 1 identifier remains without hrid identifier
+    JsonArray identifiers = updatedInstance.getJsonArray("identifiers");
+    assertThat(identifiers.size(), is(1));
+    assertThat(identifiers.getJsonObject(0).getString("value"), is("393893"));
+  }
+
   @Test(expected = ExecutionException.class)
   public void shouldProcessEventAnd() throws InterruptedException, ExecutionException, TimeoutException {
     Reader fakeReader = Mockito.mock(Reader.class);
@@ -1691,4 +1772,7 @@ public class ReplaceInstanceEventHandlerTest {
     }).when(instanceRecordCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
   }
 
+  private static String readFileFromPath(String path) throws IOException {
+    return new String(FileUtils.readFileToByteArray(new File(path)));
+  }
 }
