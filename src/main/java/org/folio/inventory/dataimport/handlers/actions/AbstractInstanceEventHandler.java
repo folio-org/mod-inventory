@@ -89,6 +89,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
       JsonObject parsedRecord = new JsonObject((String) new JsonObject(context.get(MARC_BIBLIOGRAPHIC.value()))
         .mapTo(Record.class).getParsedRecord().getContent());
       RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_BIB_RECORD_FORMAT);
+      LOGGER.info("defaultMapRecordToInstance:: marc bibliographic before mapping prettily: {}, raw: {}", parsedRecord.encodePrettily(), parsedRecord.encode());
       var instance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       LOGGER.info("defaultMapRecordToInstance:: mapped instance: {}", JsonObject.mapFrom(instance).encodePrettily());
       dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(instance))));

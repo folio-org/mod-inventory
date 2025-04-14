@@ -354,6 +354,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       return getRecordByInstanceId(client, instance.getId())
         .compose(existingRecord -> {
           Record incomingRecord = Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
+          LOGGER.info("prepareRecordForMapping:: Incoming record prettily: {}, raw: {}",
+            JsonObject.mapFrom(incomingRecord).encodePrettily(), JsonObject.mapFrom(incomingRecord).encode());
           String updatedContent = new MarcRecordModifier().updateRecord(incomingRecord, existingRecord, marcFieldProtectionSettings);
           incomingRecord.getParsedRecord().setContent(updatedContent);
 
@@ -367,7 +369,9 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
             org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(updatedIncomingRecord, org.folio.rest.jaxrs.model.Record.class);
 
             AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
+            AdditionalFieldsUtil.move001To035(targetRecord);
             AdditionalFieldsUtil.normalize035(targetRecord);
+            LOGGER.info("prepareRecordForMapping:: marc after normalization: {}", JsonObject.mapFrom(targetRecord).encodePrettily());
             dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
           } else {
             dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
