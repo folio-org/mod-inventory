@@ -1,5 +1,9 @@
 package org.folio.inventory.eventhandlers;
 
+import static org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate.MAPPING_PARAMS_KEY;
+import static org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate.MAPPING_RULES_KEY;
+import static org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate.QM_RELATED_RECORD_VERSION_KEY;
+import static org.folio.inventory.dataimport.handlers.quickmarc.AbstractQuickMarcEventHandler.RECORD_TYPE_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -332,14 +336,14 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
 
   @Test
   public void shouldUpdateInstanceIfMappingRulesHasNoRuleForDeletedField() {
-    JsonObject mappingRules = new JsonObject(MAPPING_RULES_WITHOUT_DELETED_FIELD_MAPPING);
+    JsonObject mappingRulesWithoutDeletedMapping = new JsonObject(MAPPING_RULES_WITHOUT_DELETED_FIELD_MAPPING);
 
     HashMap<String, String> eventPayload = new HashMap<>();
-    eventPayload.put("RECORD_TYPE", "MARC_BIB");
+    eventPayload.put(RECORD_TYPE_KEY, "MARC_BIB");
     eventPayload.put("MARC_BIB", record.encode());
-    eventPayload.put("MAPPING_RULES", mappingRules.encode());
-    eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
-    eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
+    eventPayload.put(MAPPING_RULES_KEY, mappingRulesWithoutDeletedMapping.encode());
+    eventPayload.put(MAPPING_PARAMS_KEY, new JsonObject().encode());
+    eventPayload.put(QM_RELATED_RECORD_VERSION_KEY, INSTANCE_VERSION);
 
     Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
     Instance updatedInstance = future.result();

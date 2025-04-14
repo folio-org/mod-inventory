@@ -29,9 +29,9 @@ public class InstanceUpdateDelegate {
 
   private static final Logger LOGGER = LogManager.getLogger(InstanceUpdateDelegate.class);
 
-  private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
-  private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
-  private static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
+  public static final String MAPPING_RULES_KEY = "MAPPING_RULES";
+  public static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
+  public static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
 
   private final Storage storage;
 
