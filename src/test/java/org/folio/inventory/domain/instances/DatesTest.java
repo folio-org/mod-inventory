@@ -7,11 +7,16 @@ import junitparams.converters.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static org.folio.inventory.domain.instances.Dates.datesFromJson;
+import java.util.UUID;
+
+import static org.folio.inventory.domain.instances.Dates.convertToDates;
 import static org.folio.inventory.domain.instances.Dates.datesToJson;
+import static org.folio.inventory.domain.instances.Dates.retrieveDatesFromJson;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 @RunWith(JUnitParamsRunner.class)
 public class DatesTest {
@@ -25,7 +30,7 @@ public class DatesTest {
   })
   @Test
   public void shouldCreateDatesFromJson(@Nullable String dateTypeId, @Nullable String date1, @Nullable String date2) {
-    var dates = datesFromJson(datesJson(dateTypeId, date1, date2));
+    var dates = convertToDates(datesJson(dateTypeId, date1, date2));
 
     assertThat(dates.getDateTypeId(), is(dateTypeId));
     assertThat(dates.getDate1(), is(date1));
@@ -34,12 +39,12 @@ public class DatesTest {
 
   @Test
   public void shouldNotCreateDatesFromJsonWhenJsonIsNull() {
-    assertThat(datesFromJson(null), nullValue());
+    assertThat(convertToDates(null), nullValue());
   }
 
   @Test
   public void shouldNotCreateDatesFromJsonWhenAllFieldsAreNull() {
-    assertThat(datesFromJson(datesJson(null, null, null)), nullValue());
+    assertThat(convertToDates(datesJson(null, null, null)), nullValue());
   }
 
   @Parameters({
@@ -66,6 +71,37 @@ public class DatesTest {
   @Test
   public void shouldNotConvertDatesToJsonWhenAllFieldsAreNull() {
     assertThat(datesToJson(new Dates(null, null, null)), nullValue());
+  }
+
+  @Test
+  public void shouldRetrieveDatesFromInstanceJson() {
+    JsonObject instanceAsJson = new JsonObject();
+    instanceAsJson.put("id", UUID.randomUUID());
+    JsonObject datesObject = new JsonObject();
+    datesObject.put("date1", "1998");
+    datesObject.put("date2", "2025");
+    instanceAsJson.put("dates", datesObject);
+    JsonObject retrievedDate = retrieveDatesFromJson(instanceAsJson);
+    assertNotNull(retrievedDate);
+    assertEquals("1998", datesObject.getString("date1"));
+    assertEquals("2025", datesObject.getString("date2"));
+  }
+
+  @Test
+  public void shouldRetrieveDatesFromInstanceJsonFromJsonForStorageObject() {
+    JsonObject instanceAsJson = new JsonObject();
+    instanceAsJson.put("id", UUID.randomUUID());
+    JsonObject datesObject = new JsonObject();
+    datesObject.put("date1", "1998");
+    datesObject.put("date2", "2025");
+    JsonObject jsonForStorage = new JsonObject();
+    jsonForStorage.put("idForStorage", UUID.randomUUID());
+    jsonForStorage.put("dates", datesObject);
+    instanceAsJson.put("jsonForStorage", jsonForStorage);
+    JsonObject retrievedDate = retrieveDatesFromJson(instanceAsJson);
+    assertNotNull(retrievedDate);
+    assertEquals("1998", datesObject.getString("date1"));
+    assertEquals("2025", datesObject.getString("date2"));
   }
 
   private JsonObject datesJson(String dateTypeId, String date1, String date2) {
