@@ -237,8 +237,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
             if (instanceToUpdate.getSource().equals(MARC.getValue())) {
               LOGGER.debug("processInstanceUpdate:: processing MARC Instance with id: {}", instance.getId());
               setExternalIds(targetRecord, instance);
-              AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(targetRecord);
-
               setSuppressFromDiscovery(targetRecord, instance.getDiscoverySuppress());
               if (targetRecord.getMatchedId() == null) {
                 LOGGER.debug("processInstanceUpdate:: Instance with id: {} has no related marc bib. Creating new record in SRS", instance.getId());
@@ -360,6 +358,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
             AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
             AdditionalFieldsUtil.normalize035(targetRecord);
+            AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(targetRecord);
             dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
           } else {
             dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
