@@ -1,7 +1,8 @@
 package org.folio.inventory.domain.instances;
 
-import static org.folio.inventory.domain.instances.Dates.datesFromJson;
+import static org.folio.inventory.domain.instances.Dates.convertToDates;
 import static org.folio.inventory.domain.instances.Dates.datesToJson;
+import static org.folio.inventory.domain.instances.Dates.retrieveDatesFromJson;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 
 import java.lang.invoke.MethodHandles;
@@ -73,6 +74,8 @@ public class Instance {
   public static final String TAG_LIST_KEY = "tagList";
   public static final String NATURE_OF_CONTENT_TERM_IDS_KEY = "natureOfContentTermIds";
   public static final String DATES_KEY = "dates";
+  public static final String JSON_FOR_STORAGE_KEY = "jsonForStorage";
+
 
   private final String id;
   @JsonProperty("_version")
@@ -188,7 +191,7 @@ public class Instance {
       .setStatusUpdatedDate(instanceJson.getString(STATUS_UPDATED_DATE_KEY))
       .setTags(getTags(instanceJson))
       .setNatureOfContentTermIds(toListOfStrings(instanceJson.getJsonArray(NATURE_OF_CONTENT_TERM_IDS_KEY)))
-      .setDates(datesFromJson(instanceJson.getJsonObject(DATES_KEY)));
+      .setDates(convertToDates(retrieveDatesFromJson(instanceJson)));
   }
 
   /**
