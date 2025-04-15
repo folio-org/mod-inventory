@@ -33,8 +33,7 @@ public class Dates {
   }
 
   public static JsonObject retrieveDatesFromJson(JsonObject targetInstance) {
-    JsonObject dates;
-    dates = targetInstance.getJsonObject(DATES_KEY);
+    JsonObject dates = targetInstance.getJsonObject(DATES_KEY);
     if (dates == null) {
       JsonObject jsonForStorage = targetInstance.getJsonObject(JSON_FOR_STORAGE_KEY);
       if (jsonForStorage != null) {

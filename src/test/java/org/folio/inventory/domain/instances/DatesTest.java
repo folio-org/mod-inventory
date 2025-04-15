@@ -7,14 +7,12 @@ import junitparams.converters.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.Map;
 import java.util.UUID;
 
 import static org.folio.inventory.domain.instances.Dates.convertToDates;
 import static org.folio.inventory.domain.instances.Dates.datesToJson;
 import static org.folio.inventory.domain.instances.Dates.retrieveDatesFromJson;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.in;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertEquals;
