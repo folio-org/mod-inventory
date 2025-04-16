@@ -20,6 +20,8 @@ import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang3.BooleanUtils.isNotTrue;
+import static org.apache.commons.lang3.BooleanUtils.isTrue;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
 
@@ -27,9 +29,9 @@ public class InstanceUpdateDelegate {
 
   private static final Logger LOGGER = LogManager.getLogger(InstanceUpdateDelegate.class);
 
-  private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
-  private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
-  private static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
+  public static final String MAPPING_RULES_KEY = "MAPPING_RULES";
+  public static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
+  public static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
 
   private final Storage storage;
 
@@ -94,7 +96,7 @@ public class InstanceUpdateDelegate {
   private Future<Instance> updateInstance(Instance existingInstance, org.folio.Instance mappedInstance) {
     try {
       mappedInstance.setId(existingInstance.getId());
-      if (!existingInstance.getDeleted() && mappedInstance.getDeleted()) {
+      if (isNotTrue(existingInstance.getDeleted()) && isTrue(mappedInstance.getDeleted())) {
         mappedInstance.withDiscoverySuppress(true);
         mappedInstance.withStaffSuppress(true);
       } else {

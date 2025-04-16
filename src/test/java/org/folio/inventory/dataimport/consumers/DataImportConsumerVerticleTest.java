@@ -1,18 +1,11 @@
 package org.folio.inventory.dataimport.consumers;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static net.mguenther.kafka.junit.EmbeddedKafkaCluster.provisionWith;
-import static net.mguenther.kafka.junit.EmbeddedKafkaClusterConfig.defaultClusterConfig;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_PORT;
-import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_REPLICATION_FACTOR;
-import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
+import static org.folio.inventory.KafkaUtility.checkKafkaEventSent;
+import static org.folio.inventory.KafkaUtility.sendEvent;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
@@ -30,36 +23,29 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import net.mguenther.kafka.junit.EmbeddedKafkaCluster;
-import net.mguenther.kafka.junit.KeyValue;
-import net.mguenther.kafka.junit.ObserveKeyValues;
-import net.mguenther.kafka.junit.SendKeyValues;
+import java.util.concurrent.ExecutionException;
+
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.inventory.DataImportConsumerVerticle;
-import org.folio.kafka.KafkaConfig;
-import org.folio.kafka.KafkaTopicNameHelper;
+import org.folio.inventory.KafkaTest;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
-import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -69,17 +55,11 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 @RunWith(VertxUnitRunner.class)
-public class DataImportConsumerVerticleTest {
-
+public class DataImportConsumerVerticleTest extends KafkaTest {
   private static final String TENANT_ID = "diku";
-  private static final String KAFKA_ENV_NAME = "test-env";
   private static final String JOB_PROFILE_URL = "/data-import-profiles/jobProfileSnapshots";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
-
-  private static Vertx vertx;
-
-  public static EmbeddedKafkaCluster cluster;
 
   @Mock
   private EventHandler mockedEventHandler;
@@ -126,26 +106,10 @@ public class DataImportConsumerVerticleTest {
   @BeforeClass
   public static void setUpClass(TestContext context) {
     Async async = context.async();
-    vertx = Vertx.vertx();
-    cluster = provisionWith(defaultClusterConfig());
-    cluster.start();
-    String[] hostAndPort = cluster.getBrokerList().split(":");
 
-    KafkaConfig kafkaConfig = KafkaConfig.builder()
-      .kafkaHost(hostAndPort[0])
-      .kafkaPort(hostAndPort[1])
-      .build();
-
-    EventManager.registerKafkaEventPublisher(kafkaConfig, vertx, 1);
-
-    DeploymentOptions options = new DeploymentOptions()
-      .setConfig(new JsonObject()
-        .put(KAFKA_HOST, hostAndPort[0])
-        .put(KAFKA_PORT, hostAndPort[1])
-        .put(KAFKA_REPLICATION_FACTOR, "1")
-        .put(KAFKA_ENV, KAFKA_ENV_NAME)
-        .put(KAFKA_MAX_REQUEST_SIZE, "1048576"));
-    vertx.deployVerticle(DataImportConsumerVerticle.class.getName(), options, deployAr -> async.complete());
+    EventManager.registerKafkaEventPublisher(kafkaConfig, vertxAssistant.getVertx(), 1);
+    vertxAssistant.getVertx().deployVerticle(DataImportConsumerVerticle.class.getName(),
+      deploymentOptions, deployAr -> async.complete());
   }
 
   @Before
@@ -166,7 +130,8 @@ public class DataImportConsumerVerticleTest {
   }
 
   @Test
-  public void shouldSendEventWithProcessedEventPayloadWhenProcessingCoreHandlerSucceeded() throws InterruptedException {
+  public void shouldSendEventWithProcessedEventPayloadWhenProcessingCoreHandlerSucceeded()
+    throws InterruptedException, ExecutionException {
     // given
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
@@ -176,38 +141,21 @@ public class DataImportConsumerVerticleTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", profileSnapshotWrapper.getId())));
 
-    String topic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, dataImportEventPayload.getEventType());
     Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
-    KeyValue<String, String> record = new KeyValue<>("test-key", Json.encode(event));
-    record.addHeader(RECORD_ID_HEADER, UUID.randomUUID().toString(), UTF_8);
-    record.addHeader(CHUNK_ID_HEADER, UUID.randomUUID().toString(), UTF_8);
 
-    SendKeyValues<String, String> request = SendKeyValues.to(topic, Collections.singletonList(record)).useDefaults();
+    Map<String, String> headers = new HashMap<>();
+    headers.put(RECORD_ID_HEADER, UUID.randomUUID().toString());
+    headers.put(CHUNK_ID_HEADER, UUID.randomUUID().toString());
 
     // when
-    cluster.send(request);
+    sendEvent(headers, TENANT_ID,
+      DI_INCOMING_MARC_BIB_RECORD_PARSED.value(), event.getId(), Json.encode(event));
 
     // then
-    String observeTopic = KafkaTopicNameHelper.formatTopicName(KAFKA_ENV_NAME, getDefaultNameSpace(), TENANT_ID, DI_COMPLETED.value());
-    List<KeyValue<String, String>> observedValues = cluster.observe(ObserveKeyValues.on(observeTopic, 1)
-      .observeFor(30, TimeUnit.SECONDS)
-      .build());
+    var observedValues = checkKafkaEventSent(TENANT_ID, DI_COMPLETED.value(), 30000);
 
     assertEquals(1, observedValues.size());
-    assertNotNull(observedValues.get(0).getHeaders().lastHeader(RECORD_ID_HEADER));
-  }
 
-  @AfterClass
-  public static void tearDownClass(TestContext context) {
-    Async async = context.async();
-    vertx.close(ar -> {
-      if (ar.succeeded()) {
-        cluster.stop();
-        async.complete();
-      } else {
-        context.fail(ar.cause());
-      }
-    });
+    assertNotNull(observedValues.getFirst().headers().lastHeader(RECORD_ID_HEADER));
   }
-
 }
