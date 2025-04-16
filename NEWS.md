@@ -1,3 +1,9 @@
+## 21.1.2 2025-04-16
+* Upgrade dependencies kafka-client 3.9.0, Vert.x 4.5.13 for fixing vulnerabilities [MODINV-1182](https://folio-org.atlassian.net/browse/MODINV-1182)
+* Cannot edit MARC bib record on non-ECS environment due to error [MODINV-1190](https://folio-org.atlassian.net/browse/MODINV-1190)
+* 001 to HRID matching creates phantom Identifier [MODINV-1183](https://folio-org.atlassian.net/browse/MODINV-1183)
+* Updating MARC bib record removes Date 1, Date 2 and Date type fields [MODINV-1186](https://folio-org.atlassian.net/browse/MODINV-1186)
+
 ## 21.1.1 2025-04-07
 * Suppressing from discovery MARC instances makes records also staff suppressed [MODINV-1180](https://folio-org.atlassian.net/browse/MODINV-1180)
 * Missing module permissions on mark-missing endpoints [MODINV-1174](https://folio-org.atlassian.net/browse/MODINV-1174)
