@@ -81,8 +81,9 @@ public interface InstanceIngressEventHandler {
   }
 
   default Future<Optional<MappingMetadataDto>> getMappingMetadata(
-    Context context, Supplier<MappingMetadataCache> mappingMetadataCacheSupplier) {
+    Context context, Supplier<MappingMetadataCache> mappingMetadataCacheSupplier, Logger logger) {
     var cacheKey = InstanceIngressEventConsumer.class.getSimpleName() + "-" + context.getTenantId();
+    logger.info("Get mapping metadata for {}", cacheKey);
     return mappingMetadataCacheSupplier.get()
       .getByRecordType(cacheKey, context, MARC_BIB_RECORD_TYPE);
   }
@@ -113,7 +114,7 @@ public interface InstanceIngressEventHandler {
     if (errors.isEmpty()) {
       return Optional.empty();
     }
-    var msg = format(
+    var ms g = format(
       "Mapped Instance is invalid: %s, from InstanceIngressEvent with id '%s'",
       errors, eventId);
     logger.warn(msg);

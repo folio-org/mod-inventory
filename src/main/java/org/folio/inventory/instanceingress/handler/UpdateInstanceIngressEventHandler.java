@@ -59,7 +59,7 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
       var recordId = UUID.randomUUID().toString();
       var targetRecord = constructMarcBibRecord(event.getEventPayload(), recordId);
       var instanceId = getInstanceId(event).orElseGet(() -> super.getInstanceId(targetRecord));
-      getMappingMetadata(context, super::getMappingMetadataCache)
+      getMappingMetadata(context, super::getMappingMetadataCache, LOGGER)
         .compose(metadataOptional -> metadataOptional.map(metadata -> prepareAndExecuteMapping(metadata, targetRecord, event, instanceId, LOGGER))
           .orElseGet(() -> Future.failedFuture("MappingMetadata was not found for marc-bib record type")))
         .compose(newInstance -> fillPreviousInstanceData(newInstance, instanceId))

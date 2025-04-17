@@ -58,7 +58,7 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
       var targetRecord = constructMarcBibRecord(event.getEventPayload(), recordId);
       var instanceId = getInstanceId(event).orElseGet(() -> super.getInstanceId(targetRecord));
       idStorageService.store(targetRecord.getId(), instanceId, context.getTenantId())
-        .compose(res -> getMappingMetadata(context, super::getMappingMetadataCache))
+        .compose(res -> getMappingMetadata(context, super::getMappingMetadataCache, LOGGER))
         .compose(metadataOptional -> metadataOptional.map(metadata -> prepareAndExecuteMapping(metadata, targetRecord, event, instanceId, LOGGER))
           .orElseGet(() -> Future.failedFuture("MappingMetadata was not found for marc-bib record type")))
         .compose(instance -> validateInstance(instance, event, LOGGER))
