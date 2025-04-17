@@ -114,7 +114,7 @@ public interface InstanceIngressEventHandler {
     if (errors.isEmpty()) {
       return Optional.empty();
     }
-    var ms g = format(
+    var msg = format(
       "Mapped Instance is invalid: %s, from InstanceIngressEvent with id '%s'",
       errors, eventId);
     logger.warn(msg);
