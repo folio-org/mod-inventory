@@ -1,3 +1,6 @@
+## 21.1.3
+* Use a separate cache for MappingMetadata for each tenant [MODINV-1205] (https://folio-org.atlassian.net/browse/MODINV-1205)
+
 ## 21.1.2 2025-04-16
 * Upgrade dependencies kafka-client 3.9.0, Vert.x 4.5.13 for fixing vulnerabilities [MODINV-1182](https://folio-org.atlassian.net/browse/MODINV-1182)
 * Cannot edit MARC bib record on non-ECS environment due to error [MODINV-1190](https://folio-org.atlassian.net/browse/MODINV-1190)
