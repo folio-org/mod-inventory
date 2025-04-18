@@ -124,7 +124,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
         .withSourceType(LINKED_DATA)
       );
     doReturn(succeededFuture(Optional.empty())).when(mappingMetadataCache)
-      .getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+      .getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
     var expectedMessage = "MappingMetadata was not found for marc-bib record type";
 
     // when
@@ -148,7 +148,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
-      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+      .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
     var expectedMessage = "Error retrieving inventory Instance";
     doAnswer(i -> {
       Consumer<Failure> failureHandler = i.getArgument(2);
@@ -177,7 +177,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
-      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+      .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
    var existedInstance = new Instance(event.getId(), "1",
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
@@ -209,7 +209,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
-      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+      .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
    var existedInstance = new Instance(event.getId(), "1",
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
@@ -245,7 +245,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
-      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+      .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
    var existedInstance = new Instance(event.getId(), "1",
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
@@ -282,7 +282,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
-      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+      .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
    var existedInstance = new Instance(event.getId(), "1",
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
@@ -321,7 +321,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
-      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+      .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
    var existedInstance = new Instance(event.getId(), "1",
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
@@ -364,7 +364,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
-      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+      .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
    var existedInstance = new Instance(event.getId(), "1",
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
@@ -410,7 +410,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
-      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+      .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
    var existedInstance = new Instance(event.getId(), "1",
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
@@ -457,7 +457,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
-      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+      .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
    var existedInstance = new Instance(event.getId(), "1",
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
@@ -511,7 +511,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(Optional.of(new MappingMetadataDto()
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
-      .when(mappingMetadataCache).getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+      .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
    var existedInstance = new Instance(event.getId(), "1",
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
@@ -563,4 +563,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, 's')).hasValue(initialSrsId);
   }
 
+  private String metadataCacheKey() {
+    return InstanceIngressEventConsumer.class.getSimpleName() + "-" + TENANT;
+  }
 }
