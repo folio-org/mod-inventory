@@ -1,3 +1,6 @@
+## 21.0.14 2025-04-23
+* Updating MARC bib record removes Date 1, Date 2 and Date type fields [MODINV-1212](https://folio-org.atlassian.net/browse/MODINV-1212)
+
 ## 21.0.13 2025-04-07
 * Introduce new post retrieve api to fetch inventory item [MODINV-1177](https://folio-org.atlassian.net/browse/MODINV-1177)
 
