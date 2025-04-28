@@ -139,7 +139,7 @@ public class MoveApi extends AbstractInventoryResource {
                 .findById(toInstanceId)
                 .thenApply(sharedInstance -> {
                   if (sharedInstance == null) {
-                    throw new BadRequestException("Instance with id=" + toInstanceId + " not found in central tenant");
+                    throw new BadRequestException("Instance with id=" + toInstanceId + " not found");
                   }
                   return sharedInstance;
                 });
