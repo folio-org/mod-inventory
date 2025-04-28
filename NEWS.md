@@ -1,3 +1,6 @@
+## 21.2.0 2025-xx-xx
+* ECS: Moving holdings to another instance produces error if the instance does not already have an associated holdings with active affiliation [MODINV-1213](https://folio-org.atlassian.net/browse/MODINV-1213)
+
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)
 * Replace usage of deprecated instance-storage-batch API  [MODINV-1101](https://folio-org.atlassian.net/browse/MODINV-1101)

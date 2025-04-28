@@ -1,6 +1,9 @@
 package org.folio.inventory.resources;
 
+import static java.lang.String.format;
 import static java.util.stream.Collectors.toList;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.resources.UpdateOwnershipApi.TENANT_NOT_IN_CONSORTIA;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.MoveApiUtil.createHoldingsRecordsFetchClient;
 import static org.folio.inventory.support.MoveApiUtil.createHoldingsStorageClient;
@@ -15,19 +18,20 @@ import static org.folio.inventory.validation.MoveValidator.itemsMoveHasRequiredF
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import org.folio.HoldingsRecord;
+import org.folio.inventory.common.Context;
 import org.folio.inventory.common.WebContext;
+import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.exceptions.BadRequestException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.MoveApiUtil;
-import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.ValidationError;
 
@@ -42,9 +46,11 @@ public class MoveApi extends AbstractInventoryResource {
   public static final String TO_INSTANCE_ID = "toInstanceId";
   public static final String ITEM_IDS = "itemIds";
   public static final String HOLDINGS_RECORD_IDS = "holdingsRecordIds";
+  private final ConsortiumService consortiumService;
 
-  public MoveApi(final Storage storage, final HttpClient client) {
+  public MoveApi(final Storage storage, final HttpClient client, ConsortiumService consortiumService) {
     super(storage, client);
+    this.consortiumService = consortiumService;
   }
 
   @Override
@@ -92,7 +98,7 @@ public class MoveApi extends AbstractInventoryResource {
             ServerErrorResponse.internalError(routingContext.response(), e);
           }
         } else {
-          JsonResponse.unprocessableEntity(routingContext.response(),
+          unprocessableEntity(routingContext.response(),
               String.format("Holding with id=%s not found", toHoldingsRecordId));
         }
       })
@@ -115,14 +121,40 @@ public class MoveApi extends AbstractInventoryResource {
     List<String> holdingsRecordsIdsToUpdate = toListOfStrings(holdingsMoveJsonRequest.getJsonArray(HOLDINGS_RECORD_IDS));
     storage.getInstanceCollection(context)
       .findById(toInstanceId)
+      .thenCompose(instance -> {
+        if (instance != null) {
+          return CompletableFuture.completedFuture(instance);
+        }
+        // Instance not found → check central tenant
+        return consortiumService.getConsortiumConfiguration(context)
+          .toCompletionStage()
+          .toCompletableFuture()
+          .thenCompose(consortiumConfig -> {
+            if (consortiumConfig.isPresent()) {
+              Context centralTenantContext = constructContext(
+                consortiumConfig.get().getCentralTenantId(), context.getToken(), context.getOkapiLocation(), context.getUserId(), context.getRequestId()
+              );
+
+              return storage.getInstanceCollection(centralTenantContext)
+                .findById(toInstanceId)
+                .thenApply(sharedInstance -> {
+                  if (sharedInstance == null) {
+                    throw new BadRequestException("Instance with id=" + toInstanceId + " not found in central tenant");
+                  }
+                  return sharedInstance;
+                });
+            } else {
+              throw new BadRequestException(format(TENANT_NOT_IN_CONSORTIA, context.getTenantId()));
+            }
+          });
+      })
       .thenAccept(instance -> {
         if (instance == null) {
-          JsonResponse.unprocessableEntity(routingContext.response(), String.format("Instance with id=%s not found", toInstanceId));
-          return;
+          throw new BadRequestException("Instance with id=" + toInstanceId + " not found in source or central tenant after fallback");
         }
         try {
-          CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(createHttpClient(client, routingContext, context),
-              context);
+          CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(
+            createHttpClient(client, routingContext, context), context);
           MultipleRecordsFetchClient holdingsRecordFetchClient = createHoldingsRecordsFetchClient(holdingsStorageClient);
 
           holdingsRecordFetchClient.find(holdingsRecordsIdsToUpdate, MoveApiUtil::fetchByIdCql)
@@ -139,7 +171,11 @@ public class MoveApi extends AbstractInventoryResource {
         }
       })
       .exceptionally(e -> {
-        ServerErrorResponse.internalError(routingContext.response(), e);
+        if (e.getCause() instanceof BadRequestException) {
+          unprocessableEntity(routingContext.response(), e.getCause().getMessage());
+        } else {
+          ServerErrorResponse.internalError(routingContext.response(), e);
+        }
         return null;
       });
   }
@@ -156,7 +192,7 @@ public class MoveApi extends AbstractInventoryResource {
 
     List<CompletableFuture<Item>> updates = itemsToUpdate.stream()
       .map(storageItemCollection::update)
-      .collect(Collectors.toList());
+      .toList();
 
     CompletableFuture.allOf(updates.toArray(new CompletableFuture[0]))
       .handle((vVoid, throwable) -> updates.stream()
@@ -182,7 +218,7 @@ public class MoveApi extends AbstractInventoryResource {
 
     List<CompletableFuture<HoldingsRecord>> updateFutures = holdingsToUpdate.stream()
       .map(storageHoldingsRecordsCollection::update)
-      .collect(Collectors.toList());
+      .toList();
 
     CompletableFuture.allOf(updateFutures.toArray(new CompletableFuture[0]))
       .handle((vVoid, throwable) -> updateFutures.stream()
