@@ -1,5 +1,5 @@
 ## 21.2.0-SNAPSHOT 2025-XX-XX
-* Update deduplication logic in mod-inventory [MODINV-1189](https://folio-org.atlassian.net/browse/MODINV-1189)
+* Error editing the "Temporary" field in the holding [MODINV-1189](https://folio-org.atlassian.net/browse/MODINV-1189)
 
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)
