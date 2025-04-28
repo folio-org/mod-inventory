@@ -149,9 +149,6 @@ public class MoveApi extends AbstractInventoryResource {
           });
       })
       .thenAccept(instance -> {
-        if (instance == null) {
-          throw new BadRequestException("Instance with id=" + toInstanceId + " not found in source or central tenant after fallback");
-        }
         try {
           CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(
             createHttpClient(client, routingContext, context), context);
