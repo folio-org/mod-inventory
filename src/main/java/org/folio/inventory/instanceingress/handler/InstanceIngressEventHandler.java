@@ -82,8 +82,9 @@ public interface InstanceIngressEventHandler {
 
   default Future<Optional<MappingMetadataDto>> getMappingMetadata(
     Context context, Supplier<MappingMetadataCache> mappingMetadataCacheSupplier) {
+    var cacheKey = InstanceIngressEventConsumer.class.getSimpleName() + "-" + context.getTenantId();
     return mappingMetadataCacheSupplier.get()
-      .getByRecordType(InstanceIngressEventConsumer.class.getSimpleName(), context, MARC_BIB_RECORD_TYPE);
+      .getByRecordType(cacheKey, context, MARC_BIB_RECORD_TYPE);
   }
 
   default Future<Instance> validateInstance(org.folio.Instance instance,
