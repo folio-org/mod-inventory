@@ -15,10 +15,13 @@ import static org.folio.inventory.support.http.server.JsonResponse.unprocessable
 import static org.folio.inventory.validation.MoveValidator.holdingsMoveHasRequiredFields;
 import static org.folio.inventory.validation.MoveValidator.itemsMoveHasRequiredFields;
 
+import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.WebContext;
@@ -42,11 +45,13 @@ import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 
 public class MoveApi extends AbstractInventoryResource {
+  private static final Logger LOGGER = LogManager.getLogger(MethodHandles.lookup().lookupClass());
   public static final String TO_HOLDINGS_RECORD_ID = "toHoldingsRecordId";
   public static final String TO_INSTANCE_ID = "toInstanceId";
   public static final String ITEM_IDS = "itemIds";
   public static final String HOLDINGS_RECORD_IDS = "holdingsRecordIds";
   private final ConsortiumService consortiumService;
+  private static final String INSTANCE_NOT_FOUND = "Instance with id=%s not found";
 
   public MoveApi(final Storage storage, final HttpClient client, ConsortiumService consortiumService) {
     super(storage, client);
@@ -99,7 +104,7 @@ public class MoveApi extends AbstractInventoryResource {
           }
         } else {
           unprocessableEntity(routingContext.response(),
-              String.format("Holding with id=%s not found", toHoldingsRecordId));
+              format("Holding with id=%s not found", toHoldingsRecordId));
         }
       })
     .exceptionally(e -> {
@@ -139,11 +144,14 @@ public class MoveApi extends AbstractInventoryResource {
                 .findById(toInstanceId)
                 .thenApply(sharedInstance -> {
                   if (sharedInstance == null) {
-                    throw new BadRequestException("Instance with id=" + toInstanceId + " not found");
+                    LOGGER.warn(format(INSTANCE_NOT_FOUND, toInstanceId));
+                    throw new BadRequestException(format(INSTANCE_NOT_FOUND, toInstanceId));
                   }
+                  LOGGER.info("shared instance with id={} found in central tenant", sharedInstance.getId());
                   return sharedInstance;
                 });
             } else {
+              LOGGER.warn(format(TENANT_NOT_IN_CONSORTIA, context.getTenantId()));
               throw new BadRequestException(format(TENANT_NOT_IN_CONSORTIA, context.getTenantId()));
             }
           });
