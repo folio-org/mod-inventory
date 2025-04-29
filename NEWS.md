@@ -1,3 +1,6 @@
+## 21.1.4 2025-XX-XX
+* Error editing the "Temporary" field in the holding [MODINV-1189](https://folio-org.atlassian.net/browse/MODINV-1189)
+
 ## 21.1.3 2025-04-18
 * Use a separate cache for MappingMetadata for each tenant [MODINV-1205](https://folio-org.atlassian.net/browse/MODINV-1205)
 
