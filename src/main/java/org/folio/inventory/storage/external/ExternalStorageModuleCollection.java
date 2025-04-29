@@ -232,12 +232,15 @@ abstract class ExternalStorageModuleCollection<T> {
   }
 
   protected HttpRequest<Buffer> withStandardHeaders(HttpRequest<Buffer> request) {
-    return request
-      .putHeader(ACCEPT, "application/json, text/plain")
+    request.putHeader(ACCEPT, "application/json, text/plain")
       .putHeader(TENANT_HEADER, tenant)
       .putHeader(TOKEN_HEADER, token)
-      .putHeader(USER_ID_HEADER, userId)
       .putHeader(REQUEST_ID_HEADER, requestId);
+
+    if (!userId.isBlank()) {
+      request.putHeader(USER_ID_HEADER, userId);
+    }
+    return request;
   }
 
   protected CompletionStage<Response> mapAsyncResultToCompletionStage(
