@@ -9,7 +9,9 @@ import static org.folio.inventory.common.dao.PostgresConnectionOptions.*;
 
 public class PgPoolContainer {
 
-  public static final String POSTGRES_IMAGE = "postgres:12-alpine";
+  public static final String DEFAULT_POSTGRES_IMAGE = "postgres:16-alpine";
+  public static final String POSTGRES_IMAGE =
+      System.getenv().getOrDefault("TESTCONTAINERS_POSTGRES_IMAGE", DEFAULT_POSTGRES_IMAGE);
 
   private static PostgreSQLContainer<?> container = new PostgreSQLContainer<>(POSTGRES_IMAGE);
 
