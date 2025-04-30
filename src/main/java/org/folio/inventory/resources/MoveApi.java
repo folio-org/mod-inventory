@@ -152,7 +152,7 @@ public class MoveApi extends AbstractInventoryResource {
                 });
             } else {
               LOGGER.warn(format(TENANT_NOT_IN_CONSORTIA, context.getTenantId()));
-              throw new BadRequestException(format(TENANT_NOT_IN_CONSORTIA, context.getTenantId()));
+              throw new BadRequestException(format(INSTANCE_NOT_FOUND, toInstanceId));
             }
           });
       })
