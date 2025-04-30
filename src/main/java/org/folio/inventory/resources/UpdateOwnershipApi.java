@@ -610,7 +610,9 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private Item mapToItem(JsonObject itemJson, String targetHoldingId) {
     return ItemUtil.fromStoredItemRepresentation(itemJson)
       .withHrid(null)
-      .withHoldingId(targetHoldingId);
+      .withHoldingId(targetHoldingId)
+      .withTemporaryLocationId(null)
+      .withPermanentLocationId(null);
   }
 
   private List<HoldingsRecord> getHoldingsToDelete(List<NotUpdatedEntity> notUpdatedEntities,

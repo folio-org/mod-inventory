@@ -42,6 +42,8 @@ import static org.folio.inventory.resources.UpdateOwnershipApi.ITEM_NOT_FOUND;
 import static org.folio.inventory.resources.UpdateOwnershipApi.ITEM_NOT_LINKED_TO_SHARED_INSTANCE;
 import static org.folio.inventory.resources.UpdateOwnershipApi.ITEM_WITH_PARTS_ERROR;
 import static org.folio.inventory.support.ItemUtil.HOLDINGS_RECORD_ID;
+import static org.folio.inventory.support.ItemUtil.PERMANENT_LOCATION_ID_KEY;
+import static org.folio.inventory.support.ItemUtil.TEMPORARY_LOCATION_ID_KEY;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 import static org.hamcrest.CoreMatchers.is;
@@ -51,6 +53,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(JUnitParamsRunner.class)
@@ -73,6 +76,8 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
     UUID instanceId = UUID.randomUUID();
     JsonObject instance = smallAngryPlanet(instanceId);
     String itemHrId = "it0000001";
+    String locationId = UUID.randomUUID().toString();
+    JsonObject location = new JsonObject().put("id", locationId).put("name", "location");
 
     InstanceApiClient.createInstance(okapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
     InstanceApiClient.createInstance(consortiumOkapiClient, instance.put("source", FOLIO.getValue()));
@@ -85,14 +90,18 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
       new ItemRequestBuilder()
         .forHolding(createHoldingsRecord1)
         .withBarcode("645398607547")
-        .withStatus(ItemStatusName.AVAILABLE.value()));
+        .withStatus(ItemStatusName.AVAILABLE.value())
+        .withTemporaryLocation(location)
+        .withPermanentLocation(location));
 
     final var secondItem = itemsClient.create(
       new ItemRequestBuilder()
         .forHolding(createHoldingsRecord1)
         .withHrid(itemHrId)
         .withBarcode("645398607546")
-        .withStatus(ItemStatusName.AVAILABLE.value()));
+        .withStatus(ItemStatusName.AVAILABLE.value())
+        .withTemporaryLocation(location)
+        .withPermanentLocation(location));
 
     JsonObject itemsUpdateOwnershipRequestBody = new ItemsUpdateOwnershipRequestBuilder(createHoldingsRecord2,
       new JsonArray(List.of(firstItem.getId().toString(), secondItem.getId().toString())), ApiTestSuite.COLLEGE_TENANT_ID).create();
@@ -128,6 +137,11 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceSecondUpdatedItem.getStatusCode()));
     assertTrue(targetTenantHoldingsIds.contains(createHoldingsRecord2.toString()));
     assertNotEquals(targetTenantItem2.getString("hrid"), itemHrId);
+
+    targetHoldingsRecordItems.forEach(item -> {
+      assertNull(item.getString(TEMPORARY_LOCATION_ID_KEY));
+      assertNull(item.getString(PERMANENT_LOCATION_ID_KEY));
+    });
   }
 
   @Test
