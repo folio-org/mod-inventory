@@ -1,3 +1,6 @@
+## 21.1.5 2025-05-dd
+* ECS: Moving holdings to another instance produces error if the instance does not already have an associated holdings with active affiliation [MODINV-1225](https://folio-org.atlassian.net/browse/MODINV-1225)
+
 ## 21.1.4 2025-05-02
 * Error editing the "Temporary" field in the holding [MODINV-1189](https://folio-org.atlassian.net/browse/MODINV-1189)
 * Unable to update holdings or item ownership on LOC stage [MODINV-1175](https://folio-org.atlassian.net/browse/MODINV-1175)
