@@ -9,7 +9,9 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
 import org.folio.inventory.support.http.client.Response;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -23,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import static api.ApiTestSuite.ID_FOR_FAILURE;
+import static api.ApiTestSuite.createConsortiumTenant;
 import static api.support.InstanceSamples.nod;
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
@@ -30,12 +33,22 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
 @RunWith(JUnitParamsRunner.class)
 public class HoldingsApiMoveExamples extends ApiTests {
 
   private static final String INSTANCE_ID = "instanceId";
+  @Before
+  public void initConsortia() throws Exception {
+    createConsortiumTenant();
+  }
+
+  @After
+  public void clearConsortia() throws Exception {
+    userTenantsClient.deleteAll();
+  }
 
   @Test
   public void canMoveHoldingsToDifferentInstance() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
@@ -66,6 +79,58 @@ public class HoldingsApiMoveExamples extends ApiTests {
 
     Assert.assertEquals(newInstanceId.toString(), holdingsRecord1.getString(INSTANCE_ID));
     Assert.assertEquals(newInstanceId.toString(), holdingsRecord2.getString(INSTANCE_ID));
+  }
+
+  @Test
+  public void canMoveHoldingsToDifferentInstanceAcrossTenantsWhenSharedInstanceExists() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+    UUID oldInstanceId = UUID.randomUUID();
+    UUID sharedInstanceId = UUID.randomUUID(); // instance exists in central tenant
+
+    // Create instance in source tenant
+    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(oldInstanceId));
+
+    // Simulate that shared instance exists in central tenant
+    createSharedInstanceInCentralTenant(sharedInstanceId); // <-- helper method to mock it
+
+    // Create holdings linked to oldInstance
+    UUID holdingsRecordId1 = createHoldingForInstance(oldInstanceId);
+    UUID holdingsRecordId2 = createHoldingForInstance(oldInstanceId);
+
+    JsonObject holdingsMoveRequestBody = new HoldingsRecordMoveRequestBuilder(
+      sharedInstanceId, new JsonArray(Arrays.asList(holdingsRecordId1.toString(), holdingsRecordId2.toString()))
+    ).create();
+
+    Response postHoldingsMoveResponse = moveHoldingsRecords(holdingsMoveRequestBody);
+
+    assertThat(postHoldingsMoveResponse.getStatusCode(), is(200));
+    assertThat(new JsonObject(postHoldingsMoveResponse.getBody()).getJsonArray("nonUpdatedIds").size(), is(0));
+    assertThat(postHoldingsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
+
+    JsonObject updatedHoldings1 = holdingsStorageClient.getById(holdingsRecordId1).getJson();
+    JsonObject updatedHoldings2 = holdingsStorageClient.getById(holdingsRecordId2).getJson();
+
+    assertEquals(sharedInstanceId.toString(), updatedHoldings1.getString(INSTANCE_ID));
+    assertEquals(sharedInstanceId.toString(), updatedHoldings2.getString(INSTANCE_ID));
+  }
+
+  @Test
+  public void cannotMoveHoldingsWhenSharedInstanceNotFoundAcrossTenants() throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+    UUID oldInstanceId = UUID.randomUUID();
+    UUID missingSharedInstanceId = UUID.randomUUID(); // will not create this shared instance
+
+    InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(oldInstanceId));
+
+    UUID holdingsRecordId1 = createHoldingForInstance(oldInstanceId);
+
+    JsonObject holdingsMoveRequestBody = new HoldingsRecordMoveRequestBuilder(
+      missingSharedInstanceId, new JsonArray(Collections.singletonList(holdingsRecordId1.toString()))
+    ).create();
+
+    Response postHoldingsMoveResponse = moveHoldingsRecords(holdingsMoveRequestBody);
+
+    assertThat(postHoldingsMoveResponse.getStatusCode(), is(422)); // Unprocessable Entity
+    assertThat(postHoldingsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsMoveResponse.getBody(), containsString("Instance with id=" + missingSharedInstanceId + " not found"));
   }
 
   @Test
@@ -250,17 +315,20 @@ public class HoldingsApiMoveExamples extends ApiTests {
     return postHoldingRecordsMoveCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
   }
 
-  private UUID createHoldingForInstance(UUID instanceId)
-      throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+  private UUID createHoldingForInstance(UUID instanceId) {
     return holdingsStorageClient.create(new HoldingRequestBuilder().forInstance(instanceId))
       .getId();
   }
 
-  private UUID createHoldingForInstance(UUID id, UUID instanceId)
-    throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
+  private UUID createHoldingForInstance(UUID id, UUID instanceId) {
     JsonObject obj = new HoldingRequestBuilder().forInstance(instanceId).create();
     obj.put("id", id.toString());
     holdingsStorageClient.create(obj);
     return id;
   }
+
+  private void createSharedInstanceInCentralTenant(UUID sharedInstanceId) {
+    InstanceApiClient.createInstance(consortiumOkapiClient, nod(sharedInstanceId));
+  }
+
 }
