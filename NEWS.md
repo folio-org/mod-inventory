@@ -1,5 +1,6 @@
-## 21.1.4 2025-XX-XX
+## 21.1.4 2025-05-02
 * Error editing the "Temporary" field in the holding [MODINV-1189](https://folio-org.atlassian.net/browse/MODINV-1189)
+* Unable to update holdings or item ownership on LOC stage [MODINV-1175](https://folio-org.atlassian.net/browse/MODINV-1175)
 
 ## 21.1.3 2025-04-18
 * Use a separate cache for MappingMetadata for each tenant [MODINV-1205](https://folio-org.atlassian.net/browse/MODINV-1205)
