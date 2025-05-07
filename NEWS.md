@@ -1,5 +1,6 @@
-## 21.1.5 2025-05-dd
+## 21.1.5 2025-05-08
 * ECS: Moving holdings to another instance produces error if the instance does not already have an associated holdings with active affiliation [MODINV-1225](https://folio-org.atlassian.net/browse/MODINV-1225)
+* Upgrade data-import-processing-core to v4.4.3 to fix vulnerabilities [MODINV-1224](https://folio-org.atlassian.net/browse/MODINV-1224)
 
 ## 21.1.4 2025-05-02
 * Error editing the "Temporary" field in the holding [MODINV-1189](https://folio-org.atlassian.net/browse/MODINV-1189)
