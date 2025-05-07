@@ -14,6 +14,7 @@ import org.folio.inventory.KafkaUtility;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
@@ -35,6 +36,8 @@ import org.testcontainers.kafka.KafkaContainer;
  *
  * <p>Test logging.
  */
+@EnabledOnOs(architectures = "x86_64",
+             disabledReason = "Dockerfile base image folioci/alpine-jre-openjdk is available for x86_64 only")
 @Testcontainers
 class InventoryIT {
 
