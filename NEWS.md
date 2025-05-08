@@ -1,5 +1,6 @@
-## 21.0.15 2025-05-dd
-* ECS: Moving holdings to another instance produces error if the instance does not already have an associated holdings with active affiliation [MODINV-1226](https://folio-org.atlassian.net/browse/MODINV-1226) (MODINVSTOR-1404)
+## 21.0.15 2025-05-08
+* Unable to update holdings or item ownership on LOC stage [MODINV-1222](https://folio-org.atlassian.net/browse/MODINV-1222) (MODINV-1175)
+* ECS: Fix holdings movement to another instance if the instance does not already have an associated holdings with active affiliation [MODINV-1226](https://folio-org.atlassian.net/browse/MODINV-1226) (MODINVSTOR-1404)
 
 ## 21.0.14 2025-04-23
 * Updating MARC bib record removes Date 1, Date 2 and Date type fields [MODINV-1212](https://folio-org.atlassian.net/browse/MODINV-1212)
