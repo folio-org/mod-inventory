@@ -113,7 +113,7 @@ public final class ParsedRecordUtil {
       StringBuilder builder = new StringBuilder(leader);
       builder.setCharAt(LEADER_STATUS_SUBFIELD_POSITION, status);
       marcJson.put(LEADER, builder.toString());
-      parsedRecord.setContent(normalize(marcJson));
+      parsedRecord.setContent(marcJson.encode());
     }
   }
 
