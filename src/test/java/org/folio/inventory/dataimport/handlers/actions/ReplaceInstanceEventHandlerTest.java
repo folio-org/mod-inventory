@@ -57,6 +57,7 @@ import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.jaxrs.model.Snapshot;
+import org.folio.rest.tools.ClientHelpers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -99,6 +100,7 @@ import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEve
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.MARC_BIB_RECORD_CREATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.LEADER_STATUS_DELETED;
+import static org.folio.inventory.dataimport.util.ParsedRecordUtil.normalize;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.MARC;
@@ -147,6 +149,7 @@ public class ReplaceInstanceEventHandlerTest {
   private final String localTenant = "tenant";
   private final String consortiumTenant = "consortiumTenant";
   private final UUID instanceId = UUID.randomUUID();
+  private final String instanceHrid = "in0001";
   private final String consortiumId = UUID.randomUUID().toString();
   private final String jobExecutionId = UUID.randomUUID().toString();
 
@@ -421,11 +424,13 @@ public class ReplaceInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     HashMap<String, String> context = new HashMap<>();
-    Record srsRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_DELETED_05));
+    Record srsRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_DELETED_05))
+      .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId.toString()).withInstanceHrid(instanceHrid));
+
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(srsRecord));
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", instanceId)
-      .put("hrid", UUID.randomUUID().toString())
+      .put("hrid", instanceHrid)
       .put("source", MARC_INSTANCE_SOURCE)
       .put("_version", INSTANCE_VERSION)
       .put("discoverySuppress", false)
@@ -477,6 +482,7 @@ public class ReplaceInstanceEventHandlerTest {
       return r.getState() == Record.State.DELETED && r.getAdditionalInfo().getSuppressDiscovery() &&
         r.getDeleted() && leader.isPresent() && leader.get().equals(LEADER_STATUS_DELETED);
     }));
+    verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), argThat(this::verifyParsedContentSerialization));
     verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
@@ -1759,8 +1765,8 @@ public class ReplaceInstanceEventHandlerTest {
   }
 
   private void mockInstance(String sourceType, boolean deleted) {
-    Instance returnedInstance = new Instance(UUID.randomUUID().toString(), String.valueOf(INSTANCE_VERSION),
-      UUID.randomUUID().toString(), sourceType, "title", "instanceTypeId");
+    Instance returnedInstance = new Instance(instanceId.toString(), String.valueOf(INSTANCE_VERSION),
+      instanceHrid, sourceType, "title", "instanceTypeId");
     returnedInstance.setDeleted(deleted);
     returnedInstance.setDiscoverySuppress(deleted);
     returnedInstance.setStaffSuppress(deleted);
@@ -1775,4 +1781,11 @@ public class ReplaceInstanceEventHandlerTest {
   private static String readFileFromPath(String path) throws IOException {
     return new String(FileUtils.readFileToByteArray(new File(path)));
   }
+
+  private boolean verifyParsedContentSerialization(Record sourceRecord) {
+    String serializedParsedRecord = ClientHelpers.pojo2json(sourceRecord.getParsedRecord());
+    JsonObject contentJson = normalize(Json.decodeValue(serializedParsedRecord, ParsedRecord.class).getContent());
+    return contentJson.fieldNames().size() == 2 && contentJson.fieldNames().containsAll(List.of("fields", "leader"));
+  }
+
 }
