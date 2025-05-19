@@ -7,6 +7,9 @@ import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil.AdditionalSubfields;
 import org.folio.rest.jaxrs.model.Record;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -80,7 +83,10 @@ public class ParsedRecordUtilTest {
     ParsedRecordUtil.updateLeaderStatus(parsedRecord, newStatus);
 
     // then
+    assertThat(parsedRecord.getContent(), instanceOf(String.class));
     JsonObject updatedContent = ParsedRecordUtil.normalize(parsedRecord.getContent());
+    assertEquals(2, updatedContent.fieldNames().size());
+    assertThat(updatedContent.fieldNames(), containsInAnyOrder("fields", "leader"));
     assertEquals("01240bvs a2200397   4500", updatedContent.getString("leader"));
   }
 
