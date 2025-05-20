@@ -1,3 +1,6 @@
+## 21.1.6 2025-05-20
+* Deleted from Inventory MARC records are not matching during update [MODINV-1232](https://folio-org.atlassian.net/browse/MODINV-1232)
+
 ## 21.1.5 2025-05-08
 * ECS: Moving holdings to another instance produces error if the instance does not already have an associated holdings with active affiliation [MODINV-1225](https://folio-org.atlassian.net/browse/MODINV-1225)
 * Upgrade data-import-processing-core to v4.4.3 to fix vulnerabilities [MODINV-1224](https://folio-org.atlassian.net/browse/MODINV-1224)
