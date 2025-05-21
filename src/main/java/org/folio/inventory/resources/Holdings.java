@@ -29,6 +29,7 @@ import org.apache.logging.log4j.Logger;
 
 import org.folio.HoldingsRecord;
 import org.folio.HttpStatus;
+import org.folio.Metadata;
 import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.config.InventoryConfiguration;
@@ -39,6 +40,7 @@ import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.server.FailureResponseConsumer;
+import org.folio.okapi.common.OkapiToken;
 
 public class Holdings {
 
@@ -78,10 +80,10 @@ public class Holdings {
   private void update(RoutingContext rContext) {
     try {
       var wContext = new WebContext(rContext);
-      var holdingsRequest = rContext.getBodyAsJson();
-      var updatedHoldings = holdingsRequest.mapTo(HoldingsRecord.class);
+      var updatedHoldings = rContext.body().asPojo(HoldingsRecord.class);
       var holdingsRecordCollection = storage.getHoldingsRecordCollection(wContext);
       var holdingRecordSourceCollection = storage.getHoldingsRecordsSourceCollection(wContext);
+      populateUpdatedByUserIdIfNeeded(updatedHoldings, wContext);
 
       completedFuture(updatedHoldings)
         .thenCompose(holdingsRecord -> holdingsRecordCollection.findById(rContext.request().getParam(ID_FIELD)))
@@ -97,6 +99,18 @@ public class Holdings {
     } catch (Exception e) {
       LOGGER.error(e);
       handleFailure(e, rContext);
+    }
+  }
+
+  private void populateUpdatedByUserIdIfNeeded(HoldingsRecord updatedHoldings, WebContext wContext) {
+    if (updatedHoldings.getMetadata() == null) {
+      updatedHoldings.setMetadata(new Metadata());
+    }
+
+    if (StringUtils.isBlank(updatedHoldings.getMetadata().getUpdatedByUserId())) {
+      String userId = StringUtils.isNotBlank(wContext.getUserId()) ? wContext.getUserId()
+        : new OkapiToken(wContext.getToken()).getUserIdWithoutValidation();
+      updatedHoldings.getMetadata().setUpdatedByUserId(userId);
     }
   }
 
