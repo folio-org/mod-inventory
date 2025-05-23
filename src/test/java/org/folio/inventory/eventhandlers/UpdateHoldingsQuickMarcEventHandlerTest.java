@@ -7,17 +7,21 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import api.ApiTestSuite;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
 import org.folio.HoldingsType;
+import org.folio.Metadata;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
@@ -183,6 +187,69 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   }
 
   @Test
+  public void shouldPopulateUpdatedByUserIdFieldFromContextUserIdIfUpdatedByUserIdFieldIsAbsent() {
+    existingHoldingsRecord.setMetadata(new Metadata().withUpdatedByUserId(null));
+    String expectedUserId = UUID.randomUUID().toString();
+    when(context.getUserId()).thenReturn(expectedUserId);
+
+    HashMap<String, String> eventPayload = new HashMap<>();
+    eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
+    eventPayload.put("MARC_HOLDING", record.encode());
+    eventPayload.put("MAPPING_RULES", mappingRules.encode());
+    eventPayload.put("MAPPING_PARAMS", Json.encode(new MappingParameters()));
+    eventPayload.put("RELATED_RECORD_VERSION", HOLDINGS_VERSION.toString());
+
+    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
+    HoldingsRecord updatedHoldings = future.result();
+
+    Assert.assertNotNull(updatedHoldings);
+    Assert.assertEquals(HOLDINGS_ID, updatedHoldings.getId());
+    Assert.assertEquals(HOLDINGS_VERSION, updatedHoldings.getVersion());
+    Assert.assertEquals(expectedUserId, updatedHoldings.getMetadata().getUpdatedByUserId());
+  }
+
+  @Test
+  public void shouldPopulateUpdatedByUserIdFieldFromContextTokenIfUpdatedByUserIdFieldAndUserIdAreAbsent() {
+    existingHoldingsRecord.setMetadata(new Metadata().withUpdatedByUserId(null));
+    String expectedUserId = UUID.randomUUID().toString();
+    when(context.getUserId()).thenReturn(null);
+    when(context.getToken()).thenReturn(getUnsecuredJwtWithUserId(expectedUserId));
+
+    HashMap<String, String> eventPayload = new HashMap<>();
+    eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
+    eventPayload.put("MARC_HOLDING", record.encode());
+    eventPayload.put("MAPPING_RULES", mappingRules.encode());
+    eventPayload.put("MAPPING_PARAMS", Json.encode(new MappingParameters()));
+    eventPayload.put("RELATED_RECORD_VERSION", HOLDINGS_VERSION.toString());
+
+    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
+    HoldingsRecord updatedHoldings = future.result();
+
+    Assert.assertNotNull(updatedHoldings);
+    Assert.assertEquals(HOLDINGS_ID, updatedHoldings.getId());
+    Assert.assertEquals(HOLDINGS_VERSION, updatedHoldings.getVersion());
+    Assert.assertEquals(expectedUserId, updatedHoldings.getMetadata().getUpdatedByUserId());
+  }
+
+  @Test
+  public void shouldReturnFailedFutureIfUpdatedByUserIdFieldIsAbsentAndContextTokenIsInvalid() {
+    existingHoldingsRecord.setMetadata(new Metadata().withUpdatedByUserId(null));
+    when(context.getUserId()).thenReturn(null);
+    when(context.getToken()).thenReturn("invalid-token");
+
+    HashMap<String, String> eventPayload = new HashMap<>();
+    eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
+    eventPayload.put("MARC_HOLDING", record.encode());
+    eventPayload.put("MAPPING_RULES", mappingRules.encode());
+    eventPayload.put("MAPPING_PARAMS", Json.encode(new MappingParameters()));
+    eventPayload.put("RELATED_RECORD_VERSION", HOLDINGS_VERSION.toString());
+
+    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
+
+    Assert.assertTrue(future.failed());
+  }
+
+  @Test
   public void shouldCompleteExceptionally_whenRecordIsEmpty() {
     HashMap<String, String> eventPayload = new HashMap<>();
     eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
@@ -218,5 +285,17 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
 
     Assert.assertTrue(future.failed());
+  }
+
+  private String getUnsecuredJwtWithUserId(String userId) {
+    String header = new JsonObject().put("alg", "none").encode();
+    String payload = new JsonObject()
+      .put("user_id", userId)
+      .put("tenant", ApiTestSuite.TENANT_ID)
+      .encode();
+
+    String encodedHeader = Base64.getEncoder().encodeToString(header.getBytes(StandardCharsets.UTF_8));
+    String encodedPayload = Base64.getEncoder().encodeToString(payload.getBytes(StandardCharsets.UTF_8));
+    return String.format("%s.%s.", encodedHeader, encodedPayload);
   }
 }
