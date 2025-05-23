@@ -240,6 +240,15 @@ public class ApiTestSuite {
       it -> System.out.printf("Request failed: %s%n", it.toString()));
   }
 
+  public static OkapiHttpClient createOkapiHttpClient(String tenantId, String token, String userId)
+    throws MalformedURLException {
+
+    return new OkapiHttpClient(
+      vertxAssistant.getVertx(),
+      new URL(storageOkapiUrl()), tenantId, token, userId, null,
+      it -> System.out.printf("Request failed: %s%n", it.toString()));
+  }
+
   public static String storageOkapiUrl() {
     if(useOkapiForStorageRequests) {
       return okapiAddress;
