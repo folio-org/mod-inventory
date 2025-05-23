@@ -4,6 +4,7 @@ import static io.netty.util.internal.StringUtil.COMMA;
 import static java.lang.String.format;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
+import static org.folio.inventory.dataimport.util.HoldingsRecordUtil.populateUpdatedByUserIdIfNeeded;
 import static org.folio.inventory.support.CompletableFutures.failedFuture;
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.http.server.ServerErrorResponse.internalError;
@@ -29,7 +30,6 @@ import org.apache.logging.log4j.Logger;
 
 import org.folio.HoldingsRecord;
 import org.folio.HttpStatus;
-import org.folio.Metadata;
 import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.config.InventoryConfiguration;
@@ -40,7 +40,6 @@ import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.server.FailureResponseConsumer;
-import org.folio.okapi.common.OkapiToken;
 
 public class Holdings {
 
@@ -99,18 +98,6 @@ public class Holdings {
     } catch (Exception e) {
       LOGGER.error(e);
       handleFailure(e, rContext);
-    }
-  }
-
-  private void populateUpdatedByUserIdIfNeeded(HoldingsRecord updatedHoldings, WebContext wContext) {
-    if (updatedHoldings.getMetadata() == null) {
-      updatedHoldings.setMetadata(new Metadata());
-    }
-
-    if (StringUtils.isBlank(updatedHoldings.getMetadata().getUpdatedByUserId())) {
-      String userId = StringUtils.isNotBlank(wContext.getUserId()) ? wContext.getUserId()
-        : new OkapiToken(wContext.getToken()).getUserIdWithoutValidation();
-      updatedHoldings.getMetadata().setUpdatedByUserId(userId);
     }
   }
 

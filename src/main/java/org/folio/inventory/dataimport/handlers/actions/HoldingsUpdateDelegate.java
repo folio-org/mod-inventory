@@ -17,6 +17,7 @@ import org.folio.Holdings;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.folio.inventory.dataimport.util.HoldingsRecordUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.services.HoldingsCollectionService;
@@ -66,6 +67,7 @@ public class HoldingsUpdateDelegate {
             mappedHoldings.setSourceId(sourceId);
             return mergeRecords(existingHoldingsRecord, mappedHoldings);
           }))
+        .map(updatedHoldingsRecord -> populateUpdatedByUserIdIfNeeded(updatedHoldingsRecord, context))
         .compose(updatedHoldingsRecord -> updateHoldingsRecord(updatedHoldingsRecord, holdingsRecordCollection));
     } catch (Exception e) {
       LOGGER.error("Error updating inventory holdings", e);
@@ -146,5 +148,10 @@ public class HoldingsUpdateDelegate {
   private Future<String> findSourceId(Context context) {
     var sourceCollection = storage.getHoldingsRecordsSourceCollection(context);
     return holdingsCollectionService.findSourceIdByName(sourceCollection, MARC_NAME);
+  }
+
+  private HoldingsRecord populateUpdatedByUserIdIfNeeded(HoldingsRecord holdingsRecord, Context context) {
+    HoldingsRecordUtil.populateUpdatedByUserIdIfNeeded(holdingsRecord, context);
+    return holdingsRecord;
   }
 }
