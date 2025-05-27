@@ -18,10 +18,13 @@ public final class HoldingsRecordUtil {
     }
 
     if (StringUtils.isBlank(updatedHoldings.getMetadata().getUpdatedByUserId())) {
-      String userId = StringUtils.isNotBlank(context.getUserId()) ? context.getUserId()
-        : new OkapiToken(context.getToken()).getUserIdWithoutValidation();
-      updatedHoldings.getMetadata().setUpdatedByUserId(userId);
+      updatedHoldings.getMetadata().setUpdatedByUserId(getUserId(context));
     }
+  }
+
+  private static String getUserId(Context context) {
+    return StringUtils.isNotBlank(context.getUserId()) ? context.getUserId()
+      : new OkapiToken(context.getToken()).getUserIdWithoutValidation();
   }
 
 }
