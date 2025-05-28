@@ -1,6 +1,7 @@
 package api;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
@@ -236,7 +237,7 @@ public class ApiTestSuite {
 
     return new OkapiHttpClient(
       vertxAssistant.getVertx(),
-      new URL(storageOkapiUrl()), tenantId, TOKEN, USER_ID, null,
+      URI.create(storageOkapiUrl()).toURL(), tenantId, TOKEN, USER_ID, null,
       it -> System.out.printf("Request failed: %s%n", it.toString()));
   }
 
@@ -245,7 +246,7 @@ public class ApiTestSuite {
 
     return new OkapiHttpClient(
       vertxAssistant.getVertx(),
-      new URL(storageOkapiUrl()), tenantId, token, userId, null,
+      URI.create(storageOkapiUrl()).toURL(), tenantId, token, userId, null,
       it -> System.out.printf("Request failed: %s%n", it.toString()));
   }
 
