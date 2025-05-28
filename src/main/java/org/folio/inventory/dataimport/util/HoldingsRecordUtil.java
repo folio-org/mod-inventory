@@ -12,14 +12,15 @@ public final class HoldingsRecordUtil {
     throw new UnsupportedOperationException("Cannot instantiate utility class");
   }
 
-  public static void populateUpdatedByUserIdIfNeeded(HoldingsRecord updatedHoldings, Context context) {
-    if (updatedHoldings.getMetadata() == null) {
-      updatedHoldings.setMetadata(new Metadata());
+  public static HoldingsRecord populateUpdatedByUserIdIfNeeded(HoldingsRecord holdingsRecord, Context context) {
+    if (holdingsRecord.getMetadata() == null) {
+      holdingsRecord.setMetadata(new Metadata());
     }
 
-    if (StringUtils.isBlank(updatedHoldings.getMetadata().getUpdatedByUserId())) {
-      updatedHoldings.getMetadata().setUpdatedByUserId(getUserId(context));
+    if (StringUtils.isBlank(holdingsRecord.getMetadata().getUpdatedByUserId())) {
+      holdingsRecord.getMetadata().setUpdatedByUserId(getUserId(context));
     }
+    return holdingsRecord;
   }
 
   private static String getUserId(Context context) {

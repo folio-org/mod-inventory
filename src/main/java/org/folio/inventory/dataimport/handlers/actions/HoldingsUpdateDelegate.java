@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import static java.lang.String.format;
+import static org.folio.inventory.dataimport.util.HoldingsRecordUtil.populateUpdatedByUserIdIfNeeded;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
 
 import java.util.Map;
@@ -17,7 +18,6 @@ import org.folio.Holdings;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
-import org.folio.inventory.dataimport.util.HoldingsRecordUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.services.HoldingsCollectionService;
@@ -148,10 +148,5 @@ public class HoldingsUpdateDelegate {
   private Future<String> findSourceId(Context context) {
     var sourceCollection = storage.getHoldingsRecordsSourceCollection(context);
     return holdingsCollectionService.findSourceIdByName(sourceCollection, MARC_NAME);
-  }
-
-  private HoldingsRecord populateUpdatedByUserIdIfNeeded(HoldingsRecord holdingsRecord, Context context) {
-    HoldingsRecordUtil.populateUpdatedByUserIdIfNeeded(holdingsRecord, context);
-    return holdingsRecord;
   }
 }
