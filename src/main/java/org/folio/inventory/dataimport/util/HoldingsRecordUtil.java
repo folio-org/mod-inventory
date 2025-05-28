@@ -12,6 +12,14 @@ public final class HoldingsRecordUtil {
     throw new UnsupportedOperationException("Cannot instantiate utility class");
   }
 
+  /**
+   * Populates the updatedByUserId field of the specified {@code holdingsRecord} if it is not already set,
+   * using value from the {@code  context} user ID, if present, or from token otherwise.
+   *
+   * @param holdingsRecord the HoldingsRecord to update
+   * @param context        the context containing user information
+   * @return the updated {@code holdingsRecord}
+   */
   public static HoldingsRecord populateUpdatedByUserIdIfNeeded(HoldingsRecord holdingsRecord, Context context) {
     if (holdingsRecord.getMetadata() == null) {
       holdingsRecord.setMetadata(new Metadata());
