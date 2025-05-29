@@ -9,9 +9,12 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.hamcrest.Matchers.contains;
+import static org.junit.Assert.assertFalse;
 
 import java.net.MalformedURLException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -25,6 +28,8 @@ import api.support.fixtures.InstanceRequestExamples;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.folio.HoldingsRecord;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.junit.After;
 import org.junit.Test;
 
@@ -202,6 +207,79 @@ public class HoldingsApiExamples extends ApiTests {
     }
   }
 
+  @Test
+  public void canUpdateHoldingsAndSetUpdatedByUserIdFromUserIdHeaderIfUpdatedByUserIdIsNotSet() throws Exception {
+    String token = "token";
+    String expectedUserId = UUID.randomUUID().toString();
+
+    UUID instanceId = instancesClient.create(InstanceRequestExamples.smallAngryPlanet()).getId();
+    JsonObject newHoldings = holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance(instanceId)).getJson();
+
+    JsonObject updateHoldingsRequest = newHoldings.copy()
+      .put("permanentLocationId", "fcd64ce1-6995-48f0-840e-89ffa2288371")
+      .put("metadata", new JsonObject()
+        .put("createdByUserId", expectedUserId));
+    assertFalse(updateHoldingsRequest.getJsonObject("metadata").containsKey("updatedByUserId"));
+
+    Response putResponse = updateHoldings(updateHoldingsRequest, token, expectedUserId);
+    assertThat(putResponse.getStatusCode(), is(NO_CONTENT.code()));
+
+    Response getResponse = holdingsStorageClient.getById(getId(newHoldings));
+    assertThat(getResponse.getStatusCode(), is(OK.code()));
+
+    JsonObject updatedHoldings = getResponse.getJson();
+    HoldingsRecord holdingsRecord = updatedHoldings.mapTo(HoldingsRecord.class);
+
+    assertThat(holdingsRecord.getId(), is(newHoldings.getString("id")));
+    assertThat(holdingsRecord.getMetadata().getUpdatedByUserId(), is(expectedUserId));
+    assertThat(updatedHoldings.getString("permanentLocationId"), is("fcd64ce1-6995-48f0-840e-89ffa2288371"));
+  }
+
+  @Test
+  public void canUpdateHoldingsAndSetUpdatedByUserIdFromTokenIfUpdatedByUserIdIsNotSetAndUserIdHeaderIsAbsent()
+    throws Exception {
+
+    String expectedUserId = UUID.randomUUID().toString();
+    String token = getUnsecuredJwtWithUserId(expectedUserId);
+
+    UUID instanceId = instancesClient.create(InstanceRequestExamples.smallAngryPlanet()).getId();
+    JsonObject newHoldings = holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance(instanceId)).getJson();
+
+    JsonObject updateHoldingsRequest = newHoldings.copy()
+      .put("permanentLocationId", "fcd64ce1-6995-48f0-840e-89ffa2288371")
+      .put("metadata", new JsonObject()
+        .put("createdByUserId", expectedUserId));
+    assertFalse(updateHoldingsRequest.getJsonObject("metadata").containsKey("updatedByUserId"));
+
+    Response putResponse = updateHoldings(updateHoldingsRequest, token, null);
+    assertThat(putResponse.getStatusCode(), is(NO_CONTENT.code()));
+
+    Response getResponse = holdingsStorageClient.getById(getId(newHoldings));
+    assertThat(getResponse.getStatusCode(), is(OK.code()));
+
+    JsonObject updatedHoldings = getResponse.getJson();
+    HoldingsRecord holdingsRecord = updatedHoldings.mapTo(HoldingsRecord.class);
+
+    assertThat(holdingsRecord.getId(), is(newHoldings.getString("id")));
+    assertThat(holdingsRecord.getMetadata().getUpdatedByUserId(), is(expectedUserId));
+    assertThat(updatedHoldings.getString("permanentLocationId"), is("fcd64ce1-6995-48f0-840e-89ffa2288371"));
+  }
+
+  @Test
+  public void cannotUpdateHoldingsAndSetUpdatedByUserIdIfTokenHeaderInvalidAndUserIdHeaderIsAbsent() throws Exception {
+    String token = "invalidToken";
+    UUID instanceId = instancesClient.create(InstanceRequestExamples.smallAngryPlanet()).getId();
+    JsonObject newHoldings = holdingsStorageClient.create(new HoldingRequestBuilder()
+      .forInstance(instanceId)).getJson();
+
+    JsonObject updateHoldingsRequest = newHoldings.copy();
+    Response putResponse = updateHoldings(updateHoldingsRequest, token, null);
+
+    assertThat(putResponse.getStatusCode(), is(INTERNAL_SERVER_ERROR.code()));
+  }
+
   private UUID getId(JsonObject newHoldings) {
     return UUID.fromString(newHoldings.getString("id"));
   }
@@ -235,5 +313,29 @@ public class HoldingsApiExamples extends ApiTests {
     final var putFuture = okapiClient.put(holdingsUpdateUri, holdings);
 
     return putFuture.toCompletableFuture().get(5, SECONDS);
+  }
+
+  private Response updateHoldings(JsonObject holdings, String token, String userId) throws MalformedURLException,
+    InterruptedException, ExecutionException, TimeoutException {
+    String holdingsUpdateUri = String
+      .format("%s/%s", ApiRoot.holdings(), holdings.getString("id"));
+
+    OkapiHttpClient okapiHttpClient = ApiTestSuite.createOkapiHttpClient(ApiTestSuite.TENANT_ID, token, userId);
+
+    final var putFuture = okapiHttpClient.put(holdingsUpdateUri, holdings);
+
+    return putFuture.toCompletableFuture().get(5, SECONDS);
+  }
+
+  private String getUnsecuredJwtWithUserId(String userId) {
+    String header = new JsonObject().put("alg", "none").encode();
+    String payload = new JsonObject()
+      .put("user_id", userId)
+      .put("tenant", ApiTestSuite.TENANT_ID)
+      .encode();
+
+    String encodedHeader = Base64.getEncoder().encodeToString(header.getBytes(StandardCharsets.UTF_8));
+    String encodedPayload = Base64.getEncoder().encodeToString(payload.getBytes(StandardCharsets.UTF_8));
+    return String.format("%s.%s.", encodedHeader, encodedPayload);
   }
 }
