@@ -169,6 +169,10 @@ class ExternalStorageModuleInstanceCollection
     instance.put(Instance.ID, existingInstance.getId());
     JsonObject existing = JsonObject.mapFrom(existingInstance);
     JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, instance);
+
+    LOGGER.info("modifyInstance:: existingInstance source: '{}', mergedInstance source: '{}'",
+      existingInstance.getSource(), Instance.fromJson(mergedInstanceAsJson).getSource());
+
     return Instance.fromJson(mergedInstanceAsJson);
   }
 
