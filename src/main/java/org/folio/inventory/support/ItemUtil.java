@@ -84,53 +84,61 @@ public final class ItemUtil {
       itemFromServer.getJsonObject(Item.TAGS_KEY).getJsonArray(Item.TAG_LIST_KEY))
       : new ArrayList<>();
 
+    List<JsonObject> additionalCallNumbers = toList(
+        itemFromServer.getJsonArray(Item.ITEM_LEVEL_ADDITIONAL_CALL_NUMBERS_KEY, new JsonArray()));
+
+    List<EffectiveCallNumberComponents> itemLevelAdditionalCallNumbers = additionalCallNumbers.stream()
+        .map(EffectiveCallNumberComponents::from)
+        .collect(Collectors.toList());
+
     return new Item(
-      itemFromServer.getString(ID),
-      itemFromServer.getString(Item.VERSION_KEY),
-      itemFromServer.getString(HOLDINGS_RECORD_ID),
-      itemFromServer.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
-      converterForClass(Status.class).fromJson(itemFromServer.getJsonObject(STATUS)),
-      itemFromServer.getString(MATERIAL_TYPE_ID_KEY),
-      itemFromServer.getString(PERMANENT_LOAN_TYPE_ID_KEY),
-      itemFromServer.getJsonObject("metadata"))
-      .withHrid(itemFromServer.getString(Item.HRID_KEY))
-      .withEffectiveShelvingOrder(itemFromServer.getString(Item.EFFECTIVE_SHELVING_ORDER_KEY))
-      .withFormerIds(formerIds)
-      .withDiscoverySuppress(itemFromServer.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
-      .withBarcode(itemFromServer.getString(BARCODE))
-      .withItemLevelCallNumber(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_KEY))
-      .withItemLevelCallNumberPrefix(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY))
-      .withItemLevelCallNumberSuffix(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
-      .withItemLevelCallNumberTypeId(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
-      .withVolume(itemFromServer.getString(Item.VOLUME_KEY))
-      .withDisplaySummary(itemFromServer.getString(DISPLAY_SUMMARY))
-      .withEnumeration(itemFromServer.getString(ENUMERATION))
-      .withChronology(itemFromServer.getString(CHRONOLOGY))
-      .withCopyNumber(itemFromServer.getString(COPY_NUMBER))
-      .withNumberOfPieces(itemFromServer.getString(NUMBER_OF_PIECES))
-      .withDescriptionOfPieces(itemFromServer.getString(Item.DESCRIPTION_OF_PIECES_KEY))
-      .withNumberOfMissingPieces(itemFromServer.getString(Item.NUMBER_OF_MISSING_PIECES_KEY))
-      .withMissingPieces(itemFromServer.getString(Item.MISSING_PIECES_KEY))
-      .withMissingPiecesDate(itemFromServer.getString(Item.MISSING_PIECES_DATE_KEY))
-      .withItemDamagedStatusId(itemFromServer.getString(Item.ITEM_DAMAGED_STATUS_ID_KEY))
-      .withItemDamagedStatusDate(itemFromServer.getString(Item.ITEM_DAMAGED_STATUS_DATE_KEY))
-      .withAdministrativeNotes(administrativeNotes)
-      .withNotes(mappedNotes)
-      .withCirculationNotes(mappedCirculationNotes)
-      .withPermanentLocationId(itemFromServer.getString(PERMANENT_LOCATION_ID_KEY))
-      .withTemporaryLocationId(itemFromServer.getString(TEMPORARY_LOCATION_ID_KEY))
-      .withEffectiveLocationId(itemFromServer.getString("effectiveLocationId"))
-      .withTemporaryLoanTypeId(itemFromServer.getString(TEMPORARY_LOAN_TYPE_ID_KEY))
-      .withAccessionNumber(itemFromServer.getString(Item.ACCESSION_NUMBER_KEY))
-      .withItemIdentifier(itemFromServer.getString(Item.ITEM_IDENTIFIER_KEY))
-      .withYearCaption(yearCaption)
-      .withElectronicAccess(mappedElectronicAccess)
-      .withStatisticalCodeIds(statisticalCodeIds)
-      .withPurchaseOrderLineIdentifier(itemFromServer.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
-      .withTags(tags)
-      .withLastCheckIn(LastCheckIn.from(itemFromServer.getJsonObject("lastCheckIn")))
-      .withEffectiveCallNumberComponents(
-        EffectiveCallNumberComponents.from(itemFromServer.getJsonObject("effectiveCallNumberComponents")));
+        itemFromServer.getString(ID),
+        itemFromServer.getString(Item.VERSION_KEY),
+        itemFromServer.getString(HOLDINGS_RECORD_ID),
+        itemFromServer.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
+        converterForClass(Status.class).fromJson(itemFromServer.getJsonObject(STATUS)),
+        itemFromServer.getString(MATERIAL_TYPE_ID_KEY),
+        itemFromServer.getString(PERMANENT_LOAN_TYPE_ID_KEY),
+        itemFromServer.getJsonObject("metadata"))
+        .withHrid(itemFromServer.getString(Item.HRID_KEY))
+        .withEffectiveShelvingOrder(itemFromServer.getString(Item.EFFECTIVE_SHELVING_ORDER_KEY))
+        .withFormerIds(formerIds)
+        .withDiscoverySuppress(itemFromServer.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
+        .withBarcode(itemFromServer.getString(BARCODE))
+        .withItemLevelCallNumber(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_KEY))
+        .withItemLevelCallNumberPrefix(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY))
+        .withItemLevelCallNumberSuffix(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
+        .withItemLevelCallNumberTypeId(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
+        .withVolume(itemFromServer.getString(Item.VOLUME_KEY))
+        .withDisplaySummary(itemFromServer.getString(DISPLAY_SUMMARY))
+        .withItemLevelAdditionalCallNumbers(itemLevelAdditionalCallNumbers)
+        .withEnumeration(itemFromServer.getString(ENUMERATION))
+        .withChronology(itemFromServer.getString(CHRONOLOGY))
+        .withCopyNumber(itemFromServer.getString(COPY_NUMBER))
+        .withNumberOfPieces(itemFromServer.getString(NUMBER_OF_PIECES))
+        .withDescriptionOfPieces(itemFromServer.getString(Item.DESCRIPTION_OF_PIECES_KEY))
+        .withNumberOfMissingPieces(itemFromServer.getString(Item.NUMBER_OF_MISSING_PIECES_KEY))
+        .withMissingPieces(itemFromServer.getString(Item.MISSING_PIECES_KEY))
+        .withMissingPiecesDate(itemFromServer.getString(Item.MISSING_PIECES_DATE_KEY))
+        .withItemDamagedStatusId(itemFromServer.getString(Item.ITEM_DAMAGED_STATUS_ID_KEY))
+        .withItemDamagedStatusDate(itemFromServer.getString(Item.ITEM_DAMAGED_STATUS_DATE_KEY))
+        .withAdministrativeNotes(administrativeNotes)
+        .withNotes(mappedNotes)
+        .withCirculationNotes(mappedCirculationNotes)
+        .withPermanentLocationId(itemFromServer.getString(PERMANENT_LOCATION_ID_KEY))
+        .withTemporaryLocationId(itemFromServer.getString(TEMPORARY_LOCATION_ID_KEY))
+        .withEffectiveLocationId(itemFromServer.getString("effectiveLocationId"))
+        .withTemporaryLoanTypeId(itemFromServer.getString(TEMPORARY_LOAN_TYPE_ID_KEY))
+        .withAccessionNumber(itemFromServer.getString(Item.ACCESSION_NUMBER_KEY))
+        .withItemIdentifier(itemFromServer.getString(Item.ITEM_IDENTIFIER_KEY))
+        .withYearCaption(yearCaption)
+        .withElectronicAccess(mappedElectronicAccess)
+        .withStatisticalCodeIds(statisticalCodeIds)
+        .withPurchaseOrderLineIdentifier(itemFromServer.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
+        .withTags(tags)
+        .withLastCheckIn(LastCheckIn.from(itemFromServer.getJsonObject("lastCheckIn")))
+        .withEffectiveCallNumberComponents(
+            EffectiveCallNumberComponents.from(itemFromServer.getJsonObject("effectiveCallNumberComponents")));
 
   }
 
@@ -163,6 +171,7 @@ public final class ItemUtil {
     includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY, item.getItemLevelCallNumberPrefix());
     includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY, item.getItemLevelCallNumberSuffix());
     includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY, item.getItemLevelCallNumberTypeId());
+    includeIfPresent(itemToSend, Item.ITEM_LEVEL_ADDITIONAL_CALL_NUMBERS_KEY, item.getItemLevelAdditionalCallNumbers());
     includeIfPresent(itemToSend, Item.VOLUME_KEY, item.getVolume());
     includeIfPresent(itemToSend, DISPLAY_SUMMARY, item.getDisplaySummary());
     includeIfPresent(itemToSend, ENUMERATION, item.getEnumeration());
@@ -228,6 +237,12 @@ public final class ItemUtil {
     List<String> tags = itemRequest.containsKey(Item.TAGS_KEY)
       ? getTags(itemRequest) : new ArrayList<>();
 
+    List<JsonObject> additionalCallNumbers = toList(
+        itemRequest.getJsonArray(Item.ITEM_LEVEL_ADDITIONAL_CALL_NUMBERS_KEY, new JsonArray()));
+
+    List<EffectiveCallNumberComponents> itemLevelAdditionalCallNumbers = additionalCallNumbers.stream()
+        .map(EffectiveCallNumberComponents::from)
+        .collect(Collectors.toList());
 
     String materialTypeId = getNestedProperty(itemRequest, MATERIAL_TYPE, ID);
     String permanentLocationId = getNestedProperty(itemRequest, PERMANENT_LOCATION, ID);
@@ -236,49 +251,50 @@ public final class ItemUtil {
     String temporaryLoanTypeId = getNestedProperty(itemRequest, TEMPORARY_LOAN_TYPE, ID);
 
     return new Item(
-      itemRequest.getString(ID),
-      itemRequest.getString(Item.VERSION_KEY),
-      itemRequest.getString(HOLDINGS_RECORD_ID),
-      itemRequest.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
-      status,
-      materialTypeId,
-      permanentLoanTypeId,
-      null)
-      .withHrid(itemRequest.getString(Item.HRID_KEY))
-      .withFormerIds(formerIds)
-      .withDiscoverySuppress(itemRequest.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
-      .withBarcode(itemRequest.getString(BARCODE))
-      .withItemLevelCallNumber(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_KEY))
-      .withEffectiveShelvingOrder(itemRequest.getString(Item.EFFECTIVE_SHELVING_ORDER_KEY))
-      .withItemLevelCallNumberPrefix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY))
-      .withItemLevelCallNumberSuffix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
-      .withItemLevelCallNumberTypeId(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
-      .withVolume(itemRequest.getString(Item.VOLUME_KEY))
-      .withDisplaySummary(itemRequest.getString(DISPLAY_SUMMARY))
-      .withEnumeration(itemRequest.getString(ENUMERATION))
-      .withChronology(itemRequest.getString(CHRONOLOGY))
-      .withNumberOfPieces(itemRequest.getString(NUMBER_OF_PIECES))
-      .withDescriptionOfPieces(itemRequest.getString(Item.DESCRIPTION_OF_PIECES_KEY))
-      .withNumberOfMissingPieces(itemRequest.getString(Item.NUMBER_OF_MISSING_PIECES_KEY))
-      .withMissingPieces(itemRequest.getString(Item.MISSING_PIECES_KEY))
-      .withMissingPiecesDate(itemRequest.getString(Item.MISSING_PIECES_DATE_KEY))
-      .withItemDamagedStatusId(itemRequest.getString(Item.ITEM_DAMAGED_STATUS_ID_KEY))
-      .withItemDamagedStatusDate(itemRequest.getString(Item.ITEM_DAMAGED_STATUS_DATE_KEY))
-      .withPermanentLocationId(permanentLocationId)
-      .withTemporaryLocationId(temporaryLocationId)
-      .withTemporaryLoanTypeId(temporaryLoanTypeId)
-      .withCopyNumber(itemRequest.getString(Item.COPY_NUMBER_KEY))
-      .withAdministrativeNotes(administrativeNotes)
-      .withNotes(notes)
-      .withCirculationNotes(circulationNotes)
-      .withAccessionNumber(itemRequest.getString(Item.ACCESSION_NUMBER_KEY))
-      .withItemIdentifier(itemRequest.getString(Item.ITEM_IDENTIFIER_KEY))
-      .withYearCaption(yearCaption)
-      .withElectronicAccess(electronicAccess)
-      .withStatisticalCodeIds(statisticalCodeIds)
-      .withPurchaseOrderLineIdentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
-      .withLastCheckIn(LastCheckIn.from(itemRequest.getJsonObject(Item.LAST_CHECK_IN)))
-      .withTags(tags);
+        itemRequest.getString(ID),
+        itemRequest.getString(Item.VERSION_KEY),
+        itemRequest.getString(HOLDINGS_RECORD_ID),
+        itemRequest.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
+        status,
+        materialTypeId,
+        permanentLoanTypeId,
+        null)
+        .withHrid(itemRequest.getString(Item.HRID_KEY))
+        .withFormerIds(formerIds)
+        .withDiscoverySuppress(itemRequest.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
+        .withBarcode(itemRequest.getString(BARCODE))
+        .withItemLevelCallNumber(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_KEY))
+        .withEffectiveShelvingOrder(itemRequest.getString(Item.EFFECTIVE_SHELVING_ORDER_KEY))
+        .withItemLevelCallNumberPrefix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY))
+        .withItemLevelCallNumberSuffix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
+        .withItemLevelCallNumberTypeId(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
+        .withVolume(itemRequest.getString(Item.VOLUME_KEY))
+        .withItemLevelAdditionalCallNumbers(itemLevelAdditionalCallNumbers)
+        .withDisplaySummary(itemRequest.getString(DISPLAY_SUMMARY))
+        .withEnumeration(itemRequest.getString(ENUMERATION))
+        .withChronology(itemRequest.getString(CHRONOLOGY))
+        .withNumberOfPieces(itemRequest.getString(NUMBER_OF_PIECES))
+        .withDescriptionOfPieces(itemRequest.getString(Item.DESCRIPTION_OF_PIECES_KEY))
+        .withNumberOfMissingPieces(itemRequest.getString(Item.NUMBER_OF_MISSING_PIECES_KEY))
+        .withMissingPieces(itemRequest.getString(Item.MISSING_PIECES_KEY))
+        .withMissingPiecesDate(itemRequest.getString(Item.MISSING_PIECES_DATE_KEY))
+        .withItemDamagedStatusId(itemRequest.getString(Item.ITEM_DAMAGED_STATUS_ID_KEY))
+        .withItemDamagedStatusDate(itemRequest.getString(Item.ITEM_DAMAGED_STATUS_DATE_KEY))
+        .withPermanentLocationId(permanentLocationId)
+        .withTemporaryLocationId(temporaryLocationId)
+        .withTemporaryLoanTypeId(temporaryLoanTypeId)
+        .withCopyNumber(itemRequest.getString(Item.COPY_NUMBER_KEY))
+        .withAdministrativeNotes(administrativeNotes)
+        .withNotes(notes)
+        .withCirculationNotes(circulationNotes)
+        .withAccessionNumber(itemRequest.getString(Item.ACCESSION_NUMBER_KEY))
+        .withItemIdentifier(itemRequest.getString(Item.ITEM_IDENTIFIER_KEY))
+        .withYearCaption(yearCaption)
+        .withElectronicAccess(electronicAccess)
+        .withStatisticalCodeIds(statisticalCodeIds)
+        .withPurchaseOrderLineIdentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
+        .withLastCheckIn(LastCheckIn.from(itemRequest.getJsonObject(Item.LAST_CHECK_IN)))
+        .withTags(tags);
   }
 
   private static List<String> getTags(JsonObject itemRequest) {
@@ -314,6 +330,7 @@ public final class ItemUtil {
     includeIfPresent(itemJson, Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY, item.getItemLevelCallNumberPrefix());
     includeIfPresent(itemJson, Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY, item.getItemLevelCallNumberSuffix());
     includeIfPresent(itemJson, Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY, item.getItemLevelCallNumberTypeId());
+    includeIfPresent(itemJson, Item.ITEM_LEVEL_ADDITIONAL_CALL_NUMBERS_KEY, item.getItemLevelAdditionalCallNumbers());
     includeIfPresent(itemJson, Item.VOLUME_KEY, item.getVolume());
     includeIfPresent(itemJson, DISPLAY_SUMMARY, item.getDisplaySummary());
     includeIfPresent(itemJson, ENUMERATION, item.getEnumeration());
