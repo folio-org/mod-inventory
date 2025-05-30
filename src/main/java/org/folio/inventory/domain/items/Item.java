@@ -29,6 +29,7 @@ public class Item {
   public static final String ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY = "itemLevelCallNumberPrefix";
   public static final String ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY = "itemLevelCallNumberSuffix";
   public static final String ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY = "itemLevelCallNumberTypeId";
+  public static final String ITEM_LEVEL_ADDITIONAL_CALL_NUMBERS_KEY = "itemLevelAdditionalCallNumbers";
   public static final String VOLUME_KEY = "volume";
 
   public static final String DESCRIPTION_OF_PIECES_KEY = "descriptionOfPieces";
@@ -59,6 +60,7 @@ public class Item {
   private String itemLevelCallNumberPrefix;
   private String itemLevelCallNumberSuffix;
   private String itemLevelCallNumberTypeId;
+  private List<EffectiveCallNumberComponents> itemLevelAdditionalCallNumbers = new ArrayList<>();
   private String volume;
   private String accessionNumber;
   private String itemIdentifier;
@@ -225,6 +227,15 @@ public class Item {
   public Item withItemLevelCallNumberTypeId(String itemLevelCallNumberTypeId) {
     this.itemLevelCallNumberTypeId = itemLevelCallNumberTypeId;
     return this;
+  }
+
+  public Item withItemLevelAdditionalCallNumbers(List<EffectiveCallNumberComponents> itemLevelAdditionalCallNumbers) {
+    this.itemLevelAdditionalCallNumbers = itemLevelAdditionalCallNumbers;
+    return this;
+  }
+
+  public List<EffectiveCallNumberComponents> getItemLevelAdditionalCallNumbers() {
+    return itemLevelAdditionalCallNumbers;
   }
 
   public String getVolume() {
@@ -526,81 +537,83 @@ public class Item {
 
   public Item copyWithNewId(String newId) {
     return new Item(newId, null, holdingId, inTransitDestinationServicePointId, this.status,
-       this.materialTypeId, this.permanentLoanTypeId, this.metadata)
-            .withHrid(this.hrid)
-            .withFormerIds(this.formerIds)
-            .withDiscoverySuppress(this.discoverySuppress)
-            .withBarcode(this.barcode)
-            .withItemLevelCallNumber(this.itemLevelCallNumber)
-            .withItemLevelCallNumberPrefix(this.itemLevelCallNumberPrefix)
-            .withItemLevelCallNumberSuffix(this.itemLevelCallNumberSuffix)
-            .withItemLevelCallNumberTypeId(this.itemLevelCallNumberTypeId)
-            .withVolume(this.volume)
-            .withDisplaySummary(this.displaySummary)
-            .withEnumeration(this.enumeration)
-            .withChronology(this.chronology)
-            .withCopyNumber(this.copyNumber)
-            .withNumberOfPieces(this.numberOfPieces)
-            .withDescriptionOfPieces(this.descriptionOfPieces)
-            .withNumberOfMissingPieces(this.numberOfMissingPieces)
-            .withMissingPieces(this.missingPieces)
-            .withMissingPiecesDate(this.missingPiecesDate)
-            .withItemDamagedStatusId(this.itemDamagedStatusId)
-            .withItemDamagedStatusDate(this.itemDamagedStatusDate)
-            .withAdministrativeNotes(this.administrativeNotes)
-            .withNotes(this.notes)
-            .withPermanentLocationId(this.permanentLocationId)
-            .withTemporaryLocationId(this.temporaryLocationId)
-            .withEffectiveLocationId(this.effectiveLocationId)
-            .withTemporaryLoanTypeId(this.temporaryLoanTypeId)
-            .withAccessionNumber(this.accessionNumber)
-            .withItemIdentifier(this.itemIdentifier)
-            .withYearCaption(this.yearCaption)
-            .withElectronicAccess(this.electronicAccess)
-            .withStatisticalCodeIds(this.statisticalCodeIds)
-            .withLastCheckIn(this.lastCheckIn)
-            .withPurchaseOrderLineIdentifier(this.purchaseOrderLineIdentifier);
+        this.materialTypeId, this.permanentLoanTypeId, this.metadata)
+        .withHrid(this.hrid)
+        .withFormerIds(this.formerIds)
+        .withDiscoverySuppress(this.discoverySuppress)
+        .withBarcode(this.barcode)
+        .withItemLevelCallNumber(this.itemLevelCallNumber)
+        .withItemLevelCallNumberPrefix(this.itemLevelCallNumberPrefix)
+        .withItemLevelCallNumberSuffix(this.itemLevelCallNumberSuffix)
+        .withItemLevelCallNumberTypeId(this.itemLevelCallNumberTypeId)
+        .withItemLevelAdditionalCallNumbers(this.itemLevelAdditionalCallNumbers)
+        .withVolume(this.volume)
+        .withDisplaySummary(this.displaySummary)
+        .withEnumeration(this.enumeration)
+        .withChronology(this.chronology)
+        .withCopyNumber(this.copyNumber)
+        .withNumberOfPieces(this.numberOfPieces)
+        .withDescriptionOfPieces(this.descriptionOfPieces)
+        .withNumberOfMissingPieces(this.numberOfMissingPieces)
+        .withMissingPieces(this.missingPieces)
+        .withMissingPiecesDate(this.missingPiecesDate)
+        .withItemDamagedStatusId(this.itemDamagedStatusId)
+        .withItemDamagedStatusDate(this.itemDamagedStatusDate)
+        .withAdministrativeNotes(this.administrativeNotes)
+        .withNotes(this.notes)
+        .withPermanentLocationId(this.permanentLocationId)
+        .withTemporaryLocationId(this.temporaryLocationId)
+        .withEffectiveLocationId(this.effectiveLocationId)
+        .withTemporaryLoanTypeId(this.temporaryLoanTypeId)
+        .withAccessionNumber(this.accessionNumber)
+        .withItemIdentifier(this.itemIdentifier)
+        .withYearCaption(this.yearCaption)
+        .withElectronicAccess(this.electronicAccess)
+        .withStatisticalCodeIds(this.statisticalCodeIds)
+        .withLastCheckIn(this.lastCheckIn)
+        .withPurchaseOrderLineIdentifier(this.purchaseOrderLineIdentifier);
   }
 
   public Item changeStatus(ItemStatusName newStatus) {
     return new Item(this.id, this.version, holdingId, inTransitDestinationServicePointId,
-       new Status(newStatus), this.materialTypeId, this.permanentLoanTypeId, this.metadata)
-      .withHrid(this.hrid)
-      .withFormerIds(this.formerIds)
-      .withDiscoverySuppress(this.discoverySuppress)
-      .withBarcode(this.barcode)
-      .withItemLevelCallNumber(this.itemLevelCallNumber)
-      .withItemLevelCallNumberPrefix(this.itemLevelCallNumberPrefix)
-      .withItemLevelCallNumberSuffix(this.itemLevelCallNumberSuffix)
-      .withItemLevelCallNumberTypeId(this.itemLevelCallNumberTypeId)
-      .withVolume(this.volume)
-      .withDisplaySummary(this.displaySummary)
-      .withEnumeration(this.enumeration)
-      .withChronology(this.chronology)
-      .withCopyNumber(this.copyNumber)
-      .withNumberOfPieces(this.numberOfPieces)
-      .withDescriptionOfPieces(this.descriptionOfPieces)
-      .withNumberOfMissingPieces(this.numberOfMissingPieces)
-      .withMissingPieces(this.missingPieces)
-      .withMissingPiecesDate(this.missingPiecesDate)
-      .withItemDamagedStatusId(this.itemDamagedStatusId)
-      .withItemDamagedStatusDate(this.itemDamagedStatusDate)
-      .withAdministrativeNotes(this.administrativeNotes)
-      .withNotes(this.notes)
-      .withPermanentLocationId(this.permanentLocationId)
-      .withTemporaryLocationId(this.temporaryLocationId)
-      .withEffectiveLocationId(this.effectiveLocationId)
-      .withTemporaryLoanTypeId(this.temporaryLoanTypeId)
-      .withAccessionNumber(this.accessionNumber)
-      .withItemIdentifier(this.itemIdentifier)
-      .withYearCaption(this.yearCaption)
-      .withElectronicAccess(this.electronicAccess)
-      .withStatisticalCodeIds(this.statisticalCodeIds)
-      .withPurchaseOrderLineIdentifier(purchaseOrderLineIdentifier)
-      .withIsBoundWith(this.isBoundWith)
-      .withTags(tags)
-      .withCirculationNotes(circulationNotes)
-      .withLastCheckIn(this.lastCheckIn);
+        new Status(newStatus), this.materialTypeId, this.permanentLoanTypeId, this.metadata)
+        .withHrid(this.hrid)
+        .withFormerIds(this.formerIds)
+        .withDiscoverySuppress(this.discoverySuppress)
+        .withBarcode(this.barcode)
+        .withItemLevelCallNumber(this.itemLevelCallNumber)
+        .withItemLevelCallNumberPrefix(this.itemLevelCallNumberPrefix)
+        .withItemLevelCallNumberSuffix(this.itemLevelCallNumberSuffix)
+        .withItemLevelCallNumberTypeId(this.itemLevelCallNumberTypeId)
+        .withItemLevelAdditionalCallNumbers(this.itemLevelAdditionalCallNumbers)
+        .withVolume(this.volume)
+        .withDisplaySummary(this.displaySummary)
+        .withEnumeration(this.enumeration)
+        .withChronology(this.chronology)
+        .withCopyNumber(this.copyNumber)
+        .withNumberOfPieces(this.numberOfPieces)
+        .withDescriptionOfPieces(this.descriptionOfPieces)
+        .withNumberOfMissingPieces(this.numberOfMissingPieces)
+        .withMissingPieces(this.missingPieces)
+        .withMissingPiecesDate(this.missingPiecesDate)
+        .withItemDamagedStatusId(this.itemDamagedStatusId)
+        .withItemDamagedStatusDate(this.itemDamagedStatusDate)
+        .withAdministrativeNotes(this.administrativeNotes)
+        .withNotes(this.notes)
+        .withPermanentLocationId(this.permanentLocationId)
+        .withTemporaryLocationId(this.temporaryLocationId)
+        .withEffectiveLocationId(this.effectiveLocationId)
+        .withTemporaryLoanTypeId(this.temporaryLoanTypeId)
+        .withAccessionNumber(this.accessionNumber)
+        .withItemIdentifier(this.itemIdentifier)
+        .withYearCaption(this.yearCaption)
+        .withElectronicAccess(this.electronicAccess)
+        .withStatisticalCodeIds(this.statisticalCodeIds)
+        .withPurchaseOrderLineIdentifier(purchaseOrderLineIdentifier)
+        .withIsBoundWith(this.isBoundWith)
+        .withTags(tags)
+        .withCirculationNotes(circulationNotes)
+        .withLastCheckIn(this.lastCheckIn);
   }
 
   @Override
