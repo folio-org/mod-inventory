@@ -63,7 +63,7 @@ public class InventoryVerticle extends AbstractVerticle {
 
     new AdminApi().register(router);
     new Items(storage, client).register(router);
-    new MoveApi(storage, client).register(router);
+    new MoveApi(storage, client, consortiumService).register(router);
     new Instances(storage, client, consortiumService).register(router);
     new Holdings(storage, client).register(router);
     new InstancesBatch(storage, client, consortiumService).register(router);

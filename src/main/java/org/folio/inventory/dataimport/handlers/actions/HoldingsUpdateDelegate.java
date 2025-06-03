@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import static java.lang.String.format;
+import static org.folio.inventory.dataimport.util.HoldingsRecordUtil.populateUpdatedByUserIdIfNeeded;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
 
 import java.util.Map;
@@ -66,6 +67,7 @@ public class HoldingsUpdateDelegate {
             mappedHoldings.setSourceId(sourceId);
             return mergeRecords(existingHoldingsRecord, mappedHoldings);
           }))
+        .map(updatedHoldingsRecord -> populateUpdatedByUserIdIfNeeded(updatedHoldingsRecord, context))
         .compose(updatedHoldingsRecord -> updateHoldingsRecord(updatedHoldingsRecord, holdingsRecordCollection));
     } catch (Exception e) {
       LOGGER.error("Error updating inventory holdings", e);

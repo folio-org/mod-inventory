@@ -350,7 +350,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
       this.administrativeNotes);
   }
 
-  private ItemRequestBuilder withTemporaryLocation(JsonObject location) {
+  public ItemRequestBuilder withTemporaryLocation(JsonObject location) {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
@@ -377,7 +377,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
       this.administrativeNotes);
   }
 
-    private ItemRequestBuilder withPermanentLocation(JsonObject location) {
+    public ItemRequestBuilder withPermanentLocation(JsonObject location) {
     return new ItemRequestBuilder(
       this.id,
       this.holdingId,
