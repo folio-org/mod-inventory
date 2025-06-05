@@ -167,6 +167,7 @@ class ExternalStorageModuleInstanceCollection
 
   private Instance modifyInstance(Instance existingInstance, JsonObject instance) {
     instance.put(Instance.ID, existingInstance.getId());
+    instance.put(Instance.SOURCE_KEY, existingInstance.getSource());
     JsonObject existing = JsonObject.mapFrom(existingInstance);
     JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, instance);
     return Instance.fromJson(mergedInstanceAsJson);
