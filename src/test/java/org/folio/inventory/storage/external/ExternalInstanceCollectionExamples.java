@@ -6,6 +6,8 @@ import static org.folio.inventory.common.FutureAssistance.fail;
 import static org.folio.inventory.common.FutureAssistance.getOnCompletion;
 import static org.folio.inventory.common.FutureAssistance.succeed;
 import static org.folio.inventory.common.FutureAssistance.waitForCompletion;
+import static org.folio.inventory.domain.instances.InstanceSource.LINKED_DATA;
+import static org.folio.inventory.domain.instances.InstanceSource.MARC;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -16,10 +18,13 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.common.Context;
 import org.folio.inventory.common.WaitForAllFutures;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.hamcrest.CoreMatchers;
@@ -292,6 +297,33 @@ public class ExternalInstanceCollectionExamples extends ExternalStorageTests {
     assertThat(findByNameResults.get(0).getId(), is(addedSmallAngryPlanet.getId()));
   }
 
+  @Test
+  @SneakyThrows
+  public void anInstanceCanBeUpdatedByIdRetainingSourceOfExistingInstance() {
+    String expectedTitle = "Updated title";
+    CompletableFuture<Instance> addFinished = new CompletableFuture<>();
+
+    collection.add(sourceLinkDataInstance(), succeed(addFinished), fail(addFinished));
+    Instance addedInstance = getOnCompletion(addFinished);
+    assertThat(addedInstance.getSource(), is(LINKED_DATA.getValue()));
+
+    JsonObject changedInstanceJson = addedInstance.getJsonForStorage();
+    changedInstanceJson.put(Instance.SOURCE_KEY, MARC.getValue());
+    changedInstanceJson.put(Instance.TITLE_KEY, expectedTitle);
+
+    Context context = EventHandlingUtil.constructContext(
+      TENANT_ID, TENANT_TOKEN, getStorageAddress(), USER_ID, REQUEST_ID);
+    collection.findByIdAndUpdate(addedInstance.getId(), changedInstanceJson, context);
+
+    CompletableFuture<Instance> gotUpdated = new CompletableFuture<>();
+    collection.findById(addedInstance.getId(), succeed(gotUpdated), fail(gotUpdated));
+    Instance updated = getOnCompletion(gotUpdated);
+
+    assertThat(updated.getId(), is(addedInstance.getId()));
+    assertThat(updated.getTitle(), is(expectedTitle));
+    assertThat(updated.getSource(), is(addedInstance.getSource()));
+  }
+
   @SneakyThrows
   private static void addSomeExamples(InstanceCollection instanceCollection) {
     WaitForAllFutures<Instance> allAdded = new WaitForAllFutures<>();
@@ -334,6 +366,19 @@ public class ExternalInstanceCollectionExamples extends ExternalStorageTests {
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "0552167541")
       .addIdentifier(ISBN_IDENTIFIER_TYPE, "9780552167543")
       .addContributor(PERSONAL_CONTRIBUTOR_NAME_TYPE, "Pratchett, Terry", AUTHOR_CONTRIBUTOR_TYPE, "", "", null);
+  }
+
+  private static Instance sourceLinkDataInstance() {
+    return new Instance(
+      UUID.randomUUID().toString(),
+      null,
+      null,
+      LINKED_DATA.getValue(),
+      "Temeraire",
+      BOOKS_INSTANCE_TYPE)
+      .setAlternativeTitles(new ArrayList<>())
+      .setIdentifiers(new ArrayList<>())
+      .setContributors(new ArrayList<>());
   }
 
   private static Instance createInstance(String title) {
