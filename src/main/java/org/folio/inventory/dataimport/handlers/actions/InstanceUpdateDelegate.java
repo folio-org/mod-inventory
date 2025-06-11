@@ -101,12 +101,15 @@ public class InstanceUpdateDelegate {
     LOGGER.info("updateInstance:: Updating instance with id: {}", existingInstance.getId());
     try {
       mappedInstance.setId(existingInstance.getId());
-      LOGGER.info("updateInstance:: existing instance isDeleted: {}, mapped instance isDeleted: {}",
+      LOGGER.info("updateInstance:: existingInstance isDeleted: {}, mappedInstance isDeleted: {}",
         existingInstance.getDeleted(), mappedInstance.getDeleted());
       if (isNotTrue(existingInstance.getDeleted()) && isTrue(mappedInstance.getDeleted())) {
+        LOGGER.info("updateInstance:: Instance is marked as deleted, setting discovery and staff suppress to true");
         mappedInstance.withDiscoverySuppress(true);
         mappedInstance.withStaffSuppress(true);
       } else {
+        LOGGER.info("updateInstance:: existingInstance discoverySuppress: {}, staffSuppress: {}",
+          existingInstance.getDiscoverySuppress(), existingInstance.getStaffSuppress());
         mappedInstance.withStaffSuppress(existingInstance.getStaffSuppress());
         mappedInstance.withDiscoverySuppress(existingInstance.getDiscoverySuppress());
       }
