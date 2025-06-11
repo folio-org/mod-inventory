@@ -45,6 +45,7 @@ public class InstanceUpdateDelegate {
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
       MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
       JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
+      LOGGER.info("handle:: Parsed record content: {}", parsedRecord.encodePrettily());
       String instanceId = marcRecord.getExternalIdsHolder().getInstanceId();
       LOGGER.info("Instance update with instanceId: {}", instanceId);
       RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_BIB_RECORD_FORMAT);
@@ -100,7 +101,7 @@ public class InstanceUpdateDelegate {
     LOGGER.info("updateInstance:: Updating instance with id: {}", existingInstance.getId());
     try {
       mappedInstance.setId(existingInstance.getId());
-      LOGGER.info("updateInstance:: existing instance: {}, mapped instance id: {}",
+      LOGGER.info("updateInstance:: existing instance isDeleted: {}, mapped instance isDeleted: {}",
         existingInstance.getDeleted(), mappedInstance.getDeleted());
       if (isNotTrue(existingInstance.getDeleted()) && isTrue(mappedInstance.getDeleted())) {
         mappedInstance.withDiscoverySuppress(true);
@@ -111,8 +112,12 @@ public class InstanceUpdateDelegate {
       }
 
       JsonObject existing = JsonObject.mapFrom(existingInstance);
+      LOGGER.info("updateInstance:: existing instance: {}", existing.encodePrettily());
       JsonObject mapped = JsonObject.mapFrom(mappedInstance);
+      LOGGER.info("updateInstance:: mapped instance: {}", mapped.encodePrettily());
       JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, mapped);
+      LOGGER.info("updateInstance:: mergedInstanceAsJson instance: {}", mergedInstanceAsJson.encodePrettily());
+
       Instance mergedInstance = Instance.fromJson(mergedInstanceAsJson);
       LOGGER.info("updateInstance:: Merged instance: {}", mergedInstance);
       return Future.succeededFuture(mergedInstance);
