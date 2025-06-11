@@ -120,12 +120,14 @@ public class InstanceUtil {
   }
 
   public static Future<Instance> findInstanceById(String instanceId, InstanceCollection instanceCollection) {
+    LOGGER.debug("findInstanceById:: instanceId: {}", instanceId);
     Promise<Instance> promise = Promise.promise();
     instanceCollection.findById(instanceId, success -> {
         if (success.getResult() == null) {
           LOGGER.warn("findInstanceById:: Can't find Instance by id: {} ", instanceId);
           promise.fail(new NotFoundException(format("Can't find Instance by id: %s", instanceId)));
         } else {
+          LOGGER.debug("findInstanceById:: Found Instance by id: {} ", instanceId);
           promise.complete(success.getResult());
         }
       },
