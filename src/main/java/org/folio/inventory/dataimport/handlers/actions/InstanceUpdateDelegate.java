@@ -82,9 +82,9 @@ public class InstanceUpdateDelegate {
   }
 
   private void fillVersion(Instance existingInstance, Map<String, String> eventPayload) {
-    LOGGER.debug("fillVersion:: Filling version for existing instance with id: {}", existingInstance.getId());
+    LOGGER.info("fillVersion:: Filling version for existing instance with id: {}", existingInstance.getId());
     if (eventPayload.containsKey(QM_RELATED_RECORD_VERSION_KEY)) {
-      LOGGER.debug("fillVersion:: Setting version for existing instance with id: {} to {}", existingInstance.getId(),
+      LOGGER.info("fillVersion:: Setting version for existing instance with id: {} to {}", existingInstance.getId(),
         eventPayload.get(QM_RELATED_RECORD_VERSION_KEY));
       existingInstance.setVersion(eventPayload.get(QM_RELATED_RECORD_VERSION_KEY));
     }
@@ -97,10 +97,10 @@ public class InstanceUpdateDelegate {
   }
 
   private Future<Instance> updateInstance(Instance existingInstance, org.folio.Instance mappedInstance) {
-    LOGGER.debug("updateInstance:: Updating instance with id: {}", existingInstance.getId());
+    LOGGER.info("updateInstance:: Updating instance with id: {}", existingInstance.getId());
     try {
       mappedInstance.setId(existingInstance.getId());
-      LOGGER.debug("updateInstance:: existing instance: {}, mapped instance id: {}",
+      LOGGER.info("updateInstance:: existing instance: {}, mapped instance id: {}",
         existingInstance.getDeleted(), mappedInstance.getDeleted());
       if (isNotTrue(existingInstance.getDeleted()) && isTrue(mappedInstance.getDeleted())) {
         mappedInstance.withDiscoverySuppress(true);
@@ -114,7 +114,7 @@ public class InstanceUpdateDelegate {
       JsonObject mapped = JsonObject.mapFrom(mappedInstance);
       JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, mapped);
       Instance mergedInstance = Instance.fromJson(mergedInstanceAsJson);
-      LOGGER.debug("updateInstance:: Merged instance: {}", mergedInstance);
+      LOGGER.info("updateInstance:: Merged instance: {}", mergedInstance);
       return Future.succeededFuture(mergedInstance);
     } catch (Exception e) {
       LOGGER.error("Error updating instance", e);
