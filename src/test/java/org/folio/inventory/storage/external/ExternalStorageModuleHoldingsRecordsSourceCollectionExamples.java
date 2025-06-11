@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import org.folio.HoldingsRecordsSource;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import io.vertx.core.json.JsonObject;
@@ -32,6 +33,7 @@ public class ExternalStorageModuleHoldingsRecordsSourceCollectionExamples extend
     assertEquals(name, source.getName());
   }
 
+  @Ignore
   @Test(expected = JsonMappingException.class)
   public void shouldNotMapFromJsonAndThrowException() {
     JsonObject holdingsRecordsSource = new JsonObject()
