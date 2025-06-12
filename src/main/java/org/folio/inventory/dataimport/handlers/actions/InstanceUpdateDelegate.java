@@ -43,6 +43,7 @@ public class InstanceUpdateDelegate {
     logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
     try {
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
+      LOGGER.info("handle:: Parsed mappingRules content: {}", mappingRules.encodePrettily());
       MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
       JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
       LOGGER.info("handle:: Parsed record content: {}", parsedRecord.encodePrettily());
