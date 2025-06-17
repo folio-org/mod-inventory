@@ -217,9 +217,12 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
             return consortiumService.getConsortiumConfiguration(context)
               .compose(consortiumConfigurationOptional -> {
                 if (consortiumConfigurationOptional.isPresent()) {
-                  var centralTenantContext = centralTenantContext(context, consortiumConfigurationOptional.get());
+                  var consortiumConfiguration = consortiumConfigurationOptional.get();
+                  var centralTenantContext = centralTenantContext(context, consortiumConfiguration);
                   var consortiumInstanceCollection = storage.getInstanceCollection(centralTenantContext);
-                  return holdingsCollectionService.findInstanceIdByHrid(consortiumInstanceCollection, instanceHrid);
+                  return holdingsCollectionService.findInstanceIdByHrid(consortiumInstanceCollection, instanceHrid)
+                    .compose(centralInstanceId -> consortiumService.createShadowInstance(context, centralInstanceId, consortiumConfiguration)
+                      .map(sharingInstance -> centralInstanceId));
                 }
                 return Future.failedFuture(throwable);
               });

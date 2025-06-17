@@ -17,6 +17,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -239,6 +240,8 @@ public class CreateMarcHoldingsEventHandlerTest {
       .thenReturn(Future.succeededFuture(instanceId));
     when(consortiumService.getConsortiumConfiguration(any())).thenReturn(Future.succeededFuture(Optional.of(
       new ConsortiumConfiguration("central", ""))));
+    when(consortiumService.createShadowInstance(any(), any(), any(ConsortiumConfiguration.class)))
+      .thenReturn(Future.succeededFuture(null));
 
     var holdings = new HoldingsRecord()
       .withId(String.valueOf(UUID.randomUUID()))
@@ -276,6 +279,7 @@ public class CreateMarcHoldingsEventHandlerTest {
 
     verify(consortiumService).getConsortiumConfiguration(any());
     verify(holdingsCollectionService, times(2)).findInstanceIdByHrid(any(), any());
+    verify(consortiumService).createShadowInstance(any(), eq(instanceId), any(ConsortiumConfiguration.class));
   }
 
   @Test(expected = ExecutionException.class)
