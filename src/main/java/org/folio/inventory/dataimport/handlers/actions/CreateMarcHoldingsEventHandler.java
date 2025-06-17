@@ -15,10 +15,13 @@ import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventH
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.getControlFieldValue;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,7 +31,10 @@ import org.folio.Holdings;
 import org.folio.HoldingsRecord;
 import org.folio.MappingMetadataDto;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
+import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.HoldingsCollectionService;
@@ -43,11 +49,6 @@ import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
-
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
 
 public class CreateMarcHoldingsEventHandler implements EventHandler {
 
@@ -71,15 +72,18 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
   private final HoldingsCollectionService holdingsCollectionService;
   private final MappingMetadataCache mappingMetadataCache;
   private final IdStorageService idStorageService;
+  private final ConsortiumService consortiumService;
 
   public CreateMarcHoldingsEventHandler(Storage storage,
                                         MappingMetadataCache mappingMetadataCache,
                                         IdStorageService idStorageService,
-                                        HoldingsCollectionService holdingsCollectionService) {
+                                        HoldingsCollectionService holdingsCollectionService,
+                                        ConsortiumService consortiumService) {
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
     this.idStorageService = idStorageService;
     this.holdingsCollectionService = holdingsCollectionService;
+    this.consortiumService = consortiumService;
   }
 
   @Override
@@ -200,15 +204,29 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
     String instanceId = holdingAsJson.getString(INSTANCE_ID_FIELD);
     if (StringUtils.isBlank(instanceId)) {
       var recordAsString = dataImportEventPayload.getContext().get(MARC_FORMAT);
-      var record = Json.decodeValue(recordAsString, Record.class);
-      var instanceHrid = getControlFieldValue(record, "004");
+      var decodedRecord = Json.decodeValue(recordAsString, Record.class);
+      var instanceHrid = getControlFieldValue(decodedRecord, "004");
       if (isBlank(instanceHrid)) {
         LOGGER.warn(FIELD_004_MARC_HOLDINGS_NOT_NULL);
         throw new EventProcessingException(FIELD_004_MARC_HOLDINGS_NOT_NULL);
       }
       var instanceCollection = storage.getInstanceCollection(context);
-      return holdingsCollectionService.findInstanceIdByHrid(instanceCollection, instanceHrid);
-    }else{
+      return holdingsCollectionService.findInstanceIdByHrid(instanceCollection, instanceHrid)
+        .recover(throwable -> {
+          if (throwable instanceof EventProcessingException) {
+            return consortiumService.getConsortiumConfiguration(context)
+              .compose(consortiumConfigurationOptional -> {
+                if (consortiumConfigurationOptional.isPresent()) {
+                  var centralTenantContext = centralTenantContext(context, consortiumConfigurationOptional.get());
+                  var consortiumInstanceCollection = storage.getInstanceCollection(centralTenantContext);
+                  return holdingsCollectionService.findInstanceIdByHrid(consortiumInstanceCollection, instanceHrid);
+                }
+                return Future.failedFuture(throwable);
+              });
+          }
+          return Future.failedFuture(throwable);
+        });
+    } else {
       promise.complete(instanceId);
     }
     return promise.future();
@@ -261,6 +279,16 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
     dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonObject().encode());
+  }
+
+  private Context centralTenantContext(Context context, ConsortiumConfiguration consortiumConfiguration) {
+    return EventHandlingUtil.constructContext(
+      consortiumConfiguration.getCentralTenantId(),
+      context.getToken(),
+      context.getOkapiLocation(),
+      context.getUserId(),
+      context.getRequestId()
+    );
   }
 
 }

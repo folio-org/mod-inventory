@@ -1,15 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.when;
-
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.ActionProfile.FolioRecord.MARC_HOLDINGS;
@@ -17,21 +8,19 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDINGS_CREATED_READY
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDING_RECORD_CREATED;
 import static org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler.ACTION_HAS_NO_MAPPING_MSG;
+import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
-
-import io.vertx.core.Future;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -41,42 +30,54 @@ import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import com.google.common.collect.Lists;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-
-import org.folio.inventory.common.domain.Failure;
-import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
-import org.folio.inventory.domain.relationship.RecordToEntity;
-import org.folio.inventory.services.HoldingsCollectionService;
-import org.folio.inventory.services.HoldingsIdStorageService;
-import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
-import org.folio.MappingMetadataDto;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.HoldingsRecord;
 import org.folio.JobProfile;
+import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.inventory.TestUtil;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
+import org.folio.inventory.consortium.services.ConsortiumService;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.HoldingsRecordCollection;
+import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.domain.relationship.RecordToEntity;
+import org.folio.inventory.services.HoldingsCollectionService;
+import org.folio.inventory.services.HoldingsIdStorageService;
 import org.folio.inventory.storage.Storage;
+import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 public class CreateMarcHoldingsEventHandlerTest {
 
@@ -99,6 +100,8 @@ public class CreateMarcHoldingsEventHandlerTest {
   private HoldingsIdStorageService holdingsIdStorageService;
   @Mock
   private HoldingsCollectionService holdingsCollectionService;
+  @Mock
+  private ConsortiumService consortiumService;
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -156,7 +159,7 @@ public class CreateMarcHoldingsEventHandlerTest {
     MockitoAnnotations.openMocks(this);
     MappingManager.clearReaderFactories();
     MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, vertx.createHttpClient(), true);
-    createMarcHoldingsEventHandler = new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, holdingsIdStorageService, holdingsCollectionService);
+    createMarcHoldingsEventHandler = new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, holdingsIdStorageService, holdingsCollectionService, consortiumService);
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     instanceId = String.valueOf(UUID.randomUUID());
     sourceId = String.valueOf(UUID.randomUUID());
@@ -222,6 +225,57 @@ public class CreateMarcHoldingsEventHandlerTest {
     assertEquals(instanceId, createdHoldings.getString("instanceId"));
     assertEquals(sourceId, createdHoldings.getString("sourceId"));
     assertEquals(PERMANENT_LOCATION_ID, createdHoldings.getString("permanentLocationId"));
+  }
+
+  @Test
+  public void shouldProcessConsortiumLocalHoldingsForSharedInstanceEvent()
+    throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+    when(storage.getHoldingsRecordsSourceCollection(any())).thenReturn(holdingsRecordsSourceCollection);
+    when(holdingsCollectionService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+    when(holdingsCollectionService.findInstanceIdByHrid(any(), any()))
+      .thenReturn(Future.failedFuture(new EventProcessingException("")))
+      .thenReturn(Future.succeededFuture(instanceId));
+    when(consortiumService.getConsortiumConfiguration(any())).thenReturn(Future.succeededFuture(Optional.of(
+      new ConsortiumConfiguration("central", ""))));
+
+    var holdings = new HoldingsRecord()
+      .withId(String.valueOf(UUID.randomUUID()))
+      .withHrid(String.valueOf(UUID.randomUUID()))
+      .withInstanceId(String.valueOf(UUID.randomUUID()))
+      .withSourceId(String.valueOf(UUID.randomUUID()))
+      .withHoldingsTypeId(String.valueOf(UUID.randomUUID()))
+      .withPermanentLocationId(PERMANENT_LOCATION_ID);
+
+    var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
+    var holdingsRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    holdingsRecord.setId(recordId);
+    var payloadContext = new HashMap<String, String>();
+    payloadContext.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
+    payloadContext.put(MARC_HOLDINGS.value(), Json.encode(holdingsRecord));
+
+    var dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(payloadContext)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    var future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
+    var actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
+    var createdHoldings = new JsonObject(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+
+    assertEquals(holdingsId, createdHoldings.getString("id"));
+    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    assertNotNull(createdHoldings.getString("id"));
+    assertEquals(instanceId, createdHoldings.getString("instanceId"));
+    assertEquals(sourceId, createdHoldings.getString("sourceId"));
+    assertEquals(PERMANENT_LOCATION_ID, createdHoldings.getString("permanentLocationId"));
+
+    verify(consortiumService).getConsortiumConfiguration(any());
+    verify(holdingsCollectionService, times(2)).findInstanceIdByHrid(any(), any());
   }
 
   @Test(expected = ExecutionException.class)
