@@ -42,13 +42,13 @@ public abstract class AbstractPreloader {
     public CompletableFuture<LoadQuery> preload(LoadQuery query, DataImportEventPayload dataImportEventPayload) {
         String jobExecutionId = dataImportEventPayload.getJobExecutionId();
         String recordId = dataImportEventPayload.getContext() != null ? dataImportEventPayload.getContext().get("recordId") : null;
-        
+
         if (query == null) {
             LOG.info("preload:: Received null query - JobExecutionId: {}, RecordId: {}", jobExecutionId, recordId);
             return CompletableFuture.completedFuture(null);
         }
 
-        LOG.info("preload:: Starting preload - JobExecutionId: {}, RecordId: {}, InitialCQL: '{}'", 
+        LOG.info("preload:: Starting preload - JobExecutionId: {}, RecordId: {}, InitialCQL: '{}'",
             jobExecutionId, recordId, query.getCql());
 
         MatchProfile matchProfile = extractMatchProfile(dataImportEventPayload);
@@ -56,35 +56,38 @@ public abstract class AbstractPreloader {
         MatchExpression matchExpression = matchDetail.getExistingMatchExpression();
 
         Optional<PreloadingFields> preloadingField = getPreloadingField(matchExpression);
-        if (preloadingField.isEmpty()) {
-            LOG.info("preload:: No preloading field found, returning original query - JobExecutionId: {}, RecordId: {}", 
-                jobExecutionId, recordId);
-            return CompletableFuture.completedFuture(query);
-        }
+      if (preloadingField.isEmpty()) {
+        MatchValueReader reader = MatchValueReaderFactory.build(matchProfile.getIncomingRecordType());
+        Value<?> value = reader.read(dataImportEventPayload, matchDetail);
+        LoadQuery loadQuery = LoadQueryBuilder.build(value, matchDetail);
+        LOG.info("preload:: Built query without preloading - JobExecutionId: {}, RecordId: {}, CQL: '{}'",
+            jobExecutionId, recordId, loadQuery != null ? loadQuery.getCql() : "null");
+        return CompletableFuture.completedFuture(query);
+      }
 
-        LOG.info("preload:: Found preloading field: {} - JobExecutionId: {}, RecordId: {}", 
+        LOG.info("preload:: Found preloading field: {} - JobExecutionId: {}, RecordId: {}",
             preloadingField.get().name(), jobExecutionId, recordId);
 
         List<String> preloadValues = extractPreloadValues(dataImportEventPayload, matchProfile, matchDetail);
-        LOG.info("preload:: Extracted preload values: {} - JobExecutionId: {}, RecordId: {}", 
+        LOG.info("preload:: Extracted preload values: {} - JobExecutionId: {}, RecordId: {}",
             preloadValues, jobExecutionId, recordId);
 
         return doPreloading(dataImportEventPayload, preloadingField.get(), preloadValues)
                 .thenApply(values -> {
                     if (values.isEmpty()) {
-                      LOG.info("preload:: No values returned from preloading, returning null - JobExecutionId: {}, RecordId: {}", 
+                      LOG.info("preload:: No values returned from preloading, returning null - JobExecutionId: {}, RecordId: {}",
                           jobExecutionId, recordId);
                       return null;
                     }
-                    LOG.info("preload:: Preloading returned values: {} - JobExecutionId: {}, RecordId: {}", 
+                    LOG.info("preload:: Preloading returned values: {} - JobExecutionId: {}, RecordId: {}",
                         values.get(), jobExecutionId, recordId);
-                    
+
                     matchExpression.setFields(Collections.singletonList(
                             new Field().withLabel("field").withValue(getLoaderTargetFieldName())));
                     matchDetail.setExistingMatchExpression(matchExpression);
 
                     LoadQuery newQuery = LoadQueryBuilder.build(ListValue.of(values.get()), matchDetail);
-                    LOG.info("preload:: Built new query after preloading - JobExecutionId: {}, RecordId: {}, NewCQL: '{}'", 
+                    LOG.info("preload:: Built new query after preloading - JobExecutionId: {}, RecordId: {}, NewCQL: '{}'",
                         jobExecutionId, recordId, newQuery != null ? newQuery.getCql() : "null");
                     return newQuery;
                 });
