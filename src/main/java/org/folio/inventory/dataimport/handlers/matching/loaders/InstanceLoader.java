@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
@@ -24,6 +26,8 @@ import org.folio.processing.matching.loader.query.LoadQuery;
 import org.folio.rest.jaxrs.model.EntityType;
 
 public class InstanceLoader extends AbstractLoader<Instance> {
+
+  private static final Logger LOG = LogManager.getLogger(InstanceLoader.class);
 
   private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
   private static final String ID_FIELD = "id";
@@ -39,7 +43,15 @@ public class InstanceLoader extends AbstractLoader<Instance> {
   @Override
   public CompletableFuture<LoadResult> loadEntity(LoadQuery loadQuery, DataImportEventPayload eventPayload) {
     return preloader.preload(loadQuery, eventPayload)
-            .thenCompose(query -> super.loadEntity(query, eventPayload));
+            .thenCompose(query -> {
+              if (query != null) {
+                String jobExecutionId = eventPayload.getJobExecutionId();
+                String recordId = eventPayload.getContext().get("recordId");
+                LOG.info("loadEntity:: Processing LoadQuery for Instance matching - JobExecutionId: {}, RecordId: {}, CQL: {}", 
+                  jobExecutionId, recordId, query.getCql());
+              }
+              return super.loadEntity(query, eventPayload);
+            });
   }
 
   @Override
@@ -59,11 +71,17 @@ public class InstanceLoader extends AbstractLoader<Instance> {
       if (isNotEmpty(eventPayload.getContext().get(AbstractLoader.MULTI_MATCH_IDS))
         || isNotEmpty(eventPayload.getContext().get(INSTANCES_IDS_KEY))) {
         cqlSubMatch = getConditionByMultiMatchResult(eventPayload);
+        LOG.info("addCqlSubMatchCondition:: Added multi-match condition - JobExecutionId: {}, RecordId: {}, SubMatch: {}", 
+          eventPayload.getJobExecutionId(), eventPayload.getContext().get("recordId"), cqlSubMatch);
       } else if (isNotEmpty(eventPayload.getContext().get(INSTANCE.value()))) {
         JsonObject instanceAsJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
         cqlSubMatch = format(" AND id == \"%s\"", instanceAsJson.getString(ID_FIELD));
+        LOG.info("addCqlSubMatchCondition:: Added single instance condition - JobExecutionId: {}, RecordId: {}, InstanceId: {}, SubMatch: {}", 
+          eventPayload.getJobExecutionId(), eventPayload.getContext().get("recordId"), instanceAsJson.getString(ID_FIELD), cqlSubMatch);
       }
     }
+    LOG.info("addCqlSubMatchCondition:: Final sub-match condition - JobExecutionId: {}, RecordId: {}, SubMatch: '{}'", 
+      eventPayload.getJobExecutionId(), eventPayload.getContext().get("recordId"), cqlSubMatch);
     return cqlSubMatch;
   }
 
