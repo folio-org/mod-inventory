@@ -50,7 +50,12 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     PagingParameters pagingParameters = buildPagingParameters(canProcessMultiMatchResult);
 
     try {
-      String cql = loadQuery.getCql() + addCqlSubMatchCondition(eventPayload);
+      String baseCql = loadQuery.getCql();
+      String subCondition = addCqlSubMatchCondition(eventPayload);
+      String cql = baseCql + subCondition;
+      LOG.info("loadEntity:: Final CQL query - JobExecutionId: {}, RecordId: {}, EntityType: {}, BaseCQL: '{}', SubCondition: '{}', FinalCQL: '{}'", 
+        eventPayload.getJobExecutionId(), eventPayload.getContext().get("recordId"), getEntityType().value(), 
+        baseCql, subCondition, cql);
       getSearchableCollection(context).findByCql(cql, pagingParameters,
         success -> {
           MultipleRecords<T> collection = success.getResult();
