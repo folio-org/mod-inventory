@@ -16,6 +16,7 @@ import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 import org.folio.inventory.consortium.services.ConsortiumService;
+import org.folio.inventory.consortium.services.ConsortiumServiceImpl;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.dataimport.HoldingsItemMatcherFactory;
 import org.folio.inventory.dataimport.HoldingsMapperFactory;
@@ -54,7 +55,6 @@ import org.folio.inventory.dataimport.handlers.matching.preloaders.InstancePrelo
 import org.folio.inventory.dataimport.handlers.matching.preloaders.ItemPreloader;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.OrdersPreloaderHelper;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
-import org.folio.inventory.consortium.services.ConsortiumServiceImpl;
 import org.folio.inventory.dataimport.services.OrderHelperService;
 import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
 import org.folio.inventory.services.AuthorityIdStorageService;
@@ -85,8 +85,10 @@ import java.util.concurrent.CompletableFuture;
 
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.folio.DataImportEventTypes.DI_ERROR;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
+import static org.folio.okapi.common.XOkapiHeaders.PERMISSIONS;
 
 public class DataImportKafkaHandler implements AsyncRecordHandler<String, String> {
 
@@ -156,7 +158,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
       String recordId = headersMap.get(RECORD_ID_HEADER);
       String chunkId = headersMap.get(CHUNK_ID_HEADER);
-
       String userId = extractUserId(eventPayload, headersMap);
 
       String jobExecutionId = eventPayload.getJobExecutionId();
@@ -168,6 +169,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       eventPayload.getContext().put(RECORD_ID_HEADER, recordId);
       eventPayload.getContext().put(CHUNK_ID_HEADER, chunkId);
       eventPayload.getContext().put(USER_ID_HEADER, userId);
+      populateWithPermissionsHeader(eventPayload, headersMap);
 
       Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl(),
         eventPayload.getContext().get(USER_ID_HEADER));
@@ -243,4 +245,12 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, mappingMetadataCache));
     EventManager.registerEventHandler(new MarcBibModifyEventHandler(mappingMetadataCache, new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, client));
   }
+
+  private void populateWithPermissionsHeader(DataImportEventPayload eventPayload, Map<String, String> headersMap) {
+    String permissions = headersMap.get(PERMISSIONS);
+    if (isNotBlank(permissions)) {
+      eventPayload.getContext().put(PERMISSIONS, permissions);
+    }
+  }
+
 }
