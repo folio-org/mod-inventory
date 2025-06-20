@@ -97,7 +97,9 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.ACTION_HAS_NO_MAPPING_MSG;
+import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.CENTRAL_RECORD_UPDATE_PERMISSION;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.MARC_BIB_RECORD_CREATED;
+import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.USER_HAS_NO_PERMISSION_MSG;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.LEADER_STATUS_DELETED;
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.normalize;
@@ -105,6 +107,7 @@ import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MAR
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.MARC;
 import static org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle.TITLE_KEY;
+import static org.folio.okapi.common.XOkapiHeaders.PERMISSIONS;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
@@ -115,6 +118,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -634,7 +638,7 @@ public class ReplaceInstanceEventHandlerTest {
   }
 
   @Test
-  public void shouldProcessEventIfConsortiumInstance() throws InterruptedException, ExecutionException, TimeoutException {
+  public void shouldProcessEventIfPayloadHasShadowInstance() throws InterruptedException, ExecutionException, TimeoutException {
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
 
     mockInstance(CONSORTIUM_MARC.getValue());
@@ -678,6 +682,7 @@ public class ReplaceInstanceEventHandlerTest {
     HashMap<String, String> context = new HashMap<>();
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT)).withSnapshotId(jobExecutionId);
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(PERMISSIONS, JsonArray.of(CENTRAL_RECORD_UPDATE_PERMISSION).encode());
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put("hrid", UUID.randomUUID().toString())
@@ -720,7 +725,7 @@ public class ReplaceInstanceEventHandlerTest {
   }
 
   @Test(expected = ExecutionException.class)
-  public void shouldShouldFailIfErrorDuringCreatingOfSnapshotForConsortiumInstance() throws InterruptedException, ExecutionException, TimeoutException {
+  public void shouldFailIfErrorDuringCreatingOfSnapshotForConsortiumInstance() throws InterruptedException, ExecutionException, TimeoutException {
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
 
     mockInstance(CONSORTIUM_MARC.getValue());
@@ -807,6 +812,7 @@ public class ReplaceInstanceEventHandlerTest {
     HashMap<String, String> context = new HashMap<>();
     context.put(CENTRAL_TENANT_ID_KEY, consortiumTenant);
     context.put(PAYLOAD_USER_ID, USER_ID);
+    context.put(PERMISSIONS, JsonArray.of(CENTRAL_RECORD_UPDATE_PERMISSION).encode());
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", UUID.randomUUID().toString())
@@ -877,6 +883,7 @@ public class ReplaceInstanceEventHandlerTest {
 
     HashMap<String, String> context = new HashMap<>();
     context.put(CENTRAL_TENANT_ID_KEY, consortiumTenant);
+    context.put(PERMISSIONS, JsonArray.of(CENTRAL_RECORD_UPDATE_PERMISSION).encode());
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", UUID.randomUUID().toString())
@@ -924,6 +931,66 @@ public class ReplaceInstanceEventHandlerTest {
     verify(replaceInstanceEventHandler, times(2)).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
     verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
     verify(sourceStorageSnapshotsClient).postSourceStorageSnapshots(argThat(snapshot -> snapshot.getJobExecutionId().equals(record.getSnapshotId())));
+  }
+
+  @Test
+  public void shouldFailIfPayloadContainsCentralTenantIdAndSharedInstanceButHasNoPermissionForSharedInstanceUpdate() {
+    Record incomingRecord = new Record().withSnapshotId(jobExecutionId)
+      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+
+    HashMap<String, String> context = new HashMap<>();
+    context.put(CENTRAL_TENANT_ID_KEY, consortiumTenant);
+    context.put(PAYLOAD_USER_ID, USER_ID);
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("hrid", UUID.randomUUID().toString())
+      .put("source", MARC.toString())
+      .put("_version", INSTANCE_VERSION)
+      .encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_MATCHED.value())
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withOkapiUrl(mockServer.baseUrl())
+      .withTenant(TENANT_ID)
+      .withToken(TOKEN)
+      .withContext(context)
+      .withJobExecutionId(UUID.randomUUID().toString());
+    assertEquals(consortiumTenant, dataImportEventPayload.getContext().get(CENTRAL_TENANT_ID_KEY));
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+
+    ExecutionException exception = assertThrows(ExecutionException.class, future::get);
+    assertEquals(USER_HAS_NO_PERMISSION_MSG, exception.getCause().getMessage());
+  }
+
+  @Test
+  public void shouldFailIfPayloadHasShadowInstanceButHasNoPermissionForSharedInstanceUpdate() {
+    Record incomingRecord = new Record().withSnapshotId(jobExecutionId)
+      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("hrid", UUID.randomUUID().toString())
+      .put("source", CONSORTIUM_MARC.getValue())
+      .put("_version", INSTANCE_VERSION)
+      .encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_MATCHED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString());
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+
+    ExecutionException exception = assertThrows(ExecutionException.class, future::get);
+    assertEquals(USER_HAS_NO_PERMISSION_MSG, exception.getCause().getMessage());
   }
 
   @Test(expected = ExecutionException.class)
@@ -1144,7 +1211,7 @@ public class ReplaceInstanceEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
 
-    ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
+    ExecutionException exception = assertThrows(ExecutionException.class, future::get);
     Assert.assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
   }
 
