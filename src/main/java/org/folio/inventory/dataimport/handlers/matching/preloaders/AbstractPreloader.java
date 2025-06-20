@@ -60,6 +60,9 @@ public abstract class AbstractPreloader {
         MatchValueReader reader = MatchValueReaderFactory.build(matchProfile.getIncomingRecordType());
         Value<?> value = reader.read(dataImportEventPayload, matchDetail);
         LoadQuery loadQuery = LoadQueryBuilder.build(value, matchDetail);
+        Json.encode(value);
+          LOG.info("preload:: values: {} matchDetail: {} - JobExecutionId: {}, RecordId: {}",
+            Json.encode(value), Json.encode(matchDetail), jobExecutionId, recordId);
         LOG.info("preload:: Built query without preloading - JobExecutionId: {}, RecordId: {}, CQL: '{}'",
             jobExecutionId, recordId, loadQuery != null ? loadQuery.getCql() : "null");
         return CompletableFuture.completedFuture(query);
