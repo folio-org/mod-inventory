@@ -40,6 +40,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -47,6 +48,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.domain.items.CQLQueryRequestDto;
+import org.folio.inventory.domain.items.EffectiveCallNumberComponents;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.IndividualResource;
@@ -1685,6 +1687,109 @@ public class ItemApiExamples extends ApiTests {
 
     assertThat(createResponse.getJson().getJsonObject("status").getString("name"),
       is(itemStatus));
+  }
+
+  @Test
+  public void canCreateAndUpdateItemWithCompleteAdditionalCallNumbers() throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID holdingId = createInstanceAndHolding();
+    JsonArray additionalCallNumbers = new JsonArray();
+    final String callNumber = "123";
+    final String prefix = "A";
+    final String suffix = "Z";
+    final String typeId = CALL_NUMBER_TYPE_ID;
+    additionalCallNumbers
+      .add(new EffectiveCallNumberComponents(callNumber, prefix, suffix, typeId));
+    IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withItemLevelAdditionalCallNumbers(additionalCallNumbers));
+
+    final JsonObject itemLevelCallNumbers = createdItem.getJson().getJsonArray("itemLevelAdditionalCallNumbers")
+      .getJsonObject(0);
+
+    final String additionalCallNumber = itemLevelCallNumbers.getString("callNumber");
+    final String additionalCallNumberPrefix = itemLevelCallNumbers.getString("prefix");
+    final String additionalCallNumberSuffix = itemLevelCallNumbers.getString("suffix");
+    final String additionalCallNumberTypeId = itemLevelCallNumbers.getString("typeId");
+    assertThat(additionalCallNumber, is(callNumber));
+    assertThat(additionalCallNumberPrefix, is(prefix));
+    assertThat(additionalCallNumberSuffix, is(suffix));
+    assertThat(additionalCallNumberTypeId, is(typeId));
+
+    JsonArray updatedAdditionalCallNumbers = new JsonArray();
+    final String newCallNumber = "321";
+    updatedAdditionalCallNumbers
+      .add(new EffectiveCallNumberComponents(newCallNumber, prefix, suffix, typeId));
+    JsonObject itemToUpdate = createdItem.getJson().copy()
+      .put("itemLevelAdditionalCallNumbers", updatedAdditionalCallNumbers);
+
+    itemsClient.replace(createdItem.getId(), itemToUpdate);
+    final JsonObject updatedItem = itemsClient.getById(createdItem.getId()).getJson();
+
+    final String updatedAdditionalCallNumber = updatedItem.getJsonArray("itemLevelAdditionalCallNumbers").getJsonObject(0)
+      .getString("callNumber");
+    assertThat(updatedAdditionalCallNumber, is(newCallNumber));
+  }
+
+  @Test
+  public void canCreateItemWithMinimalAdditionalCallNumbers() throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID holdingId = createInstanceAndHolding();
+    JsonArray additionalCallNumbers = new JsonArray();
+    final String callNumber = "123";
+    additionalCallNumbers
+      .add(new EffectiveCallNumberComponents(callNumber, null, null, null));
+    IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withItemLevelAdditionalCallNumbers(additionalCallNumbers));
+
+    final JsonObject itemLevelCallNumbers = createdItem.getJson().getJsonArray("itemLevelAdditionalCallNumbers")
+      .getJsonObject(0);
+
+    final String additionalCallNumber = itemLevelCallNumbers.getString("callNumber");
+    assertThat(additionalCallNumber, is(callNumber));
+  }
+  @Test
+  public void canDeleteAdditionalCallNumbers() throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID holdingId = createInstanceAndHolding();
+    JsonArray additionalCallNumbers = new JsonArray();
+    final String callNumber = "123";
+    final String prefix = "A";
+    final String suffix = "Z";
+    final String typeId = CALL_NUMBER_TYPE_ID;
+    additionalCallNumbers
+      .add(new EffectiveCallNumberComponents(callNumber, prefix, suffix, typeId));
+    IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .withItemLevelAdditionalCallNumbers(additionalCallNumbers));
+
+    final JsonObject itemLevelCallNumbers = createdItem.getJson().getJsonArray("itemLevelAdditionalCallNumbers")
+      .getJsonObject(0);
+
+    final String additionalCallNumber = itemLevelCallNumbers.getString("callNumber");
+    final String additionalCallNumberPrefix = itemLevelCallNumbers.getString("prefix");
+    final String additionalCallNumberSuffix = itemLevelCallNumbers.getString("suffix");
+    final String additionalCallNumberTypeId = itemLevelCallNumbers.getString("typeId");
+    assertThat(additionalCallNumber, is(callNumber));
+    assertThat(additionalCallNumberPrefix, is(prefix));
+    assertThat(additionalCallNumberSuffix, is(suffix));
+    assertThat(additionalCallNumberTypeId, is(typeId));
+
+    JsonObject itemToUpdate = createdItem.getJson().copy();
+    itemToUpdate.remove("itemLevelAdditionalCallNumbers");
+
+    Response response = itemsClient.attemptToReplace(createdItem.getId(), itemToUpdate);
+    assertThat(response.getStatusCode(), is(204));
   }
 
   private Response updateItem(JsonObject item) throws MalformedURLException,

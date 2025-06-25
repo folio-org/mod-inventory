@@ -113,6 +113,7 @@ class ItemRepresentation {
     includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY, item.getItemLevelCallNumberPrefix());
     includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY, item.getItemLevelCallNumberSuffix());
     includeIfPresent(representation, Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY, item.getItemLevelCallNumberTypeId());
+    representation.put(Item.ITEM_LEVEL_ADDITIONAL_CALL_NUMBERS_KEY, item.getItemLevelAdditionalCallNumbers());
     includeIfPresent(representation, Item.VOLUME_KEY, item.getVolume());
     includeIfPresent(representation, "displaySummary", item.getDisplaySummary());
     includeIfPresent(representation, "enumeration", item.getEnumeration());
