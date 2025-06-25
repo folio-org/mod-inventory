@@ -89,7 +89,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   public static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
   private final ConsortiumService consortiumService;
   public static final String MARC_BIB_RECORD_CREATED = "MARC_BIB_RECORD_CREATED";
-  static final String CENTRAL_RECORD_UPDATE_PERMISSION = "data-import.central-record.item.put";
+  static final String CENTRAL_RECORD_UPDATE_PERMISSION = "consortia.data-import.central-record-update.execute";
 
   public ReplaceInstanceEventHandler(Storage storage,
                                      PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
