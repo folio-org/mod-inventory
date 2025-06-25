@@ -504,13 +504,11 @@
           <useSystemClassLoader>false</useSystemClassLoader>
           <excludes>
             <exclude>**/api/**Examples.class</exclude>
-            <include>**/org/folio/inventory/storage/external/*Examples.class</include>
-            <include>**/org/folio/inventory/storage/external/failure/*Examples.class</include>
           </excludes>
           <includes>
             <include>**/api/ApiTestSuite.class</include>
-            <include>**/storage/external/ExternalStorageSuite.class</include>
-            <include>**/storage/external/failure/ExternalStorageFailureSuite.class</include>
+            <include>**/org/folio/inventory/storage/external/*Examples.class</include>
+            <include>**/org/folio/inventory/storage/external/failure/*Examples.class</include>
             <include>org/folio/inventory/**</include>
           </includes>
         </configuration>

@@ -21,7 +21,7 @@ public abstract class ExternalStorageTests {
   static final String TENANT_ID = "test_tenant";
   static final String TENANT_TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ";
 
-  private static final VertxAssistant vertxAssistant = new VertxAssistant();
+  private static VertxAssistant vertxAssistant;
 
   private static String storageModuleDeploymentId;
 
@@ -32,6 +32,7 @@ public abstract class ExternalStorageTests {
   @BeforeClass
   @SneakyThrows
   public static void beforeAll() {
+    vertxAssistant = new VertxAssistant();
     vertxAssistant.start();
 
     final var deployed = new CompletableFuture<String>();
