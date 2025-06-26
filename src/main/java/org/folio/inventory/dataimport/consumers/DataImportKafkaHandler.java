@@ -152,6 +152,8 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> kafkaRecord) {
     try {
+      LOGGER.info("handle:: Kafka headers: '{}'", kafkaRecord.headers());
+
       Promise<String> promise = Promise.promise();
       Event event = Json.decodeValue(kafkaRecord.value(), Event.class);
       DataImportEventPayload eventPayload = Json.decodeValue(event.getEventPayload(), DataImportEventPayload.class);
