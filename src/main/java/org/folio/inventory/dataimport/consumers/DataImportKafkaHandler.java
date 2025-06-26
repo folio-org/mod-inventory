@@ -150,12 +150,12 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   }
 
   @Override
-  public Future<String> handle(KafkaConsumerRecord<String, String> record) {
+  public Future<String> handle(KafkaConsumerRecord<String, String> kafkaRecord) {
     try {
       Promise<String> promise = Promise.promise();
-      Event event = Json.decodeValue(record.value(), Event.class);
+      Event event = Json.decodeValue(kafkaRecord.value(), Event.class);
       DataImportEventPayload eventPayload = Json.decodeValue(event.getEventPayload(), DataImportEventPayload.class);
-      Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
+      Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(kafkaRecord.headers());
       String recordId = headersMap.get(RECORD_ID_HEADER);
       String chunkId = headersMap.get(CHUNK_ID_HEADER);
       String userId = extractUserId(eventPayload, headersMap);
@@ -188,12 +188,12 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
             LOGGER.warn("Failed to process data import event payload: {}", processedPayload.getEventType());
             promise.fail("Failed to process data import event payload");
           } else {
-            promise.complete(record.key());
+            promise.complete(kafkaRecord.key());
           }
         });
       return promise.future();
     } catch (Exception e) {
-      LOGGER.error(format("Failed to process data import kafka record from topic %s", record.topic()), e);
+      LOGGER.error(format("Failed to process data import kafka record from topic %s", kafkaRecord.topic()), e);
       return Future.failedFuture(e);
     }
   }
