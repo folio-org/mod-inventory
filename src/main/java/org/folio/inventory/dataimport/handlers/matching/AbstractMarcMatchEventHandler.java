@@ -441,6 +441,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
    * @return Future of {@link DataImportEventPayload} with result of matching
    */
   private Future<DataImportEventPayload> processSucceededResult(Optional<Record> recordOptional, DataImportEventPayload payload) {
+    LOG.info("handle:: Payload keys: '{}'", payload.getContext().keySet());
+
     if (recordOptional.isPresent()) {
       payload.setEventType(matchedEventType.toString());
       payload.getContext().put(getMatchedMarcKey(), Json.encode(recordOptional.get()));

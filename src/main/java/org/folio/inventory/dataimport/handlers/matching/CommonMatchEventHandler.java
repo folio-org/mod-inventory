@@ -74,6 +74,7 @@ public class CommonMatchEventHandler implements EventHandler {
 
   private CompletableFuture<DataImportEventPayload> invokeNextHandlerIfNeeded(DataImportEventPayload eventPayload) {
     if (!containsMarcMultipleMatchResult(eventPayload)) {
+      LOG.info("invokeNextHandlerIfNeeded:: Payload keys: '{}'", eventPayload.getContext().keySet());
       return CompletableFuture.completedFuture(eventPayload);
     }
 
