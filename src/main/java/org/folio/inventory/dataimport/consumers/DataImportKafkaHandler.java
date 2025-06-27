@@ -247,7 +247,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   }
 
   private void populateWithPermissionsHeader(DataImportEventPayload eventPayload, Map<String, String> headersMap) {
-    String permissions = headersMap.get(PERMISSIONS);
+    String permissions = headersMap.getOrDefault(PERMISSIONS, headersMap.get(PERMISSIONS.toLowerCase()));
     if (isNotBlank(permissions)) {
       eventPayload.getContext().put(PERMISSIONS, permissions);
     }
