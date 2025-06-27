@@ -183,6 +183,9 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
           .map(profileSnapshot -> EventManager.handleEvent(eventPayload, profileSnapshot))
           .orElse(CompletableFuture.failedFuture(new EventProcessingException(format("Job profile snapshot with id '%s' does not exist", jobProfileSnapshotId)))))
         .whenComplete((processedPayload, throwable) -> {
+          LOGGER.info("handle:: Payload keys: '{}'", eventPayload.getContext().keySet());
+          LOGGER.info("handle:: Payload context: '{}'", eventPayload.getContext());
+
           if (throwable != null) {
             LOGGER.error(throwable.getMessage());
             promise.fail(throwable);
