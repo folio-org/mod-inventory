@@ -81,6 +81,7 @@ import org.folio.rest.jaxrs.model.Event;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static java.lang.String.format;
@@ -251,7 +252,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   }
 
   private void populateWithPermissionsHeader(DataImportEventPayload eventPayload, Map<String, String> headersMap) {
-    String permissions = headersMap.get(PERMISSIONS);
+    String permissions = headersMap.getOrDefault(PERMISSIONS, headersMap.get(PERMISSIONS.toLowerCase()));
     if (isNotBlank(permissions)) {
       eventPayload.getContext().put(PERMISSIONS, permissions);
     }
