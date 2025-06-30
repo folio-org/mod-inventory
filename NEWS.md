@@ -1,3 +1,6 @@
+## 21.1.7 2025-06-30
+* Support CREATE action for MARC holdings record on shared Instance from member tenant on ECS environment [MODINV-1240](https://folio-org.atlassian.net/browse/MODINV-1240)
+
 ## 21.1.6 2025-05-20
 * Deleted from Inventory MARC records are not matching during update [MODINV-1232](https://folio-org.atlassian.net/browse/MODINV-1232)
 
