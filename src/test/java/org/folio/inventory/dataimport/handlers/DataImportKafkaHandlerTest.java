@@ -9,6 +9,7 @@ import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -33,6 +34,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -46,6 +48,7 @@ import java.util.concurrent.CompletableFuture;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
+import static org.folio.okapi.common.XOkapiHeaders.PERMISSIONS;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
@@ -53,6 +56,7 @@ import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(VertxUnitRunner.class)
@@ -131,7 +135,7 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
   @Test
   public void shouldReturnSucceededFutureWhenProcessingCoreHandlerSucceeded(TestContext context) {
     // given
-    Async async = context.async();
+    String expectedPermissions = JsonArray.of("test-permission").encode();
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
@@ -140,9 +144,14 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
     String expectedKafkaRecordKey = "test_key";
+    List<KafkaHeader> headers = List.of(
+      KafkaHeader.header(RECORD_ID_HEADER, UUID.randomUUID().toString()),
+      KafkaHeader.header(CHUNK_ID_HEADER, UUID.randomUUID().toString()),
+      KafkaHeader.header(PERMISSIONS, expectedPermissions)
+    );
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
-    when(kafkaRecord.headers()).thenReturn(List.of(KafkaHeader.header(RECORD_ID_HEADER, UUID.randomUUID().toString()), KafkaHeader.header(CHUNK_ID_HEADER, UUID.randomUUID().toString())));
+    when(kafkaRecord.headers()).thenReturn(headers);
 
     EventHandler mockedEventHandler = mock(EventHandler.class);
     when(mockedEventHandler.isEligible(any(DataImportEventPayload.class))).thenReturn(true);
@@ -154,11 +163,13 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
     Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
 
     // then
-    future.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertEquals(expectedKafkaRecordKey, ar.result());
-      async.complete();
-    });
+    future.onComplete(context.asyncAssertSuccess(actualKafkaRecordKey -> {
+      context.assertEquals(expectedKafkaRecordKey, actualKafkaRecordKey);
+      ArgumentCaptor<DataImportEventPayload> payloadCaptor = ArgumentCaptor.forClass(DataImportEventPayload.class);
+      verify(mockedEventHandler).handle(payloadCaptor.capture());
+      DataImportEventPayload payload = payloadCaptor.getValue();
+      context.assertEquals(expectedPermissions, payload.getContext().get(PERMISSIONS));
+    }));
   }
 
   @Test
