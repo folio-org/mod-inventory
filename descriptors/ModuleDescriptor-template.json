@@ -656,7 +656,7 @@
     },
     {
       "id": "item-storage",
-      "version": "10.2"
+      "version": "10.3"
     },
     {
       "id": "instance-storage",
@@ -668,7 +668,7 @@
     },
     {
       "id": "holdings-storage",
-      "version": "2.0 3.0 4.0 5.0 6.0 7.0 8.0"
+      "version": "8.1"
     },
     {
       "id": "material-types",
