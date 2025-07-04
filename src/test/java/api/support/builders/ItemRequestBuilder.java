@@ -34,7 +34,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
   private final String itemLevelCallNumberPrefix;
   private final String itemLevelCallNumberSuffix;
   private final String itemLevelCallNumberTypeId;
-  private final JsonArray itemLevelAdditionalCallNumbers;
+  private final JsonArray additionalCallNumbers;
   private final String hrid;
   private final String copyNumber;
 
@@ -67,7 +67,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
       String itemLevelCallNumberPrefix,
       String itemLevelCallNumberSuffix,
       String itemLevelCallNumberTypeId,
-      JsonArray itemLevelAdditionalCallNumbers,
+      JsonArray additionalCallNumbers,
       String hrid,
       String copyNumber,
       JsonArray administrativeNotes) {
@@ -92,7 +92,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     this.itemLevelCallNumberPrefix = itemLevelCallNumberPrefix;
     this.itemLevelCallNumberSuffix = itemLevelCallNumberSuffix;
     this.itemLevelCallNumberTypeId = itemLevelCallNumberTypeId;
-    this.itemLevelAdditionalCallNumbers = itemLevelAdditionalCallNumbers;
+    this.additionalCallNumbers = additionalCallNumbers;
     this.hrid = hrid;
     this.copyNumber = copyNumber;
     this.administrativeNotes = administrativeNotes;
@@ -130,7 +130,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     includeWhenPresent(itemRequest, "itemLevelCallNumberSuffix", itemLevelCallNumberSuffix);
     includeWhenPresent(itemRequest, "itemLevelCallNumberPrefix", itemLevelCallNumberPrefix);
     includeWhenPresent(itemRequest, "itemLevelCallNumberTypeId", itemLevelCallNumberTypeId);
-    includeWhenPresent(itemRequest, "itemLevelAdditionalCallNumbers", itemLevelAdditionalCallNumbers);
+    includeWhenPresent(itemRequest, "additionalCallNumbers", additionalCallNumbers);
     includeWhenPresent(itemRequest, "hrid", hrid);
     includeWhenPresent(itemRequest, "inTransitDestinationServicePointId", inTransitDestinationServicePointId);
     includeWhenPresent(itemRequest, "lastCheckIn", lastCheckIn);
@@ -161,7 +161,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -173,7 +173,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.readOnlyEffectiveLocation, this.permanentLocation, this.temporaryLocation,
         this.permanentLoanType, this.temporaryLoanType, this.circulationNotes, this.tags,
         this.lastCheckIn, this.itemLevelCallNumber, this.itemLevelCallNumberPrefix,
-        this.itemLevelCallNumberSuffix, this.itemLevelCallNumberTypeId, this.itemLevelAdditionalCallNumbers, this.hrid,
+        this.itemLevelCallNumberSuffix, this.itemLevelCallNumberTypeId, this.additionalCallNumbers, this.hrid,
         this.copyNumber, this.administrativeNotes);
   }
 
@@ -199,7 +199,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -227,7 +227,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -255,7 +255,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -283,7 +283,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -315,7 +315,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -355,7 +355,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -383,7 +383,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -411,7 +411,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -455,7 +455,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -495,7 +495,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -523,7 +523,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -551,7 +551,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -594,7 +594,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -658,7 +658,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -686,7 +686,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -714,7 +714,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -742,13 +742,13 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
   }
 
-  public ItemRequestBuilder withItemLevelAdditionalCallNumbers(JsonArray itemLevelAdditionalCallNumbers) {
+  public ItemRequestBuilder withAdditionalCallNumbers(JsonArray additionalCallNumbers) {
     return new ItemRequestBuilder(
         this.id,
         this.holdingId,
@@ -770,7 +770,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        itemLevelAdditionalCallNumbers,
+        additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -798,7 +798,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -826,7 +826,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         copyNumber,
         this.administrativeNotes);
@@ -854,7 +854,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         this.administrativeNotes);
@@ -882,7 +882,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.itemLevelCallNumberPrefix,
         this.itemLevelCallNumberSuffix,
         this.itemLevelCallNumberTypeId,
-        this.itemLevelAdditionalCallNumbers,
+        this.additionalCallNumbers,
         this.hrid,
         this.copyNumber,
         administrativeNotes);

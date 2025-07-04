@@ -29,7 +29,7 @@ public class Item {
   public static final String ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY = "itemLevelCallNumberPrefix";
   public static final String ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY = "itemLevelCallNumberSuffix";
   public static final String ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY = "itemLevelCallNumberTypeId";
-  public static final String ITEM_LEVEL_ADDITIONAL_CALL_NUMBERS_KEY = "itemLevelAdditionalCallNumbers";
+  public static final String ADDITIONAL_CALL_NUMBERS_KEY = "additionalCallNumbers";
   public static final String VOLUME_KEY = "volume";
 
   public static final String DESCRIPTION_OF_PIECES_KEY = "descriptionOfPieces";
@@ -60,7 +60,7 @@ public class Item {
   private String itemLevelCallNumberPrefix;
   private String itemLevelCallNumberSuffix;
   private String itemLevelCallNumberTypeId;
-  private List<EffectiveCallNumberComponents> itemLevelAdditionalCallNumbers = new ArrayList<>();
+  private List<EffectiveCallNumberComponents> additionalCallNumbers = new ArrayList<>();
   private String volume;
   private String accessionNumber;
   private String itemIdentifier;
@@ -229,13 +229,13 @@ public class Item {
     return this;
   }
 
-  public Item withItemLevelAdditionalCallNumbers(List<EffectiveCallNumberComponents> itemLevelAdditionalCallNumbers) {
-    this.itemLevelAdditionalCallNumbers = itemLevelAdditionalCallNumbers;
+  public Item withAdditionalCallNumbers(List<EffectiveCallNumberComponents> additionalCallNumbers) {
+    this.additionalCallNumbers = additionalCallNumbers;
     return this;
   }
 
-  public List<EffectiveCallNumberComponents> getItemLevelAdditionalCallNumbers() {
-    return itemLevelAdditionalCallNumbers;
+  public List<EffectiveCallNumberComponents> getAdditionalCallNumbers() {
+    return additionalCallNumbers;
   }
 
   public String getVolume() {
@@ -546,7 +546,7 @@ public class Item {
         .withItemLevelCallNumberPrefix(this.itemLevelCallNumberPrefix)
         .withItemLevelCallNumberSuffix(this.itemLevelCallNumberSuffix)
         .withItemLevelCallNumberTypeId(this.itemLevelCallNumberTypeId)
-        .withItemLevelAdditionalCallNumbers(this.itemLevelAdditionalCallNumbers)
+        .withAdditionalCallNumbers(this.additionalCallNumbers)
         .withVolume(this.volume)
         .withDisplaySummary(this.displaySummary)
         .withEnumeration(this.enumeration)
@@ -585,7 +585,7 @@ public class Item {
         .withItemLevelCallNumberPrefix(this.itemLevelCallNumberPrefix)
         .withItemLevelCallNumberSuffix(this.itemLevelCallNumberSuffix)
         .withItemLevelCallNumberTypeId(this.itemLevelCallNumberTypeId)
-        .withItemLevelAdditionalCallNumbers(this.itemLevelAdditionalCallNumbers)
+        .withAdditionalCallNumbers(this.additionalCallNumbers)
         .withVolume(this.volume)
         .withDisplaySummary(this.displaySummary)
         .withEnumeration(this.enumeration)

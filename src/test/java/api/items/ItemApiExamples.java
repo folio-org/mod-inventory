@@ -1705,9 +1705,9 @@ public class ItemApiExamples extends ApiTests {
       .add(new EffectiveCallNumberComponents(callNumber, prefix, suffix, typeId));
     IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
-      .withItemLevelAdditionalCallNumbers(additionalCallNumbers));
+      .withAdditionalCallNumbers(additionalCallNumbers));
 
-    final JsonObject itemLevelCallNumbers = createdItem.getJson().getJsonArray("itemLevelAdditionalCallNumbers")
+    final JsonObject itemLevelCallNumbers = createdItem.getJson().getJsonArray("additionalCallNumbers")
       .getJsonObject(0);
 
     final String additionalCallNumber = itemLevelCallNumbers.getString("callNumber");
@@ -1724,12 +1724,12 @@ public class ItemApiExamples extends ApiTests {
     updatedAdditionalCallNumbers
       .add(new EffectiveCallNumberComponents(newCallNumber, prefix, suffix, typeId));
     JsonObject itemToUpdate = createdItem.getJson().copy()
-      .put("itemLevelAdditionalCallNumbers", updatedAdditionalCallNumbers);
+      .put("additionalCallNumbers", updatedAdditionalCallNumbers);
 
     itemsClient.replace(createdItem.getId(), itemToUpdate);
     final JsonObject updatedItem = itemsClient.getById(createdItem.getId()).getJson();
 
-    final String updatedAdditionalCallNumber = updatedItem.getJsonArray("itemLevelAdditionalCallNumbers").getJsonObject(0)
+    final String updatedAdditionalCallNumber = updatedItem.getJsonArray("additionalCallNumbers").getJsonObject(0)
       .getString("callNumber");
     assertThat(updatedAdditionalCallNumber, is(newCallNumber));
   }
@@ -1747,9 +1747,9 @@ public class ItemApiExamples extends ApiTests {
       .add(new EffectiveCallNumberComponents(callNumber, null, null, null));
     IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
-      .withItemLevelAdditionalCallNumbers(additionalCallNumbers));
+      .withAdditionalCallNumbers(additionalCallNumbers));
 
-    final JsonObject itemLevelCallNumbers = createdItem.getJson().getJsonArray("itemLevelAdditionalCallNumbers")
+    final JsonObject itemLevelCallNumbers = createdItem.getJson().getJsonArray("additionalCallNumbers")
       .getJsonObject(0);
 
     final String additionalCallNumber = itemLevelCallNumbers.getString("callNumber");
@@ -1771,9 +1771,9 @@ public class ItemApiExamples extends ApiTests {
       .add(new EffectiveCallNumberComponents(callNumber, prefix, suffix, typeId));
     IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
-      .withItemLevelAdditionalCallNumbers(additionalCallNumbers));
+      .withAdditionalCallNumbers(additionalCallNumbers));
 
-    final JsonObject itemLevelCallNumbers = createdItem.getJson().getJsonArray("itemLevelAdditionalCallNumbers")
+    final JsonObject itemLevelCallNumbers = createdItem.getJson().getJsonArray("additionalCallNumbers")
       .getJsonObject(0);
 
     final String additionalCallNumber = itemLevelCallNumbers.getString("callNumber");
@@ -1786,7 +1786,7 @@ public class ItemApiExamples extends ApiTests {
     assertThat(additionalCallNumberTypeId, is(typeId));
 
     JsonObject itemToUpdate = createdItem.getJson().copy();
-    itemToUpdate.remove("itemLevelAdditionalCallNumbers");
+    itemToUpdate.remove("additionalCallNumbers");
 
     Response response = itemsClient.attemptToReplace(createdItem.getId(), itemToUpdate);
     assertThat(response.getStatusCode(), is(204));
