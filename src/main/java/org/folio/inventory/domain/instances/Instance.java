@@ -35,6 +35,7 @@ public class Instance {
   public static final String VERSION_KEY = "_version";
   public static final String HRID_KEY = "hrid";
   public static final String MATCH_KEY_KEY = "matchKey";
+  public static final String SOURCE_URI_KEY = "sourceUri";
   public static final String SOURCE_KEY = "source";
   public static final String PARENT_INSTANCES_KEY = "parentInstances";
   public static final String CHILD_INSTANCES_KEY = "childInstances";
@@ -83,6 +84,7 @@ public class Instance {
   private String version;
   private final String hrid;
   private String matchKey;
+  private String sourceUri;
   private final String source;
   private List<InstanceRelationshipToParent> parentInstances = new ArrayList<>();
   private List<InstanceRelationshipToChild> childInstances = new ArrayList<>();
@@ -123,8 +125,6 @@ public class Instance {
   private List<String> natureOfContentTermIds = new ArrayList<>();
   private Dates dates;
 
-  protected static final String INVENTORY_PATH = "/inventory";
-  protected static final String INSTANCES_PATH = INVENTORY_PATH + "/instances";
   protected static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
   public Instance(
@@ -155,12 +155,13 @@ public class Instance {
     return new Instance(
       instanceJson.getString(ID),
       instanceJson.getString(VERSION_KEY),
-      instanceJson.getString("hrid"),
+      instanceJson.getString(HRID_KEY),
       instanceJson.getString(SOURCE_KEY),
       instanceJson.getString(TITLE_KEY),
       instanceJson.getString(INSTANCE_TYPE_ID_KEY))
       .setIndexTitle(instanceJson.getString(INDEX_TITLE_KEY))
       .setMatchKey(instanceJson.getString(MATCH_KEY_KEY))
+      .setSourceUri(instanceJson.getString(SOURCE_URI_KEY))
       .setParentInstances(instanceJson.getJsonArray(PARENT_INSTANCES_KEY))
       .setChildInstances(instanceJson.getJsonArray(CHILD_INSTANCES_KEY))
       .setPrecedingTitles(instanceJson.getJsonArray(PRECEDING_TITLES_KEY))
@@ -212,6 +213,7 @@ public class Instance {
     json.put(HRID_KEY, hrid);
     if (source != null) json.put(SOURCE_KEY, source);
     json.put(MATCH_KEY_KEY, matchKey);
+    json.put(SOURCE_URI_KEY, sourceUri);
     json.put(TITLE_KEY, title);
     json.put(INDEX_TITLE_KEY, indexTitle);
     json.put(ALTERNATIVE_TITLES_KEY, alternativeTitles);
@@ -259,11 +261,12 @@ public class Instance {
 
     json.put(ID, getId());
     putIfNotNull(json, VERSION_KEY, version);
-    json.put("hrid", getHrid());
+    json.put(HRID_KEY, getHrid());
     json.put(SOURCE_KEY, getSource());
     json.put(TITLE_KEY, getTitle());
     json.put(ADMININSTRATIVE_NOTES_KEY, getAdministrativeNotes());
     putIfNotNull(json, MATCH_KEY_KEY, getMatchKey());
+    putIfNotNull(json, SOURCE_URI_KEY, getSourceUri());
     putIfNotNull(json, INDEX_TITLE_KEY, getIndexTitle());
     putIfNotNull(json, PARENT_INSTANCES_KEY, parentInstances);
     putIfNotNull(json, CHILD_INSTANCES_KEY, childInstances);
@@ -316,6 +319,11 @@ public class Instance {
 
   public Instance setMatchKey(String matchKey) {
     this.matchKey = matchKey;
+    return this;
+  }
+
+  public Instance setSourceUri(String sourceUri) {
+    this.sourceUri = sourceUri;
     return this;
   }
 
@@ -585,6 +593,10 @@ public class Instance {
     return matchKey;
   }
 
+  public String getSourceUri() {
+    return sourceUri;
+  }
+
   public String getSource() {
     return source;
   }
@@ -741,6 +753,7 @@ public class Instance {
   public Instance copyWithNewId(String newId) {
     return new Instance(newId, null, null, this.source, this.title, this.instanceTypeId)
             .setIndexTitle(indexTitle)
+            .setSourceUri(sourceUri)
             .setAlternativeTitles(alternativeTitles)
             .setEditions(editions)
             .setSeries(series)
@@ -775,6 +788,7 @@ public class Instance {
   public Instance copyInstance() {
     return new Instance(this.id, this.version, this.hrid, this.source, this.title, this.instanceTypeId)
             .setIndexTitle(indexTitle)
+            .setSourceUri(sourceUri)
             .setAlternativeTitles(alternativeTitles)
             .setEditions(editions)
             .setSeries(series)
