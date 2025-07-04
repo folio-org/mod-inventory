@@ -60,6 +60,7 @@
         "type": "object",
         "$ref": "additionalCallNumber.json",
         "uniqueItems": true
+      }
     },
     "callNumber": {
       "type": "string",
