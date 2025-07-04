@@ -1,5 +1,5 @@
-## 21.0.16 2025-05-08
-* Implement marc bib submatch [MODINV-1114](https://issues.folio.org/browse/MODINV-1114)
+## 21.0.16 2025-07-04
+* Implement marc bib submatch [MODINV-1252](https://issues.folio.org/browse/MODINV-1252) (MODINV-1114)
 
 ## 21.0.15 2025-05-08
 * Unable to update holdings or item ownership on LOC stage [MODINV-1222](https://folio-org.atlassian.net/browse/MODINV-1222) (MODINV-1175)
