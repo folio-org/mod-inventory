@@ -135,6 +135,7 @@ public final class ItemUtil {
       .withPurchaseOrderLineIdentifier(itemFromServer.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
       .withTags(tags)
       .withLastCheckIn(LastCheckIn.from(itemFromServer.getJsonObject("lastCheckIn")))
+      .withOrder(itemFromServer.getInteger(Item.ORDER))
       .withEffectiveCallNumberComponents(
         EffectiveCallNumberComponents.from(itemFromServer.getJsonObject("effectiveCallNumberComponents")));
   }
@@ -193,6 +194,7 @@ public final class ItemUtil {
     itemToSend.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
     itemToSend.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineIdentifier());
     itemToSend.put(Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
+    itemToSend.put(Item.ORDER, item.getOrder());
 
     return itemToSend;
   }
@@ -289,6 +291,7 @@ public final class ItemUtil {
       .withStatisticalCodeIds(statisticalCodeIds)
       .withPurchaseOrderLineIdentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
       .withLastCheckIn(LastCheckIn.from(itemRequest.getJsonObject(Item.LAST_CHECK_IN)))
+      .withOrder(itemRequest.getInteger(Item.ORDER))
       .withTags(tags);
   }
 
@@ -350,6 +353,7 @@ public final class ItemUtil {
     itemJson.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
     itemJson.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineIdentifier());
     itemJson.put(Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
+    itemJson.put(Item.ORDER, item.getOrder());
 
     return itemJson;
   }
