@@ -4,7 +4,10 @@ import api.ApiTestSuite;
 import api.support.ApiTests;
 import api.support.InstanceApiClient;
 import api.support.builders.HoldingRequestBuilder;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+
+import org.folio.inventory.domain.items.EffectiveCallNumberComponents;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.junit.Test;
@@ -12,6 +15,8 @@ import support.fakes.FakeOkapi;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -95,6 +100,17 @@ public class HoldingApiExample extends ApiTests {
     assertThat(updateHolding(holding).getStatusCode(), is(409));
   }
 
+  @Test
+  public void canCreateHoldingWithAdditionalCallNumbers() throws Exception {
+    JsonObject instance = createInstance(smallAngryPlanet(UUID.randomUUID()));
+
+    List<EffectiveCallNumberComponents> additionalCallNumbers = new ArrayList<>();
+    additionalCallNumbers.add(new EffectiveCallNumberComponents("123", "prefix", "suffix", "typeId"));
+    JsonObject holding = new HoldingRequestBuilder().forInstance(UUID.fromString(instance.getString("id")))
+      .withAdditionalCallNumbers(additionalCallNumbers).create();
+    assertThat(createHolding(holding).getStatusCode(), is(201));
+  }
+
   private JsonObject createInstance(JsonObject newInstanceRequest)
     throws InterruptedException,
     MalformedURLException,
@@ -105,14 +121,14 @@ public class HoldingApiExample extends ApiTests {
   }
 
   private Response createHolding(JsonObject newHoldingRequest)
-      throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
 
     final var postCompleted = okapiClient.post(new URL(HOLDINGS_URL), newHoldingRequest);
     return postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
   }
 
   private Response updateHolding(JsonObject holding)
-      throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
 
     final var putCompleted = okapiClient.put(new URL(HOLDINGS_URL + "/" + holding.getString("id")), holding);
     return putCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
