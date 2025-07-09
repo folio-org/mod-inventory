@@ -4,6 +4,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.http.HttpStatus;
 import org.folio.ActionProfile;
@@ -47,6 +48,7 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
@@ -66,6 +68,7 @@ import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MAR
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.LINKED_DATA;
 import static org.folio.inventory.domain.instances.InstanceSource.MARC;
+import static org.folio.okapi.common.XOkapiHeaders.PERMISSIONS;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 
 public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { // NOSONAR
@@ -73,6 +76,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC or INSTANCE data";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to update an Instance requires a mapping profile";
   private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
+  static final String USER_HAS_NO_PERMISSION_MSG = "User does not have permission to update record/instance on central tenant";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
@@ -85,6 +89,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   public static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
   private final ConsortiumService consortiumService;
   public static final String MARC_BIB_RECORD_CREATED = "MARC_BIB_RECORD_CREATED";
+  static final String CENTRAL_RECORD_UPDATE_PERMISSION = "consortia.data-import.central-record-update.execute";
 
   public ReplaceInstanceEventHandler(Storage storage,
                                      PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
@@ -128,8 +133,20 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         return CompletableFuture.failedFuture(new DataImportException(msg));
       }
 
-      if (instanceToUpdate.getSource() != null && (instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO.getValue()) || instanceToUpdate.getSource().equals(CONSORTIUM_MARC.getValue()))) {
+      if (isNotBlank(payloadContext.get(CENTRAL_TENANT_ID)) && isCentralTenantInstanceUpdateForbidden(payloadContext)) {
+        LOGGER.warn("handle:: Failed to process instance update, reason: '{}', jobExecutionId: '{}', recordId: '{}', chunkId: '{}'",
+          USER_HAS_NO_PERMISSION_MSG, dataImportEventPayload.getJobExecutionId(), payloadContext.get(RECORD_ID_HEADER), payloadContext.get(CHUNK_ID_HEADER));
+        return CompletableFuture.failedFuture(new EventProcessingException(USER_HAS_NO_PERMISSION_MSG));
+      }
+
+      if (isShadowInstance(instanceToUpdate)) {
         LOGGER.info("handle:: Processing Consortium Instance jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
+        if (isCentralTenantInstanceUpdateForbidden(payloadContext)) {
+          LOGGER.warn("handle:: Failed to process instance update, reason: '{}', jobExecutionId: '{}', recordId: '{}', chunkId: '{}'",
+            USER_HAS_NO_PERMISSION_MSG, dataImportEventPayload.getJobExecutionId(), payloadContext.get(RECORD_ID_HEADER), payloadContext.get(CHUNK_ID_HEADER));
+          return CompletableFuture.failedFuture(new EventProcessingException(USER_HAS_NO_PERMISSION_MSG));
+        }
+
         consortiumService.getConsortiumConfiguration(context)
           .compose(consortiumConfigurationOptional -> {
             if (consortiumConfigurationOptional.isPresent()) {
@@ -174,6 +191,16 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private boolean isShadowInstance(Instance instanceToUpdate) {
+    return CONSORTIUM_FOLIO.getValue().equals(instanceToUpdate.getSource())
+      || CONSORTIUM_MARC.getValue().equals(instanceToUpdate.getSource());
+  }
+
+  private boolean isCentralTenantInstanceUpdateForbidden(HashMap<String, String> payloadContext) {
+    JsonArray permissions = new JsonArray(payloadContext.getOrDefault(PERMISSIONS, "[]"));
+    return !permissions.contains(CENTRAL_RECORD_UPDATE_PERMISSION);
   }
 
   private void processInstanceUpdate(DataImportEventPayload dataImportEventPayload, InstanceCollection instanceCollection, Context context, Instance instanceToUpdate,
