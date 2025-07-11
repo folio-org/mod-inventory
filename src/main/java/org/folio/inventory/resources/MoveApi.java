@@ -1,7 +1,6 @@
 package org.folio.inventory.resources;
 
 import static java.lang.String.format;
-import static java.util.stream.Collectors.toList;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.resources.UpdateOwnershipApi.TENANT_NOT_IN_CONSORTIA;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
@@ -92,7 +91,7 @@ public class MoveApi extends AbstractInventoryResource {
 
             itemsFetchClient.find(itemIdsToUpdate, MoveApiUtil::fetchByIdCql)
               .thenAccept(jsons -> {
-                List<Item> itemsToUpdate = updateHoldingsRecordIdForItems(toHoldingsRecordId, jsons);
+                var itemsToUpdate = updateItemFields(toHoldingsRecordId, jsons);
                 updateItems(routingContext, context, itemIdsToUpdate, itemsToUpdate);
               })
               .exceptionally(e -> {
@@ -185,11 +184,20 @@ public class MoveApi extends AbstractInventoryResource {
       });
   }
 
-  private List<Item> updateHoldingsRecordIdForItems(String toHoldingsRecordId, List<JsonObject> jsons) {
+  /**
+   * Updates the holdingId and sets the order field to null (storage will recalculate order if it doesn't exist)
+   * for each item.
+   *
+   * @param toHoldingsRecordId the id of the holdings record to which items will be moved
+   * @param jsons the list of items in JSON format to be updated
+   * @return a list of Item objects with updated holdingId and order fields
+   */
+  private List<Item> updateItemFields(String toHoldingsRecordId, List<JsonObject> jsons) {
     return jsons.stream()
       .map(ItemUtil::fromStoredItemRepresentation)
       .map(item -> item.withHoldingId(toHoldingsRecordId))
-      .collect(toList());
+      .map(item -> item.withOrder(null))
+      .toList();
   }
 
   private void updateItems(RoutingContext routingContext, WebContext context, List<String> idsToUpdate, List<Item> itemsToUpdate) {
@@ -204,7 +212,7 @@ public class MoveApi extends AbstractInventoryResource {
         .filter(future -> !future.isCompletedExceptionally())
         .map(CompletableFuture::join)
         .map(Item::getId)
-        .collect(toList()))
+        .toList())
       .thenAccept(updatedIds -> respond(routingContext, idsToUpdate, updatedIds));
   }
 
@@ -214,7 +222,7 @@ public class MoveApi extends AbstractInventoryResource {
     return jsons.stream()
       .map(json -> json.mapTo(HoldingsRecord.class))
       .map(holding -> holding.withInstanceId(toInstanceId))
-      .collect(toList());
+      .toList();
   }
 
   private void updateHoldings(RoutingContext routingContext, WebContext context, List<String> idsToUpdate,
@@ -230,7 +238,7 @@ public class MoveApi extends AbstractInventoryResource {
         .filter(future -> !future.isCompletedExceptionally())
         .map(CompletableFuture::join)
         .map(HoldingsRecord::getId)
-        .collect(toList()))
+        .toList())
       .thenAccept(updatedIds -> respond(routingContext, idsToUpdate, updatedIds));
   }
 }

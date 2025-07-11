@@ -11,6 +11,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import api.ApiTestSuite;
@@ -25,7 +26,6 @@ import io.vertx.core.json.JsonObject;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import junitparams.JUnitParamsRunner;
 import lombok.SneakyThrows;
@@ -50,6 +50,7 @@ public class ItemApiMoveExamples extends ApiTests {
       new ItemRequestBuilder()
         .forHolding(existingHoldingsId)
         .withBarcode("645398607547")
+        .withOrder(10)
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
     final var secondItem = itemsClient.create(
@@ -69,6 +70,8 @@ public class ItemApiMoveExamples extends ApiTests {
 
     assertThat(firstUpdatedItem.getString(HOLDINGS_RECORD_ID), is(newHoldingsId.toString()));
     assertThat(secondUpdatedItem.getString(HOLDINGS_RECORD_ID), is(newHoldingsId.toString()));
+
+    assertThat(firstUpdatedItem.getInteger("order"), nullValue());
   }
 
   @Test
@@ -214,7 +217,7 @@ public class ItemApiMoveExamples extends ApiTests {
   private Response moveItems(UUID newHoldingsId, IndividualResource... items) {
     final var itemIds = Stream.of(items)
       .map(IndividualResource::getId)
-      .collect(Collectors.toList());
+      .toList();
 
     return moveItems(newHoldingsId, itemIds);
   }
