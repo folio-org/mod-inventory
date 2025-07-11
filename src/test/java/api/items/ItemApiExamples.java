@@ -17,6 +17,7 @@ import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.SOURCE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
 import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
+import static org.folio.inventory.domain.items.Item.ORDER;
 import static org.folio.inventory.domain.user.Personal.FIRST_NAME_KEY;
 import static org.folio.inventory.domain.user.Personal.LAST_NAME_KEY;
 import static org.folio.inventory.domain.user.User.ID_KEY;
@@ -267,6 +268,29 @@ public class ItemApiExamples extends ApiTests {
       .forHolding(holdingId)
       .withNoMaterialType()
       .create();
+
+    final var postCompleted = okapiClient.post(ApiRoot.items(), newItemRequest);
+
+    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
+
+    assertThat(postResponse.getStatusCode(), is(422));
+  }
+
+  @Test
+  public void cannotCreateItemWithInvalidOrder()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID holdingId = createInstanceAndHolding();
+
+    JsonObject newItemRequest = new ItemRequestBuilder()
+      .forHolding(holdingId)
+      .create();
+
+    newItemRequest.put(ORDER, "invalid-order");
+
 
     final var postCompleted = okapiClient.post(ApiRoot.items(), newItemRequest);
 

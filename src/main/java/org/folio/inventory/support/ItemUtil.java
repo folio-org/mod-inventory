@@ -1,6 +1,7 @@
 package org.folio.inventory.support;
 
 import static org.folio.inventory.domain.converters.EntityConverters.converterForClass;
+import static org.folio.inventory.support.CompletableFutures.failedFuture;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.JsonHelper.getNestedProperty;
@@ -21,6 +22,8 @@ import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.folio.inventory.exceptions.UnprocessableEntityException;
+import org.folio.inventory.support.http.server.ValidationError;
 
 public final class ItemUtil {
   public static final String MATERIAL_TYPE_ID_KEY = "materialTypeId";
@@ -247,6 +250,16 @@ public final class ItemUtil {
     String permanentLoanTypeId = getNestedProperty(itemRequest, PERMANENT_LOAN_TYPE, ID);
     String temporaryLoanTypeId = getNestedProperty(itemRequest, TEMPORARY_LOAN_TYPE, ID);
 
+    Integer order;
+    try {
+      order = itemRequest.getInteger(Item.ORDER);
+    } catch (Exception e) {
+      final ValidationError validationError = new ValidationError(
+        "Order should be a number", "order", String.valueOf(itemRequest.getValue(Item.ORDER)));
+
+      throw new UnprocessableEntityException(validationError);
+    }
+
     return new Item(
       itemRequest.getString(ID),
       itemRequest.getString(Item.VERSION_KEY),
@@ -291,7 +304,7 @@ public final class ItemUtil {
       .withStatisticalCodeIds(statisticalCodeIds)
       .withPurchaseOrderLineIdentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
       .withLastCheckIn(LastCheckIn.from(itemRequest.getJsonObject(Item.LAST_CHECK_IN)))
-      .withOrder(itemRequest.getInteger(Item.ORDER))
+      .withOrder(order)
       .withTags(tags);
   }
 
