@@ -12,6 +12,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import junitparams.JUnitParamsRunner;
 import org.apache.http.HttpStatus;
+import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.support.http.client.Response;
 import org.joda.time.DateTime;
@@ -127,6 +128,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     final var firstItem = itemsClient.create(
       new ItemRequestBuilder()
         .forHolding(createHoldingsRecord1)
+        .withOrder(10)
         .withBarcode("645398607547")
         .withStatus(ItemStatusName.AVAILABLE.value())
         .withTemporaryLocation(location)
@@ -135,6 +137,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     final var secondItem = itemsClient.create(
       new ItemRequestBuilder()
         .forHolding(createHoldingsRecord2)
+        .withOrder(20)
         .withHrid(itemHrId)
         .withBarcode("645398607546")
         .withStatus(ItemStatusName.AVAILABLE.value())
@@ -185,6 +188,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertEquals(targetTenantItem1.getString(ID), firstItem.getId().toString());
     assertNull(targetTenantItem1.getString(PERMANENT_LOCATION_ID_KEY));
     assertNull(targetTenantItem1.getString(TEMPORARY_LOCATION_ID_KEY));
+    assertEquals(10, (int) targetTenantItem1.getInteger(Item.ORDER));
 
     Response sourceTenantItem2 = itemsClient.getById(secondItem.getId());
     List<JsonObject> targetTenantItems2 = collegeItemsClient.getMany(String.format("holdingsRecordId=%s", createHoldingsRecord2), 100);
@@ -197,6 +201,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertNull(targetTenantItem2.getString(PERMANENT_LOCATION_ID_KEY));
     assertNull(targetTenantItem2.getString(TEMPORARY_LOCATION_ID_KEY));
     assertEquals(secondItem.getId().toString(), targetTenantItem2.getString(ID));
+    assertEquals(20, (int) targetTenantItem2.getInteger(Item.ORDER));
 
     assertNotEquals(targetTenantItem2.getString("hrid"), itemHrId);
   }

@@ -264,7 +264,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                 List<JsonObject> validatedItems = validateItems(jsons, holdingsRecordsIds, notUpdatedEntities);
 
                 List<Item> items = validatedItems.stream()
-                  .map(itemJson -> mapToItem(itemJson, toHoldingsRecord.getId())).toList();
+                  .map(itemJson -> mapToItem(itemJson, toHoldingsRecord.getId(), true)).toList();
 
                 return validateItemsBoundWith(items, notUpdatedEntities, routingContext, context)
                   .thenCompose(wrappersWithoutBoundWith -> createItems(wrappersWithoutBoundWith, notUpdatedEntities, Item::getId, targetTenantItemCollection))
@@ -343,7 +343,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       return itemsFetchClient.find(sourceHoldingsRecordsIds, MoveApiUtil::fetchByHoldingsRecordIdCql)
         .thenApply(jsons -> jsons.stream().map(itemJson -> {
           String targetHoldingId = getTargetHoldingId(itemJson, holdingsRecordsWrappers);
-          return mapToItem(itemJson, targetHoldingId);
+          return mapToItem(itemJson, targetHoldingId, false);
         }).toList())
         .thenCompose(items -> {
           if (!items.isEmpty()) {
@@ -607,13 +607,22 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .withPermanentLocationId(holdingsUpdateOwnership.getTargetLocationId());
   }
 
-  private Item mapToItem(JsonObject itemJson, String targetHoldingId) {
-    return ItemUtil.fromStoredItemRepresentation(itemJson)
+  /**
+   * Maps item JSON representation to an Item object.
+   * Order cleanup should be performed only for item update ownership request.
+   *
+   * @param itemJson the item JSON representation
+   * @param targetHoldingId the ID of the target holdings record
+   * @param cleanUpOrder if true, the order information will be removed from the item representation
+   * @return an Item object with the specified target holdings ID and cleaned up order if required
+   */
+  private Item mapToItem(JsonObject itemJson, String targetHoldingId, boolean cleanUpOrder) {
+    var item = ItemUtil.fromStoredItemRepresentation(itemJson)
       .withHrid(null)
-      .withOrder(null)
       .withHoldingId(targetHoldingId)
       .withTemporaryLocationId(null)
       .withPermanentLocationId(null);
+    return cleanUpOrder ? item.withOrder(null) : item;
   }
 
   private List<HoldingsRecord> getHoldingsToDelete(List<NotUpdatedEntity> notUpdatedEntities,
