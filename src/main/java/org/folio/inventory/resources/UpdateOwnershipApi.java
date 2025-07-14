@@ -4,6 +4,7 @@ import static java.lang.String.format;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
+import static org.folio.inventory.resources.Holdings.MARC_SOURCE_ID;
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.MoveApiUtil.createBoundWithPartsFetchClient;
 import static org.folio.inventory.support.MoveApiUtil.createBoundWithPartsStorageClient;
@@ -18,22 +19,30 @@ import static org.folio.inventory.validation.UpdateOwnershipValidator.updateOwne
 
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.folio.rest.jaxrs.model.Record;
+
 import org.apache.commons.collections4.ListUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HoldingsRecord;
 import org.folio.HoldingsUpdateOwnership;
 import org.folio.ItemsUpdateOwnership;
 import org.folio.NotUpdatedEntity;
+import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
@@ -49,6 +58,7 @@ import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.MoveApiUtil;
+
 
 public class UpdateOwnershipApi extends AbstractInventoryResource {
   private static final Logger LOGGER = LogManager.getLogger(MethodHandles.lookup().lookupClass());
@@ -67,6 +77,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
   private static final String ITEM_ID = "itemId";
   private static final String INSTANCE_ID = "instanceId";
+
+  private static final String MARC_HOLDING_RECORD_TYPE = "MARC_HOLDING";
+  private static final String SOURCE_RECORD_NOT_FOUND_BY_HRID_MSG = "Source record not found for holdings record with hrid: %s";
+  private static final String FAILED_TO_TRANSFER_MARC_HOLDING_MSG = "Failed to transfer MARC holding SRS record with id: %s. Reason: %s";
 
   private final ConsortiumService consortiumService;
 
@@ -288,39 +302,164 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       LOGGER.debug("updateOwnershipOfHoldingsRecords:: Updating ownership of holdingsRecord: {}, to tenant: {}",
         holdingsUpdateOwnership.getHoldingsRecordIds(), targetTenantContext.getTenantId());
 
-      CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(createHttpClient(client, routingContext, context),
-        context);
+      CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(createHttpClient(client, routingContext, context), context);
       MultipleRecordsFetchClient holdingsRecordFetchClient = createHoldingsRecordsFetchClient(holdingsStorageClient);
-
-      HoldingsRecordCollection sourceTenantHoldingsRecordCollection = storage.getHoldingsRecordCollection(context);
-      HoldingsRecordCollection targetTenantHoldingsRecordCollection = storage.getHoldingsRecordCollection(targetTenantContext);
 
       return holdingsRecordFetchClient.find(holdingsUpdateOwnership.getHoldingsRecordIds(), MoveApiUtil::fetchByIdCql)
         .thenCompose(jsons -> {
           LOGGER.debug("updateOwnershipOfHoldingsRecords:: Found holdings to update ownership: {}", jsons);
           processNotFoundEntities(holdingsUpdateOwnership.getHoldingsRecordIds(), notUpdatedEntities, context, jsons, HOLDINGS_RECORD_NOT_FOUND);
-          if (!jsons.isEmpty()) {
-            List<JsonObject> validatedHoldingsRecords = validateHoldingsRecords(jsons, holdingsUpdateOwnership.getToInstanceId(), notUpdatedEntities);
-            List<HoldingsRecord> holdingsRecords = validatedHoldingsRecords.stream().map(h -> mapToHoldingsRecord(h, holdingsUpdateOwnership)).toList();
 
-            return validateHoldingsRecordsBoundWith(holdingsRecords, notUpdatedEntities, routingContext, context)
-              .thenCompose(wrappersWithoutBoundWith -> createHoldings(wrappersWithoutBoundWith, notUpdatedEntities, targetTenantHoldingsRecordCollection))
-              .thenCompose(createdHoldings -> {
-                LOGGER.debug("updateOwnershipOfHoldingsRecords:: Created holdings: {}, for tenant: {}",
-                  createdHoldings, targetTenantContext.getTenantId());
-
-                return transferAttachedItems(createdHoldings, notUpdatedEntities, routingContext, context, targetTenantContext)
-                  .thenCompose(itemIds ->
-                    deleteSourceHoldings(getHoldingsToDelete(notUpdatedEntities, createdHoldings), notUpdatedEntities, sourceTenantHoldingsRecordCollection));
-              });
+          if (jsons.isEmpty()) {
+            return CompletableFuture.completedFuture(new ArrayList<>());
           }
-          return CompletableFuture.completedFuture(new ArrayList<>());
+
+          List<JsonObject> validatedHoldingsJson = validateHoldingsRecords(jsons, holdingsUpdateOwnership.getToInstanceId(), notUpdatedEntities);
+          List<HoldingsRecord> holdingsToProcess = validatedHoldingsJson.stream().map(h -> mapToHoldingsRecord(h, holdingsUpdateOwnership)).toList();
+
+          // Partition holdings into FOLIO and MARC based on sourceId
+          Map<Boolean, List<HoldingsRecord>> partitionedHoldings = holdingsToProcess.stream()
+            .collect(Collectors.partitioningBy(h -> MARC_SOURCE_ID.equals(h.getSourceId())));
+
+          List<HoldingsRecord> folioHoldings = partitionedHoldings.get(false);
+          List<HoldingsRecord> marcHoldings = partitionedHoldings.get(true);
+
+          // For FOLIO holdings, apply the original logic (full transfer with inventory)
+          CompletableFuture<List<String>> folioTransferFuture = transferFolioHoldings(
+            folioHoldings.stream().map(h -> mapToHoldingsRecord(JsonObject.mapFrom(h), holdingsUpdateOwnership)).toList(),
+            notUpdatedEntities, routingContext, context, targetTenantContext);
+
+          // For MARC holdings, apply the new, simplified logic (SRS record only)
+          CompletableFuture<List<String>> marcTransferFuture = transferMarcSrsRecords(marcHoldings, notUpdatedEntities, context, targetTenantContext);
+
+          return CompletableFuture.allOf(folioTransferFuture, marcTransferFuture)
+            .thenApply(v -> {
+              List<String> movedIds = new ArrayList<>();
+              movedIds.addAll(folioTransferFuture.join());
+              movedIds.addAll(marcTransferFuture.join());
+              return movedIds;
+            });
         });
     } catch (Exception e) {
       LOGGER.warn("updateOwnershipOfHoldingsRecords:: Error during update ownership of holdings {}, to tenant: {}",
         holdingsUpdateOwnership.getHoldingsRecordIds(), holdingsUpdateOwnership.getTargetTenantId(), e);
       return CompletableFuture.failedFuture(e);
     }
+  }
+
+  private CompletableFuture<List<String>> transferFolioHoldings(List<HoldingsRecord> folioHoldings,
+                                                                List<NotUpdatedEntity> notUpdatedEntities, RoutingContext routingContext,
+                                                                WebContext context, Context targetTenantContext) {
+    if (folioHoldings.isEmpty()) {
+      return CompletableFuture.completedFuture(new ArrayList<>());
+    }
+
+    HoldingsRecordCollection sourceTenantHoldingsRecordCollection = storage.getHoldingsRecordCollection(context);
+    HoldingsRecordCollection targetTenantHoldingsRecordCollection = storage.getHoldingsRecordCollection(targetTenantContext);
+
+    return validateHoldingsRecordsBoundWith(folioHoldings, notUpdatedEntities, routingContext, context)
+      .thenCompose(wrappersWithoutBoundWith -> createHoldings(wrappersWithoutBoundWith, notUpdatedEntities, targetTenantHoldingsRecordCollection))
+      .thenCompose(createdHoldings -> {
+        LOGGER.debug("transferFolioHoldings:: Created FOLIO holdings: {}, for tenant: {}",
+          createdHoldings.stream().map(HoldingsRecord::getId).toList(), targetTenantContext.getTenantId());
+
+        return transferAttachedItems(createdHoldings, notUpdatedEntities, routingContext, context, targetTenantContext)
+          .thenCompose(itemIds ->
+            deleteSourceHoldings(getHoldingsToDelete(notUpdatedEntities, createdHoldings), notUpdatedEntities, sourceTenantHoldingsRecordCollection));
+      });
+  }
+
+  private CompletableFuture<List<String>> transferMarcSrsRecords(List<HoldingsRecord> marcHoldings,
+                                                                 List<NotUpdatedEntity> notUpdatedEntities,
+                                                                 WebContext sourceContext, Context targetContext) {
+    if (marcHoldings.isEmpty()) {
+      return CompletableFuture.completedFuture(new ArrayList<>());
+    }
+
+    LOGGER.debug("transferMarcSrsRecords:: Transferring MARC holdings SRS records for holdings: {}", marcHoldings.stream().map(HoldingsRecord::getId).toList());
+
+    List<CompletableFuture<String>> transferFutures = marcHoldings.stream()
+      .map(holding -> transferSingleMarcSrsRecord(holding, notUpdatedEntities, sourceContext, targetContext)
+        .exceptionally(ex -> {
+          LOGGER.warn("transferMarcSrsRecords:: Failed to process MARC holding SRS record for holdings id {}", holding.getId(), ex);
+          notUpdatedEntities.add(new NotUpdatedEntity()
+            .withEntityId(holding.getId())
+            .withErrorMessage(format(FAILED_TO_TRANSFER_MARC_HOLDING_MSG, holding.getId(), ex.getCause().getMessage())));
+          return null;
+        }))
+      .toList();
+
+    return CompletableFuture.allOf(transferFutures.toArray(new CompletableFuture[0]))
+      .thenApply(v -> transferFutures.stream()
+        .map(CompletableFuture::join)
+        .filter(StringUtils::isNotBlank)
+        .toList());
+  }
+
+  private CompletableFuture<String> transferSingleMarcSrsRecord(HoldingsRecord sourceHolding, List<NotUpdatedEntity> notUpdatedEntities,
+                                                                WebContext sourceContext, Context targetContext) {
+    SourceStorageRecordsClientWrapper sourceSrsClient = new SourceStorageRecordsClientWrapper(sourceContext.getOkapiLocation(), sourceContext.getTenantId(), sourceContext.getToken(), sourceContext.getUserId(), client);
+    SourceStorageRecordsClientWrapper targetSrsClient = new SourceStorageRecordsClientWrapper(targetContext.getOkapiLocation(), targetContext.getTenantId(), targetContext.getToken(), targetContext.getUserId(), client);
+
+    final String originalHoldingId = sourceHolding.getId();
+
+    return getSourceRecordByHrid(sourceHolding.getHrid(), sourceSrsClient)
+      .thenCompose(sourceSrsRecord -> targetSrsClient.postSourceStorageRecords(sourceSrsRecord)
+        .toCompletionStage()
+        .toCompletableFuture()
+        .thenCompose(response -> {
+          if (response.statusCode() == HttpStatus.SC_CREATED) {
+            Record createdSrsRecord = response.bodyAsJson(Record.class);
+            LOGGER.debug("transferSingleMarcSrsRecord:: Created SRS record {} on target tenant {}", createdSrsRecord.getId(), targetContext.getTenantId());
+
+            sourceSrsRecord.setState(Record.State.DELETED);
+            return sourceSrsClient.putSourceStorageRecordsById(sourceSrsRecord.getId(), sourceSrsRecord)
+              .toCompletionStage()
+              .toCompletableFuture()
+              .thenApply(updateResponse -> {
+                if (updateResponse.statusCode() == HttpStatus.SC_OK) {
+                  LOGGER.debug("transferSingleMarcSrsRecord:: Marked source SRS record {} as DELETED", sourceSrsRecord.getId());
+                  return originalHoldingId;
+                }
+                throw new CompletionException(new RuntimeException("Failed to mark source SRS record as DELETED. Status: " + updateResponse.statusCode()));
+              });
+          }
+          throw new CompletionException(new RuntimeException("Failed to create SRS record on target. Status: " + response.statusCode() + " Body: " + response.bodyAsString()));
+        }));
+  }
+
+  private CompletableFuture<Record> getSourceRecordByHrid(String hrid, SourceStorageRecordsClientWrapper srsClient) {
+    Promise<Record> promise = Promise.promise();
+    String query = format("externalIdsHolder.holdingsHrid==\"%s\" and recordType==\"%s\"", hrid, MARC_HOLDING_RECORD_TYPE);
+
+    LOGGER.debug("getSourceRecordByHrid:: Sending CQL query to SRS: {}", query);
+
+    srsClient.getSourceStorageRecords(query, 0, 1)
+      .onSuccess(response -> {
+        if (response.statusCode() == HttpStatus.SC_OK) {
+          JsonObject responseBody = response.bodyAsJsonObject();
+          JsonArray records = responseBody.getJsonArray("records");
+          if (records != null && !records.isEmpty()) {
+            Record foundRecord = records.getJsonObject(0).mapTo(Record.class);
+            promise.complete(foundRecord);
+          } else {
+            String errorMessage = format(SOURCE_RECORD_NOT_FOUND_BY_HRID_MSG, hrid);
+            LOGGER.warn(errorMessage);
+            promise.fail(new NotFoundException(errorMessage));
+          }
+        } else {
+          String errorMessage = format("Failed to fetch source record by hrid '%s'. Status: %d, Body: %s",
+            hrid, response.statusCode(), response.bodyAsString());
+          LOGGER.warn(errorMessage);
+          promise.fail(new RuntimeException(errorMessage));
+        }
+      })
+      .onFailure(error -> {
+        LOGGER.error("Error querying SRS for source record with hrid '{}'", hrid, error);
+        promise.fail(error);
+      });
+
+    return promise.future().toCompletionStage().toCompletableFuture();
   }
 
   private CompletableFuture<List<String>> transferAttachedItems(List<HoldingsRecord> holdingsRecordsWrappers,

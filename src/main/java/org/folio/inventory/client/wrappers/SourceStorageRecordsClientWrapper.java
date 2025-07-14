@@ -4,12 +4,14 @@ import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.util.PercentCodec;
 
+import static java.lang.String.format;
 import static org.folio.inventory.client.util.ClientWrapperUtil.createRequest;
 import static org.folio.inventory.client.util.ClientWrapperUtil.getBuffer;
 
@@ -67,5 +69,16 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
     return createRequest(HttpMethod.PUT, okapiUrl + SOURCE_STORAGE_RECORDS + id + "/suppress-from-discovery" + queryParams,
       okapiUrl, tenantId, token, userId, webClient)
       .send();
+  }
+
+  public Future<HttpResponse<Buffer>> getSourceStorageRecords(String query, int offset, int limit) {
+    try {
+      String path = format("/source-storage/records?query=%s&offset=%d&limit=%d", PercentCodec.encode(query), offset, limit);
+      HttpRequest<Buffer> request = createRequest(HttpMethod.GET, okapiUrl + path, okapiUrl, tenantId, token, userId, webClient);
+      request.headers().remove("Content-Type");
+      return request.send();
+    } catch (Exception e) {
+      return Future.failedFuture(e);
+    }
   }
 }
