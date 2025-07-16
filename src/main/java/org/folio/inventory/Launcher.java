@@ -1,8 +1,10 @@
 package org.folio.inventory;
 
+import io.vertx.core.Context;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.VertxAssistant;
+import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
 
 import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
@@ -26,6 +28,7 @@ public class Launcher {
   private static final String MARC_BIB_UPDATE_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG = "inventory.kafka.MarcBibUpdateConsumerVerticle.instancesNumber";
   private static final String CONSORTIUM_INSTANCE_SHARING_CONSUMER_VERTICLE_NUMBER_CONFIG = "inventory.kafka.ConsortiumInstanceSharingConsumerVerticle.instancesNumber";
   private static final String INSTANCE_INGRESS_VERTICLE_NUMBER_CONFIG = "inventory.kafka.InstanceIngressConsumerVerticle.instancesNumber";
+  private static final int CANCELLED_JOBS_CONSUMER_VERTICLE_INSTANCES_NUMBER = 1;
   private static final VertxAssistant vertxAssistant = new VertxAssistant();
 
   private static String inventoryModuleDeploymentId;
@@ -35,6 +38,7 @@ public class Launcher {
   private static String marcBibUpdateConsumerVerticleDeploymentId;
   private static String consortiumInstanceSharingVerticleDeploymentId;
   private static String instanceIngressConsumerVerticleDeploymentId;
+  private static String cancelledJobsConsumerVerticleDeploymentId;
 
   public static void main(String[] args)
     throws InterruptedException, ExecutionException, TimeoutException {
@@ -63,9 +67,10 @@ public class Launcher {
 
     start(config);
 
-    if(Boolean.parseBoolean(kafkaConsumersToBeInitialized)){
+    if (Boolean.parseBoolean(kafkaConsumersToBeInitialized)) {
       Map<String, Object> consumerVerticlesConfig = getConsumerVerticleConfig();
-      startConsumerVerticles(consumerVerticlesConfig);
+      CancelledJobsIdsCache consortiumDataCache = new CancelledJobsIdsCache();
+      startConsumerVerticles(consumerVerticlesConfig, consortiumDataCache);
     } else {
       final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
       log.warn("\n*******\n*  WARNING: The module is running in Traffics Diversion mode (there is no Consumers to accept DI Kafka messages)\n*******");
@@ -91,7 +96,8 @@ public class Launcher {
     inventoryModuleDeploymentId = deployed.get(20, TimeUnit.SECONDS);
   }
 
-  private static void startConsumerVerticles(Map<String, Object> consumerVerticlesConfig)
+  private static void startConsumerVerticles(Map<String, Object> consumerVerticlesConfig,
+                                             CancelledJobsIdsCache consortiumDataCache)
     throws InterruptedException, ExecutionException, TimeoutException {
     int dataImportConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(DATA_IMPORT_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "3"));
     int instanceHridSetConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(MARC_BIB_INSTANCE_HRID_SET_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "3"));
@@ -106,6 +112,8 @@ public class Launcher {
     CompletableFuture<String> future4 = new CompletableFuture<>();
     CompletableFuture<String> future5 = new CompletableFuture<>();
     CompletableFuture<String> future6 = new CompletableFuture<>();
+    CompletableFuture<String> future7 = new CompletableFuture<>();
+
     vertxAssistant.deployVerticle(DataImportConsumerVerticle.class.getName(),
       consumerVerticlesConfig, dataImportConsumerVerticleNumber, future1);
     vertxAssistant.deployVerticle(MarcHridSetConsumerVerticle.class.getName(),
@@ -118,6 +126,9 @@ public class Launcher {
       consumerVerticlesConfig, consortiumInstanceSharingVerticleNumber, future5);
     vertxAssistant.deployVerticle(InstanceIngressConsumerVerticle.class.getName(),
       consumerVerticlesConfig, instanceIngressConsumerVerticleNumber, future6);
+    vertxAssistant.deployVerticle(() -> new CancelledJobExecutionConsumerVerticle(consortiumDataCache),
+      CancelledJobExecutionConsumerVerticle.class.getName(),
+      consumerVerticlesConfig, CANCELLED_JOBS_CONSUMER_VERTICLE_INSTANCES_NUMBER, future7);
 
     consumerVerticleDeploymentId = future1.get(20, TimeUnit.SECONDS);
     marcInstHridSetConsumerVerticleDeploymentId = future2.get(20, TimeUnit.SECONDS);
@@ -125,6 +136,7 @@ public class Launcher {
     marcBibUpdateConsumerVerticleDeploymentId = future4.get(20, TimeUnit.SECONDS);
     consortiumInstanceSharingVerticleDeploymentId = future5.get(20, TimeUnit.SECONDS);
     instanceIngressConsumerVerticleDeploymentId = future6.get(20, TimeUnit.SECONDS);
+    cancelledJobsConsumerVerticleDeploymentId = future7.get(20, TimeUnit.SECONDS);
   }
 
   private static void stop() {
@@ -141,6 +153,7 @@ public class Launcher {
       .thenCompose(v -> vertxAssistant.undeployVerticle(marcBibUpdateConsumerVerticleDeploymentId))
       .thenCompose(v -> vertxAssistant.undeployVerticle(consortiumInstanceSharingVerticleDeploymentId))
       .thenCompose(v -> vertxAssistant.undeployVerticle(instanceIngressConsumerVerticleDeploymentId))
+      .thenCompose(v -> vertxAssistant.undeployVerticle(cancelledJobsConsumerVerticleDeploymentId))
       .thenAccept(v -> vertxAssistant.stop(stopped));
 
     stopped.thenAccept(v -> log.info("Server Stopped"));
@@ -170,5 +183,10 @@ public class Launcher {
     putNonNullConfig("storage.type", storageType, configMap);
     putNonNullConfig("storage.location", storageLocation, configMap);
     return configMap;
+  }
+
+  private static void initCancelledJobsIdsCache(Context context) {
+    CancelledJobsIdsCache consortiumDataCache = new CancelledJobsIdsCache();
+    context.put(CancelledJobsIdsCache.class.getName(), consortiumDataCache);
   }
 }
