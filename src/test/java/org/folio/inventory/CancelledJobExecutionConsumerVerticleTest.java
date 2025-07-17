@@ -17,6 +17,7 @@ import org.junit.runner.RunWith;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
 
@@ -85,12 +86,46 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
       .allMatch(id -> cancelledJobsIdsCache.contains(UUID.fromString(id))));
   }
 
-  private Future<String> deployVerticle(CancelledJobsIdsCache cancelledJobsIdsCache) {
-    Promise<String> promise = Promise.promise();
-    vertxAssistant.getVertx().deployVerticle(() -> new CancelledJobExecutionConsumerVerticle(cancelledJobsIdsCache),
-      getDeploymentOptions(), promise);
+//  @Test
+  public void shouldReadAllEventsIfVerticleWasRestarted2(TestContext context) throws ExecutionException, InterruptedException {
+    List<String> ids = generateJobIds(100);
+    sendJobIdsToKafka(ids);
+    await().atMost(ofSeconds(3)).until(() -> ids.stream()
+      .allMatch(id -> cancelledJobsIdsCache.contains(UUID.fromString(id))));
 
-    return promise.future()
+    List<String> ids2 = generateJobIds(200);
+    sendJobIdsToKafka(ids2);
+
+    System.err.println("Sent 2nd batch");
+
+    cancelledJobsIdsCache = new CancelledJobsIdsCache();
+    Promise<String> deploymentPromise = Promise.promise();
+    vertxAssistant.getVertx().deployVerticle(() -> new CancelledJobExecutionConsumerVerticle(cancelledJobsIdsCache),
+      deploymentOptions, deploymentPromise);
+
+    deploymentPromise.future().onComplete(context.asyncAssertSuccess(v -> {
+      System.err.println("Verticle deployed");
+      System.err.println("Verticle deployed2:");
+      await().atMost(ofSeconds(3)).until(() -> ids.stream()
+        .allMatch(id -> cancelledJobsIdsCache.contains(UUID.fromString(id))));
+      await().atMost(ofSeconds(3)).until(() -> ids2.stream()
+        .allMatch(id -> cancelledJobsIdsCache.contains(UUID.fromString(id))));
+    }));
+
+    System.err.println("After deployment");
+  }
+
+  private Future<String> deployVerticle(CancelledJobsIdsCache cancelledJobsIdsCache) {
+    CompletableFuture<String> future = new CompletableFuture<>();
+    vertxAssistant.deployVerticle(
+      () -> new CancelledJobExecutionConsumerVerticle(cancelledJobsIdsCache),
+      CancelledJobExecutionConsumerVerticle.class.getName(),
+      getDeploymentOptions().getConfig().getMap(),
+      1,
+      future
+    );
+
+    return Future.fromCompletionStage(future)
       .onSuccess(deploymentId -> verticleDeploymentId = deploymentId);
   }
 
