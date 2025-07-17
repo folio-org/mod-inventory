@@ -1,6 +1,8 @@
 package org.folio.inventory.common;
 
 import io.vertx.core.DeploymentOptions;
+import io.vertx.core.ThreadingModel;
+import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
@@ -10,6 +12,7 @@ import java.lang.invoke.MethodHandles;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class VertxAssistant {
   private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
@@ -76,6 +79,32 @@ public class VertxAssistant {
 
         log.info(String.format(
           "%s deployed in %s milliseconds", verticleClass, elapsedTime));
+
+        deployed.complete(result.result());
+      } else {
+        deployed.completeExceptionally(result.cause());
+      }
+    });
+
+  }
+
+  public void deployVerticle(Supplier<Verticle> verticleSupplier,
+                             String verticleClass,
+                             Map<String, Object> config,
+                             int verticleInstancesNumber,
+                             CompletableFuture<String> deployed) {
+    long startTime = System.currentTimeMillis();
+
+    DeploymentOptions options = new DeploymentOptions()
+      .setConfig(new JsonObject(config))
+      .setThreadingModel(ThreadingModel.WORKER)
+      .setInstances(verticleInstancesNumber);
+
+    vertx.deployVerticle(verticleSupplier, options, result -> {
+      if (result.succeeded()) {
+        long elapsedTime = System.currentTimeMillis() - startTime;
+
+        log.info("{} deployed in {} milliseconds", verticleClass, elapsedTime);
 
         deployed.complete(result.result());
       } else {
