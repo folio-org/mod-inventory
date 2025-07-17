@@ -17,6 +17,7 @@ import org.junit.runner.RunWith;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
 
@@ -45,6 +46,7 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
   }
 
   @Test
+  @SuppressWarnings("squid:S2699")
   public void shouldReadAndPutMultipleJobIdsToCache() throws ExecutionException, InterruptedException {
     List<String> ids = generateJobIds(100);
 
@@ -55,6 +57,7 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
   }
 
   @Test
+  @SuppressWarnings("squid:S2699")
   public void shouldReadAllEventsFromTopicIfVerticleWasRestarted(TestContext context)
     throws ExecutionException, InterruptedException {
 
@@ -86,11 +89,16 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
   }
 
   private Future<String> deployVerticle(CancelledJobsIdsCache cancelledJobsIdsCache) {
-    Promise<String> promise = Promise.promise();
-    vertxAssistant.getVertx().deployVerticle(() -> new CancelledJobExecutionConsumerVerticle(cancelledJobsIdsCache),
-      getDeploymentOptions(), promise);
+    CompletableFuture<String> future = new CompletableFuture<>();
+    vertxAssistant.deployVerticle(
+      () -> new CancelledJobExecutionConsumerVerticle(cancelledJobsIdsCache),
+      CancelledJobExecutionConsumerVerticle.class.getName(),
+      getDeploymentOptions().getConfig().getMap(),
+      1,
+      future
+    );
 
-    return promise.future()
+    return Future.fromCompletionStage(future)
       .onSuccess(deploymentId -> verticleDeploymentId = deploymentId);
   }
 

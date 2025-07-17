@@ -1,6 +1,5 @@
 package org.folio.inventory;
 
-import io.vertx.core.Context;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.VertxAssistant;
@@ -185,8 +184,4 @@ public class Launcher {
     return configMap;
   }
 
-  private static void initCancelledJobsIdsCache(Context context) {
-    CancelledJobsIdsCache consortiumDataCache = new CancelledJobsIdsCache();
-    context.put(CancelledJobsIdsCache.class.getName(), consortiumDataCache);
-  }
 }
