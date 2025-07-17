@@ -53,6 +53,15 @@
         }
       }
     },
+    "additionalCallNumbers": {
+      "description": "Additional Call Numbers to track the history of identifiers assigned to an item.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "$ref": "additionalCallNumber.json",
+        "uniqueItems": true
+      }
+    },
     "callNumber": {
       "type": "string",
       "description": "Call number is an identifier assigned to an item, usually printed on a label attached to the item, and used to determine its physical position in a shelving sequence (e.g. K1 .M44, read only, inherited from associated holdings record)",

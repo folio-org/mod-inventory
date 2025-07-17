@@ -84,6 +84,11 @@ public final class ItemUtil {
       itemFromServer.getJsonObject(Item.TAGS_KEY).getJsonArray(Item.TAG_LIST_KEY))
       : new ArrayList<>();
 
+    List<EffectiveCallNumberComponents> additionalCallNumbers = toList(
+        itemFromServer.getJsonArray(Item.ADDITIONAL_CALL_NUMBERS_KEY, new JsonArray())).stream()
+      .map(EffectiveCallNumberComponents::from)
+      .toList();
+
     return new Item(
       itemFromServer.getString(ID),
       itemFromServer.getString(Item.VERSION_KEY),
@@ -104,6 +109,7 @@ public final class ItemUtil {
       .withItemLevelCallNumberTypeId(itemFromServer.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
       .withVolume(itemFromServer.getString(Item.VOLUME_KEY))
       .withDisplaySummary(itemFromServer.getString(DISPLAY_SUMMARY))
+      .withAdditionalCallNumbers(additionalCallNumbers)
       .withEnumeration(itemFromServer.getString(ENUMERATION))
       .withChronology(itemFromServer.getString(CHRONOLOGY))
       .withCopyNumber(itemFromServer.getString(COPY_NUMBER))
@@ -131,7 +137,6 @@ public final class ItemUtil {
       .withLastCheckIn(LastCheckIn.from(itemFromServer.getJsonObject("lastCheckIn")))
       .withEffectiveCallNumberComponents(
         EffectiveCallNumberComponents.from(itemFromServer.getJsonObject("effectiveCallNumberComponents")));
-
   }
 
   public static JsonObject toStoredItemRepresentation(Item item) {
@@ -163,6 +168,7 @@ public final class ItemUtil {
     includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY, item.getItemLevelCallNumberPrefix());
     includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY, item.getItemLevelCallNumberSuffix());
     includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY, item.getItemLevelCallNumberTypeId());
+    includeIfPresent(itemToSend, Item.ADDITIONAL_CALL_NUMBERS_KEY, item.getAdditionalCallNumbers());
     includeIfPresent(itemToSend, Item.VOLUME_KEY, item.getVolume());
     includeIfPresent(itemToSend, DISPLAY_SUMMARY, item.getDisplaySummary());
     includeIfPresent(itemToSend, ENUMERATION, item.getEnumeration());
@@ -228,6 +234,10 @@ public final class ItemUtil {
     List<String> tags = itemRequest.containsKey(Item.TAGS_KEY)
       ? getTags(itemRequest) : new ArrayList<>();
 
+    List<EffectiveCallNumberComponents> additionalCallNumbers = toList(
+        itemRequest.getJsonArray(Item.ADDITIONAL_CALL_NUMBERS_KEY, new JsonArray())).stream()
+      .map(EffectiveCallNumberComponents::from)
+      .toList();
 
     String materialTypeId = getNestedProperty(itemRequest, MATERIAL_TYPE, ID);
     String permanentLocationId = getNestedProperty(itemRequest, PERMANENT_LOCATION, ID);
@@ -254,6 +264,7 @@ public final class ItemUtil {
       .withItemLevelCallNumberSuffix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
       .withItemLevelCallNumberTypeId(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
       .withVolume(itemRequest.getString(Item.VOLUME_KEY))
+      .withAdditionalCallNumbers(additionalCallNumbers)
       .withDisplaySummary(itemRequest.getString(DISPLAY_SUMMARY))
       .withEnumeration(itemRequest.getString(ENUMERATION))
       .withChronology(itemRequest.getString(CHRONOLOGY))
@@ -314,6 +325,7 @@ public final class ItemUtil {
     includeIfPresent(itemJson, Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY, item.getItemLevelCallNumberPrefix());
     includeIfPresent(itemJson, Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY, item.getItemLevelCallNumberSuffix());
     includeIfPresent(itemJson, Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY, item.getItemLevelCallNumberTypeId());
+    includeIfPresent(itemJson, Item.ADDITIONAL_CALL_NUMBERS_KEY, item.getAdditionalCallNumbers());
     includeIfPresent(itemJson, Item.VOLUME_KEY, item.getVolume());
     includeIfPresent(itemJson, DISPLAY_SUMMARY, item.getDisplaySummary());
     includeIfPresent(itemJson, ENUMERATION, item.getEnumeration());
