@@ -417,7 +417,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                                                                             WebContext sourceContext, Context targetContext, String snapshotId) {
     SourceStorageRecordsClientWrapper sourceSrsClient = new SourceStorageRecordsClientWrapper(sourceContext.getOkapiLocation(), sourceContext.getTenantId(), sourceContext.getToken(), sourceContext.getUserId(), client);
     SourceStorageRecordsClientWrapper targetSrsClient = new SourceStorageRecordsClientWrapper(targetContext.getOkapiLocation(), targetContext.getTenantId(), targetContext.getToken(), targetContext.getUserId(), client);
+
+    LOGGER.info("sourceTenantId: {}, targetTenantId: {}", sourceContext.getTenantId(), targetContext.getTenantId());
     LOGGER.debug("transferSingleMarcSrsRecordWithSnapshot:: Source holding: {}", sourceHolding);
+
     final String externalHoldingId = sourceHolding.getId();
     return getSourceRecordByHrid(sourceHolding.getHrid(), sourceSrsClient)
       .thenCompose(sourceSrsRecord -> {
@@ -447,8 +450,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private CompletableFuture<Record> getSourceRecordByHrid(String hrid, SourceStorageRecordsClientWrapper srsClient) {
     Promise<Record> promise = Promise.promise();
     String query = format("externalIdsHolder.holdingsHrid==\"%s\" and recordType==\"%s\"", hrid, MARC_HOLDING_RECORD_TYPE);
-
-    LOGGER.debug("getSourceRecordByHrid:: Sending CQL query to SRS: {}", query);
+    LOGGER.info("getSourceRecordByHrid:: Sending CQL query to SRS: {}", query);
 
     srsClient.getSourceStorageRecords(query, 0, 1)
       .onSuccess(response -> {
