@@ -61,6 +61,9 @@ import org.folio.inventory.support.MoveApiUtil;
 import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.rest.jaxrs.model.Snapshot;
 import java.util.UUID;
+import java.util.HashMap;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.ext.web.client.HttpResponse;
 
 
 public class UpdateOwnershipApi extends AbstractInventoryResource {
@@ -448,37 +451,35 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   }
 
   private CompletableFuture<Record> getSourceRecordByHrid(String hrid, SourceStorageRecordsClientWrapper srsClient) {
-    Promise<Record> promise = Promise.promise();
-    String query = format("externalIdsHolder.holdingsHrid==\"%s\" and recordType==\"%s\"", hrid, MARC_HOLDING_RECORD_TYPE);
-    LOGGER.info("getSourceRecordByHrid:: Sending CQL query to SRS: {}", query);
-
-    srsClient.getSourceStorageRecords(query, 0, 1)
+    Map<String, String> queryParams = new HashMap<>();
+    queryParams.put("recordType", MARC_HOLDING_RECORD_TYPE);
+    queryParams.put("externalIdsHolder.holdingsHrid", hrid);
+    CompletableFuture<Record> future = new CompletableFuture<>();
+    srsClient.getSourceStorageRecords(queryParams)
       .onSuccess(response -> {
-        if (response.statusCode() == HttpStatus.SC_OK) {
+        if (response.statusCode() == 200) {
           JsonObject responseBody = response.bodyAsJsonObject();
           JsonArray records = responseBody.getJsonArray("records");
           if (records != null && !records.isEmpty()) {
             Record foundRecord = records.getJsonObject(0).mapTo(Record.class);
             LOGGER.info("getSourceRecordByHrid:: Found source record with hrid '{}': {}", hrid, JsonObject.mapFrom(foundRecord).encodePrettily());
-            promise.complete(foundRecord);
+            future.complete(foundRecord);
           } else {
             String errorMessage = format(SOURCE_RECORD_NOT_FOUND_BY_HRID_MSG, hrid);
             LOGGER.warn(errorMessage);
-            promise.fail(new NotFoundException(errorMessage));
+            future.complete(null);
           }
         } else {
-          String errorMessage = format("Failed to fetch source record by hrid '%s'. Status: %d, Body: %s",
-            hrid, response.statusCode(), response.bodyAsString());
+          String errorMessage = format("Failed to fetch source record by hrid '%s'. Status: %d, Body: %s", hrid, response.statusCode(), response.bodyAsString());
           LOGGER.warn(errorMessage);
-          promise.fail(new RuntimeException(errorMessage));
+          future.completeExceptionally(new RuntimeException(errorMessage));
         }
       })
       .onFailure(error -> {
         LOGGER.error("Error querying SRS for source record with hrid '{}'", hrid, error);
-        promise.fail(error);
+        future.completeExceptionally(error);
       });
-
-    return promise.future().toCompletionStage().toCompletableFuture();
+    return future;
   }
 
   private CompletableFuture<List<String>> transferAttachedItems(List<HoldingsRecord> holdingsRecordsWrappers,
