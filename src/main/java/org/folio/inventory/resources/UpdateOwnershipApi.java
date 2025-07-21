@@ -436,6 +436,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
               Record createdSrsRecord = response.bodyAsJson(Record.class);
               LOGGER.debug("transferSingleMarcSrsRecordWithSnapshot:: Created SRS record {} on target tenant {}", createdSrsRecord.getId(), targetContext.getTenantId());
               sourceSrsRecord.setDeleted(true);
+              LOGGER.info("transferSingleMarcSrsRecordWithSnapshot:: Marking source SRS record {} as DELETED: {}", sourceSrsRecord.getId(),
+                JsonObject.mapFrom(sourceSrsRecord).encodePrettily());
               return sourceSrsClient.putSourceStorageRecordsById(sourceSrsRecord.getId(), sourceSrsRecord)
                 .toCompletionStage().toCompletableFuture()
                 .thenApply(updateResponse -> {
