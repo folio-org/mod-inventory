@@ -318,6 +318,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           }
 
           List<JsonObject> validatedHoldingsJson = validateHoldingsRecords(jsons, holdingsUpdateOwnership.getToInstanceId(), notUpdatedEntities);
+          LOGGER.debug("updateOwnershipOfHoldingsRecords:: Validated holdings JSON: {}",
+            validatedHoldingsJson.stream().map(JsonObject::encodePrettily).collect(Collectors.toList()));
           List<HoldingsRecord> holdingsToProcess = validatedHoldingsJson.stream().map(h -> mapToHoldingsRecord(h, holdingsUpdateOwnership)).toList();
 
           // Partition holdings into FOLIO and MARC based on sourceId
@@ -425,7 +427,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
             if (response.statusCode() == HttpStatus.SC_CREATED) {
               Record createdSrsRecord = response.bodyAsJson(Record.class);
               LOGGER.debug("transferSingleMarcSrsRecordWithSnapshot:: Created SRS record {} on target tenant {}", createdSrsRecord.getId(), targetContext.getTenantId());
-              sourceSrsRecord.setState(Record.State.DELETED);
+              sourceSrsRecord.setDeleted(true);
               return sourceSrsClient.putSourceStorageRecordsById(sourceSrsRecord.getId(), sourceSrsRecord)
                 .toCompletionStage().toCompletableFuture()
                 .thenApply(updateResponse -> {
