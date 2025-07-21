@@ -418,7 +418,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     SourceStorageRecordsClientWrapper sourceSrsClient = new SourceStorageRecordsClientWrapper(sourceContext.getOkapiLocation(), sourceContext.getTenantId(), sourceContext.getToken(), sourceContext.getUserId(), client);
     SourceStorageRecordsClientWrapper targetSrsClient = new SourceStorageRecordsClientWrapper(targetContext.getOkapiLocation(), targetContext.getTenantId(), targetContext.getToken(), targetContext.getUserId(), client);
     LOGGER.debug("transferSingleMarcSrsRecordWithSnapshot:: Source holding: {}", sourceHolding);
-    final String originalHoldingId = sourceHolding.getId();
+    final String externalHoldingId = sourceHolding.getId();
     return getSourceRecordByHrid(sourceHolding.getHrid(), sourceSrsClient)
       .thenCompose(sourceSrsRecord -> {
         sourceSrsRecord.setSnapshotId(snapshotId);
@@ -434,7 +434,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                 .thenApply(updateResponse -> {
                   if (updateResponse.statusCode() == HttpStatus.SC_OK) {
                     LOGGER.debug("transferSingleMarcSrsRecordWithSnapshot:: Marked source SRS record {} as DELETED", sourceSrsRecord.getId());
-                    return originalHoldingId;
+                    return externalHoldingId;
                   }
                   throw new CompletionException(new RuntimeException("Failed to mark source SRS record as DELETED. Status: " + updateResponse.statusCode()));
                 });
@@ -758,7 +758,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     MoveApiUtil.removeExtraRedundantFields(holdingsRecordJson);
 
     return holdingsRecordJson.mapTo(HoldingsRecord.class)
-      .withHrid(null)
+      //.withHrid(null)
       .withPermanentLocationId(holdingsUpdateOwnership.getTargetLocationId());
   }
 
