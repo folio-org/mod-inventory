@@ -427,6 +427,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     final String externalHoldingId = sourceHolding.getId();
     return getSourceRecordByHrid(sourceHolding.getHrid(), sourceSrsClient)
       .thenCompose(sourceSrsRecord -> {
+        LOGGER.info("Record found by hrId: {}, sourceSrsRecord: {}", sourceHolding.getHrid(), JsonObject.mapFrom(sourceSrsRecord).encodePrettily());
         sourceSrsRecord.setSnapshotId(snapshotId);
         return targetSrsClient.postSourceStorageRecords(sourceSrsRecord)
           .toCompletionStage().toCompletableFuture()
