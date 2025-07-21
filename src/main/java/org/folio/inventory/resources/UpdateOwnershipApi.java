@@ -329,13 +329,13 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           List<HoldingsRecord> folioHoldings = partitionedHoldings.get(false);
           List<HoldingsRecord> marcHoldings = partitionedHoldings.get(true);
 
+          // For MARC holdings, apply the new, simplified logic (SRS record only)
+          CompletableFuture<List<String>> marcTransferFuture = transferMarcHoldings(
+            marcHoldings, notUpdatedEntities, context, targetTenantContext);
+
           // For FOLIO holdings, apply the original logic (full transfer with inventory)
           CompletableFuture<List<String>> folioTransferFuture = transferFolioHoldings(
-            folioHoldings.stream().map(h -> mapToHoldingsRecord(JsonObject.mapFrom(h), holdingsUpdateOwnership)).toList(),
-            notUpdatedEntities, routingContext, context, targetTenantContext);
-
-          // For MARC holdings, apply the new, simplified logic (SRS record only)
-          CompletableFuture<List<String>> marcTransferFuture = transferMarcSrsRecords(marcHoldings, notUpdatedEntities, context, targetTenantContext);
+            folioHoldings, notUpdatedEntities, routingContext, context, targetTenantContext);
 
           return CompletableFuture.allOf(folioTransferFuture, marcTransferFuture)
             .thenApply(v -> {
@@ -374,9 +374,9 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       });
   }
 
-  private CompletableFuture<List<String>> transferMarcSrsRecords(List<HoldingsRecord> marcHoldings,
-                                                                List<NotUpdatedEntity> notUpdatedEntities,
-                                                                WebContext sourceContext, Context targetContext) {
+  private CompletableFuture<List<String>> transferMarcHoldings(List<HoldingsRecord> marcHoldings,
+                                                               List<NotUpdatedEntity> notUpdatedEntities,
+                                                               WebContext sourceContext, Context targetContext) {
     if (marcHoldings.isEmpty()) {
       return CompletableFuture.completedFuture(new ArrayList<>());
     }
@@ -417,6 +417,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                                                                             WebContext sourceContext, Context targetContext, String snapshotId) {
     SourceStorageRecordsClientWrapper sourceSrsClient = new SourceStorageRecordsClientWrapper(sourceContext.getOkapiLocation(), sourceContext.getTenantId(), sourceContext.getToken(), sourceContext.getUserId(), client);
     SourceStorageRecordsClientWrapper targetSrsClient = new SourceStorageRecordsClientWrapper(targetContext.getOkapiLocation(), targetContext.getTenantId(), targetContext.getToken(), targetContext.getUserId(), client);
+    LOGGER.debug("transferSingleMarcSrsRecordWithSnapshot:: Source holding: {}", sourceHolding);
     final String originalHoldingId = sourceHolding.getId();
     return getSourceRecordByHrid(sourceHolding.getHrid(), sourceSrsClient)
       .thenCompose(sourceSrsRecord -> {
