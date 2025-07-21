@@ -68,6 +68,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
+import org.folio.inventory.dataimport.services.SnapshotService;
 
 import java.io.File;
 import java.io.IOException;
@@ -126,6 +127,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -315,7 +317,7 @@ public class ReplaceInstanceEventHandlerTest {
 
     Vertx vertx = Vertx.vertx();
     replaceInstanceEventHandler = spy(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, MappingMetadataCache.getInstance(vertx,
-      vertx.createHttpClient(), true), vertx.createHttpClient(), consortiumServiceImpl));
+      vertx.createHttpClient(), true), vertx.createHttpClient(), consortiumServiceImpl, mock(SnapshotService.class)));
 
     var recordUUID = UUID.randomUUID().toString();
     HttpResponse<Buffer> recordHttpResponse = buildHttpResponseWithBuffer(BufferImpl.buffer(String.format(EXISTING_SRS_CONTENT, recordUUID, recordUUID, 0)), HttpStatus.SC_OK);
@@ -568,7 +570,7 @@ public class ReplaceInstanceEventHandlerTest {
   }
 
   @Test
-  public void shouldReplaceExistingPrecedingTitleOnInstanceUpdate() throws InterruptedException, ExecutionException {
+  public void shouldReplaceExistingPrecedingTitleOnInstanceUpdate() throws InterruptedException, ExecutionException, TimeoutException {
     JsonObject existingPrecedingTitle = new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put(TITLE_KEY, "Butterflies in the snow");

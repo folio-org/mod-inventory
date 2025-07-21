@@ -37,6 +37,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.services.OrderHelperService;
+import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -65,13 +66,16 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   public static final String DISCOVERY_SUPPRESS_PROPERTY = "discoverySuppress";
   protected final IdStorageService idStorageService;
   private final OrderHelperService orderHelperService;
+  private final SnapshotService snapshotService;
 
   public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
                                     MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService,
-                                    OrderHelperService orderHelperService, HttpClient httpClient) {
-    super(storage,precedingSucceedingTitlesHelper,mappingMetadataCache, httpClient);
+                                    OrderHelperService orderHelperService, SnapshotService snapshotService,
+                                    HttpClient httpClient) {
+    super(storage, precedingSucceedingTitlesHelper, snapshotService, mappingMetadataCache, httpClient);
     this.orderHelperService = orderHelperService;
     this.idStorageService = idStorageService;
+    this.snapshotService = snapshotService;
   }
 
   @Override

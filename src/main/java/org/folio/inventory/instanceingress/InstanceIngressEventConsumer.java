@@ -26,6 +26,7 @@ import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
+import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.instanceingress.handler.CreateInstanceIngressEventHandler;
 import org.folio.inventory.instanceingress.handler.InstanceIngressEventHandler;
 import org.folio.inventory.instanceingress.handler.UpdateInstanceIngressEventHandler;
@@ -87,11 +88,12 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
 
   private InstanceIngressEventHandler getInstanceIngressEventHandler(InstanceIngressEvent.EventType eventType, Context context) {
     var precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
+    SnapshotService snapshotService = new SnapshotService(client);
     if (eventType == CREATE_INSTANCE) {
       var idStorageService = new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)));
-      return new CreateInstanceIngressEventHandler(precedingSucceedingTitlesHelper, mappingMetadataCache, idStorageService, client, context, storage);
+      return new CreateInstanceIngressEventHandler(precedingSucceedingTitlesHelper, mappingMetadataCache, idStorageService, client, context, storage, snapshotService);
     } else if (eventType == UPDATE_INSTANCE) {
-      return new UpdateInstanceIngressEventHandler(precedingSucceedingTitlesHelper, mappingMetadataCache, client, context, storage);
+      return new UpdateInstanceIngressEventHandler(precedingSucceedingTitlesHelper, mappingMetadataCache, client, context, storage, snapshotService);
     } else {
       LOGGER.warn("Can't process eventType {}", eventType);
       throw new EventProcessingException("Can't process eventType " + eventType);

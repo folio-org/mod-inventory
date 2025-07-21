@@ -17,6 +17,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.mock;
 
 import io.vertx.core.buffer.impl.BufferImpl;
 import io.vertx.core.http.HttpClient;
@@ -57,6 +58,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
+import org.folio.inventory.dataimport.services.SnapshotService;
 
 @RunWith(VertxUnitRunner.class)
 public class UpdateInstanceIngressEventHandlerUnitTest {
@@ -95,7 +97,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(USER_ID).when(context).getUserId();
     doReturn(instanceCollection).when(storage).getInstanceCollection(context);
     handler = spy(new UpdateInstanceIngressEventHandler(precedingSucceedingTitlesHelper,
-      mappingMetadataCache, httpClient, context, storage));
+      mappingMetadataCache, httpClient, context, storage, mock(SnapshotService.class)));
   }
 
   @Test

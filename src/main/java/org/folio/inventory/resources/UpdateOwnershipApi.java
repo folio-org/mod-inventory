@@ -58,6 +58,9 @@ import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.MoveApiUtil;
+import org.folio.inventory.dataimport.services.SnapshotService;
+import org.folio.rest.jaxrs.model.Snapshot;
+import java.util.UUID;
 
 
 public class UpdateOwnershipApi extends AbstractInventoryResource {
@@ -370,62 +373,72 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   }
 
   private CompletableFuture<List<String>> transferMarcSrsRecords(List<HoldingsRecord> marcHoldings,
-                                                                 List<NotUpdatedEntity> notUpdatedEntities,
-                                                                 WebContext sourceContext, Context targetContext) {
+                                                                List<NotUpdatedEntity> notUpdatedEntities,
+                                                                WebContext sourceContext, Context targetContext) {
     if (marcHoldings.isEmpty()) {
       return CompletableFuture.completedFuture(new ArrayList<>());
     }
 
     LOGGER.debug("transferMarcSrsRecords:: Transferring MARC holdings SRS records for holdings: {}", marcHoldings.stream().map(HoldingsRecord::getId).toList());
 
-    List<CompletableFuture<String>> transferFutures = marcHoldings.stream()
-      .map(holding -> transferSingleMarcSrsRecord(holding, notUpdatedEntities, sourceContext, targetContext)
-        .exceptionally(ex -> {
-          LOGGER.warn("transferMarcSrsRecords:: Failed to process MARC holding SRS record for holdings id {}", holding.getId(), ex);
-          notUpdatedEntities.add(new NotUpdatedEntity()
-            .withEntityId(holding.getId())
-            .withErrorMessage(format(FAILED_TO_TRANSFER_MARC_HOLDING_MSG, holding.getId(), ex.getCause().getMessage())));
-          return null;
-        }))
-      .toList();
+    SnapshotService snapshotService = new SnapshotService(client);
+    String newSnapshotId = UUID.randomUUID().toString();
+    Snapshot snapshot = new Snapshot()
+      .withJobExecutionId(newSnapshotId)
+      .withStatus(Snapshot.Status.COMMITTED)
+      .withProcessingStartedDate(new java.util.Date());
 
-    return CompletableFuture.allOf(transferFutures.toArray(new CompletableFuture[0]))
-      .thenApply(v -> transferFutures.stream()
-        .map(CompletableFuture::join)
-        .filter(StringUtils::isNotBlank)
-        .toList());
+    // First, create the snapshot on the target tenant
+    return snapshotService.postSnapshotInSrsAndHandleResponse(targetContext, snapshot)
+      .toCompletionStage().toCompletableFuture()
+      .thenCompose(createdSnapshot -> {
+        List<CompletableFuture<String>> transferFutures = marcHoldings.stream()
+          .map(holding -> transferSingleMarcSrsRecordWithSnapshot(holding, sourceContext, targetContext, createdSnapshot.getJobExecutionId())
+            .exceptionally(ex -> {
+              LOGGER.warn("transferMarcSrsRecords:: Failed to process MARC holding SRS record for holdings id {}", holding.getId(), ex);
+              notUpdatedEntities.add(new NotUpdatedEntity()
+                .withEntityId(holding.getId())
+                .withErrorMessage(format(FAILED_TO_TRANSFER_MARC_HOLDING_MSG, holding.getId(), ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage())));
+              return null;
+            }))
+          .toList();
+        return CompletableFuture.allOf(transferFutures.toArray(new CompletableFuture[0]))
+          .thenApply(v -> transferFutures.stream()
+            .map(CompletableFuture::join)
+            .filter(StringUtils::isNotBlank)
+            .toList());
+      });
   }
 
-  private CompletableFuture<String> transferSingleMarcSrsRecord(HoldingsRecord sourceHolding, List<NotUpdatedEntity> notUpdatedEntities,
-                                                                WebContext sourceContext, Context targetContext) {
+  // Helper method to transfer a single MARC SRS record with a specific snapshotId
+  private CompletableFuture<String> transferSingleMarcSrsRecordWithSnapshot(HoldingsRecord sourceHolding,
+                                                                            WebContext sourceContext, Context targetContext, String snapshotId) {
     SourceStorageRecordsClientWrapper sourceSrsClient = new SourceStorageRecordsClientWrapper(sourceContext.getOkapiLocation(), sourceContext.getTenantId(), sourceContext.getToken(), sourceContext.getUserId(), client);
     SourceStorageRecordsClientWrapper targetSrsClient = new SourceStorageRecordsClientWrapper(targetContext.getOkapiLocation(), targetContext.getTenantId(), targetContext.getToken(), targetContext.getUserId(), client);
-
     final String originalHoldingId = sourceHolding.getId();
-
     return getSourceRecordByHrid(sourceHolding.getHrid(), sourceSrsClient)
-      .thenCompose(sourceSrsRecord -> targetSrsClient.postSourceStorageRecords(sourceSrsRecord)
-        .toCompletionStage()
-        .toCompletableFuture()
-        .thenCompose(response -> {
-          if (response.statusCode() == HttpStatus.SC_CREATED) {
-            Record createdSrsRecord = response.bodyAsJson(Record.class);
-            LOGGER.debug("transferSingleMarcSrsRecord:: Created SRS record {} on target tenant {}", createdSrsRecord.getId(), targetContext.getTenantId());
-
-            sourceSrsRecord.setState(Record.State.DELETED);
-            return sourceSrsClient.putSourceStorageRecordsById(sourceSrsRecord.getId(), sourceSrsRecord)
-              .toCompletionStage()
-              .toCompletableFuture()
-              .thenApply(updateResponse -> {
-                if (updateResponse.statusCode() == HttpStatus.SC_OK) {
-                  LOGGER.debug("transferSingleMarcSrsRecord:: Marked source SRS record {} as DELETED", sourceSrsRecord.getId());
-                  return originalHoldingId;
-                }
-                throw new CompletionException(new RuntimeException("Failed to mark source SRS record as DELETED. Status: " + updateResponse.statusCode()));
-              });
-          }
-          throw new CompletionException(new RuntimeException("Failed to create SRS record on target. Status: " + response.statusCode() + " Body: " + response.bodyAsString()));
-        }));
+      .thenCompose(sourceSrsRecord -> {
+        sourceSrsRecord.setSnapshotId(snapshotId);
+        return targetSrsClient.postSourceStorageRecords(sourceSrsRecord)
+          .toCompletionStage().toCompletableFuture()
+          .thenCompose(response -> {
+            if (response.statusCode() == HttpStatus.SC_CREATED) {
+              Record createdSrsRecord = response.bodyAsJson(Record.class);
+              LOGGER.debug("transferSingleMarcSrsRecordWithSnapshot:: Created SRS record {} on target tenant {}", createdSrsRecord.getId(), targetContext.getTenantId());
+              sourceSrsRecord.setState(Record.State.DELETED);
+              return sourceSrsClient.putSourceStorageRecordsById(sourceSrsRecord.getId(), sourceSrsRecord)
+                .toCompletionStage().toCompletableFuture()
+                .thenApply(updateResponse -> {
+                  if (updateResponse.statusCode() == HttpStatus.SC_OK) {
+                    LOGGER.debug("transferSingleMarcSrsRecordWithSnapshot:: Marked source SRS record {} as DELETED", sourceSrsRecord.getId());
+                    return originalHoldingId;
+                  }
+                  throw new CompletionException(new RuntimeException("Failed to mark source SRS record as DELETED. Status: " + updateResponse.statusCode()));
+                });
+            }
+            throw new CompletionException(new RuntimeException("Failed to create SRS record on target. Status: " + response.statusCode() + " Body: " + response.bodyAsString()));
+          });
+      });
   }
 
   private CompletableFuture<Record> getSourceRecordByHrid(String hrid, SourceStorageRecordsClientWrapper srsClient) {

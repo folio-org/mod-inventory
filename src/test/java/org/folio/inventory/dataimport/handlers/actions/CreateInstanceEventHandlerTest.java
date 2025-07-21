@@ -66,6 +66,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
+import org.folio.inventory.dataimport.services.SnapshotService;
 
 import java.io.IOException;
 import java.net.URL;
@@ -113,6 +114,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -316,7 +318,7 @@ public class CreateInstanceEventHandlerTest {
     HttpClient httpClient = vertx.createHttpClient();
     createInstanceEventHandler = spy(new CreateInstanceEventHandler(storage,
       new PrecedingSucceedingTitlesHelper(context -> mockedClient), MappingMetadataCache.getInstance(vertx,
-      httpClient, true), instanceIdStorageService, orderHelperService, httpClient));
+      httpClient, true), instanceIdStorageService, orderHelperService, mock(SnapshotService.class), httpClient));
 
     doReturn(sourceStorageClient).when(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), any(), any());
     doAnswer(invocationOnMock -> {

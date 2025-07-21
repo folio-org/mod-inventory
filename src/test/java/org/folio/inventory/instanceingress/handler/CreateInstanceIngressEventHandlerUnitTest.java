@@ -19,6 +19,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.mock;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
@@ -38,6 +39,7 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
+import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.instanceingress.InstanceIngressEventConsumer;
@@ -99,7 +101,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
     doReturn(USER_ID).when(context).getUserId();
     doReturn(instanceCollection).when(storage).getInstanceCollection(context);
     handler = spy(new CreateInstanceIngressEventHandler(precedingSucceedingTitlesHelper,
-      mappingMetadataCache, idStorageService, httpClient, context, storage));
+      mappingMetadataCache, idStorageService, httpClient, context, storage, mock(SnapshotService.class)));
   }
 
   @Test

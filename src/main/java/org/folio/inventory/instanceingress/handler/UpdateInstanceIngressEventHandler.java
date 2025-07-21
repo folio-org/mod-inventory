@@ -19,6 +19,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
+import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -39,8 +40,9 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
                                            MappingMetadataCache mappingMetadataCache,
                                            HttpClient client,
                                            Context context,
-                                           Storage storage) {
-    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, null);
+                                           Storage storage,
+                                           SnapshotService snapshotService) {
+    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, null, snapshotService);
     this.instanceCollection = storage.getInstanceCollection(context);
     this.context = context;
   }

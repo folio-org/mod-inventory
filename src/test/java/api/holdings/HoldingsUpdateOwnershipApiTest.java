@@ -93,7 +93,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     var targetTenantHoldingIds = targetTenantHoldings.stream().map(object -> object.getString(ID))
       .toList();
 
-    JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.get(0);
+    JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.getFirst();
 
     assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord1.getString(INSTANCE_ID));
@@ -178,7 +178,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     List<JsonObject> targetTenantItems1 = collegeItemsClient.getMany(String.format("holdingsRecordId=%s", createHoldingsRecord1), 100);
     assertEquals(1, targetTenantItems1.size());
 
-    JsonObject targetTenantItem1 = targetTenantItems1.get(0);
+    JsonObject targetTenantItem1 = targetTenantItems1.getFirst();
 
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceTenantItem1.getStatusCode()));
     assertEquals(targetTenantItem1.getString(HOLDINGS_RECORD_ID), createHoldingsRecord1.toString());
@@ -190,7 +190,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     List<JsonObject> targetTenantItems2 = collegeItemsClient.getMany(String.format("holdingsRecordId=%s", createHoldingsRecord2), 100);
     assertEquals(1, targetTenantItems1.size());
 
-    JsonObject targetTenantItem2 = targetTenantItems2.get(0);
+    JsonObject targetTenantItem2 = targetTenantItems2.getFirst();
 
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceTenantItem2.getStatusCode()));
     assertEquals(targetTenantItem2.getString(HOLDINGS_RECORD_ID), createHoldingsRecord2.toString());
@@ -258,7 +258,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     List<JsonObject> targetTenantHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId), 100);
     assertEquals(1, targetTenantHoldings.size());
 
-    JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.get(0);
+    JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.getFirst();
 
     assertEquals(instanceId.toString(), sourceTenantHoldingsRecord1.getJson().getString(INSTANCE_ID));
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord1.getString(INSTANCE_ID));
@@ -319,7 +319,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     List<JsonObject> targetTenantHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId), 100);
     assertEquals(1, targetTenantHoldings.size());
 
-    JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.get(0);
+    JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.getFirst();
 
     assertEquals(instanceId.toString(), sourceTenantHoldingsRecord1.getJson().getString(INSTANCE_ID));
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord1.getString(INSTANCE_ID));
@@ -329,7 +329,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     List<JsonObject> targetTenantItems1 = collegeItemsClient.getMany(String.format("holdingsRecordId=%s", targetTenantHoldingsRecord1.getString(ID)), 100);
     assertEquals(1, targetTenantItems1.size());
 
-    JsonObject targetTenantItem1 = targetTenantItems1.get(0);
+    JsonObject targetTenantItem1 = targetTenantItems1.getFirst();
 
     assertThat(sourceTenantItem1.getJson().getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord1.toString()));
     assertThat(targetTenantItem1.getString(HOLDINGS_RECORD_ID), is(targetTenantHoldingsRecord1.getString(ID)));
@@ -368,7 +368,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     List<JsonObject> targetTenantHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId), 100);
     assertEquals(1, targetTenantHoldings.size());
 
-    JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.get(0);
+    JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.getFirst();
 
     assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
     assertThat(instanceId.toString(), equalTo(targetTenantHoldingsRecord1.getString(INSTANCE_ID)));
@@ -427,7 +427,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     List<JsonObject> targetTenantHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId), 100);
     assertEquals(1, targetTenantHoldings.size());
 
-    JsonObject targetTenantHoldingsRecord = targetTenantHoldings.get(0);
+    JsonObject targetTenantHoldingsRecord = targetTenantHoldings.getFirst();
 
     assertEquals(HttpStatus.SC_OK, sourceTenantHoldingsRecord1.getStatusCode());
 
@@ -442,7 +442,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     List<JsonObject> targetTenantItems1 = collegeItemsClient.getMany(String.format("holdingsRecordId=%s", targetTenantHoldingsRecord.getString(ID)), 100);
     assertEquals(1, targetTenantItems1.size());
 
-    JsonObject targetTenantItem = targetTenantItems1.get(0);
+    JsonObject targetTenantItem = targetTenantItems1.getFirst();
 
     assertThat(HttpStatus.SC_OK, is(sourceTenantItem1.getStatusCode()));
 
@@ -492,7 +492,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     List<JsonObject> targetTenantHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId1), 100);
     assertEquals(1, targetTenantHoldings.size());
 
-    JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.get(0);
+    JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.getFirst();
 
     assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
     assertThat(instanceId1.toString(), equalTo(targetTenantHoldingsRecord1.getString(INSTANCE_ID)));
@@ -722,7 +722,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     List<JsonObject> targetTenantHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId), 100);
     assertEquals(1, targetTenantHoldings.size());
 
-    JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.get(0);
+    JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.getFirst();
 
     assertEquals(instanceId.toString(), sourceTenantHoldingsRecord1.getJson().getString(INSTANCE_ID));
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord1.getString(INSTANCE_ID));
@@ -761,7 +761,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     List<JsonObject> targetTenantHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId), 100);
     assertEquals(2, targetTenantHoldings.size());
 
-    JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.get(0);
+    JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.getFirst();
 
     assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord1.getString(INSTANCE_ID));
@@ -771,6 +771,51 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.getStatusCode());
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord2.getString(INSTANCE_ID));
+  }
+
+  @Test
+  public void canTransferMarcHoldingsOwnershipToDifferentTenant() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+
+    // Create shared instance in both tenants
+    InstanceApiClient.createInstance(okapiClient, instance.copy().put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.copy().put("source", FOLIO.getValue()));
+
+    // Create a MARC holdings source holding
+    UUID marcHoldingsId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(instanceId)
+        .withMarcSource()
+        .withHrId("holMARC0001")
+    ).getId();
+
+    // Prepare ownership transfer request
+    JsonObject holdingsRecordUpdateOwnershipRequestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(
+      instanceId,
+      new JsonArray(List.of(marcHoldingsId.toString())),
+      UUID.fromString(getMainLibraryLocation()),
+      ApiTestSuite.COLLEGE_TENANT_ID
+    ).create();
+
+    // Execute transfer
+    Response postHoldingsUpdateOwnershipResponse = updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
+
+    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(200));
+    assertThat(new JsonObject(postHoldingsUpdateOwnershipResponse.getBody()).getJsonArray("notUpdatedEntities").size(), is(0));
+    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+
+    // Verify holding is removed from source tenant
+    Response sourceTenantHoldingsRecord = holdingsStorageClient.getById(marcHoldingsId);
+    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord.getStatusCode());
+
+    // Verify holding is present in target tenant
+    List<JsonObject> targetTenantHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId), 100);
+    assertEquals(1, targetTenantHoldings.size());
+    JsonObject targetTenantHoldingsRecord = targetTenantHoldings.getFirst();
+    assertEquals(instanceId.toString(), targetTenantHoldingsRecord.getString(INSTANCE_ID));
+    assertEquals(getMainLibraryLocation(), targetTenantHoldingsRecord.getString(PERMANENT_LOCATION_ID_KEY));
+    assertNull(targetTenantHoldingsRecord.getString("hrid"));
   }
 
   private Response updateHoldingsRecordsOwnership(JsonObject holdingsRecordUpdateOwnershipRequestBody) throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
