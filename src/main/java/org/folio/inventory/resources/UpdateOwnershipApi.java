@@ -457,6 +457,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           JsonArray records = responseBody.getJsonArray("records");
           if (records != null && !records.isEmpty()) {
             Record foundRecord = records.getJsonObject(0).mapTo(Record.class);
+            LOGGER.debug("getSourceRecordByHrid:: Found source record with hrid '{}': {}", hrid, foundRecord);
             promise.complete(foundRecord);
           } else {
             String errorMessage = format(SOURCE_RECORD_NOT_FOUND_BY_HRID_MSG, hrid);
