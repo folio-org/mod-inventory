@@ -398,7 +398,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .toCompletionStage().toCompletableFuture()
       .thenCompose(createdSnapshot -> {
         List<CompletableFuture<String>> transferFutures = marcHoldings.stream()
-          .map(holding -> transferSingleMarcSrsRecordWithSnapshot(holding, sourceContext, targetContext, createdSnapshot.getJobExecutionId())
+          .map(holding -> transferSingleMarcHolding(holding, createdSnapshot.getJobExecutionId(), sourceContext, targetContext)
             .exceptionally(ex -> {
               LOGGER.warn("transferMarcSrsRecords:: Failed to process MARC holding SRS record for holdings id {}", holding.getId(), ex);
               notUpdatedEntities.add(new NotUpdatedEntity()
@@ -416,38 +416,48 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   }
 
   // Helper method to transfer a single MARC SRS record with a specific snapshotId
-  private CompletableFuture<String> transferSingleMarcSrsRecordWithSnapshot(HoldingsRecord sourceHolding,
-                                                                            WebContext sourceContext, Context targetContext, String snapshotId) {
+  private CompletableFuture<String> transferSingleMarcHolding(HoldingsRecord sourceHolding, String snapshotId,
+                                                              WebContext sourceContext, Context targetContext) {
+
     SourceStorageRecordsClientWrapper sourceSrsClient = new SourceStorageRecordsClientWrapper(sourceContext.getOkapiLocation(), sourceContext.getTenantId(), sourceContext.getToken(), sourceContext.getUserId(), client);
     SourceStorageRecordsClientWrapper targetSrsClient = new SourceStorageRecordsClientWrapper(targetContext.getOkapiLocation(), targetContext.getTenantId(), targetContext.getToken(), targetContext.getUserId(), client);
 
-    LOGGER.info("sourceTenantId: {}, targetTenantId: {}", sourceContext.getTenantId(), targetContext.getTenantId());
-    LOGGER.debug("transferSingleMarcSrsRecordWithSnapshot:: Source holding: {}", sourceHolding);
+    LOGGER.info("transferSingleMarcHolding:: sourceTenantId: {}, targetTenantId: {}", sourceContext.getTenantId(), targetContext.getTenantId());
+    LOGGER.info("transferSingleMarcHolding:: Source holding: {}", sourceHolding);
 
     final String externalHoldingId = sourceHolding.getId();
     return getSourceRecordByHrid(sourceHolding.getHrid(), sourceSrsClient)
       .thenCompose(sourceSrsRecord -> {
-        LOGGER.info("Record found by hrId: {}, sourceSrsRecord: {}", sourceHolding.getHrid(), JsonObject.mapFrom(sourceSrsRecord).encodePrettily());
+        LOGGER.info("transferSingleMarcHolding:: record found by hrId: {}, record: {}",
+          sourceHolding.getHrid(), JsonObject.mapFrom(sourceSrsRecord).encodePrettily());
+
         sourceSrsRecord.setSnapshotId(snapshotId);
         return targetSrsClient.postSourceStorageRecords(sourceSrsRecord)
           .toCompletionStage().toCompletableFuture()
           .thenCompose(response -> {
             if (response.statusCode() == HttpStatus.SC_CREATED) {
+
               Record createdSrsRecord = response.bodyAsJson(Record.class);
-              LOGGER.debug("transferSingleMarcSrsRecordWithSnapshot:: Created SRS record {} on target tenant {}", createdSrsRecord.getId(), targetContext.getTenantId());
+              LOGGER.debug("transferSingleMarcHolding:: created SRS record {} on target tenant {}", createdSrsRecord.getId(), targetContext.getTenantId());
+
               sourceSrsRecord.setDeleted(true);
-              LOGGER.info("transferSingleMarcSrsRecordWithSnapshot:: Marking source SRS record {} as DELETED: {}", sourceSrsRecord.getId(),
+              LOGGER.info("transferSingleMarcHolding:: Marking source SRS record {} as DELETED: {}", sourceSrsRecord.getId(),
                 JsonObject.mapFrom(sourceSrsRecord).encodePrettily());
+
               return sourceSrsClient.putSourceStorageRecordsById(sourceSrsRecord.getId(), sourceSrsRecord)
                 .toCompletionStage().toCompletableFuture()
                 .thenApply(updateResponse -> {
                   if (updateResponse.statusCode() == HttpStatus.SC_OK) {
-                    LOGGER.debug("transferSingleMarcSrsRecordWithSnapshot:: Marked source SRS record {} as DELETED", sourceSrsRecord.getId());
+                    LOGGER.info("transferSingleMarcHolding:: Marked source of holding record {} as DELETED.", sourceSrsRecord.getId());
                     return externalHoldingId;
                   }
+                  LOGGER.warn("transferSingleMarcHolding:: Failed to mark source SRS record as DELETED. Status: {}, Body: {}",
+                    updateResponse.statusCode(), updateResponse.bodyAsString());
                   throw new CompletionException(new RuntimeException("Failed to mark source SRS record as DELETED. Status: " + updateResponse.statusCode()));
                 });
             }
+            LOGGER.warn("transferSingleMarcHolding:: Failed to create SRS record on target. Status: {}, Body: {}",
+              response.statusCode(), response.bodyAsString());
             throw new CompletionException(new RuntimeException("Failed to create SRS record on target. Status: " + response.statusCode() + " Body: " + response.bodyAsString()));
           });
       });
@@ -474,12 +484,12 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           }
         } else {
           String errorMessage = format("Failed to fetch source record by hrid '%s'. Status: %d, Body: %s", hrid, response.statusCode(), response.bodyAsString());
-          LOGGER.warn(errorMessage);
+          LOGGER.warn("getSourceRecordByHrid:: {}", errorMessage);
           future.completeExceptionally(new RuntimeException(errorMessage));
         }
       })
       .onFailure(error -> {
-        LOGGER.error("Error querying SRS for source record with hrid '{}'", hrid, error);
+        LOGGER.error("getSourceRecordByHrid:: Error querying SRS for source record with hrid '{}'", hrid, error);
         future.completeExceptionally(error);
       });
     return future;
