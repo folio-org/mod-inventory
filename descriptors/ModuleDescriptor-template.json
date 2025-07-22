@@ -721,10 +721,6 @@
     {
       "id": "authority-storage",
       "version": "2.0"
-    },
-    {
-      "id": "instance-authority-linking-rules",
-      "version": "1.1"
     }
   ],
   "optional": [
@@ -1015,7 +1011,6 @@
         "inventory-storage.preceding-succeeding-titles.item.put",
         "inventory-storage.preceding-succeeding-titles.item.delete",
         "instance-authority-links.instances.collection.get",
-        "instance-authority.linking-rules.collection.get",
         "instance-authority-links.instances.collection.put"
       ]
     }
