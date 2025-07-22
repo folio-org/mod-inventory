@@ -344,6 +344,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         List<CompletableFuture<Void>> marcFutures = marcHoldings.stream()
             .map(marcHolding -> transferMarcHoldingAndMarkDeleted(marcHolding, context, targetTenantContext)
                 .thenAccept(createdRecord -> {
+
+                  LOGGER.info("updateOwnershipOfHoldingsRecords:: Successfully transferred MARC holding record to target tenant {}: \n {}",
+                    targetTenantContext.getTenantId(), JsonObject.mapFrom(createdRecord).encodePrettily());
+
                   if (createdRecord != null && createdRecord.getExternalIdsHolder() != null) {
                     marcHolding.setHrid(createdRecord.getExternalIdsHolder().getHoldingsHrid());
                     LOGGER.info("Set new HRID '{}' on MARC holding '{}'.", createdRecord.getExternalIdsHolder().getHoldingsHrid(), marcHolding.getId());
@@ -416,8 +420,9 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     return getSourceRecordByHrid(marcHolding.getHrid(), sourceSrsClient)
       .thenCompose(sourceSrsRecord -> {
         if (sourceSrsRecord == null) {
-          LOGGER.warn("transferMarcHoldingAndMarkDeleted:: No SRS record found for MARC holding with hrid: {}", marcHolding.getHrid());
-          throw new RuntimeException("No SRS record found for MARC holding with hrid: " + marcHolding.getHrid());
+          String msg = String.format("transferMarcHoldingAndMarkDeleted:: No SRS record found for MARC holding with hrid: %s", marcHolding.getHrid());
+          LOGGER.error(msg);
+          throw new RuntimeException(msg);
         }
         String originalSnapshotId = sourceSrsRecord.getSnapshotId();
         Record targetSrsRecord = JsonObject.mapFrom(sourceSrsRecord).mapTo(Record.class);
@@ -425,18 +430,38 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         return snapshotService.postSnapshotInSrsAndHandleResponse(targetContext, snapshot)
           .toCompletionStage().toCompletableFuture()
           .thenCompose(createdSnapshot -> {
+            if (createdSnapshot == null || createdSnapshot.getJobExecutionId() == null) {
+              String msg = String.format("transferMarcHoldingAndMarkDeleted:: Failed to create snapshot for target tenant %s", targetContext.getTenantId());
+              LOGGER.error(msg);
+              throw new RuntimeException(msg);
+            }
+            targetSrsRecord.setId(null);
             targetSrsRecord.getExternalIdsHolder().setHoldingsHrid(null);
             targetSrsRecord.setSnapshotId(createdSnapshot.getJobExecutionId());
-            LOGGER.info("transferMarcHoldingAndMarkDeleted:: Posting MARC holding SRS record with externalId: {} to target tenant {} with new snapshotId: {}", marcHolding.getId(), targetContext.getTenantId(), createdSnapshot.getJobExecutionId());
+            LOGGER.info("transferMarcHoldingAndMarkDeleted:: Posting MARC holding source record to target tenant {} with new snapshotId: {}: \n {}",
+              targetContext.getTenantId(), createdSnapshot.getJobExecutionId(), JsonObject.mapFrom(targetSrsRecord).encodePrettily());
             return targetSrsClient.postSourceStorageRecords(targetSrsRecord)
               .toCompletionStage().toCompletableFuture()
               .thenCompose(createdSrsRecord -> {
+                if (createdSrsRecord.statusCode() < 200 || createdSrsRecord.statusCode() >= 300) {
+                  String msg = String.format("transferMarcHoldingAndMarkDeleted:: Failed to POST SRS record to target tenant %s. Status: %d, Body: %s", targetContext.getTenantId(), createdSrsRecord.statusCode(), createdSrsRecord.bodyAsString());
+                  LOGGER.error(msg);
+                  throw new RuntimeException(msg);
+                }
                 sourceSrsRecord.setDeleted(true);
                 sourceSrsRecord.setSnapshotId(originalSnapshotId); // restore original snapshotId
                 LOGGER.info("transferMarcHoldingAndMarkDeleted:: Marking source MARC holding SRS record with externalId: {} as deleted in source tenant {}", sourceSrsRecord.getId(), sourceContext.getTenantId());
                 return sourceSrsClient.putSourceStorageRecordsById(sourceSrsRecord.getId(), sourceSrsRecord)
                   .toCompletionStage().toCompletableFuture()
-                  .thenApply(v -> createdSrsRecord.bodyAsJson(Record.class));
+                  .thenApply(updateResponse -> {
+                    if (updateResponse.statusCode() < 200 || updateResponse.statusCode() >= 300) {
+                      String msg = String.format("transferMarcHoldingAndMarkDeleted:: Failed to mark source SRS record as deleted in source tenant %s. Status: %d, Body: %s", sourceContext.getTenantId(), updateResponse.statusCode(), updateResponse.bodyAsString());
+                      LOGGER.error(msg);
+                      throw new RuntimeException(msg);
+                    }
+                    LOGGER.info("transferMarcHoldingAndMarkDeleted:: Successfully marked source SRS record {} as deleted in source tenant {}", sourceSrsRecord.getId(), sourceContext.getTenantId());
+                    return createdSrsRecord.bodyAsJson(Record.class);
+                  });
               });
           });
       });
