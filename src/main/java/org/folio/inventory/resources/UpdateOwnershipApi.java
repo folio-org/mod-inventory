@@ -431,6 +431,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         LOGGER.info("transferSingleMarcHolding:: record found by hrId: {}, record: {}",
           sourceHolding.getHrid(), JsonObject.mapFrom(sourceSrsRecord).encodePrettily());
 
+        String oldSnapshotId = sourceSrsRecord.getSnapshotId();
         sourceSrsRecord.setSnapshotId(snapshotId);
         return targetSrsClient.postSourceStorageRecords(sourceSrsRecord)
           .toCompletionStage().toCompletableFuture()
@@ -440,6 +441,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
               Record createdSrsRecord = response.bodyAsJson(Record.class);
               LOGGER.debug("transferSingleMarcHolding:: created SRS record {} on target tenant {}", createdSrsRecord.getId(), targetContext.getTenantId());
 
+              sourceSrsRecord.setSnapshotId(oldSnapshotId);
               sourceSrsRecord.setDeleted(true);
               LOGGER.info("transferSingleMarcHolding:: Marking source SRS record {} as DELETED: {}", sourceSrsRecord.getId(),
                 JsonObject.mapFrom(sourceSrsRecord).encodePrettily());
