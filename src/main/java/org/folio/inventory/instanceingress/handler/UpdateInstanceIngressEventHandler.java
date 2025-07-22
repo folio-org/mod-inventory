@@ -40,7 +40,7 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
                                            HttpClient client,
                                            Context context,
                                            Storage storage) {
-    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, null);
+    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, null, null);
     this.instanceCollection = storage.getInstanceCollection(context);
     this.context = context;
   }
