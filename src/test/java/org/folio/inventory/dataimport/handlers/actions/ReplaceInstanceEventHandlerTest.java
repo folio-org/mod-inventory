@@ -868,7 +868,6 @@ public class ReplaceInstanceEventHandlerTest {
     verify(storage).getInstanceCollection(contextCaptor.capture());
     assertEquals(consortiumTenant, contextCaptor.getValue().getTenantId());
 
-    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
     verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), argThat(USER_ID::equals));
     verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), argThat(USER_ID::equals));
@@ -938,7 +937,6 @@ public class ReplaceInstanceEventHandlerTest {
     verify(storage).getInstanceCollection(contextCaptor.capture());
     assertEquals(consortiumTenant, contextCaptor.getValue().getTenantId());
 
-    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
     verify(replaceInstanceEventHandler, times(2)).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
     verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
@@ -1334,7 +1332,6 @@ public class ReplaceInstanceEventHandlerTest {
     assertTrue(Boolean.parseBoolean(actualDataImportEventPayload.getContext().get(MARC_BIB_RECORD_CREATED)));
     verify(0, getRequestedFor(new UrlPathPattern(new RegexPattern(SOURCE_RECORDS_PATH + "/.{36}"), true)));
 
-    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
     assertNotNull(recordId, recordCaptor.getValue().getMatchedId());
   }
@@ -1921,7 +1918,6 @@ public class ReplaceInstanceEventHandlerTest {
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
     verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
 
-    var recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
     assertThat(recordCaptor.getValue().getParsedRecord().getContent().toString(), containsString(authorityId));
     verify(instanceLinkClient, times(0)).updateInstanceLinks(any(), any(), any());
