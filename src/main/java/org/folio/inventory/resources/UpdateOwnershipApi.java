@@ -342,13 +342,21 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
         // Process each MARC holding individually (move SRS, mark deleted)
         List<CompletableFuture<Void>> marcFutures = marcHoldings.stream()
-          .map(marcHolding -> transferMarcHoldingAndMarkDeleted(marcHolding, context, targetTenantContext)
-            .exceptionally(e -> {
-              LOGGER.error("updateOwnershipOfHoldingsRecords:: Failed to transfer MARC holding {}: {}", marcHolding.getId(), e.getMessage(), e);
-              notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(marcHolding.getId()).withErrorMessage(e.getMessage()));
-              return null;
-            }))
-          .toList();
+            .map(marcHolding -> transferMarcHoldingAndMarkDeleted(marcHolding, context, targetTenantContext)
+                .thenAccept(createdRecord -> {
+                  if (createdRecord != null && createdRecord.getExternalIdsHolder() != null) {
+                    marcHolding.setHrid(createdRecord.getExternalIdsHolder().getHoldingsHrid());
+                    LOGGER.info("Set new HRID '{}' on MARC holding '{}'.", createdRecord.getExternalIdsHolder().getHoldingsHrid(), marcHolding.getId());
+                  } else {
+                    LOGGER.warn("No HRID returned for MARC holding '{}'.", marcHolding.getId());
+                  }
+                })
+                .exceptionally(e -> {
+                  LOGGER.error("updateOwnershipOfHoldingsRecords:: Failed to transfer MARC holding {}: {}", marcHolding.getId(), e.getMessage(), e);
+                  notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(marcHolding.getId()).withErrorMessage(e.getMessage()));
+                  return null;
+                }))
+            .toList();
 
         // After all MARC holdings are processed, treat all as FOLIO
         return CompletableFuture.allOf(marcFutures.toArray(new CompletableFuture[0]))
@@ -391,9 +399,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       });
   }
 
-  private CompletableFuture<Void> transferMarcHoldingAndMarkDeleted(HoldingsRecord marcHolding,
-                                                                    WebContext sourceContext, Context targetContext) {
-
+  private CompletableFuture<Record> transferMarcHoldingAndMarkDeleted(HoldingsRecord marcHolding,
+                                                                      WebContext sourceContext, Context targetContext) {
     SourceStorageRecordsClientWrapper sourceSrsClient = new SourceStorageRecordsClientWrapper(
       sourceContext.getOkapiLocation(), sourceContext.getTenantId(), sourceContext.getToken(), sourceContext.getUserId(), client);
     SourceStorageRecordsClientWrapper targetSrsClient = new SourceStorageRecordsClientWrapper(
@@ -429,7 +436,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                 LOGGER.info("transferMarcHoldingAndMarkDeleted:: Marking source MARC holding SRS record with externalId: {} as deleted in source tenant {}", sourceSrsRecord.getId(), sourceContext.getTenantId());
                 return sourceSrsClient.putSourceStorageRecordsById(sourceSrsRecord.getId(), sourceSrsRecord)
                   .toCompletionStage().toCompletableFuture()
-                  .thenAccept(v -> {});
+                  .thenApply(v -> createdSrsRecord.bodyAsJson(Record.class));
               });
           });
       });
