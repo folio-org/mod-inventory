@@ -1,5 +1,54 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.concurrent.CompletableFuture.completedStage;
+import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
+import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
+import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.ACTION_HAS_NO_MAPPING_MSG;
+import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.CENTRAL_RECORD_UPDATE_PERMISSION;
+import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.MARC_BIB_RECORD_CREATED;
+import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.USER_HAS_NO_PERMISSION_MSG;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
+import static org.folio.inventory.dataimport.util.ParsedRecordUtil.LEADER_STATUS_DELETED;
+import static org.folio.inventory.dataimport.util.ParsedRecordUtil.normalize;
+import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
+import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
+import static org.folio.inventory.domain.instances.InstanceSource.MARC;
+import static org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle.TITLE_KEY;
+import static org.folio.okapi.common.XOkapiHeaders.PERMISSIONS;
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
@@ -15,15 +64,34 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
+import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpStatus;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.InstanceLinkDtoCollection;
 import org.folio.JobProfile;
+import org.folio.Link;
+import org.folio.LinkingRuleDto;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.inventory.TestUtil;
+import org.folio.inventory.client.InstanceLinkClient;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
@@ -69,68 +137,6 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
-
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
-import static com.github.tomakehurst.wiremock.client.WireMock.verify;
-import static java.util.concurrent.CompletableFuture.completedStage;
-import static org.folio.ActionProfile.FolioRecord.INSTANCE;
-import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
-import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
-import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.ACTION_HAS_NO_MAPPING_MSG;
-import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.CENTRAL_RECORD_UPDATE_PERMISSION;
-import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.MARC_BIB_RECORD_CREATED;
-import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.USER_HAS_NO_PERMISSION_MSG;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
-import static org.folio.inventory.dataimport.util.ParsedRecordUtil.LEADER_STATUS_DELETED;
-import static org.folio.inventory.dataimport.util.ParsedRecordUtil.normalize;
-import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
-import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
-import static org.folio.inventory.domain.instances.InstanceSource.MARC;
-import static org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle.TITLE_KEY;
-import static org.folio.okapi.common.XOkapiHeaders.PERMISSIONS;
-import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 public class ReplaceInstanceEventHandlerTest {
 
   private static final String PARSED_CONTENT = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"titleValue\"}]}},{\"336\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}]}},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}}]}";
@@ -165,6 +171,8 @@ public class ReplaceInstanceEventHandlerTest {
   private OkapiHttpClient mockedClient;
   @Mock
   private ConsortiumServiceImpl consortiumServiceImpl;
+  @Mock
+  private InstanceLinkClient instanceLinkClient;
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
   @Mock
@@ -308,14 +316,18 @@ public class ReplaceInstanceEventHandlerTest {
 
     WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(new MappingMetadataDto()
-        .withMappingParams(Json.encode(new MappingParameters()))
+        .withMappingParams(Json.encode(new MappingParameters()
+          .withLinkingRules(List.of(new LinkingRuleDto()
+            .withId(1)
+            .withBibField("100")
+            .withAuthorityField("100")))))
         .withMappingRules(mappingRules.toString())))));
 
     precedingSucceedingTitlesHelper = spy(new PrecedingSucceedingTitlesHelper(ctxt -> mockedClient));
 
     Vertx vertx = Vertx.vertx();
     replaceInstanceEventHandler = spy(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, MappingMetadataCache.getInstance(vertx,
-      vertx.createHttpClient(), true), vertx.createHttpClient(), consortiumServiceImpl));
+      vertx.createHttpClient(), true), vertx.createHttpClient(), consortiumServiceImpl, instanceLinkClient));
 
     var recordUUID = UUID.randomUUID().toString();
     HttpResponse<Buffer> recordHttpResponse = buildHttpResponseWithBuffer(BufferImpl.buffer(String.format(EXISTING_SRS_CONTENT, recordUUID, recordUUID, 0)), HttpStatus.SC_OK);
@@ -575,7 +587,7 @@ public class ReplaceInstanceEventHandlerTest {
 
     JsonObject precedingSucceedingTitles = new JsonObject().put(PRECEDING_SUCCEEDING_TITLES_KEY, new JsonArray().add(existingPrecedingTitle));
     when(mockedClient.get(anyString()))
-      .thenReturn(CompletableFuture.completedFuture(createResponse(HttpStatus.SC_OK, precedingSucceedingTitles.encode())));
+      .thenReturn(completedFuture(createResponse(HttpStatus.SC_OK, precedingSucceedingTitles.encode())));
 
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
@@ -856,7 +868,6 @@ public class ReplaceInstanceEventHandlerTest {
     verify(storage).getInstanceCollection(contextCaptor.capture());
     assertEquals(consortiumTenant, contextCaptor.getValue().getTenantId());
 
-    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
     verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), argThat(USER_ID::equals));
     verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), argThat(USER_ID::equals));
@@ -926,7 +937,6 @@ public class ReplaceInstanceEventHandlerTest {
     verify(storage).getInstanceCollection(contextCaptor.capture());
     assertEquals(consortiumTenant, contextCaptor.getValue().getTenantId());
 
-    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
     verify(replaceInstanceEventHandler, times(2)).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
     verify(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
@@ -1233,7 +1243,7 @@ public class ReplaceInstanceEventHandlerTest {
 
     mockInstance(MARC_INSTANCE_SOURCE);
 
-    when(instanceRecordCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(returnedInstance));
+    when(instanceRecordCollection.findById(anyString())).thenReturn(completedFuture(returnedInstance));
 
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
@@ -1322,7 +1332,6 @@ public class ReplaceInstanceEventHandlerTest {
     assertTrue(Boolean.parseBoolean(actualDataImportEventPayload.getContext().get(MARC_BIB_RECORD_CREATED)));
     verify(0, getRequestedFor(new UrlPathPattern(new RegexPattern(SOURCE_RECORDS_PATH + "/.{36}"), true)));
 
-    ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
     assertNotNull(recordId, recordCaptor.getValue().getMatchedId());
   }
@@ -1821,6 +1830,97 @@ public class ReplaceInstanceEventHandlerTest {
   @Test
   public void shouldReturnPostProcessingInitializationEventType() {
     assertEquals(DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING.value(), replaceInstanceEventHandler.getPostProcessingInitializationEventType());
+  }
+
+  @Test
+  @SneakyThrows
+  public void shouldNotUpdateLinksWhenIncomingZeroSubfieldIsSameAsExisting() {
+    // given
+    var incomingParsedContent =
+      "{\"leader\":\"02340cam a2200301Ki 4500\",\"fields\":[{\"001\":\"ybp7406411\"}," +
+        "{\"100\":{\"subfields\":[{\"a\":\"Chin, Staceyann Test,\"},{\"e\":\"author updated.\"},{\"0\":\"http://id.loc.gov/authorities/names/n2008052404\"}],\"ind1\":\"1\",\"ind2\":\" \"}}]}";
+    var expectedParsedContent =
+      "{\"leader\":\"00220cam a2200061Ki 4500\",\"fields\":[{\"001\":\"ybp7406411\"}," +
+        "{\"100\":{\"subfields\":[{\"a\":\"Chin, Staceyann Test,\"},{\"e\":\"author updated.\"},{\"0\":\"http://id.loc.gov/authorities/names/n2008052404\"},{\"9\":\"5a56ffa8-e274-40ca-8620-34a23b5b45dd\"}],\"ind1\":\"1\",\"ind2\":\" \"}}]}";
+
+    var fakeReader = Mockito.mock(Reader.class);
+    var instanceTypeId = UUID.randomUUID().toString();
+    var title = "titleValue";
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    var context = new HashMap<String, String>();
+    var recordId = UUID.randomUUID().toString();
+    var incomingRecord = new Record().withId(recordId).withMatchedId(recordId).withParsedRecord(new ParsedRecord().withContent(incomingParsedContent));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", instanceId)
+      .put("hrid", UUID.randomUUID().toString())
+      .put("source", MARC_INSTANCE_SOURCE)
+      .put("_version", INSTANCE_VERSION)
+      .put("discoverySuppress", false)
+      .encode());
+
+    mockInstance(MARC_INSTANCE_SOURCE);
+
+    var expectedRecord = new Record()
+      .withId(recordId)
+      .withMatchedId(recordId)
+      .withParsedRecord(new ParsedRecord()
+        .withId(recordId)
+        .withContent(new JsonObject(expectedParsedContent)));
+    var buffer = BufferImpl.buffer(JsonObject.mapFrom(expectedRecord).encode());
+    var respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
+    when(sourceStorageClient.getSourceStorageRecordsFormattedById(any(), any()))
+      .thenReturn(Future.succeededFuture(respForPass));
+    when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(Future.succeededFuture(respForPass));
+
+    var authorityId = "5a56ffa8-e274-40ca-8620-34a23b5b45dd";
+    var links = new InstanceLinkDtoCollection()
+      .withLinks(List.of(new Link()
+        .withInstanceId(instanceId.toString())
+        .withId(2)
+        .withLinkingRuleId(1)
+        .withAuthorityId(authorityId)
+        .withAuthorityNaturalId("n2008052404")));
+    when(instanceLinkClient.getLinksByInstanceId(eq(instanceId.toString()), any())).thenReturn(completedFuture(Optional.of(links)));
+
+    var dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString());
+
+    var future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+    var actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
+
+    assertEquals(DI_INVENTORY_INSTANCE_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    var createdInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    assertNotNull(createdInstance.getString("id"));
+    assertEquals(title, createdInstance.getString("title"));
+    assertEquals(instanceTypeId, createdInstance.getString("instanceTypeId"));
+    assertEquals(MARC_INSTANCE_SOURCE, createdInstance.getString("source"));
+    assertTrue(actualDataImportEventPayload.getContext().containsKey(MARC_BIB_RECORD_CREATED));
+    assertFalse(Boolean.parseBoolean(actualDataImportEventPayload.getContext().get(MARC_BIB_RECORD_CREATED)));
+    assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
+    var updatedBib = actualDataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value());
+    var updatedBibContent = new JsonObject(updatedBib).getJsonObject("parsedRecord").getString("content");
+    assertThat(updatedBibContent, is(expectedParsedContent));
+    verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
+    verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
+
+    verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
+    assertThat(recordCaptor.getValue().getParsedRecord().getContent().toString(), containsString(authorityId));
+    verify(instanceLinkClient, times(0)).updateInstanceLinks(any(), any(), any());
   }
 
   private Response createResponse(int statusCode, String body) {
