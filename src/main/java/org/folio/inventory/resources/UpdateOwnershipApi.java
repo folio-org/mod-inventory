@@ -435,10 +435,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
               LOGGER.error(msg);
               throw new RuntimeException(msg);
             }
-            targetSrsRecord.setId(null);
+            //targetSrsRecord.setId(null);
             targetSrsRecord.getExternalIdsHolder().setHoldingsHrid(null);
             targetSrsRecord.setSnapshotId(createdSnapshot.getJobExecutionId());
-            targetSrsRecord.setMatchedId(null);
+            //targetSrsRecord.setMatchedId(null);
             LOGGER.info("transferMarcHoldingAndMarkDeleted:: Posting MARC holding source record to target tenant {} with new snapshotId: {}: \n {}",
               targetContext.getTenantId(), createdSnapshot.getJobExecutionId(), JsonObject.mapFrom(targetSrsRecord).encodePrettily());
             return targetSrsClient.postSourceStorageRecords(targetSrsRecord)
