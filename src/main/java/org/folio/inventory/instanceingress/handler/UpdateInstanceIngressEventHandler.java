@@ -9,7 +9,6 @@ import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
-
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -44,7 +43,7 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
                                            Context context,
                                            Storage storage,
                                            SnapshotService snapshotService) {
-    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, null, snapshotService);
+    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, null, snapshotService, null);
     this.instanceCollection = storage.getInstanceCollection(context);
     this.context = context;
     this.snapshotService = snapshotService;

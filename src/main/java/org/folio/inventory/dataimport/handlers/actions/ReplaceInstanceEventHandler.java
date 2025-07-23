@@ -1,52 +1,10 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
-import org.apache.http.HttpStatus;
-import org.folio.ActionProfile;
-import org.folio.DataImportEventPayload;
-import org.folio.MappingMetadataDto;
-import org.folio.ParsedRecord;
-import org.folio.Record;
-import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.Failure;
-import org.folio.inventory.consortium.services.ConsortiumService;
-import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.exceptions.DataImportException;
-import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
-import org.folio.inventory.dataimport.services.SnapshotService;
-import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
-import org.folio.inventory.dataimport.util.ValidationUtil;
-import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.InstanceCollection;
-import org.folio.inventory.exceptions.NotFoundException;
-import org.folio.inventory.storage.Storage;
-import org.folio.inventory.support.InstanceUtil;
-import org.folio.processing.exceptions.EventProcessingException;
-import org.folio.processing.mapping.MappingManager;
-import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
-import org.folio.processing.mapping.mapper.MappingContext;
-import org.folio.processing.mapping.mapper.writer.marc.MarcRecordModifier;
-import org.folio.rest.client.SourceStorageRecordsClient;
-import org.folio.rest.jaxrs.model.EntityType;
-import org.folio.rest.jaxrs.model.MarcFieldProtectionSetting;
-import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
-import org.folio.rest.jaxrs.model.Snapshot;
-
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
 import static java.lang.String.format;
+import static java.util.Collections.emptyList;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.folio.ActionProfile.Action.UPDATE;
@@ -54,7 +12,9 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
+import static org.folio.inventory.consortium.util.MarcRecordUtil.isSubfieldExist;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_PATH;
@@ -68,6 +28,55 @@ import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.LINKED_DATA;
 import static org.folio.inventory.domain.instances.InstanceSource.MARC;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
+
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import org.apache.http.HttpStatus;
+import org.folio.ActionProfile;
+import org.folio.DataImportEventPayload;
+import org.folio.InstanceLinkDtoCollection;
+import org.folio.Link;
+import org.folio.LinkingRuleDto;
+import org.folio.MappingMetadataDto;
+import org.folio.ParsedRecord;
+import org.folio.Record;
+import org.folio.inventory.client.InstanceLinkClient;
+import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.consortium.services.ConsortiumService;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.exceptions.DataImportException;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
+import org.folio.inventory.dataimport.util.ValidationUtil;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.exceptions.NotFoundException;
+import org.folio.inventory.storage.Storage;
+import org.folio.inventory.support.InstanceUtil;
+import org.folio.processing.exceptions.EventProcessingException;
+import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.processing.mapping.mapper.MappingContext;
+import org.folio.processing.mapping.mapper.writer.marc.MarcBibRecordModifier;
+import org.folio.processing.mapping.mapper.writer.marc.MarcRecordModifier;
+import org.folio.rest.client.SourceStorageRecordsClient;
+import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.MarcFieldProtectionSetting;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.Snapshot;
 
 public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { // NOSONAR
 
@@ -84,17 +93,19 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   public static final String INSTANCE_ID_TYPE = "INSTANCE";
   public static final String CENTRAL_TENANT_INSTANCE_UPDATED_FLAG = "CENTRAL_TENANT_INSTANCE_UPDATED";
   public static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
-  private final ConsortiumService consortiumService;
   public static final String MARC_BIB_RECORD_CREATED = "MARC_BIB_RECORD_CREATED";
+
+  private final ConsortiumService consortiumService;
+  private final InstanceLinkClient instanceLinkClient;
 
   public ReplaceInstanceEventHandler(Storage storage,
                                      PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
                                      MappingMetadataCache mappingMetadataCache,
                                      HttpClient client,
-                                     ConsortiumService consortiumService,
-                                     SnapshotService snapshotService) {
-    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, snapshotService, client);
+                                     ConsortiumService consortiumService, InstanceLinkClient instanceLinkClient) {
+    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client);
     this.consortiumService = consortiumService;
+    this.instanceLinkClient = instanceLinkClient;
   }
 
   @Override
@@ -338,45 +349,133 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       });
   }
 
-  private Future<Void> prepareRecordForMapping(DataImportEventPayload dataImportEventPayload,
+  private Future<Void> prepareRecordForMapping(DataImportEventPayload eventPayload,
                                                List<MarcFieldProtectionSetting> marcFieldProtectionSettings,
                                                Instance instance, MappingParameters mappingParameters, String tenantId) {
     if (MARC_INSTANCE_SOURCE.equals(instance.getSource()) || CONSORTIUM_MARC.getValue().equals(instance.getSource())) {
-      SourceStorageRecordsClient client = getSourceStorageRecordsClient(dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getToken(), tenantId, null);
+      SourceStorageRecordsClient client = getSourceStorageRecordsClient(eventPayload.getOkapiUrl(), eventPayload.getToken(), tenantId, null);
       return getRecordByInstanceId(client, instance.getId())
         .compose(existingRecord -> {
-          Record incomingRecord = Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
-          String updatedContent = new MarcRecordModifier().updateRecord(incomingRecord, existingRecord, marcFieldProtectionSettings);
-          incomingRecord.getParsedRecord().setContent(updatedContent);
+          var linkingRules = Optional.ofNullable(mappingParameters.getLinkingRules());
+          var context = constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl(),
+            eventPayload.getContext().get(PAYLOAD_USER_ID));
+          var incomingRecord = Json.decodeValue(eventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
 
-          if (instance.getSource().equals(MARC.getValue())) {
-            incomingRecord.setMatchedId(existingRecord.getMatchedId());
-            if (nonNull(existingRecord.getGeneration())) {
-              int incrementedGeneration = existingRecord.getGeneration();
-              incomingRecord.setGeneration(++incrementedGeneration);
-            }
-            String updatedIncomingRecord = Json.encode(incomingRecord);
-            org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(updatedIncomingRecord, org.folio.rest.jaxrs.model.Record.class);
+          return loadInstanceLink(existingRecord, instance.getId(), context)
+            .compose(links -> updateMarcRecordContent(incomingRecord, existingRecord, marcFieldProtectionSettings, links, linkingRules.orElse(emptyList())))
+            .map(linksForUpdate -> {
+              if (instance.getSource().equals(MARC.getValue())) {
+                incomingRecord.setMatchedId(existingRecord.getMatchedId());
+                if (nonNull(existingRecord.getGeneration())) {
+                  int incrementedGeneration = existingRecord.getGeneration();
+                  incomingRecord.setGeneration(++incrementedGeneration);
+                }
+                var updatedIncomingRecord = Json.encode(incomingRecord);
+                var targetRecord = Json.decodeValue(updatedIncomingRecord, org.folio.rest.jaxrs.model.Record.class);
 
-            AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
-            AdditionalFieldsUtil.normalize035(targetRecord);
-            AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(targetRecord);
-            dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
-          } else {
-            dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
-          }
-          return Future.succeededFuture();
+                AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
+                AdditionalFieldsUtil.normalize035(targetRecord);
+                AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(targetRecord);
+                eventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
+              } else {
+                eventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
+              }
+              return linksForUpdate;
+            })
+            .compose(linksForUpdate -> updateInstanceLinks(instance.getId(), linksForUpdate, context));
         });
     } else if (instance.getSource().equals(FOLIO.getValue())) {
-      String marcBibAsJson = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
+      String marcBibAsJson = eventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
       org.folio.rest.jaxrs.model.Record targetRecord = Json.decodeValue(marcBibAsJson, org.folio.rest.jaxrs.model.Record.class);
 
       AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
       AdditionalFieldsUtil.move001To035(targetRecord);
       AdditionalFieldsUtil.normalize035(targetRecord);
-      dataImportEventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
+      eventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
     }
     return Future.succeededFuture();
+  }
+
+  private Future<Optional<InstanceLinkDtoCollection>> updateMarcRecordContent(
+    Record incomingRecord, Record existingRecord, List<MarcFieldProtectionSetting> protectionSettings,
+    Optional<InstanceLinkDtoCollection> links, List<LinkingRuleDto> linkingRules) {
+
+    var promise = Promise.<Optional<InstanceLinkDtoCollection>>promise();
+    try {
+      if (links.isPresent()) {
+        var recordModifier = new MarcBibRecordModifier();
+        recordModifier.setLinks(links.get(), linkingRules);
+        var updatedContent = recordModifier.updateRecord(incomingRecord, existingRecord, protectionSettings);
+        incomingRecord.getParsedRecord().setContent(updatedContent);
+        if (isLinksTheSame(links.get(), recordModifier.getBibAuthorityLinksKept())) {
+          promise.complete(Optional.empty());
+        } else {
+          promise.complete(
+            Optional.of(new InstanceLinkDtoCollection().withLinks(recordModifier.getBibAuthorityLinksKept())));
+        }
+      } else {
+        var recordModifier = new MarcRecordModifier();
+        var updatedContent = recordModifier.updateRecord(incomingRecord, existingRecord, protectionSettings);
+        incomingRecord.getParsedRecord().setContent(updatedContent);
+        promise.complete(Optional.empty());
+      }
+    } catch (Exception e) {
+      promise.fail(e);
+    }
+    return promise.future();
+  }
+
+  private boolean isLinksTheSame(InstanceLinkDtoCollection links, List<Link> bibAuthorityLinksKept) {
+    if (links.getLinks().size() != bibAuthorityLinksKept.size()) {
+      return false;
+    }
+    for (Link link : links.getLinks()) {
+      if (!bibAuthorityLinksKept.contains(link)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private Future<Optional<InstanceLinkDtoCollection>> loadInstanceLink(Record oldRecord, String instanceId,
+                                                                       Context context) {
+    Promise<Optional<InstanceLinkDtoCollection>> promise = Promise.promise();
+    if (isSubfieldExist(oldRecord, '9')) {
+      if (isNull(instanceId) || isBlank(instanceId)) {
+        instanceId = oldRecord.getExternalIdsHolder().getInstanceId();
+      }
+      instanceLinkClient.getLinksByInstanceId(instanceId, context)
+        .whenComplete((instanceLinkDtoCollection, throwable) -> {
+          if (throwable != null) {
+            LOGGER.error(throwable.getMessage());
+            promise.fail(throwable);
+          } else {
+            promise.complete(instanceLinkDtoCollection);
+          }
+        });
+    } else {
+      promise.complete(Optional.empty());
+    }
+
+    return promise.future();
+  }
+
+  private Future<Void> updateInstanceLinks(String instanceId, Optional<InstanceLinkDtoCollection> links,
+                                           Context context) {
+    Promise<Void> promise = Promise.promise();
+    if (links.isPresent()) {
+      instanceLinkClient.updateInstanceLinks(instanceId, links.get(), context)
+        .whenComplete((v, throwable) -> {
+          if (throwable != null) {
+            promise.fail(throwable);
+          } else {
+            promise.complete();
+          }
+        });
+    } else {
+      promise.complete();
+    }
+    return promise.future();
   }
 
   protected Future<Record> getRecordByInstanceId(SourceStorageRecordsClient client, String instanceId) {

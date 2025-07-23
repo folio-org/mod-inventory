@@ -10,6 +10,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
+import org.folio.inventory.client.InstanceLinkClient;
 import org.folio.inventory.client.OrdersClient;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
@@ -200,6 +201,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
   private void registerDataImportProcessingHandlers(Storage storage, HttpClient client) {
     OrdersClient ordersClient = new OrdersClient(WebClient.wrap(client));
+    InstanceLinkClient instanceLinkClient = new InstanceLinkClient(WebClient.wrap(client));
     OrdersPreloaderHelper ordersPreloaderHelper = new OrdersPreloaderHelper(ordersClient);
     InstancePreloader instancePreloader = new InstancePreloader(ordersPreloaderHelper);
     HoldingsPreloader holdingsPreloader = new HoldingsPreloader(ordersPreloaderHelper);
@@ -242,7 +244,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new DeleteAuthorityEventHandler(storage));
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage, mappingMetadataCache));
-    EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, consortiumService, snapshotService));
+    EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, consortiumService, instanceLinkClient));
     EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, mappingMetadataCache));
     EventManager.registerEventHandler(new MarcBibModifyEventHandler(mappingMetadataCache, new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, client));
   }
