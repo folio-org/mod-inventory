@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.Record;
+import org.folio.rest.jaxrs.model.SourceRecord;
 import org.folio.util.PercentCodec;
 
 import java.lang.invoke.MethodHandles;
@@ -103,4 +104,15 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
       return Future.failedFuture(e);
     }
   }
+
+  public Future<HttpResponse<Buffer>> postSourceStorageRecords(SourceRecord sRecord) {
+    return createRequest(HttpMethod.POST, okapiUrl + "/source-storage/records", okapiUrl, tenantId, token, userId, webClient)
+      .sendBuffer(getBuffer(sRecord));
+  }
+
+  public Future<HttpResponse<Buffer>> putSourceStorageRecordsById(String id, SourceRecord sRecord) {
+    return createRequest(HttpMethod.PUT, okapiUrl + SOURCE_STORAGE_RECORDS + id, okapiUrl, tenantId, token, userId, webClient)
+      .sendBuffer(getBuffer(sRecord));
+  }
+
 }
