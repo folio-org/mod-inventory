@@ -7,7 +7,6 @@ import io.vertx.core.json.Json;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.folio.DataImportEventTypes;
 import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
 import org.folio.rest.jaxrs.model.Event;
 import org.junit.After;

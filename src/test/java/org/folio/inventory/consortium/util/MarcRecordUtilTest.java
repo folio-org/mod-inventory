@@ -96,4 +96,26 @@ public class MarcRecordUtilTest {
       assertFalse(field.containsKey(fieldTagToRemove));
     }
   }
+
+  @Test
+  public void isSubfieldExistReturnsTrue() {
+    var marcJson = "{\"leader\":\"00000cam a2200000 a 4500\",\"fields\":[{\"100\":{\"subfields\":[{\"a\":\"John Doe\"},{\"9\":\"test\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    var recordWith9 = new Record();
+    var parsedRecord = new ParsedRecord();
+    parsedRecord.setContent(marcJson);
+    recordWith9.setParsedRecord(parsedRecord);
+    var result = MarcRecordUtil.isSubfieldExist(recordWith9, '9');
+    Assert.assertTrue(result);
+  }
+
+  @Test
+  public void isSubfieldExistReturnsFalse() {
+    var marcJson = "{\"leader\":\"00000cam a2200000 a 4500\",\"fields\":[{\"100\":{\"subfields\":[{\"a\":\"John Doe\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    var recordWithout9 = new Record();
+    var parsedRecord = new ParsedRecord();
+    parsedRecord.setContent(marcJson);
+    recordWithout9.setParsedRecord(parsedRecord);
+    var result = MarcRecordUtil.isSubfieldExist(recordWithout9, '9');
+    Assert.assertFalse(result);
+  }
 }
