@@ -9,6 +9,7 @@ import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.consortium.services.ConsortiumServiceImpl;
+import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.resources.AdminApi;
 import org.folio.inventory.resources.Holdings;
 import org.folio.inventory.resources.Instances;
@@ -31,6 +32,7 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
+import org.folio.rest.jaxrs.model.Snapshot;
 
 public class InventoryVerticle extends AbstractVerticle {
   private HttpServer server;
@@ -60,6 +62,7 @@ public class InventoryVerticle extends AbstractVerticle {
 
     ConsortiumDataCache consortiumDataCache = new ConsortiumDataCache(vertx, client);
     ConsortiumService consortiumService = new ConsortiumServiceImpl(client, consortiumDataCache);
+    SnapshotService snapshotService = new SnapshotService(client);
 
     new AdminApi().register(router);
     new Items(storage, client).register(router);
@@ -71,7 +74,7 @@ public class InventoryVerticle extends AbstractVerticle {
     new ItemsByHoldingsRecordId(storage, client).register(router);
     new InventoryConfigApi().register(router);
     new TenantApi().register(router);
-    new UpdateOwnershipApi(storage, client, consortiumService).register(router);
+    new UpdateOwnershipApi(storage, client, consortiumService, snapshotService).register(router);
     new TenantItems(client).register(router);
 
     Handler<AsyncResult<HttpServer>> onHttpServerStart = result -> {
