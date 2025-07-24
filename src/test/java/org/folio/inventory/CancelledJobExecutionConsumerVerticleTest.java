@@ -7,6 +7,7 @@ import io.vertx.core.json.Json;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import org.folio.DataImportEventTypes;
 import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
 import org.folio.rest.jaxrs.model.Event;
 import org.junit.After;
@@ -22,6 +23,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
 
 import static java.time.Duration.ofSeconds;
+import static org.folio.DataImportEventTypes.DI_JOB_CANCELLED;
 import static org.folio.inventory.CancelledJobExecutionConsumerVerticle.TEST_MODE_PARAM;
 import static org.folio.inventory.KafkaUtility.sendEvent;
 import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
@@ -124,7 +126,7 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
   private void sendJobIdsToKafka(List<String> ids) throws ExecutionException, InterruptedException {
     for (String id : ids) {
       Event event = new Event().withEventPayload(id);
-      sendEvent(Map.of(), TENANT_ID, "DI_JOB_CANCELLED", "1", Json.encode(event));
+      sendEvent(Map.of(), TENANT_ID, DI_JOB_CANCELLED.value(), "1", Json.encode(event));
     }
   }
 

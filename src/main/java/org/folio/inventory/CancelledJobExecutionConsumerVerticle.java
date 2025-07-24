@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import static org.folio.DataImportEventTypes.DI_JOB_CANCELLED;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 
 public class CancelledJobExecutionConsumerVerticle extends KafkaConsumerVerticle {
@@ -43,7 +44,7 @@ public class CancelledJobExecutionConsumerVerticle extends KafkaConsumerVerticle
     groupName = getGroupName();
     consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, groupName);
     SubscriptionDefinition subscriptionDefinition =
-      KafkaTopicNameHelper.createSubscriptionDefinition(kafkaConfig.getEnvId(), getDefaultNameSpace(), "DI_JOB_CANCELLED");
+      KafkaTopicNameHelper.createSubscriptionDefinition(kafkaConfig.getEnvId(), getDefaultNameSpace(), DI_JOB_CANCELLED.value());
     Pattern pattern = Pattern.compile(subscriptionDefinition.getSubscriptionPattern());
 
     if (isTestMode()) {

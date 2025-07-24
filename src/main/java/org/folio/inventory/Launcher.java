@@ -96,7 +96,7 @@ public class Launcher {
   }
 
   private static void startConsumerVerticles(Map<String, Object> consumerVerticlesConfig,
-                                             CancelledJobsIdsCache consortiumDataCache)
+                                             CancelledJobsIdsCache cancelledJobsIdsCache)
     throws InterruptedException, ExecutionException, TimeoutException {
     int dataImportConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(DATA_IMPORT_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "3"));
     int instanceHridSetConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(MARC_BIB_INSTANCE_HRID_SET_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "3"));
@@ -125,7 +125,7 @@ public class Launcher {
       consumerVerticlesConfig, consortiumInstanceSharingVerticleNumber, future5);
     vertxAssistant.deployVerticle(InstanceIngressConsumerVerticle.class.getName(),
       consumerVerticlesConfig, instanceIngressConsumerVerticleNumber, future6);
-    vertxAssistant.deployVerticle(() -> new CancelledJobExecutionConsumerVerticle(consortiumDataCache),
+    vertxAssistant.deployVerticle(() -> new CancelledJobExecutionConsumerVerticle(cancelledJobsIdsCache),
       CancelledJobExecutionConsumerVerticle.class.getName(),
       consumerVerticlesConfig, CANCELLED_JOBS_CONSUMER_VERTICLE_INSTANCES_NUMBER, future7);
 
