@@ -76,11 +76,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
   private static final String ITEM_ID = "itemId";
   private static final String INSTANCE_ID = "instanceId";
-  private static final String SRS_HOLDINGS_PATH = "/source-storage/records/holding";
-  private static final String SOURCE_RECORD_NOT_FOUND = "Source record for holdings %s not found";
   private static final String MARC_HOLDING_RECORD_TYPE = "MARC_HOLDING";
   private static final String SOURCE_RECORD_NOT_FOUND_BY_HRID_MSG = "Source record not found for holdings record with hrid: %s";
-  private static final String FAILED_TO_TRANSFER_MARC_HOLDING_MSG = "Failed to transfer MARC holding SRS record with id: %s. Reason: %s";
   private final SnapshotService snapshotService;
 
 
@@ -309,6 +306,9 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(createHttpClient(client, routingContext, context), context);
       MultipleRecordsFetchClient holdingsRecordFetchClient = createHoldingsRecordsFetchClient(holdingsStorageClient);
 
+      SourceStorageRecordsClientWrapper sourceSrsClient = new SourceStorageRecordsClientWrapper(
+        context.getOkapiLocation(), context.getTenantId(), context.getToken(), context.getUserId(), client);
+
       HoldingsRecordCollection sourceTenantHoldingsRecordCollection = storage.getHoldingsRecordCollection(context);
       HoldingsRecordCollection targetTenantHoldingsRecordCollection = storage.getHoldingsRecordCollection(targetTenantContext);
 
@@ -320,18 +320,38 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
             List<JsonObject> validatedHoldingsRecords = validateHoldingsRecords(jsons, holdingsUpdateOwnership.getToInstanceId(), notUpdatedEntities);
             List<HoldingsRecord> holdingsRecords = validatedHoldingsRecords.stream().map(h -> mapToHoldingsRecord(h, holdingsUpdateOwnership)).toList();
 
-            return validateHoldingsRecordsBoundWith(holdingsRecords, notUpdatedEntities, routingContext, context)
-              .thenCompose(wrappersWithoutBoundWith -> createHoldings(wrappersWithoutBoundWith, notUpdatedEntities, targetTenantHoldingsRecordCollection)
-                .thenCompose(createdHoldings -> {
-                  LOGGER.info("updateOwnershipOfHoldingsRecords:: Created holdings: {}, for tenant: {}",
-                    createdHoldings, targetTenantContext.getTenantId());
+            Map<String, Record> holdingMarcSources = new HashMap<>();
+            List<CompletableFuture<Void>> srsFutures = new ArrayList<>();
+            holdingsRecords.stream()
+              .filter(h -> MARC_SOURCE_ID.equals(h.getSourceId()))
+              .forEach(h -> srsFutures.add(
+                getSourceRecordByHrid(h.getHrid(), sourceSrsClient)
+                  .thenAccept(record -> {
+                    if (record != null) {
+                      LOGGER.info("updateOwnershipOfHoldingsRecords:: Found record: {}", record);
+                      holdingMarcSources.put(h.getId(), record);
+                    }
+                  })
+              ));
+            CompletableFuture<Void> allSrsFetched = CompletableFuture.allOf(srsFutures.toArray(new CompletableFuture[0]));
 
-                  // Move SRS records for MARC holdings
-                  return moveSrsRecordsForMarcHoldings(wrappersWithoutBoundWith, createdHoldings, context, targetTenantContext, routingContext, notUpdatedEntities)
-                    .thenCompose(v -> transferAttachedItems(createdHoldings, notUpdatedEntities, routingContext, context, targetTenantContext)
-                      .thenCompose(itemIds ->
-                        deleteSourceHoldings(getHoldingsToDelete(notUpdatedEntities, createdHoldings), notUpdatedEntities, sourceTenantHoldingsRecordCollection)));
-                }));
+            holdingsRecords.forEach(h -> h.setHrid(null));
+            return allSrsFetched.thenCompose(v -> {
+              holdingsRecords.forEach(h -> h.setHrid(null));
+              return validateHoldingsRecordsBoundWith(holdingsRecords, notUpdatedEntities, routingContext, context)
+                .thenCompose(wrappersWithoutBoundWith -> createHoldings(wrappersWithoutBoundWith, notUpdatedEntities, targetTenantHoldingsRecordCollection)
+                  .thenCompose(createdHoldings -> {
+                    LOGGER.info("updateOwnershipOfHoldingsRecords:: Created holdings: {}, for tenant: {}",
+                      createdHoldings, targetTenantContext.getTenantId());
+
+                    // Move SRS records for MARC holdings
+                    return moveSrsRecordsForMarcHoldings(wrappersWithoutBoundWith, createdHoldings, context,
+                      targetTenantContext, routingContext, notUpdatedEntities, holdingMarcSources)
+                      .thenCompose(v2 -> transferAttachedItems(createdHoldings, notUpdatedEntities, routingContext, context, targetTenantContext)
+                        .thenCompose(itemIds ->
+                          deleteSourceHoldings(getHoldingsToDelete(notUpdatedEntities, createdHoldings), notUpdatedEntities, sourceTenantHoldingsRecordCollection)));
+                  }));
+            });
           }
           return CompletableFuture.completedFuture(new ArrayList<>());
         });
@@ -348,7 +368,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
    */
   private CompletableFuture<Void> moveSrsRecordsForMarcHoldings(List<HoldingsRecord> sourceHoldings, List<HoldingsRecord> targetHoldings,
                                                                WebContext sourceContext, Context targetTenantContext, RoutingContext routingContext,
-                                                               List<NotUpdatedEntity> notUpdatedEntities) {
+                                                               List<NotUpdatedEntity> notUpdatedEntities, Map<String, Record> holdingMarcSources) {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     for (HoldingsRecord sourceHolding : sourceHoldings) {
       if (MARC_SOURCE_ID.equals(sourceHolding.getSourceId())) {
@@ -362,7 +382,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHolding.getId()).withErrorMessage(msg));
           continue;
         }
-        futures.add(moveSingleMarcHoldingsSrsRecord(sourceHolding, targetHolding, sourceContext, targetTenantContext, routingContext, notUpdatedEntities));
+        LOGGER.info("sourceHolding: {}, targetHolding: {}, record: {}", sourceHolding.getId(), targetHolding.getId(), holdingMarcSources.get(sourceHolding.getId()));
+        futures.add(moveSingleMarcHoldingsSrsRecord(sourceHolding, holdingMarcSources.get(sourceHolding.getId()), targetHolding, sourceContext, targetTenantContext, routingContext, notUpdatedEntities));
       }
     }
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
@@ -400,7 +421,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     return future;
   }
 
-  private CompletableFuture<Void> moveSingleMarcHoldingsSrsRecord(HoldingsRecord sourceHolding, HoldingsRecord targetHolding,
+  private CompletableFuture<Void> moveSingleMarcHoldingsSrsRecord(HoldingsRecord sourceHolding, Record sourceRecord, HoldingsRecord targetHolding,
                                                                   WebContext sourceContext, Context targetTenantContext, RoutingContext routingContext,
                                                                   List<NotUpdatedEntity> notUpdatedEntities) {
     CompletableFuture<Void> result = new CompletableFuture<>();
@@ -410,20 +431,6 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         sourceContext.getOkapiLocation(), sourceContext.getTenantId(), sourceContext.getToken(), sourceContext.getUserId(), client);
       SourceStorageRecordsClientWrapper targetSrsClient = new SourceStorageRecordsClientWrapper(
         targetTenantContext.getOkapiLocation(), targetTenantContext.getTenantId(), targetTenantContext.getToken(), targetTenantContext.getUserId(), client);
-
-      // 1. Fetch SRS record for the source holding
-      getSourceRecordByHrid(sourceHolding.getHrid(), sourceSrsClient)
-        .thenAccept(sourceRecord -> {
-          if (sourceRecord == null) {
-            String msg = String.format("No SRS record found for holdingsId=%s with hrid=%s in tenant=%s",
-              sourceHolding.getId(), sourceHolding.getHrid(), sourceContext.getTenantId());
-            LOGGER.warn(msg);
-            notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHolding.getId()).withErrorMessage(msg));
-            result.complete(null);
-            return;
-          }
-          LOGGER.info("Found SRS record for holdingsId={} with hrid={}, object: {}", sourceHolding.getId(), sourceHolding.getHrid(),
-            JsonObject.mapFrom(sourceRecord).encodePrettily());
 
           // 2. Create a new Snapshot in the target tenant
           Snapshot snapshot = new Snapshot()
@@ -471,7 +478,6 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
               });
             });
           });
-        });
     } catch (Exception e) {
       String msg = String.format("Exception during SRS move for holdingsId=%s: %s", sourceHolding.getId(), e.getMessage());
       LOGGER.warn(msg, e);
@@ -765,7 +771,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     MoveApiUtil.removeExtraRedundantFields(holdingsRecordJson);
 
     return holdingsRecordJson.mapTo(HoldingsRecord.class)
-      .withHrid(null)
+      //.withHrid(null)
       .withPermanentLocationId(holdingsUpdateOwnership.getTargetLocationId());
   }
 
