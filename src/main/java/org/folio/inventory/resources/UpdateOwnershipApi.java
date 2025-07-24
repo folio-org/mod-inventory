@@ -401,7 +401,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         if (response.statusCode() == 200) {
           JsonObject responseBody = response.bodyAsJsonObject();
           LOGGER.info("getSourceRecordByHrid:: Response from SRS for hrid '{}': {}", hrid, responseBody.encodePrettily());
-          JsonArray records = responseBody.getJsonArray("records");
+          JsonArray records = responseBody.getJsonArray("sourceRecords");
           if (records != null && !records.isEmpty()) {
             Record foundRecord = records.getJsonObject(0).mapTo(Record.class);
             LOGGER.info("getSourceRecordByHrid:: Found source record with hrid '{}': {}", hrid, JsonObject.mapFrom(foundRecord).encodePrettily());
