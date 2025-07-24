@@ -130,4 +130,29 @@ public final class MarcRecordUtil {
     marcRecord.getParsedRecord().setContent(contentObject);
     return marcRecord;
   }
+
+  /**
+   * Check if any field with the subfield code exists.
+   *
+   * @param sourceRecord - source record.
+   * @param subFieldCode - subfield code.
+   * @return true if exists, otherwise false.
+   */
+  public static boolean isSubfieldExist(Record sourceRecord, char subFieldCode) {
+    try {
+      org.marc4j.marc.Record marcRecord = computeMarcRecord(sourceRecord);
+      if (marcRecord != null) {
+        for (DataField dataField : marcRecord.getDataFields()) {
+          Subfield subfield = dataField.getSubfield(subFieldCode);
+          if (subfield != null) {
+            return true;
+          }
+        }
+      }
+    } catch (Exception e) {
+      LOGGER.warn("isSubfieldExist:: Error during the search a subfield in the record", e);
+      return false;
+    }
+    return false;
+  }
 }

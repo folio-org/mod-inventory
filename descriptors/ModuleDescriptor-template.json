@@ -656,7 +656,7 @@
     },
     {
       "id": "item-storage",
-      "version": "10.4"
+      "version": "11.0"
     },
     {
       "id": "instance-storage",
@@ -688,7 +688,7 @@
     },
     {
       "id": "instance-authority-links",
-      "version": "2.0"
+      "version": "2.1"
     },
     {
       "id": "identifier-types",
@@ -1009,7 +1009,9 @@
         "inventory-storage.preceding-succeeding-titles.item.post",
         "inventory-storage.preceding-succeeding-titles.collection.get",
         "inventory-storage.preceding-succeeding-titles.item.put",
-        "inventory-storage.preceding-succeeding-titles.item.delete"
+        "inventory-storage.preceding-succeeding-titles.item.delete",
+        "instance-authority-links.instances.collection.get",
+        "instance-authority-links.instances.collection.put"
       ]
     }
   },

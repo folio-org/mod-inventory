@@ -4,6 +4,7 @@
 * Source of Instance changes from LINKED_DATA to MARC when a linked authority is updated [MODINV-1176](https://folio-org.atlassian.net/browse/MODINV-1176)
 * Adds additionalCallNumbers to the item and holding [MODINV-1241](https://folio-org.atlassian.net/browse/MODINV-1241)
 * Addition of the order field to the existing item APIs [MODINV-1249](https://folio-org.atlassian.net/browse/MODINV-1249)
+* Add instance-authority links logic on MARC Instance update [MODINV-1068](https://folio-org.atlassian.net/browse/MODINV-1068)
 
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)
