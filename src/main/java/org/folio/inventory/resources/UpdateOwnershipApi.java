@@ -303,7 +303,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                                                                            List<NotUpdatedEntity> notUpdatedEntities, RoutingContext routingContext,
                                                                            WebContext context, Context targetTenantContext) {
     try {
-      LOGGER.debug("updateOwnershipOfHoldingsRecords:: Updating ownership of holdingsRecord: {}, to tenant: {}",
+      LOGGER.info("updateOwnershipOfHoldingsRecords:: Updating ownership of holdingsRecord: {}, to tenant: {}",
         holdingsUpdateOwnership.getHoldingsRecordIds(), targetTenantContext.getTenantId());
 
       CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(createHttpClient(client, routingContext, context), context);
@@ -314,7 +314,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
       return holdingsRecordFetchClient.find(holdingsUpdateOwnership.getHoldingsRecordIds(), MoveApiUtil::fetchByIdCql)
         .thenCompose(jsons -> {
-          LOGGER.debug("updateOwnershipOfHoldingsRecords:: Found holdings to update ownership: {}", jsons);
+          LOGGER.info("updateOwnershipOfHoldingsRecords:: Found holdings to update ownership: {}", jsons);
           processNotFoundEntities(holdingsUpdateOwnership.getHoldingsRecordIds(), notUpdatedEntities, context, jsons, HOLDINGS_RECORD_NOT_FOUND);
           if (!jsons.isEmpty()) {
             List<JsonObject> validatedHoldingsRecords = validateHoldingsRecords(jsons, holdingsUpdateOwnership.getToInstanceId(), notUpdatedEntities);
@@ -323,7 +323,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
             return validateHoldingsRecordsBoundWith(holdingsRecords, notUpdatedEntities, routingContext, context)
               .thenCompose(wrappersWithoutBoundWith -> createHoldings(wrappersWithoutBoundWith, notUpdatedEntities, targetTenantHoldingsRecordCollection)
                 .thenCompose(createdHoldings -> {
-                  LOGGER.debug("updateOwnershipOfHoldingsRecords:: Created holdings: {}, for tenant: {}",
+                  LOGGER.info("updateOwnershipOfHoldingsRecords:: Created holdings: {}, for tenant: {}",
                     createdHoldings, targetTenantContext.getTenantId());
 
                   // Move SRS records for MARC holdings
@@ -545,7 +545,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                                                                  List<NotUpdatedEntity> notUpdatedEntities,
                                                                  HoldingsRecordCollection holdingsRecordCollection) {
 
-    LOGGER.debug("createHoldings:: Creating holdings records: {}", holdingsRecords);
+    LOGGER.info("createHoldings:: Creating holdings records: {}", holdingsRecords);
     List<CompletableFuture<HoldingsRecord>> createFutures = holdingsRecords.stream()
       .map(holdingsRecord ->
         holdingsRecordCollection.add(holdingsRecord)
@@ -553,7 +553,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
             LOGGER.warn("createHoldings:: Error during creating holdingsRecord with id: {}", holdingsRecord, e);
             notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(holdingsRecord.getId()).withErrorMessage(e.getMessage()));
             throw new CompletionException(e);
-          }).thenApply(h -> holdingsRecord))
+          }).thenApply(h -> {
+            LOGGER.info("createHoldings:: hrid for holdingsRecord: {}", holdingsRecord.getHrid());
+            return holdingsRecord;
+          }))
       .toList();
 
     return CompletableFuture.allOf(createFutures.toArray(new CompletableFuture[0]))
