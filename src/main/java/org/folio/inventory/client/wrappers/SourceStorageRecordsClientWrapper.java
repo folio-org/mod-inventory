@@ -94,7 +94,7 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
       for (Map.Entry<String, String> entry : queryParams.entrySet()) {
         joiner.add(entry.getKey() + "=" + PercentCodec.encode(entry.getValue()));
       }
-      String path = "/source-storage/records" + (joiner.length() > 0 ? ("?" + joiner.toString()) : "");
+      String path = "/source-storage/source-records" + (joiner.length() > 0 ? ("?" + joiner.toString()) : "");
       LOGGER.info("getSourceStorageRecords:: path: {}, tenantId: {}, okapiUrl: {}", path, tenantId, okapiUrl);
       HttpRequest<Buffer> request = createRequest(HttpMethod.GET, okapiUrl + path, okapiUrl, tenantId, token, userId, webClient);
       request.headers().remove("Content-Type");
