@@ -382,7 +382,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHolding.getId()).withErrorMessage(msg));
           continue;
         }
-        LOGGER.info("sourceHolding: {}, targetHolding: {}, record: {}", sourceHolding.getId(), targetHolding.getId(), holdingMarcSources.get(sourceHolding.getId()));
+        LOGGER.info("sourceHolding: {}, targetHolding: {}, record: {}",
+          sourceHolding.getId(), targetHolding.getId(), JsonObject.mapFrom(holdingMarcSources.get(sourceHolding.getId())).encodePrettily());
         futures.add(moveSingleMarcHoldingsSrsRecord(sourceHolding, holdingMarcSources.get(sourceHolding.getId()), targetHolding, sourceContext, targetTenantContext, routingContext, notUpdatedEntities));
       }
     }
@@ -435,7 +436,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           // 2. Create a new Snapshot in the target tenant
           Snapshot snapshot = new Snapshot()
             .withJobExecutionId(java.util.UUID.randomUUID().toString())
-            .withStatus(Snapshot.Status.COMMITTED);
+            .withStatus(Snapshot.Status.PARSING_IN_PROGRESS);
           snapshotService.postSnapshotInSrsAndHandleResponse(targetTenantContext, snapshot).onComplete(snapshotAr -> {
             if (snapshotAr.failed()) {
               String msg = String.format("Failed to create snapshot in SRS for tenant=%s: %s", targetTenantContext.getTenantId(), snapshotAr.cause().getMessage());
@@ -445,12 +446,14 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
               return;
             }
             Snapshot createdSnapshot = snapshotAr.result();
-            LOGGER.info("Created snapshot in SRS for tenant={}, snapshotId={}", targetTenantContext.getTenantId(), createdSnapshot.getJobExecutionId());
+            LOGGER.info("moveSingleMarcHoldingsSrsRecord:: Created snapshot in SRS for tenant={}, snapshotId={}", targetTenantContext.getTenantId(), createdSnapshot.getJobExecutionId());
 
             // 3. Copy SRS record to target tenant, update snapshotId and hrid
             Record newRecord = sourceRecord.withId(null) // Let SRS assign a new id
               .withSnapshotId(createdSnapshot.getJobExecutionId())
               .withDeleted(false);
+
+            LOGGER.info("moveSingleMarcHoldingsSrsRecord:: record to post: {}", JsonObject.mapFrom(newRecord).encodePrettily());
             // Set the HRID in the 001 field of the MARC record
             org.folio.inventory.dataimport.util.AdditionalFieldsUtil.fill001FieldInMarcRecord(newRecord, targetHolding.getHrid());
             targetSrsClient.postSourceStorageRecords(newRecord).onComplete(postAr -> {
