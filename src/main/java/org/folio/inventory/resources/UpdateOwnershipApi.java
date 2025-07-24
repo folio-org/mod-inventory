@@ -391,6 +391,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   }
 
   private CompletableFuture<Record> getSourceRecordByHrid(String hrid, SourceStorageRecordsClientWrapper srsClient) {
+    LOGGER.info("getSourceRecordByHrid:: Fetching source record by hrid: {}", hrid);
     Map<String, String> queryParams = new HashMap<>();
     queryParams.put("recordType", MARC_HOLDING_RECORD_TYPE);
     queryParams.put("holdingsHrid", hrid);
@@ -399,6 +400,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .onSuccess(response -> {
         if (response.statusCode() == 200) {
           JsonObject responseBody = response.bodyAsJsonObject();
+          LOGGER.info("getSourceRecordByHrid:: Response from SRS for hrid '{}': {}", hrid, responseBody.encodePrettily());
           JsonArray records = responseBody.getJsonArray("records");
           if (records != null && !records.isEmpty()) {
             Record foundRecord = records.getJsonObject(0).mapTo(Record.class);

@@ -7,10 +7,13 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.util.PercentCodec;
 
+import java.lang.invoke.MethodHandles;
 import java.util.Map;
 import java.util.StringJoiner;
 import static java.lang.String.format;
@@ -21,6 +24,7 @@ import static org.folio.inventory.client.util.ClientWrapperUtil.getBuffer;
  * Wrapper class for SourceStorageRecordsClient to handle POST and PUT HTTP requests with x-okapi-user-id header.
  */
 public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClient {
+  private static final Logger LOGGER = LogManager.getLogger(MethodHandles.lookup().lookupClass());
   private final String tenantId;
   private final String token;
   private final String okapiUrl;
@@ -91,6 +95,7 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
         joiner.add(entry.getKey() + "=" + PercentCodec.encode(entry.getValue()));
       }
       String path = "/source-storage/records" + (joiner.length() > 0 ? ("?" + joiner.toString()) : "");
+      LOGGER.info("getSourceStorageRecords:: path: {}, tenantId: {}, okapiUrl: {}", path, tenantId, okapiUrl);
       HttpRequest<Buffer> request = createRequest(HttpMethod.GET, okapiUrl + path, okapiUrl, tenantId, token, userId, webClient);
       request.headers().remove("Content-Type");
       return request.send();
