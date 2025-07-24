@@ -393,7 +393,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private CompletableFuture<Record> getSourceRecordByHrid(String hrid, SourceStorageRecordsClientWrapper srsClient) {
     Map<String, String> queryParams = new HashMap<>();
     queryParams.put("recordType", MARC_HOLDING_RECORD_TYPE);
-    queryParams.put("externalIdsHolder.holdingsHrid", hrid);
+    queryParams.put("holdingsHrid", hrid);
     CompletableFuture<Record> future = new CompletableFuture<>();
     srsClient.getSourceStorageRecords(queryParams)
       .onSuccess(response -> {
