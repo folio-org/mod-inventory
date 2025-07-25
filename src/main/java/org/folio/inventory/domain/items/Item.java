@@ -47,6 +47,7 @@ public class Item {
   public static final String COPY_NUMBER_KEY = "copyNumber";
   public static final String EFFECTIVE_SHELVING_ORDER_KEY = "effectiveShelvingOrder";
   public static final String BOUND_WITH_TITLES_KEY = "boundWithTitles";
+  public static final String ORDER_KEY = "order";
 
   public final String id;
   private final String version;
@@ -95,6 +96,7 @@ public class Item {
   private List<String> tags = new ArrayList<>();
   private LastCheckIn lastCheckIn;
   private EffectiveCallNumberComponents effectiveCallNumberComponents;
+  private Integer order;
 
   private boolean isBoundWith = false;
   private JsonArray boundWithTitles = null;
@@ -487,6 +489,12 @@ public class Item {
     return this;
   }
 
+  public Item withOrder(Integer order) {
+    this.order = order;
+
+    return this;
+  }
+
   public Item withEffectiveCallNumberComponents(EffectiveCallNumberComponents components) {
     if (components != null) {
       this.effectiveCallNumberComponents = components;
@@ -571,6 +579,7 @@ public class Item {
         .withElectronicAccess(this.electronicAccess)
         .withStatisticalCodeIds(this.statisticalCodeIds)
         .withLastCheckIn(this.lastCheckIn)
+        .withOrder(this.order)
         .withPurchaseOrderLineIdentifier(this.purchaseOrderLineIdentifier);
   }
 
@@ -613,7 +622,8 @@ public class Item {
         .withIsBoundWith(this.isBoundWith)
         .withTags(tags)
         .withCirculationNotes(circulationNotes)
-        .withLastCheckIn(this.lastCheckIn);
+        .withLastCheckIn(this.lastCheckIn)
+        .withOrder(this.order);
   }
 
   @Override
@@ -623,5 +633,9 @@ public class Item {
 
   public LastCheckIn getLastCheckIn() {
     return lastCheckIn;
+  }
+
+  public Object getOrder() {
+    return order;
   }
 }

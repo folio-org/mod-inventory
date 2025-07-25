@@ -21,6 +21,8 @@ import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.folio.inventory.exceptions.UnprocessableEntityException;
+import org.folio.inventory.support.http.server.ValidationError;
 
 public final class ItemUtil {
   public static final String MATERIAL_TYPE_ID_KEY = "materialTypeId";
@@ -135,6 +137,7 @@ public final class ItemUtil {
       .withPurchaseOrderLineIdentifier(itemFromServer.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
       .withTags(tags)
       .withLastCheckIn(LastCheckIn.from(itemFromServer.getJsonObject("lastCheckIn")))
+      .withOrder(itemFromServer.getInteger(Item.ORDER_KEY))
       .withEffectiveCallNumberComponents(
         EffectiveCallNumberComponents.from(itemFromServer.getJsonObject("effectiveCallNumberComponents")));
   }
@@ -193,6 +196,7 @@ public final class ItemUtil {
     itemToSend.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
     itemToSend.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineIdentifier());
     itemToSend.put(Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
+    itemToSend.put(Item.ORDER_KEY, item.getOrder());
 
     return itemToSend;
   }
@@ -245,6 +249,16 @@ public final class ItemUtil {
     String permanentLoanTypeId = getNestedProperty(itemRequest, PERMANENT_LOAN_TYPE, ID);
     String temporaryLoanTypeId = getNestedProperty(itemRequest, TEMPORARY_LOAN_TYPE, ID);
 
+    Integer order;
+    try {
+      order = itemRequest.getInteger(Item.ORDER_KEY);
+    } catch (Exception e) {
+      final ValidationError validationError = new ValidationError(
+        "Order should be a number", "order", String.valueOf(itemRequest.getValue(Item.ORDER_KEY)));
+
+      throw new UnprocessableEntityException(validationError);
+    }
+
     return new Item(
       itemRequest.getString(ID),
       itemRequest.getString(Item.VERSION_KEY),
@@ -289,6 +303,7 @@ public final class ItemUtil {
       .withStatisticalCodeIds(statisticalCodeIds)
       .withPurchaseOrderLineIdentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
       .withLastCheckIn(LastCheckIn.from(itemRequest.getJsonObject(Item.LAST_CHECK_IN)))
+      .withOrder(order)
       .withTags(tags);
   }
 
@@ -350,6 +365,7 @@ public final class ItemUtil {
     itemJson.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
     itemJson.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineIdentifier());
     itemJson.put(Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
+    itemJson.put(Item.ORDER_KEY, item.getOrder());
 
     return itemJson;
   }
