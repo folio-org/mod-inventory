@@ -432,6 +432,9 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       SourceStorageRecordsClientWrapper targetSrsClient = new SourceStorageRecordsClientWrapper(
         targetTenantContext.getOkapiLocation(), targetTenantContext.getTenantId(), targetTenantContext.getToken(), targetTenantContext.getUserId(), client);
 
+          String originalId = record.getId();
+          String originalSnapshotId = record.getSnapshotId();
+
           // Create a new Snapshot in the target tenant
           Snapshot snapshot = new Snapshot()
             .withJobExecutionId(java.util.UUID.randomUUID().toString())
@@ -450,7 +453,6 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
               targetTenantContext.getTenantId(), createdSnapshot.getJobExecutionId());
 
             // Copy SRS record to target tenant, update snapshotId and hrid
-            String originalId = record.getId();
             Record newRecord = record.withId(null) // Let source-records-storage assign a new id
               .withSnapshotId(createdSnapshot.getJobExecutionId())
               .withDeleted(false);
@@ -471,6 +473,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
               // Mark SRS record as deleted in source tenant
               record.setId(originalId);
+              record.setSnapshotId(originalSnapshotId);
               record.setDeleted(true);
               LOGGER.info("moveSingleMarcHoldingsSrsRecord:: Updated SRS record in source tenant={}, record: {}",
                 sourceContext.getTenantId(), JsonObject.mapFrom(record).encodePrettily());
