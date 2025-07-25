@@ -152,11 +152,15 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
   }
 
   private int getLoadLimit(String propertyKey) {
-    return getConsumerProperty(LOAD_LIMIT_TEMPLATE, propertyKey, LOAD_LIMIT_DEFAULT);
+    return getConsumerProperty(LOAD_LIMIT_TEMPLATE, propertyKey, getDefaultLoadLimit());
   }
 
   private int getConsumerProperty(String nameTemplate, String propertyKey, String defaultValue) {
     return parseInt(getProperty(format(nameTemplate, propertyKey), defaultValue));
+  }
+
+  protected String getDefaultLoadLimit() {
+    return LOAD_LIMIT_DEFAULT;
   }
 
 }

@@ -1,6 +1,5 @@
 package org.folio.inventory;
 
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
@@ -8,6 +7,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
+import org.folio.kafka.headers.FolioKafkaHeaders;
 import org.folio.rest.jaxrs.model.Event;
 import org.junit.After;
 import org.junit.Before;
@@ -23,7 +23,6 @@ import java.util.stream.Stream;
 
 import static java.time.Duration.ofSeconds;
 import static org.folio.DataImportEventTypes.DI_JOB_CANCELLED;
-import static org.folio.inventory.CancelledJobExecutionConsumerVerticle.TEST_MODE_PARAM;
 import static org.folio.inventory.KafkaUtility.sendEvent;
 import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
 
@@ -94,7 +93,7 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
     vertxAssistant.deployVerticle(
       () -> new CancelledJobExecutionConsumerVerticle(cancelledJobsIdsCache),
       CancelledJobExecutionConsumerVerticle.class.getName(),
-      getDeploymentOptions().getConfig().getMap(),
+      deploymentOptions.getConfig().getMap(),
       1,
       future
     );
@@ -110,12 +109,6 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
     return promise.future();
   }
 
-  private DeploymentOptions getDeploymentOptions() {
-    DeploymentOptions options = new DeploymentOptions(deploymentOptions);
-    options.getConfig().put(TEST_MODE_PARAM, true);
-    return options;
-  }
-
   private List<String> generateJobIds(int idsNumber) {
     return Stream.iterate(0, i -> i < idsNumber, i -> ++i)
       .map(i -> UUID.randomUUID().toString())
@@ -125,7 +118,10 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
   private void sendJobIdsToKafka(List<String> ids) throws ExecutionException, InterruptedException {
     for (String id : ids) {
       Event event = new Event().withEventPayload(id);
-      sendEvent(Map.of(), TENANT_ID, DI_JOB_CANCELLED.value(), "1", Json.encode(event));
+      Map<String, String> kafkaHeaders = Map.of(
+        FolioKafkaHeaders.TENANT_ID, TENANT_ID
+      );
+      sendEvent(kafkaHeaders, TENANT_ID, DI_JOB_CANCELLED.value(), "1", Json.encode(event));
     }
   }
 
