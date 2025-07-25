@@ -431,7 +431,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       SourceStorageRecordsClientWrapper targetSrsClient = new SourceStorageRecordsClientWrapper(
         targetTenantContext.getOkapiLocation(), targetTenantContext.getTenantId(), targetTenantContext.getToken(), targetTenantContext.getUserId(), client);
 
-          // 2. Create a new Snapshot in the target tenant
+          // Create a new Snapshot in the target tenant
           Snapshot snapshot = new Snapshot()
             .withJobExecutionId(java.util.UUID.randomUUID().toString())
             .withStatus(Snapshot.Status.PARSING_IN_PROGRESS);
@@ -446,7 +446,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
             Snapshot createdSnapshot = snapshotAr.result();
             LOGGER.info("moveSingleMarcHoldingsSrsRecord:: Created snapshot in SRS for tenant={}, snapshotId={}", targetTenantContext.getTenantId(), createdSnapshot.getJobExecutionId());
 
-            // 3. Copy SRS record to target tenant, update snapshotId and hrid
+            // Copy SRS record to target tenant, update snapshotId and hrid
             Record newRecord = record.withId(null) // Let source-records-storage assign a new id
               .withSnapshotId(createdSnapshot.getJobExecutionId())
               .withDeleted(false);
@@ -455,7 +455,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
             // Set the HRID in the 001 field of the MARC record
             targetSrsClient.postSourceStorageRecords(newRecord).onComplete(postAr -> {
               if (postAr.failed() || postAr.result().statusCode() != 201) {
-                String msg = String.format("Failed to post SRS record to target tenant=%s: %s", targetTenantContext.getTenantId(), postAr.cause() != null ? postAr.cause().getMessage() : postAr.result().bodyAsString());
+                String msg = String.format("Failed to post SRS record to target tenant=%s: %s",
+                  targetTenantContext.getTenantId(), postAr.cause() != null ? postAr.cause().getMessage() : postAr.result().bodyAsString());
                 LOGGER.warn(msg);
                 notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHolding.getId()).withErrorMessage(msg));
                 result.complete(null);
@@ -463,11 +464,13 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
               }
               LOGGER.info("Posted SRS record to target tenant={}, response: {}", targetTenantContext.getTenantId(), postAr.result().bodyAsString());
 
-              // 4. Mark SRS record as deleted in source tenant
+              // Mark SRS record as deleted in source tenant
               record.setDeleted(true);
+              LOGGER.info("moveSingleMarcHoldingsSrsRecord:: Updated SRS record in source tenant={}, record: {}", sourceContext.getTenantId(), JsonObject.mapFrom(record).encodePrettily());
               sourceSrsClient.putSourceStorageRecordsById(record.getId(), record).onComplete(putAr -> {
                 if (putAr.failed() || (putAr.result().statusCode() != 200 && putAr.result().statusCode() != 204)) {
-                  String msg = String.format("Failed to mark holdings source as deleted in source tenant=%s: %s", sourceContext.getTenantId(), putAr.cause() != null ? putAr.cause().getMessage() : putAr.result().bodyAsString());
+                  String msg = String.format("Failed to mark holdings source as deleted in source tenant=%s: %s",
+                    sourceContext.getTenantId(), putAr.cause() != null ? putAr.cause().getMessage() : putAr.result().bodyAsString());
                   LOGGER.warn(msg);
                   notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHolding.getId()).withErrorMessage(msg));
                   result.complete(null);
