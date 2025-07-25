@@ -48,7 +48,7 @@ public class CancelledJobExecutionConsumerVerticle extends KafkaConsumerVerticle
   /**
    * Constructs a unique module name with pseudo-random suffix.
    * This ensures that each instance of the module will have own consumer group
-   * and will be consuming all messages from the topic.
+   * and will consume all messages from the topic.
    *
    * @return unique module name string.
    */
