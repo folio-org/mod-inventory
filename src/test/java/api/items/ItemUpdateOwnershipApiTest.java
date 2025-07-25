@@ -36,7 +36,7 @@ import static api.support.InstanceSamples.smallAngryPlanet;
 import static java.lang.String.format;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
-import static org.folio.inventory.domain.items.Item.ORDER;
+import static org.folio.inventory.domain.items.Item.ORDER_KEY;
 import static org.folio.inventory.resources.UpdateOwnershipApi.HOLDINGS_RECORD_NOT_FOUND;
 import static org.folio.inventory.resources.UpdateOwnershipApi.INSTANCE_RELATED_TO_HOLDINGS_RECORD_NOT_SHARED;
 import static org.folio.inventory.resources.UpdateOwnershipApi.ITEM_NOT_FOUND;
@@ -141,7 +141,7 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
     assertNotEquals(targetTenantItem2.getString("hrid"), itemHrId);
 
     targetHoldingsRecordItems.forEach(item -> {
-      assertNull(item.getInteger(ORDER));
+      assertNull(item.getInteger(ORDER_KEY));
       assertNull(item.getString(TEMPORARY_LOCATION_ID_KEY));
       assertNull(item.getString(PERMANENT_LOCATION_ID_KEY));
     });

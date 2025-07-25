@@ -1,7 +1,6 @@
 package org.folio.inventory.support;
 
 import static org.folio.inventory.domain.converters.EntityConverters.converterForClass;
-import static org.folio.inventory.support.CompletableFutures.failedFuture;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.JsonHelper.getNestedProperty;
@@ -138,7 +137,7 @@ public final class ItemUtil {
       .withPurchaseOrderLineIdentifier(itemFromServer.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
       .withTags(tags)
       .withLastCheckIn(LastCheckIn.from(itemFromServer.getJsonObject("lastCheckIn")))
-      .withOrder(itemFromServer.getInteger(Item.ORDER))
+      .withOrder(itemFromServer.getInteger(Item.ORDER_KEY))
       .withEffectiveCallNumberComponents(
         EffectiveCallNumberComponents.from(itemFromServer.getJsonObject("effectiveCallNumberComponents")));
   }
@@ -197,7 +196,7 @@ public final class ItemUtil {
     itemToSend.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
     itemToSend.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineIdentifier());
     itemToSend.put(Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
-    itemToSend.put(Item.ORDER, item.getOrder());
+    itemToSend.put(Item.ORDER_KEY, item.getOrder());
 
     return itemToSend;
   }
@@ -252,10 +251,10 @@ public final class ItemUtil {
 
     Integer order;
     try {
-      order = itemRequest.getInteger(Item.ORDER);
+      order = itemRequest.getInteger(Item.ORDER_KEY);
     } catch (Exception e) {
       final ValidationError validationError = new ValidationError(
-        "Order should be a number", "order", String.valueOf(itemRequest.getValue(Item.ORDER)));
+        "Order should be a number", "order", String.valueOf(itemRequest.getValue(Item.ORDER_KEY)));
 
       throw new UnprocessableEntityException(validationError);
     }
@@ -366,7 +365,7 @@ public final class ItemUtil {
     itemJson.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
     itemJson.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineIdentifier());
     itemJson.put(Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
-    itemJson.put(Item.ORDER, item.getOrder());
+    itemJson.put(Item.ORDER_KEY, item.getOrder());
 
     return itemJson;
   }

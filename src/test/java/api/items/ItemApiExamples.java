@@ -17,7 +17,7 @@ import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.SOURCE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
 import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
-import static org.folio.inventory.domain.items.Item.ORDER;
+import static org.folio.inventory.domain.items.Item.ORDER_KEY;
 import static org.folio.inventory.domain.user.Personal.FIRST_NAME_KEY;
 import static org.folio.inventory.domain.user.Personal.LAST_NAME_KEY;
 import static org.folio.inventory.domain.user.User.ID_KEY;
@@ -41,7 +41,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -289,7 +288,7 @@ public class ItemApiExamples extends ApiTests {
       .forHolding(holdingId)
       .create();
 
-    newItemRequest.put(ORDER, "invalid-order");
+    newItemRequest.put(ORDER_KEY, "invalid-order");
 
 
     final var postCompleted = okapiClient.post(ApiRoot.items(), newItemRequest);

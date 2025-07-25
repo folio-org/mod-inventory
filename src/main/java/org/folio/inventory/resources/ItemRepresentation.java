@@ -132,7 +132,7 @@ class ItemRepresentation {
     includeIfPresent(representation, Item.ITEM_IDENTIFIER_KEY, item.getItemIdentifier());
     includeIfPresent(representation,Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
     representation.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
-    representation.put(Item.ORDER, item.getOrder());
+    representation.put(Item.ORDER_KEY, item.getOrder());
     JsonHelper.putNotNullValues(representation, Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
     representation.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
     representation.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineIdentifier());

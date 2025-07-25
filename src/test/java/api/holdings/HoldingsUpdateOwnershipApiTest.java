@@ -188,7 +188,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertEquals(targetTenantItem1.getString(ID), firstItem.getId().toString());
     assertNull(targetTenantItem1.getString(PERMANENT_LOCATION_ID_KEY));
     assertNull(targetTenantItem1.getString(TEMPORARY_LOCATION_ID_KEY));
-    assertEquals(10, (int) targetTenantItem1.getInteger(Item.ORDER));
+    assertEquals(10, (int) targetTenantItem1.getInteger(Item.ORDER_KEY));
 
     Response sourceTenantItem2 = itemsClient.getById(secondItem.getId());
     List<JsonObject> targetTenantItems2 = collegeItemsClient.getMany(String.format("holdingsRecordId=%s", createHoldingsRecord2), 100);
@@ -201,7 +201,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertNull(targetTenantItem2.getString(PERMANENT_LOCATION_ID_KEY));
     assertNull(targetTenantItem2.getString(TEMPORARY_LOCATION_ID_KEY));
     assertEquals(secondItem.getId().toString(), targetTenantItem2.getString(ID));
-    assertEquals(20, (int) targetTenantItem2.getInteger(Item.ORDER));
+    assertEquals(20, (int) targetTenantItem2.getInteger(Item.ORDER_KEY));
 
     assertNotEquals(targetTenantItem2.getString("hrid"), itemHrId);
   }

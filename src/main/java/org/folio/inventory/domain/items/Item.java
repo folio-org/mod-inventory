@@ -47,7 +47,7 @@ public class Item {
   public static final String COPY_NUMBER_KEY = "copyNumber";
   public static final String EFFECTIVE_SHELVING_ORDER_KEY = "effectiveShelvingOrder";
   public static final String BOUND_WITH_TITLES_KEY = "boundWithTitles";
-  public static final String ORDER = "order";
+  public static final String ORDER_KEY = "order";
 
   public final String id;
   private final String version;

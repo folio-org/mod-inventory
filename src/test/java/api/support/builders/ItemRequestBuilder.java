@@ -138,7 +138,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     includeWhenPresent(itemRequest, "inTransitDestinationServicePointId", inTransitDestinationServicePointId);
     includeWhenPresent(itemRequest, "lastCheckIn", lastCheckIn);
     includeWhenPresent(itemRequest, Item.COPY_NUMBER_KEY, copyNumber);
-    itemRequest.put(Item.ORDER, order);
+    itemRequest.put(Item.ORDER_KEY, order);
 
     return itemRequest;
   }
