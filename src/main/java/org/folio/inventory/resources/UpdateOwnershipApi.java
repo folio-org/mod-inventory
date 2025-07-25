@@ -18,7 +18,6 @@ import static org.folio.inventory.validation.UpdateOwnershipValidator.updateOwne
 
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -57,7 +56,6 @@ import static org.folio.inventory.resources.Holdings.MARC_SOURCE_ID;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.jaxrs.model.Snapshot;
 import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
-import org.folio.rest.jaxrs.model.SourceRecord;
 
 
 public class UpdateOwnershipApi extends AbstractInventoryResource {
@@ -77,8 +75,6 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
   private static final String ITEM_ID = "itemId";
   private static final String INSTANCE_ID = "instanceId";
-  private static final String MARC_HOLDING_RECORD_TYPE = "MARC_HOLDING";
-  private static final String SOURCE_RECORD_NOT_FOUND_BY_HRID_MSG = "Source record not found for holdings record with hrid: %s";
   private final SnapshotService snapshotService;
 
 
@@ -321,12 +317,12 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
             List<JsonObject> validatedHoldingsRecords = validateHoldingsRecords(jsons, holdingsUpdateOwnership.getToInstanceId(), notUpdatedEntities);
             List<HoldingsRecord> holdingsRecords = validatedHoldingsRecords.stream().map(h -> mapToHoldingsRecord(h, holdingsUpdateOwnership)).toList();
 
-            Map<String, SourceRecord> holdingMarcSources = new HashMap<>();
+            Map<String, Record> holdingMarcSources = new HashMap<>();
             List<CompletableFuture<Void>> srsFutures = new ArrayList<>();
             holdingsRecords.stream()
               .filter(h -> MARC_SOURCE_ID.equals(h.getSourceId()))
               .forEach(h -> srsFutures.add(
-                getSourceRecordByHrid(h.getHrid(), sourceSrsClient)
+                getSourceRecordByExternalId(h.getId(), sourceSrsClient)
                   .thenAccept(record -> {
                     if (record != null) {
                       LOGGER.info("updateOwnershipOfHoldingsRecords:: Found record: {}", record);
@@ -337,6 +333,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
             CompletableFuture<Void> allSrsFetched = CompletableFuture.allOf(srsFutures.toArray(new CompletableFuture[0]));
 
             holdingsRecords.forEach(h -> h.setHrid(null));
+
             return allSrsFetched.thenCompose(v -> {
               holdingsRecords.forEach(h -> h.setHrid(null));
               return validateHoldingsRecordsBoundWith(holdingsRecords, notUpdatedEntities, routingContext, context)
@@ -369,7 +366,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
    */
   private CompletableFuture<Void> moveSrsRecordsForMarcHoldings(List<HoldingsRecord> sourceHoldings, List<HoldingsRecord> targetHoldings,
                                                                WebContext sourceContext, Context targetTenantContext, RoutingContext routingContext,
-                                                               List<NotUpdatedEntity> notUpdatedEntities, Map<String, SourceRecord> holdingMarcSources) {
+                                                               List<NotUpdatedEntity> notUpdatedEntities, Map<String, Record> holdingMarcSources) {
     List<CompletableFuture<Void>> futures = new ArrayList<>();
     for (HoldingsRecord sourceHolding : sourceHoldings) {
       if (MARC_SOURCE_ID.equals(sourceHolding.getSourceId())) {
@@ -391,41 +388,39 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
   }
 
-  private CompletableFuture<SourceRecord> getSourceRecordByHrid(String hrid, SourceStorageRecordsClientWrapper srsClient) {
-    LOGGER.info("getSourceRecordByHrid:: Fetching source record by hrid: {}", hrid);
-    Map<String, String> queryParams = new HashMap<>();
-    queryParams.put("recordType", MARC_HOLDING_RECORD_TYPE);
-    queryParams.put("holdingsHrid", hrid);
-    CompletableFuture<SourceRecord> future = new CompletableFuture<>();
-    srsClient.getSourceStorageRecords(queryParams)
+  private CompletableFuture<Record> getSourceRecordByExternalId(String externalId, SourceStorageRecordsClientWrapper srsClient) {
+    LOGGER.info("getSourceRecordByExternalId:: Fetching source record by externalId: {}", externalId);
+    CompletableFuture<Record> future = new CompletableFuture<>();
+    srsClient.getSourceStorageRecordsFormattedById(externalId, "HOLDINGS")
       .onSuccess(response -> {
         if (response.statusCode() == 200) {
           JsonObject responseBody = response.bodyAsJsonObject();
-          LOGGER.info("getSourceRecordByHrid:: Response from SRS for hrid '{}': {}", hrid, responseBody.encodePrettily());
-          JsonArray records = responseBody.getJsonArray("sourceRecords");
-          if (records != null && !records.isEmpty()) {
-            SourceRecord foundRecord = records.getJsonObject(0).mapTo(SourceRecord.class);
-            LOGGER.info("getSourceRecordByHrid:: Found source record with hrid '{}': {}", hrid, JsonObject.mapFrom(foundRecord).encodePrettily());
-            future.complete(foundRecord);
-          } else {
-            String errorMessage = format(SOURCE_RECORD_NOT_FOUND_BY_HRID_MSG, hrid);
-            LOGGER.warn(errorMessage);
-            future.complete(null);
+          LOGGER.info("getSourceRecordByExternalId:: Response from record-storage for externalId '{}': {}",
+            externalId, responseBody.encodePrettily());
+          // Remove "formattedContent" from parsedRecord if present
+          JsonObject parsedRecord = responseBody.getJsonObject("parsedRecord");
+          if (parsedRecord != null && parsedRecord.containsKey("formattedContent")) {
+            parsedRecord.remove("formattedContent");
           }
+          Record foundRecord = responseBody.mapTo(Record.class);
+          LOGGER.info("getSourceRecordByExternalId:: Found source record with externalId '{}': {}",
+            externalId, JsonObject.mapFrom(foundRecord).encodePrettily());
+          future.complete(foundRecord);
         } else {
-          String errorMessage = format("Failed to fetch source record by hrid '%s'. Status: %d, Body: %s", hrid, response.statusCode(), response.bodyAsString());
-          LOGGER.warn("getSourceRecordByHrid:: {}", errorMessage);
+          String errorMessage = format("Failed to fetch source record by externalId '%s'. Status: %d, Body: %s",
+            externalId, response.statusCode(), response.bodyAsString());
+          LOGGER.warn("getSourceRecordByExternalId:: {}", errorMessage);
           future.completeExceptionally(new RuntimeException(errorMessage));
         }
       })
       .onFailure(error -> {
-        LOGGER.error("getSourceRecordByHrid:: Error querying SRS for source record with hrid '{}'", hrid, error);
+        LOGGER.error("getSourceRecordByExternalId:: Error querying record-storage for source record with externalId '{}'", externalId, error);
         future.completeExceptionally(error);
       });
     return future;
   }
 
-  private CompletableFuture<Void> moveSingleMarcHoldingsSrsRecord(HoldingsRecord sourceHolding, SourceRecord sourceRecord, HoldingsRecord targetHolding,
+  private CompletableFuture<Void> moveSingleMarcHoldingsSrsRecord(HoldingsRecord sourceHolding, Record record, HoldingsRecord targetHolding,
                                                                   WebContext sourceContext, Context targetTenantContext, RoutingContext routingContext,
                                                                   List<NotUpdatedEntity> notUpdatedEntities) {
     CompletableFuture<Void> result = new CompletableFuture<>();
@@ -452,7 +447,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
             LOGGER.info("moveSingleMarcHoldingsSrsRecord:: Created snapshot in SRS for tenant={}, snapshotId={}", targetTenantContext.getTenantId(), createdSnapshot.getJobExecutionId());
 
             // 3. Copy SRS record to target tenant, update snapshotId and hrid
-            SourceRecord newRecord = sourceRecord.withRecordId(null) // Let SRS assign a new id
+            Record newRecord = record.withId(null) // Let source-records-storage assign a new id
               .withSnapshotId(createdSnapshot.getJobExecutionId())
               .withDeleted(false);
 
@@ -469,10 +464,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
               LOGGER.info("Posted SRS record to target tenant={}, response: {}", targetTenantContext.getTenantId(), postAr.result().bodyAsString());
 
               // 4. Mark SRS record as deleted in source tenant
-              sourceRecord.setDeleted(true);
-              sourceSrsClient.putSourceStorageRecordsById(sourceRecord.getRecordId(), sourceRecord).onComplete(putAr -> {
+              record.setDeleted(true);
+              sourceSrsClient.putSourceStorageRecordsById(record.getId(), record).onComplete(putAr -> {
                 if (putAr.failed() || (putAr.result().statusCode() != 200 && putAr.result().statusCode() != 204)) {
-                  String msg = String.format("Failed to mark SRS record as deleted in source tenant=%s: %s", sourceContext.getTenantId(), putAr.cause() != null ? putAr.cause().getMessage() : putAr.result().bodyAsString());
+                  String msg = String.format("Failed to mark holdings source as deleted in source tenant=%s: %s", sourceContext.getTenantId(), putAr.cause() != null ? putAr.cause().getMessage() : putAr.result().bodyAsString());
                   LOGGER.warn(msg);
                   notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHolding.getId()).withErrorMessage(msg));
                   result.complete(null);
@@ -484,7 +479,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
             });
           });
     } catch (Exception e) {
-      String msg = String.format("Exception during SRS move for holdingsId=%s: %s", sourceHolding.getId(), e.getMessage());
+      String msg = String.format("Exception during moving holdingsId=%s: %s", sourceHolding.getId(), e.getMessage());
       LOGGER.warn(msg, e);
       notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHolding.getId()).withErrorMessage(msg));
       result.complete(null);

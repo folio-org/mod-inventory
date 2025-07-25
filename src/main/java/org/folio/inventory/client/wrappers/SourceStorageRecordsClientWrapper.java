@@ -78,41 +78,4 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
       .send();
   }
 
-  public Future<HttpResponse<Buffer>> getSourceStorageRecords(String query, int offset, int limit) {
-    try {
-      String path = format("/source-storage/records?query=%s&offset=%d&limit=%d", PercentCodec.encode(query), offset, limit);
-      HttpRequest<Buffer> request = createRequest(HttpMethod.GET, okapiUrl + path, okapiUrl, tenantId, token, userId, webClient);
-      request.headers().remove("Content-Type");
-      return request.send();
-    } catch (Exception e) {
-      return Future.failedFuture(e);
-    }
-  }
-
-  public Future<HttpResponse<Buffer>> getSourceStorageRecords(Map<String, String> queryParams) {
-    try {
-      StringJoiner joiner = new StringJoiner("&");
-      for (Map.Entry<String, String> entry : queryParams.entrySet()) {
-        joiner.add(entry.getKey() + "=" + PercentCodec.encode(entry.getValue()));
-      }
-      String path = "/source-storage/source-records" + (joiner.length() > 0 ? ("?" + joiner.toString()) : "");
-      LOGGER.info("getSourceStorageRecords:: path: {}, tenantId: {}, okapiUrl: {}", path, tenantId, okapiUrl);
-      HttpRequest<Buffer> request = createRequest(HttpMethod.GET, okapiUrl + path, okapiUrl, tenantId, token, userId, webClient);
-      request.headers().remove("Content-Type");
-      return request.send();
-    } catch (Exception e) {
-      return Future.failedFuture(e);
-    }
-  }
-
-  public Future<HttpResponse<Buffer>> postSourceStorageRecords(SourceRecord sRecord) {
-    return createRequest(HttpMethod.POST, okapiUrl + "/source-storage/records", okapiUrl, tenantId, token, userId, webClient)
-      .sendBuffer(getBuffer(sRecord));
-  }
-
-  public Future<HttpResponse<Buffer>> putSourceStorageRecordsById(String id, SourceRecord sRecord) {
-    return createRequest(HttpMethod.PUT, okapiUrl + SOURCE_STORAGE_RECORDS + id, okapiUrl, tenantId, token, userId, webClient)
-      .sendBuffer(getBuffer(sRecord));
-  }
-
 }
