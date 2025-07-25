@@ -22,12 +22,23 @@ public class CancelledJobsIdsCache {
       .build();
   }
 
-  public void put(UUID uuid) {
-    cache.put(uuid, Boolean.TRUE);
+  /**
+   * Puts the specified {@code jobId} into the cache.
+   *
+   * @param jobId the UUID to put into the cache
+   */
+  public void put(UUID jobId) {
+    cache.put(jobId, Boolean.TRUE);
   }
 
-  public boolean contains(UUID uuid) {
-    return cache.asMap().containsKey(uuid);
+  /**
+   * Checks if the cache contains the specified {@code jobId}.
+   *
+   * @param jobId the job UUID to check
+   * @return {@code true} if the cache contains the {@code jobId}, {@code false} otherwise
+   */
+  public boolean contains(UUID jobId) {
+    return cache.asMap().containsKey(jobId);
   }
 
 }
