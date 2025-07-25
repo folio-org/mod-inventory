@@ -474,6 +474,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
               // Mark SRS record as deleted in source tenant
               record.setId(originalId);
               record.setSnapshotId(originalSnapshotId);
+              record.setState(Record.State.DELETED);
               record.setDeleted(true);
               LOGGER.info("moveSingleMarcHoldingsSrsRecord:: Updated SRS record in source tenant={}, record: {}",
                 sourceContext.getTenantId(), JsonObject.mapFrom(record).encodePrettily());
