@@ -4,6 +4,7 @@ import static org.folio.HttpStatus.HTTP_OK;
 import static org.folio.inventory.common.FutureAssistance.allOf;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
+import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 import static org.folio.inventory.validation.ItemStatusValidator.itemHasCorrectStatus;
 import static org.folio.inventory.validation.ItemsValidator.claimedReturnedMarkedAsMissing;
@@ -207,23 +208,30 @@ public class Items extends AbstractInventoryResource {
       return;
     }
 
-    Item newItem = ItemUtil.jsonToItem(item);
+    Item newItem = null;
+    try {
+      newItem = ItemUtil.jsonToItem(item);
+    } catch (Exception e) {
+      handleFailure(e, routingContext);
+      return;
+    }
 
     ItemCollection itemCollection = storage.getItemCollection(context);
     UserCollection userCollection = storage.getUserCollection(context);
 
     if(newItem.getBarcode() != null) {
       try {
+        Item finalNewItem = newItem;
         itemCollection.findByCql(CqlHelper.barcodeIs(newItem.getBarcode()),
           PagingParameters.defaults(), findResult -> {
 
             if(findResult.getResult().records.isEmpty()) {
-              findUserAndAddItem(routingContext, context, newItem, userCollection, itemCollection);
+              findUserAndAddItem(routingContext, context, finalNewItem, userCollection, itemCollection);
             }
             else {
               ClientErrorResponse.badRequest(routingContext.response(),
                 String.format("Barcode must be unique, %s is already assigned to another item",
-                  newItem.getBarcode()));
+                  finalNewItem.getBarcode()));
             }
           }, FailureResponseConsumer.serverError(routingContext.response()));
       } catch (UnsupportedEncodingException e) {
@@ -246,7 +254,13 @@ public class Items extends AbstractInventoryResource {
       return;
     }
 
-    Item newItem = ItemUtil.jsonToItem(itemRequest);
+    Item newItem;
+    try {
+      newItem = ItemUtil.jsonToItem(itemRequest);
+    } catch (Exception e) {
+      handleFailure(e, routingContext);
+      return;
+    }
 
     ItemCollection itemCollection = storage.getItemCollection(context);
     UserCollection userCollection = storage.getUserCollection(context);
@@ -257,17 +271,18 @@ public class Items extends AbstractInventoryResource {
     itemCollection.findById(itemId, getItemFuture::complete,
       FailureResponseConsumer.serverError(routingContext.response()));
 
+    Item finalNewItem = newItem;
     getItemFuture
       .thenApply(Success::getResult)
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(oldItem -> hridChanged(oldItem, newItem))
-      .thenCompose(oldItem -> claimedReturnedMarkedAsMissing(oldItem, newItem))
+      .thenCompose(oldItem -> hridChanged(oldItem, finalNewItem))
+      .thenCompose(oldItem -> claimedReturnedMarkedAsMissing(oldItem, finalNewItem))
       .thenAccept(oldItem -> {
-        if (hasSameBarcode(newItem, oldItem)) {
-          findUserAndUpdateItem(routingContext, newItem, oldItem, userCollection, itemCollection);
+        if (hasSameBarcode(finalNewItem, oldItem)) {
+          findUserAndUpdateItem(routingContext, finalNewItem, oldItem, userCollection, itemCollection);
         } else {
           try {
-            checkForNonUniqueBarcode(routingContext, newItem, oldItem, itemCollection, userCollection);
+            checkForNonUniqueBarcode(routingContext, finalNewItem, oldItem, itemCollection, userCollection);
           } catch (UnsupportedEncodingException e) {
             ServerErrorResponse.internalError(routingContext.response(), e.toString());
           }
