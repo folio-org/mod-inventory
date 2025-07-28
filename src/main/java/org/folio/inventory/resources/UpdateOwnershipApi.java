@@ -7,8 +7,6 @@ import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MAR
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.MoveApiUtil.createBoundWithPartsFetchClient;
 import static org.folio.inventory.support.MoveApiUtil.createBoundWithPartsStorageClient;
-import static org.folio.inventory.support.MoveApiUtil.createHoldingsRecordsFetchClient;
-import static org.folio.inventory.support.MoveApiUtil.createHoldingsStorageClient;
 import static org.folio.inventory.support.MoveApiUtil.createHttpClient;
 import static org.folio.inventory.support.MoveApiUtil.createItemStorageClient;
 import static org.folio.inventory.support.MoveApiUtil.createItemsFetchClient;
@@ -22,7 +20,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import java.lang.invoke.MethodHandles;
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -306,7 +303,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
     try {
       // Initialize clients and collections
-      HoldingsOwnershipUpdateContext updateContext = initializeUpdateContext(holdingsUpdateOwnership, routingContext, context, targetTenantContext);
+      HoldingsOwnershipUpdateContext updateContext = initializeUpdateContext(routingContext, context, targetTenantContext);
 
       return fetchAndValidateHoldingsRecords(holdingsUpdateOwnership, notUpdatedEntities, updateContext)
         .thenCompose(validatedHoldings -> {
@@ -395,8 +392,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
               createdHoldings.size(), updateContext.targetTenantContext.getTenantId());
 
             return moveSrsRecordsForMarcHoldings(holdingsRecords, createdHoldings,
-              updateContext.sourceContext, updateContext.targetTenantContext,
-              updateContext.routingContext, notUpdatedEntities, holdingMarcSources)
+              updateContext.sourceContext, updateContext.targetTenantContext, notUpdatedEntities, holdingMarcSources)
               .thenCompose(v -> transferAttachedItems(createdHoldings, notUpdatedEntities,
                 updateContext.routingContext, updateContext.sourceContext, updateContext.targetTenantContext))
               .thenCompose(itemIds -> deleteSourceHoldings(getHoldingsToDelete(notUpdatedEntities, createdHoldings),
@@ -476,8 +472,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
    * Moves SRS records for MARC holdings to the target tenant
    */
   CompletableFuture<Void> moveSrsRecordsForMarcHoldings(List<HoldingsRecord> sourceHoldings, List<HoldingsRecord> targetHoldings,
-                                                        WebContext sourceContext, Context targetTenantContext, RoutingContext routingContext,
-                                                        List<NotUpdatedEntity> notUpdatedEntities, Map<String, Record> holdingMarcSources) {
+                                                        WebContext sourceContext, Context targetTenantContext, List<NotUpdatedEntity> notUpdatedEntities,
+                                                        Map<String, Record> holdingMarcSources) {
 
     LOGGER.debug("moveSrsRecordsForMarcHoldings:: Starting SRS record migration for {} source holdings", sourceHoldings.size());
 
@@ -600,20 +596,13 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
   CompletableFuture<Void> moveSingleMarcHoldingsSrsRecord(HoldingsRecord sourceHolding, Record record, HoldingsRecord targetHolding,
                                                           WebContext sourceContext, Context targetTenantContext, List<NotUpdatedEntity> notUpdatedEntities, Snapshot snapshot) {
+
     LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Starting SRS record migration for holdings: {} -> {}",
       sourceHolding.getId(), targetHolding.getId());
 
     CompletableFuture<Void> result = new CompletableFuture<>();
 
     try {
-      if (record == null) {
-        String msg = "Rrecord cannot be null";
-        LOGGER.error("moveSingleMarcHoldingsSrsRecord:: {}", msg);
-        notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHolding.getId()).withErrorMessage(msg));
-        result.complete(null);
-        return result;
-      }
-
       SourceStorageRecordsClientWrapper sourceSrsClient = clientFactory.createSourceStorageRecordsClient(sourceContext, client);
       SourceStorageRecordsClientWrapper targetSrsClient = clientFactory.createSourceStorageRecordsClient(targetTenantContext, client);
 
@@ -726,6 +715,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                                                     List<NotUpdatedEntity> notUpdatedEntities,
                                                     Function<Item, String> getEntityIdForError,
                                                     ItemCollection itemCollection) {
+
     LOGGER.debug("createItems:: Creating {} items", items.size());
 
     if (items.isEmpty()) {
@@ -1082,8 +1072,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   /**
    * Initializes all clients and collections needed for the update process
    */
-  HoldingsOwnershipUpdateContext initializeUpdateContext(HoldingsUpdateOwnership holdingsUpdateOwnership,
-                                                         RoutingContext routingContext,
+  HoldingsOwnershipUpdateContext initializeUpdateContext(RoutingContext routingContext,
                                                          WebContext context,
                                                          Context targetTenantContext) {
 
@@ -1104,32 +1093,15 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   }
 
   /**
-   * Context class to hold all the clients and collections needed for the update process
-   */
-  static class HoldingsOwnershipUpdateContext {
-    final MultipleRecordsFetchClient holdingsRecordFetchClient;
-    final SourceStorageRecordsClientWrapper sourceSrsClient;
-    final HoldingsRecordCollection sourceTenantHoldingsRecordCollection;
-    final HoldingsRecordCollection targetTenantHoldingsRecordCollection;
-    final WebContext sourceContext;
-    final Context targetTenantContext;
-    final RoutingContext routingContext;
-
-    HoldingsOwnershipUpdateContext(MultipleRecordsFetchClient holdingsRecordFetchClient,
-                                   SourceStorageRecordsClientWrapper sourceSrsClient,
-                                   HoldingsRecordCollection sourceTenantHoldingsRecordCollection,
-                                   HoldingsRecordCollection targetTenantHoldingsRecordCollection,
-                                   WebContext sourceContext,
-                                   Context targetTenantContext,
-                                   RoutingContext routingContext) {
-      this.holdingsRecordFetchClient = holdingsRecordFetchClient;
-      this.sourceSrsClient = sourceSrsClient;
-      this.sourceTenantHoldingsRecordCollection = sourceTenantHoldingsRecordCollection;
-      this.targetTenantHoldingsRecordCollection = targetTenantHoldingsRecordCollection;
-      this.sourceContext = sourceContext;
-      this.targetTenantContext = targetTenantContext;
-      this.routingContext = routingContext;
-    }
+     * Context class to hold all the clients and collections needed for the update process
+     */
+    record HoldingsOwnershipUpdateContext(
+    MultipleRecordsFetchClient holdingsRecordFetchClient,
+    SourceStorageRecordsClientWrapper sourceSrsClient,
+    HoldingsRecordCollection sourceTenantHoldingsRecordCollection,
+    HoldingsRecordCollection targetTenantHoldingsRecordCollection,
+    WebContext sourceContext, Context targetTenantContext,
+    RoutingContext routingContext) {
   }
 }
 
