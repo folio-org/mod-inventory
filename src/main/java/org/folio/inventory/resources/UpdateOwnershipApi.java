@@ -619,10 +619,12 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
       Record newRecordForTarget = new Record()
         .withSnapshotId(snapshot.getJobExecutionId())
+        .withMatchedId(record.getMatchedId())
         .withRecordType(record.getRecordType())
         .withParsedRecord(record.getParsedRecord())
         .withExternalIdsHolder(record.getExternalIdsHolder())
-        .withAdditionalInfo(record.getAdditionalInfo());
+        .withAdditionalInfo(record.getAdditionalInfo())
+        .withRawRecord(record.getRawRecord());
 
       targetSrsClient.postSourceStorageRecords(newRecordForTarget).onComplete(postAr -> {
         if (postAr.failed() || postAr.result().statusCode() != 201) {
