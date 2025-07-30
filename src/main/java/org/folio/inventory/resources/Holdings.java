@@ -59,7 +59,7 @@ public class Holdings {
   private static final String HOLDINGS_PATH = INVENTORY_PATH + "/holdings";
   private static final String HRID_FIELD = "hrid";
   private static final String ID_FIELD = "id";
-  private static final String MARC_SOURCE_ID = "036ee84a-6afd-4c3c-9ad3-4a12ab875f59";
+  public static final String MARC_SOURCE_ID = "036ee84a-6afd-4c3c-9ad3-4a12ab875f59";
 
   private final HttpClient client;
   private final Storage storage;

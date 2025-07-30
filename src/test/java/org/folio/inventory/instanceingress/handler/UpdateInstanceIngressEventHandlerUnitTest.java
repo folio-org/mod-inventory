@@ -11,12 +11,8 @@ import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
 import static org.folio.rest.jaxrs.model.InstanceIngressPayload.SourceType.LINKED_DATA;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import io.vertx.core.buffer.impl.BufferImpl;
 import io.vertx.core.http.HttpClient;
@@ -24,9 +20,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import org.apache.http.HttpStatus;
@@ -37,17 +31,20 @@ import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
+import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.instanceingress.InstanceIngressEventConsumer;
 import org.folio.inventory.storage.Storage;
+import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.client.SourceStorageSnapshotsClient;
 import org.folio.rest.jaxrs.model.InstanceIngressEvent;
 import org.folio.rest.jaxrs.model.InstanceIngressPayload;
 import org.folio.rest.jaxrs.model.Record;
+import org.folio.rest.jaxrs.model.Snapshot;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -85,6 +82,8 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
   private Storage storage;
   @Mock
   private InstanceCollection instanceCollection;
+  @Mock
+  private SnapshotService snapshotService;
   private UpdateInstanceIngressEventHandler handler;
 
   @Before
@@ -95,7 +94,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(USER_ID).when(context).getUserId();
     doReturn(instanceCollection).when(storage).getInstanceCollection(context);
     handler = spy(new UpdateInstanceIngressEventHandler(precedingSucceedingTitlesHelper,
-      mappingMetadataCache, httpClient, context, storage));
+      mappingMetadataCache, httpClient, context, storage, snapshotService));
   }
 
   @Test
@@ -338,10 +337,10 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
     doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
-    var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
-    doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
+
     var expectedMessage = "Failed to create snapshot in SRS, snapshot id: ";
+    doReturn(failedFuture(new EventProcessingException(expectedMessage)))
+      .when(snapshotService).postSnapshotInSrsAndHandleResponse(any(), any());
 
     // when
     var future = handler.handle(event);
@@ -381,12 +380,12 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
     doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
-    var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
-    doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
+    var snapshot = new Snapshot().withJobExecutionId(UUID.randomUUID().toString());
+    doReturn(succeededFuture(snapshot)).when(snapshotService).postSnapshotInSrsAndHandleResponse(any(), any());
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
     doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).getSourceStorageRecordsFormattedById(any(), any());
     doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), any());
+
     var expectedMessage = "Failed to update MARC record in SRS, instanceId: ";
 
     // when
@@ -427,13 +426,13 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
     doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
-    var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
-    doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
+    var snapshot = new Snapshot().withJobExecutionId(UUID.randomUUID().toString());
+    doReturn(succeededFuture(snapshot)).when(snapshotService).postSnapshotInSrsAndHandleResponse(any(), any());
     var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"id\":\"5e525f1e-d373-4a07-9aff-b80856bacfef\"}"), HttpStatus.SC_OK);
     doReturn(succeededFuture(existedRecordResponse)).when(sourceStorageClient).getSourceStorageRecordsFormattedById(any(), any());
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
     doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), any());
+
     var expectedMessage = "Failed to update MARC record in SRS, instanceId: ";
 
     // when
@@ -484,6 +483,9 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     var expectedMessage = "CreatePrecedingSucceedingTitles failure";
     doReturn(failedFuture(expectedMessage)).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
 
+    var snapshot = new Snapshot().withJobExecutionId(UUID.randomUUID().toString());
+    doReturn(succeededFuture(snapshot)).when(snapshotService).postSnapshotInSrsAndHandleResponse(any(), any());
+
     // when
     var future = handler.handle(event);
 
@@ -528,14 +530,14 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
     doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
-    var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
-    doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"matchedId\":\"" + initialSrsId + "\"}"), HttpStatus.SC_OK);
     doReturn(succeededFuture(existedRecordResponse)).when(sourceStorageClient).getSourceStorageRecordsFormattedById(any(), any());
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_OK);
     doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
+
+    var snapshot = new Snapshot().withJobExecutionId(UUID.randomUUID().toString());
+    doReturn(succeededFuture(snapshot)).when(snapshotService).postSnapshotInSrsAndHandleResponse(any(), any());
 
     // when
     var future = handler.handle(event);
@@ -552,7 +554,13 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     var recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
     verify(handler).getSourceStorageRecordsClient(any(), any(), argThat(TENANT::equals), argThat(USER_ID::equals));
-    verify(handler).getSourceStorageSnapshotsClient(any(), any(), argThat(TENANT::equals), argThat(USER_ID::equals));
+
+    var snapshotCaptor = ArgumentCaptor.forClass(Snapshot.class);
+    var contextCaptor = ArgumentCaptor.forClass(Context.class);
+    verify(snapshotService).postSnapshotInSrsAndHandleResponse(contextCaptor.capture(), snapshotCaptor.capture());
+    assertEquals(TENANT, contextCaptor.getValue().getTenantId());
+    assertEquals(USER_ID, contextCaptor.getValue().getUserId());
+
     var recordSentToSRS = recordCaptor.getValue();
     assertThat(recordSentToSRS.getId()).isNotNull();
     assertThat(recordSentToSRS.getId()).isNotEqualTo(initialSrsId);
