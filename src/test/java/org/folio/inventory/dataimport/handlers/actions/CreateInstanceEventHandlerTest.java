@@ -29,6 +29,7 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
+import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -143,6 +144,8 @@ public class CreateInstanceEventHandlerTest {
   private OrderHelperServiceImpl orderHelperService;
   @Mock
   private SourceStorageRecordsClient sourceStorageClient;
+  @Mock
+  private SnapshotService snapshotService;
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
 
@@ -314,9 +317,11 @@ public class CreateInstanceEventHandlerTest {
 
     Vertx vertx = Vertx.vertx();
     HttpClient httpClient = vertx.createHttpClient();
-    createInstanceEventHandler = spy(new CreateInstanceEventHandler(storage,
-      new PrecedingSucceedingTitlesHelper(context -> mockedClient), MappingMetadataCache.getInstance(vertx,
-      httpClient, true), instanceIdStorageService, orderHelperService, httpClient));
+    createInstanceEventHandler = spy(
+      new CreateInstanceEventHandler(storage,
+      new PrecedingSucceedingTitlesHelper(context -> mockedClient),
+      MappingMetadataCache.getInstance(vertx, httpClient, true),
+      instanceIdStorageService, orderHelperService, snapshotService, httpClient));
 
     doReturn(sourceStorageClient).when(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), any(), any());
     doAnswer(invocationOnMock -> {
@@ -380,7 +385,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
@@ -445,7 +450,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
@@ -507,7 +512,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapperWithSuppressFromDiscovery.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapperWithSuppressFromDiscovery.getChildSnapshotWrappers().getFirst())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
@@ -562,7 +567,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
@@ -624,7 +629,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
@@ -691,7 +696,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
@@ -762,7 +767,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapperWithSuppressFalse.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapperWithSuppressFalse.getChildSnapshotWrappers().getFirst())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
@@ -813,7 +818,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(null)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
@@ -842,7 +847,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>())
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
@@ -874,7 +879,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
@@ -906,7 +911,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -937,7 +942,7 @@ public class CreateInstanceEventHandlerTest {
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
       .withJobExecutionId(UUID.randomUUID().toString())
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -981,7 +986,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapperWithNatureOfContentTerm.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapperWithNatureOfContentTerm.getChildSnapshotWrappers().getFirst())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
@@ -1007,7 +1012,7 @@ public class CreateInstanceEventHandlerTest {
     var dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
@@ -1041,7 +1046,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>())
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
     assertTrue(createInstanceEventHandler.isEligible(dataImportEventPayload));
   }
 
@@ -1115,7 +1120,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
@@ -1160,7 +1165,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
@@ -1207,7 +1212,7 @@ public class CreateInstanceEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0))
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)

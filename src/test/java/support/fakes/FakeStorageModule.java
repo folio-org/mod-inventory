@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -98,6 +99,9 @@ class FakeStorageModule extends AbstractVerticle {
 
     router.get(rootPath + "/:id").handler(this::get);
     router.delete(rootPath + "/:id").handler(this::delete);
+
+    router.get(rootPath + "/:id/formatted").handler(this::getByExternalId);
+    router.post("/source-storage/snapshots").handler(this::createSnapshot);
   }
 
   private void emulateFailureIfNeeded(RoutingContext routingContext) {
@@ -310,7 +314,7 @@ class FakeStorageModule extends AbstractVerticle {
 
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
     List<String> queries = routingContext.queryParam("query");
-    String query = queries.size() == 1 ? queries.get(0) : "";
+    String query = queries.size() == 1 ? queries.getFirst() : "";
 
     if (query.startsWith("id==")) {
       resourcesForTenant.remove(query.substring(4));
@@ -465,6 +469,47 @@ class FakeStorageModule extends AbstractVerticle {
     }
 
     return lastPreProcess;
+  }
+
+  private void createSnapshot(RoutingContext context) {
+    JsonObject snapshotRequest = context.body().asJsonObject();
+    JsonObject snapshotResponse = (snapshotRequest != null) ? snapshotRequest : new JsonObject();
+    snapshotResponse.put("status", "COMMITTED");
+    if (!snapshotResponse.containsKey("jobExecutionId")) {
+      snapshotResponse.put("jobExecutionId", UUID.randomUUID().toString());
+    }
+
+    JsonResponse.created(context.response(), snapshotResponse);
+  }
+
+  private void getByExternalId(RoutingContext routingContext) {
+    final String idType = routingContext.request().getParam("idType");
+    if (!"HOLDINGS".equals(idType)) {
+      ClientErrorResponse.notFound(routingContext.response());
+      return;
+    }
+
+    final String holdingsId = routingContext.request().getParam("id");
+    final WebContext context = new WebContext(routingContext);
+    final Map<String, JsonObject> recordsInTenant = getResourcesForTenant(context);
+
+    if (recordsInTenant == null) {
+      ClientErrorResponse.notFound(routingContext.response());
+      return;
+    }
+
+    final Optional<JsonObject> foundRecord = recordsInTenant.values().stream()
+      .filter(rec -> {
+        JsonObject externalIdsHolder = rec.getJsonObject("externalIdsHolder");
+        return externalIdsHolder != null && holdingsId.equals(externalIdsHolder.getString("holdingsId"));
+      })
+      .findFirst();
+
+    if (foundRecord.isPresent()) {
+      JsonResponse.success(routingContext.response(), foundRecord.get());
+    } else {
+      ClientErrorResponse.notFound(routingContext.response());
+    }
   }
 
   private void emulateFailure(RoutingContext routingContext) {

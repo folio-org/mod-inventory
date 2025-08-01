@@ -29,6 +29,7 @@ import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.client.wrappers.SourceStorageSnapshotsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -62,14 +63,18 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   @Getter
   private final MappingMetadataCache mappingMetadataCache;
   @Getter
+  private final SnapshotService snapshotService;
+  @Getter
   private final HttpClient httpClient;
 
   protected AbstractInstanceEventHandler(Storage storage,
                                       PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
-                                      MappingMetadataCache mappingMetadataCache, HttpClient httpClient) {
+                                      MappingMetadataCache mappingMetadataCache,
+                                      SnapshotService snapshotService, HttpClient httpClient) {
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
+    this.snapshotService = snapshotService;
     this.httpClient = httpClient;
   }
 
@@ -78,7 +83,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     dataImportEventPayload.getContext().put("CURRENT_NODE", Json.encode(dataImportEventPayload.getCurrentNode()));
 
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
+    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
     dataImportEventPayload.getContext().put(INSTANCE.value(), new JsonObject().encode());
   }
 
@@ -146,21 +151,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   protected Future<Snapshot> postSnapshotInSrsAndHandleResponse(Context context, Snapshot snapshot) {
-    Promise<Snapshot> promise = Promise.promise();
-    getSourceStorageSnapshotsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId(), context.getUserId()).postSourceStorageSnapshots(snapshot)
-      .onComplete(ar -> {
-        var result = ar.result();
-        if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
-          LOGGER.info("postSnapshotInSrsAndHandleResponse:: Posted snapshot with id: {} to tenant: {}", snapshot.getJobExecutionId(), context.getTenantId());
-          promise.complete(result.bodyAsJson(Snapshot.class));
-        } else {
-          String msg = format("Failed to create snapshot in SRS, snapshot id: %s, tenant id: %s, status code: %s, snapshot: %s",
-            snapshot.getJobExecutionId(), context.getTenantId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
-          LOGGER.warn(msg);
-          promise.fail(msg);
-        }
-      });
-    return promise.future();
+    return snapshotService.postSnapshotInSrsAndHandleResponse(context, snapshot);
   }
 
   protected Future<Instance> executeFieldsManipulation(Instance instance, Record srcRecord) {

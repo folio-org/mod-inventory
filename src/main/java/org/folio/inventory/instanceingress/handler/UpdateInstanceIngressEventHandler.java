@@ -9,6 +9,7 @@ import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
+
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -19,6 +20,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
+import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -34,15 +36,18 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
   private static final Logger LOGGER = LogManager.getLogger(UpdateInstanceIngressEventHandler.class);
   private final InstanceCollection instanceCollection;
   private final Context context;
+  private final SnapshotService snapshotService;
 
   public UpdateInstanceIngressEventHandler(PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
                                            MappingMetadataCache mappingMetadataCache,
                                            HttpClient client,
                                            Context context,
-                                           Storage storage) {
-    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, null, null);
+                                           Storage storage,
+                                           SnapshotService snapshotService) {
+    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, null, null, snapshotService);
     this.instanceCollection = storage.getInstanceCollection(context);
     this.context = context;
+    this.snapshotService = snapshotService;
   }
 
   @Override
@@ -124,7 +129,7 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
   private Future<Instance> putRecordInSrsAndHandleResponse(Record targetRecord, Instance instance) {
     Promise<Instance> promise = Promise.promise();
     var sourceStorageRecordsClient = getSourceStorageRecordsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId(), context.getUserId());
-    postSnapshotInSrsAndHandleResponse(targetRecord.getSnapshotId(), context, super::postSnapshotInSrsAndHandleResponse)
+    postSnapshotInSrsAndHandleResponse(targetRecord.getSnapshotId(), context, snapshotService::postSnapshotInSrsAndHandleResponse)
       .onFailure(promise::fail)
       .compose(snapshot -> super.getRecordByInstanceId(sourceStorageRecordsClient, instance.getId()))
       .compose(existingRecord -> {

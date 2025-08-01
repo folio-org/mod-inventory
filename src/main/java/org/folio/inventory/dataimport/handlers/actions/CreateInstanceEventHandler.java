@@ -37,6 +37,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.services.OrderHelperService;
+import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -68,8 +69,8 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
 
   public CreateInstanceEventHandler(Storage storage, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
                                     MappingMetadataCache mappingMetadataCache, IdStorageService idStorageService,
-                                    OrderHelperService orderHelperService, HttpClient httpClient) {
-    super(storage,precedingSucceedingTitlesHelper,mappingMetadataCache, httpClient);
+                                    OrderHelperService orderHelperService, SnapshotService snapshotService, HttpClient httpClient) {
+    super(storage,precedingSucceedingTitlesHelper,mappingMetadataCache, snapshotService, httpClient);
     this.orderHelperService = orderHelperService;
     this.idStorageService = idStorageService;
   }
