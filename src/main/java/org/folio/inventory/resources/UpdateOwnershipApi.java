@@ -31,10 +31,7 @@ import java.util.function.Function;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.HoldingsRecord;
-import org.folio.HoldingsUpdateOwnership;
-import org.folio.ItemsUpdateOwnership;
-import org.folio.NotUpdatedEntity;
+import org.folio.*;
 import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.WebContext;
@@ -329,12 +326,12 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   CompletableFuture<List<HoldingsRecord>> fetchAndValidateHoldingsRecords(HoldingsUpdateOwnership holdingsUpdateOwnership,
                                                                           List<NotUpdatedEntity> notUpdatedEntities, HoldingsOwnershipUpdateContext updateContext) {
 
-    LOGGER.debug("updateOwnershipOfHoldingsRecords:: Fetching holdings records: {}", holdingsUpdateOwnership.getHoldingsRecordIds());
+    LOGGER.debug("fetchAndValidateHoldingsRecords:: Fetching holdings records: {}", holdingsUpdateOwnership.getHoldingsRecordIds());
 
     return updateContext.holdingsRecordFetchClient
       .find(holdingsUpdateOwnership.getHoldingsRecordIds(), MoveApiUtil::fetchByIdCql)
       .thenCompose(jsons -> {
-        LOGGER.info("updateOwnershipOfHoldingsRecords:: Found {} holdings records to process", jsons.size());
+        LOGGER.info("fetchAndValidateHoldingsRecords:: Found {} holdings records to process", jsons.size());
 
         // Process not found entities
         processNotFoundEntities(holdingsUpdateOwnership.getHoldingsRecordIds(),
@@ -352,12 +349,12 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           .map(h -> mapToHoldingsRecord(h, holdingsUpdateOwnership))
           .toList();
 
-        LOGGER.debug("updateOwnershipOfHoldingsRecords:: Validated {} holdings records", holdingsRecords.size());
+        LOGGER.debug("fetchAndValidateHoldingsRecords:: Validated {} holdings records", holdingsRecords.size());
 
         return CompletableFuture.completedFuture(holdingsRecords);
       })
       .exceptionally(throwable -> {
-        LOGGER.error("updateOwnershipOfHoldingsRecords:: Failed to fetch holdings records: {}",
+        LOGGER.error("fetchAndValidateHoldingsRecords:: Failed to fetch holdings records: {}",
           holdingsUpdateOwnership.getHoldingsRecordIds(), throwable);
         throw new CompletionException(throwable);
       });
@@ -369,7 +366,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   CompletableFuture<List<String>> processHoldingsOwnershipUpdate(List<HoldingsRecord> holdingsRecords, List<NotUpdatedEntity> notUpdatedEntities,
                                                                  HoldingsOwnershipUpdateContext updateContext) {
 
-    LOGGER.debug("updateOwnershipOfHoldingsRecords:: Processing {} holdings records", holdingsRecords.size());
+    LOGGER.debug("processHoldingsOwnershipUpdate:: Processing {} holdings records", holdingsRecords.size());
 
     return fetchMarcSourceRecords(holdingsRecords, notUpdatedEntities, updateContext)
       .thenCompose(holdingMarcSources -> {
@@ -381,7 +378,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           .thenCompose(validatedHoldings -> createHoldingsInTargetTenant(validatedHoldings,
             notUpdatedEntities, updateContext))
           .thenCompose(createdHoldings -> {
-            LOGGER.info("updateOwnershipOfHoldingsRecords:: Created {} holdings in target tenant: {}",
+            LOGGER.info("processHoldingsOwnershipUpdate:: Created {} holdings in target tenant: {}",
               createdHoldings.size(), updateContext.targetTenantContext.getTenantId());
 
             return moveSrsRecordsForMarcHoldings(holdingsRecords, createdHoldings,
@@ -393,7 +390,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           });
       })
       .exceptionally(throwable -> {
-        LOGGER.error("updateOwnershipOfHoldingsRecords:: Failed to process holdings ownership update", throwable);
+        LOGGER.error("processHoldingsOwnershipUpdate:: Failed to process holdings ownership update", throwable);
         throw new CompletionException(throwable);
       });
   }
@@ -401,11 +398,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   /**
    * Fetches MARC source records for holdings that have MARC source ID
    */
-  CompletableFuture<Map<String, org.folio.rest.jaxrs.model.Record>> fetchMarcSourceRecords(List<HoldingsRecord> holdingsRecords,
-                                                                                           List<NotUpdatedEntity> notUpdatedEntities, HoldingsOwnershipUpdateContext updateContext) {
+  CompletableFuture<Map<String, Record>> fetchMarcSourceRecords(List<HoldingsRecord> holdingsRecords,
+                                                                List<NotUpdatedEntity> notUpdatedEntities, HoldingsOwnershipUpdateContext updateContext) {
 
-    LOGGER.debug("updateOwnershipOfHoldingsRecords:: Fetching MARC source records for {} holdings",
-      holdingsRecords.size());
+    LOGGER.debug("fetchMarcSourceRecords:: Fetching MARC source records for {} holdings", holdingsRecords.size());
 
     Map<String, Record> holdingMarcSources = new HashMap<>();
     List<CompletableFuture<Void>> srsFutures = new ArrayList<>();
@@ -413,33 +409,43 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     holdingsRecords.stream()
       .filter(h -> MARC_SOURCE_ID.equals(h.getSourceId()))
       .forEach(h -> {
-        LOGGER.debug("updateOwnershipOfHoldingsRecords:: Fetching MARC source record for holdings: {}", h.getId());
+        LOGGER.debug("fetchMarcSourceRecords:: Fetching MARC source record for holdings: {}", h.getId());
         srsFutures.add(
           getSourceRecordByExternalId(h.getId(), updateContext.sourceSrsClient)
             .thenAccept(record -> {
               if (record != null) {
-                LOGGER.debug("updateOwnershipOfHoldingsRecords:: Found MARC source record for holdings: {}", h.getId());
+                LOGGER.debug("fetchMarcSourceRecords:: Found MARC source record for holdings: {}", h.getId());
                 holdingMarcSources.put(h.getId(), record);
               } else {
-                LOGGER.warn("updateOwnershipOfHoldingsRecords:: No MARC source record found for holdings: {}", h.getId());
+                LOGGER.warn("fetchMarcSourceRecords:: No MARC source record found for holdings: {}", h.getId());
               }
-            })
-            .exceptionally(throwable -> {
-              LOGGER.warn("updateOwnershipOfHoldingsRecords:: Failed to fetch MARC source record for holdings: {}",
-                h.getId(), throwable);
-              notUpdatedEntities.add(new NotUpdatedEntity()
-                .withEntityId(h.getId())
-                .withErrorMessage("Failed to fetch MARC source record: " + throwable.getMessage()));
-              return null;
             })
         );
       });
 
-    return CompletableFuture.allOf(srsFutures.toArray(new CompletableFuture[0]))
-      .thenApply(v -> {
-        LOGGER.debug("updateOwnershipOfHoldingsRecords:: Fetched {} MARC source records", holdingMarcSources.size());
-        return holdingMarcSources;
-      });
+    CompletableFuture<Void> allFutures = CompletableFuture.allOf(srsFutures.toArray(new CompletableFuture[0]));
+    return allFutures.handle((res, err) -> {
+      if (err != null) {
+        LOGGER.warn("fetchMarcSourceRecords:: One or more MARC source records could not be fetched. Populating notUpdatedEntities.");
+        for (int i = 0; i < srsFutures.size(); i++) {
+          if (srsFutures.get(i).isCompletedExceptionally()) {
+            String failedHoldingsId = holdingsRecords.get(i).getId();
+            try {
+              srsFutures.get(i).join();
+            } catch (CompletionException e) {
+              LOGGER.warn("fetchMarcSourceRecords:: Failed to fetch MARC source record for holdings: {}", failedHoldingsId, e.getCause());
+              notUpdatedEntities.add(new NotUpdatedEntity()
+                .withEntityId(failedHoldingsId)
+                .withErrorMessage("Failed to fetch MARC source record: " + e.getCause().getMessage()));
+            }
+          }
+        }
+        throw new CompletionException(new BadRequestException("Failed to fetch all required MARC source records."));
+      }
+
+      LOGGER.debug("fetchMarcSourceRecords:: Fetched {} MARC source records", holdingMarcSources.size());
+      return holdingMarcSources;
+    });
   }
 
   /**
@@ -543,7 +549,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         .withRawRecord(record.getRawRecord());
 
       targetSrsClient.postSourceStorageRecords(newRecordForTarget).onComplete(postAr -> {
-        if (postAr.failed() || postAr.result().statusCode() != 201) {
+        if (postAr.failed() || postAr.result().statusCode() != HttpStatus.HTTP_CREATED.toInt()) {
           String msg = String.format("Failed to post SRS record to target tenant=%s: %s",
             targetTenantContext.getTenantId(), postAr.cause() != null ? postAr.cause().getMessage() : postAr.result().bodyAsString());
           LOGGER.warn("moveSingleMarcHoldingsSrsRecord:: {}", msg);
@@ -562,7 +568,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Marking SRS record as deleted in source tenant for holdings: {}", sourceHolding.getId());
 
         sourceSrsClient.putSourceStorageRecordsById(record.getId(), record).onComplete(putAr -> {
-          if (putAr.failed() || (putAr.result().statusCode() != 200 && putAr.result().statusCode() != 204)) {
+          if (putAr.failed() || (putAr.result().statusCode() != HttpStatus.HTTP_OK.toInt() && putAr.result().statusCode() != HttpStatus.HTTP_NO_CONTENT.toInt())) {
             String msg = String.format("Failed to mark holdings source as deleted in source tenant=%s: %s",
               sourceContext.getTenantId(), putAr.cause() != null ? putAr.cause().getMessage() : putAr.result().bodyAsString());
             LOGGER.warn("moveSingleMarcHoldingsSrsRecord:: {}", msg);
@@ -589,19 +595,20 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     return result;
   }
 
+  /**
+   * Fetches source record by external ID from the source storage records client
+   */
   CompletableFuture<Record> getSourceRecordByExternalId(String externalId, SourceStorageRecordsClientWrapper srsClient) {
     LOGGER.debug("getSourceRecordByExternalId:: Fetching source record by externalId: {}", externalId);
 
     CompletableFuture<Record> future = new CompletableFuture<>();
-
     try {
       srsClient.getSourceStorageRecordsFormattedById(externalId, "HOLDINGS")
         .onSuccess(response -> {
           try {
-            if (response.statusCode() == 200) {
+            if (response.statusCode() == HttpStatus.HTTP_OK.toInt()) {
               JsonObject responseBody = response.bodyAsJsonObject();
-              LOGGER.debug("getSourceRecordByExternalId:: Response received for externalId '{}': status={}",
-                externalId, response.statusCode());
+              LOGGER.debug("getSourceRecordByExternalId:: Response received for externalId '{}': status={}", externalId, response.statusCode());
 
               // Remove "formattedContent" from parsedRecord if present
               JsonObject parsedRecord = responseBody.getJsonObject("parsedRecord");
@@ -679,11 +686,11 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   CompletableFuture<List<HoldingsRecord>> createHoldingsInTargetTenant(List<HoldingsRecord> holdingsRecords, List<NotUpdatedEntity> notUpdatedEntities,
                                                                        HoldingsOwnershipUpdateContext updateContext) {
 
-    LOGGER.debug("updateOwnershipOfHoldingsRecords:: Creating {} holdings in target tenant", holdingsRecords.size());
+    LOGGER.debug("createHoldingsInTargetTenant:: Creating {} holdings in target tenant", holdingsRecords.size());
 
     return createHoldings(holdingsRecords, notUpdatedEntities, updateContext.targetTenantHoldingsRecordCollection)
       .exceptionally(throwable -> {
-        LOGGER.error("updateOwnershipOfHoldingsRecords:: Failed to create holdings in target tenant", throwable);
+        LOGGER.error("createHoldingsInTargetTenant:: Failed to create holdings in target tenant", throwable);
         throw new CompletionException(throwable);
       });
   }
@@ -714,6 +721,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private CompletableFuture<List<HoldingsRecord>> createHoldings(List<HoldingsRecord> holdingsRecords,
                                                                  List<NotUpdatedEntity> notUpdatedEntities,
                                                                  HoldingsRecordCollection holdingsRecordCollection) {
+
     LOGGER.debug("createHoldings:: Creating holdings records: {}", holdingsRecords);
 
     List<CompletableFuture<HoldingsRecord>> createFutures = holdingsRecords.stream()
@@ -736,6 +744,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private CompletableFuture<List<String>> deleteSourceHoldings(List<HoldingsRecord> holdingsRecords,
                                                                List<NotUpdatedEntity> notUpdatedEntities,
                                                                HoldingsRecordCollection holdingsRecordCollection) {
+
     LOGGER.debug("deleteSourceHoldings:: Deleting holdings record with ids {}",
       holdingsRecords.stream().map(HoldingsRecord::getId).toList());
 
@@ -765,6 +774,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                                                             List<NotUpdatedEntity> notUpdatedEntities,
                                                             Function<Item, String> getEntityIdForError,
                                                             ItemCollection itemCollection) {
+
     LOGGER.debug("deleteSourceItems:: Deleting items with ids {}", items.stream().map(Item::getId).toList());
 
     List<CompletableFuture<String>> deleteFutures = items.stream()
@@ -791,6 +801,9 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private CompletableFuture<List<HoldingsRecord>> validateHoldingsRecordsBoundWith(List<HoldingsRecord> holdingsRecords,
                                                                                    List<NotUpdatedEntity> notUpdatedEntities,
                                                                                    RoutingContext routingContext, WebContext context) {
+
+    LOGGER.debug("validateHoldingsRecordsBoundWith:: Validating holdings records bound with parts: {}", holdingsRecords);
+
     try {
       List<String> sourceHoldingsRecordsIds = holdingsRecords.stream().map(HoldingsRecord::getId).toList();
 
@@ -856,6 +869,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
   private void processNotFoundEntities(List<String> holdingsRecordIds, List<NotUpdatedEntity> notUpdatedEntities,
                                        WebContext context, List<JsonObject> jsons, String message) {
+
     List<String> foundIds = jsons.stream().map(json -> json.getString("id")).toList();
     List<String> notFoundIds = ListUtils.subtract(holdingsRecordIds, foundIds);
     notFoundIds.forEach(id -> {
@@ -966,7 +980,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                                                          WebContext context,
                                                          Context targetTenantContext) {
 
-    LOGGER.debug("updateOwnershipOfHoldingsRecords:: Initializing update context");
+    LOGGER.debug("initializeUpdateContext:: Initializing update context");
 
     MultipleRecordsFetchClient holdingsRecordFetchClient = clientFactory.createHoldingsRecordsFetchClient(routingContext, context, client);
     SourceStorageRecordsClientWrapper sourceSrsClient = clientFactory.createSourceStorageRecordsClient(context, client);
@@ -974,7 +988,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     HoldingsRecordCollection sourceTenantHoldingsRecordCollection = storage.getHoldingsRecordCollection(context);
     HoldingsRecordCollection targetTenantHoldingsRecordCollection = storage.getHoldingsRecordCollection(targetTenantContext);
 
-    LOGGER.debug("updateOwnershipOfHoldingsRecords:: Update context initialized successfully");
+    LOGGER.debug("initializeUpdateContext:: Update context initialized successfully");
 
     return new HoldingsOwnershipUpdateContext(holdingsRecordFetchClient, sourceSrsClient,
       sourceTenantHoldingsRecordCollection, targetTenantHoldingsRecordCollection,
