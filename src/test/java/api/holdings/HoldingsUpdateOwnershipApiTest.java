@@ -778,6 +778,77 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord2.getString(INSTANCE_ID));
   }
 
+  @Test
+  public void canUpdateOwnershipOfMarcHoldingAndMoveSrsRecord() throws Exception {
+
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.put("source", FOLIO.getValue()));
+
+    final UUID holdingsId = holdingsStorageClient.create(
+        new HoldingRequestBuilder()
+          .forInstance(instanceId)
+          .withMarcSource()
+      )
+      .getId();
+
+    final JsonObject srsRecordToCreate = buildMarcSourceRecord(holdingsId);
+    final String sourceSrsId = srsRecordToCreate.getString("id");
+    sourceRecordStorageClient.create(srsRecordToCreate);
+
+    JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
+      new JsonArray(List.of(holdingsId.toString())), UUID.fromString(getMainLibraryLocation()), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response response = updateHoldingsRecordsOwnership(requestBody);
+
+    assertThat(response.getStatusCode(), is(200));
+    assertThat(new JsonObject(response.getBody()).getJsonArray("notUpdatedEntities").size(), is(0));
+
+    //check that holding removed from source tenant
+    Response sourceHoldingsResponse = holdingsStorageClient.getById(holdingsId);
+    assertThat(sourceHoldingsResponse.getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
+
+    //check that holding created in target tenant
+    List<JsonObject> targetHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId), 1);
+    assertThat(targetHoldings.size(), is(1));
+    assertThat(targetHoldings.getFirst().getString("id"), is(holdingsId.toString()));
+
+    //check that SRS record from source tenant marked as DELETED
+    Response sourceSrsResponse = sourceRecordStorageClient.getById(UUID.fromString(sourceSrsId));
+    assertThat(sourceSrsResponse.getJson().getString("state"), is("DELETED"));
+
+    //check that SRS record created in target tenant
+    List<JsonObject> targetSrsRecords = collegeSrsClient.getMany("matchedId==" + sourceSrsId, 1);
+    assertThat(targetSrsRecords.size(), is(1));
+
+    JsonObject targetSrsRecord = targetSrsRecords.getFirst();
+    assertNotEquals(sourceSrsId, targetSrsRecord.getString("id"));
+    assertEquals(sourceSrsId, targetSrsRecord.getString("matchedId"));
+    assertEquals("MARC_HOLDING", targetSrsRecord.getString("recordType"));
+  }
+
+   private JsonObject buildMarcSourceRecord(UUID holdingsId) {
+    final var srsId = UUID.randomUUID();
+    return new JsonObject()
+      .put("id", srsId.toString())
+      .put("snapshotId", UUID.randomUUID().toString())
+      .put("matchedId", srsId.toString())
+      .put("recordType", "MARC_HOLDING")
+      .put("externalIdsHolder", new JsonObject().put("holdingsId", holdingsId.toString()))
+      .put("parsedRecord", new JsonObject()
+        .put("id", srsId.toString())
+        .put("content", new JsonObject()
+          .put("leader", "00000nu  a2200000   4500")
+          .put("fields", new JsonArray()
+            .add(new JsonObject().put("852", new JsonObject()
+              .put("subfields", new JsonArray().add(new JsonObject().put("h", "Some call number")))
+              .put("ind1", " ")
+              .put("ind2", " "))))
+        )
+      );
+  }
+
   private Response updateHoldingsRecordsOwnership(JsonObject holdingsRecordUpdateOwnershipRequestBody) throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     final var postHoldingRecordsUpdateOwnershipCompleted = okapiClient.post(
       ApiRoot.updateHoldingsRecordsOwnership(), holdingsRecordUpdateOwnershipRequestBody);
