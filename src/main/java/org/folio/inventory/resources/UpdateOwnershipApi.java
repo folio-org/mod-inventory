@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -440,39 +441,23 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     }
 
     Map<String, Record> holdingMarcSources = new HashMap<>();
-    List<CompletableFuture<Void>> srsFutures = new ArrayList<>();
-
-    for (HoldingsRecord h : marcHoldings) {
-      CompletableFuture<Void> singleFetchFuture = new CompletableFuture<>();
-      srsFutures.add(singleFetchFuture);
-
-      LOGGER.debug("fetchMarcSourceRecords:: Requesting MARC source record for holdings: {}", h.getId());
-
-      getSourceRecordByExternalId(h.getId(), updateContext.sourceSrsClient)
-        .whenComplete((record, throwable) -> {
-          if (throwable != null) {
-            Throwable cause = throwable.getCause() != null ? throwable.getCause() : throwable;
-            String errorMessage = "Failed to fetch MARC source record: " + cause.getMessage();
-
-            LOGGER.warn("fetchMarcSourceRecords:: Failure for holdings id: {}. Reason: {}", h.getId(), errorMessage, cause);
+    List<CompletableFuture<Void>> srsFutures = marcHoldings.stream()
+      .map(h -> getSourceRecordByExternalId(h.getId(), updateContext.sourceSrsClient)
+        .thenAccept(record -> {
+          if (record != null) {
+            holdingMarcSources.put(h.getId(), record);
+          } else {
+            String errorMessage = "Failed to fetch MARC source record for holdings id: " + h.getId();
+            LOGGER.warn(errorMessage);
             notUpdatedEntities.add(new NotUpdatedEntity()
               .withEntityId(h.getId())
               .withErrorMessage(errorMessage));
-            singleFetchFuture.complete(null);
-          } else {
-            LOGGER.debug("fetchMarcSourceRecords:: Successfully fetched MARC source record for holdings: {}", h.getId());
-            holdingMarcSources.put(h.getId(), record);
-           singleFetchFuture.complete(null);
           }
-        });
-    }
+        }))
+      .toList();
 
     return CompletableFuture.allOf(srsFutures.toArray(new CompletableFuture[0]))
-      .thenApply(v -> {
-        LOGGER.debug("fetchMarcSourceRecords:: Finished processing all MARC source record fetches. Success: {}, Failures: {}",
-          holdingMarcSources.size(), marcHoldings.size() - holdingMarcSources.size());
-        return holdingMarcSources;
-      });
+      .thenApply(v -> holdingMarcSources);
   }
 
   /**
@@ -660,20 +645,20 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
               String errorMessage = format("Failed to fetch source record by externalId '%s'. Status: %d, Body: %s",
                 externalId, response.statusCode(), response.bodyAsString());
               LOGGER.warn("getSourceRecordByExternalId:: {}", errorMessage);
-              future.completeExceptionally(new RuntimeException(errorMessage));
+              future.complete(null);
             }
           } catch (Exception e) {
             LOGGER.error("getSourceRecordByExternalId:: Error processing response for externalId '{}'", externalId, e);
-            future.completeExceptionally(e);
+            future.complete(null);
           }
         })
         .onFailure(error -> {
           LOGGER.error("getSourceRecordByExternalId:: Error querying record-storage for source record with externalId '{}'", externalId, error);
-          future.completeExceptionally(error);
+          future.complete(null);
         });
     } catch (Exception e) {
       LOGGER.error("getSourceRecordByExternalId:: Unexpected error for externalId '{}'", externalId, e);
-      future.completeExceptionally(e);
+      future.complete(null);
     }
 
     return future;
@@ -786,27 +771,27 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
     List<CompletableFuture<String>> deleteFutures = holdingsRecords.stream()
       .map(holdingsRecord -> {
-        Promise<String> promise = Promise.promise();
+        CompletableFuture<String> future = new CompletableFuture<>();
         holdingsRecordCollection.delete(holdingsRecord.getId(),
           success -> {
             LOGGER.debug("deleteSourceHoldings:: Successfully deleted holdingsRecord with id: {}", holdingsRecord.getId());
-            promise.complete(holdingsRecord.getId());
+            future.complete(holdingsRecord.getId());
           },
           failure -> {
             LOGGER.warn("deleteSourceHoldings:: Error during deleting holdingsRecord with id: {}, status code: {}, reason: {}",
               holdingsRecord.getId(), failure.getStatusCode(), failure.getReason());
 
             notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(holdingsRecord.getId()).withErrorMessage(failure.getReason()));
-            promise.fail(failure.getReason());
+            future.complete(null);
           });
-        return promise.future().toCompletionStage().toCompletableFuture();
+        return future;
       }).toList();
 
     return CompletableFuture.allOf(deleteFutures.toArray(new CompletableFuture[0]))
-      .handle((vVoid, throwable) -> deleteFutures.stream()
-        .filter(future -> !future.isCompletedExceptionally())
+      .thenApply(v -> deleteFutures.stream()
         .map(CompletableFuture::join)
-        .toList());
+        .filter(Objects::nonNull)
+        .collect(Collectors.toList()));
   }
 
   private CompletableFuture<List<String>> deleteSourceItems(List<Item> items,
@@ -818,23 +803,25 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
     List<CompletableFuture<String>> deleteFutures = items.stream()
       .map(item -> {
-        Promise<String> promise = Promise.promise();
-        itemCollection.delete(item.getId(), success -> promise.complete(item.getId()),
+        CompletableFuture<String> future = new CompletableFuture<>();
+        itemCollection.delete(item.getId(), success -> {
+            LOGGER.debug("deleteSourceItems:: Successfully deleted item with id: {}", item.getId());
+            future.complete(item.getId());
+          },
           failure -> {
             LOGGER.warn("deleteSourceItems:: Error during deleting item with id: {} for holdingsRecord with id {}, status code: {}, reason: {}",
               item.getId(), item.getHoldingId(), failure.getStatusCode(), failure.getReason());
-
             notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(getEntityIdForError.apply(item)).withErrorMessage(failure.getReason()));
-            promise.fail(failure.getReason());
+            future.complete(null);
           });
-        return promise.future().toCompletionStage().toCompletableFuture();
+        return future;
       }).toList();
 
     return CompletableFuture.allOf(deleteFutures.toArray(new CompletableFuture[0]))
-      .handle((vVoid, throwable) -> deleteFutures.stream()
-        .filter(future -> !future.isCompletedExceptionally())
+      .thenApply(v -> deleteFutures.stream()
         .map(CompletableFuture::join)
-        .toList());
+        .filter(Objects::nonNull)
+        .collect(Collectors.toList()));
   }
 
   private CompletableFuture<List<HoldingsRecord>> validateHoldingsRecordsBoundWith(List<HoldingsRecord> holdingsRecords,

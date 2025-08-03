@@ -881,6 +881,75 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertThat(targetHoldings.size(), is(1));
   }
 
+  @Test
+  public void shouldDoNothingAndReportAllAsNotUpdatedWhenNoValidHoldingsRemainAfterValidation() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.copy().put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.copy().put("source", FOLIO.getValue()));
+
+    // MARC holding without SRS record. Should be filtered by validateHoldingsRecordsMarcSource.
+    final UUID marcHoldingId = holdingsStorageClient.create(
+        new HoldingRequestBuilder()
+          .forInstance(instanceId)
+          .withMarcSource()
+      )
+      .getId();
+
+    // FOLIO hodling with bound-with. Should be filtered by validateHoldingsRecordsBoundWith.
+    final UUID boundWithHoldingId = holdingsStorageClient.create(
+        new HoldingRequestBuilder()
+          .forInstance(instanceId)
+      )
+      .getId();
+
+    // Creation item and bound-with-part for holding 2
+    final var itemForBoundWith = itemsClient.create(
+      new ItemRequestBuilder().forHolding(boundWithHoldingId));
+    JsonObject boundWithPart = makeObjectBoundWithPart(itemForBoundWith.getId().toString(), boundWithHoldingId.toString());
+    boundWithPartsStorageClient.create(boundWithPart);
+
+    //ACTION
+    JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
+      new JsonArray(List.of(marcHoldingId.toString(), boundWithHoldingId.toString())),
+      UUID.fromString(getMainLibraryLocation()),
+      ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response response = updateHoldingsRecordsOwnership(requestBody);
+    assertThat(response.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
+
+    // Should return 2 not-updated holdings
+    JsonObject responseBody = response.getJson();
+    JsonArray notUpdatedEntities = responseBody.getJsonArray("notUpdatedEntities");
+    assertThat("There should be two not-updated entities", notUpdatedEntities.size(), is(2));
+
+    List<JsonObject> errors = notUpdatedEntities.stream()
+      .map(obj -> (JsonObject) obj)
+      .toList();
+
+    // Check errors for MARC holding without SRS record
+    assertTrue("Should contain error for MARC holding without SRS",
+      errors.stream().anyMatch(error ->
+        error.getString("entityId").equals(marcHoldingId.toString()) &&
+          error.getString("errorMessage").contains("Failed to fetch MARC source record")
+      ));
+
+    // Check errors for bound-with holding
+    assertTrue("Should contain error for bound-with holding",
+      errors.stream().anyMatch(error ->
+        error.getString("entityId").equals(boundWithHoldingId.toString()) &&
+          error.getString("errorMessage").equals(String.format(HOLDING_BOUND_WITH_PARTS_ERROR, boundWithHoldingId))
+      ));
+
+    // Check that no holdings were moved to target tenant
+    assertThat(holdingsStorageClient.getById(marcHoldingId).getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(holdingsStorageClient.getById(boundWithHoldingId).getStatusCode(), is(HttpStatus.SC_OK));
+
+    // Check that no holdings were created in target tenant
+    List<JsonObject> targetHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId==%s", instanceId), 2);
+    assertThat("No holdings should be created in the target tenant", targetHoldings.size(), is(0));
+  }
+
    private JsonObject buildMarcSourceRecord(UUID holdingsId) {
     final var srsId = UUID.randomUUID();
     return new JsonObject()
