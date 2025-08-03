@@ -344,10 +344,12 @@ class FakeStorageModule extends AbstractVerticle {
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
     if (resourcesForTenant.containsKey(id)) {
+      System.out.printf("Deleted %s resource: %s%n", recordTypeName, id);
       resourcesForTenant.remove(id);
 
       SuccessResponse.noContent(routingContext.response());
     } else {
+      System.out.printf("%s resource: %s%n for deletion is not found", recordTypeName, id);
       ClientErrorResponse.notFound(routingContext.response());
     }
   }

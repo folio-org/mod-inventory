@@ -249,12 +249,23 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(400));
 
-    JsonArray notUpdatedEntitiesIds = postHoldingsUpdateOwnershipResponse.getJson()
+    JsonArray notUpdatedEntities = postHoldingsUpdateOwnershipResponse.getJson()
       .getJsonArray("notUpdatedEntities");
+    assertThat(notUpdatedEntities.size(), is(2));
 
-    assertThat(notUpdatedEntitiesIds.size(), is(1));
-    assertThat(notUpdatedEntitiesIds.getJsonObject(0).getString("entityId"), equalTo(createHoldingsRecord1.toString()));
-    assertThat(notUpdatedEntitiesIds.getJsonObject(0).getString("errorMessage"), containsString(expectedErrorResponse.toString()));
+    List<JsonObject> errors = notUpdatedEntities.stream()
+      .map(obj -> (JsonObject) obj)
+      .toList();
+
+    assertTrue(errors.stream().anyMatch(error ->
+      error.getString("entityId").equals(createHoldingsRecord1.toString()) &&
+        error.getString("errorMessage").contains("Internal server exception")
+    ));
+
+    assertTrue(errors.stream().anyMatch(error ->
+      error.getString("entityId").equals(createHoldingsRecord1.toString()) &&
+        error.getString("errorMessage").contains("{\"message\":\"Server error\"}")
+    ));
 
     assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
 
@@ -293,7 +304,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
     final JsonObject expectedErrorResponse = new JsonObject().put("message", "Server error");
-    collegeItemsClient.emulateFailure(
+    itemsStorageClient.emulateFailure(
       new EndpointFailureDescriptor()
         .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
         .setStatusCode(500)
@@ -306,38 +317,31 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     Response postHoldingsUpdateOwnershipResponse = updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
-    collegeItemsClient.disableFailureEmulation();
+    itemsStorageClient.disableFailureEmulation();
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(400));
+    assertThat("Response status should be 400 Bad Request due to partial failure",
+      postHoldingsUpdateOwnershipResponse.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
 
-    JsonArray notUpdatedEntitiesIds = postHoldingsUpdateOwnershipResponse.getJson()
-      .getJsonArray("notUpdatedEntities");
+    JsonArray notUpdatedEntities = postHoldingsUpdateOwnershipResponse.getJson().getJsonArray("notUpdatedEntities");
+    assertThat("There should be exactly one not-updated entity", notUpdatedEntities.size(), is(1));
+    assertThat(notUpdatedEntities.getJsonObject(0).getString("entityId"), equalTo(createHoldingsRecord1.toString()));
+    assertThat(notUpdatedEntities.getJsonObject(0).getString("errorMessage"), containsString("Server error"));
 
-    assertThat(notUpdatedEntitiesIds.size(), is(1));
-    assertThat(notUpdatedEntitiesIds.getJsonObject(0).getString("entityId"), equalTo(createHoldingsRecord1.toString()));
-    assertThat(notUpdatedEntitiesIds.getJsonObject(0).getString("errorMessage"), containsString(expectedErrorResponse.toString()));
+    Response sourceHoldingsResponse = holdingsStorageClient.getById(createHoldingsRecord1);
+    assertThat("Source holding should be deleted", sourceHoldingsResponse.getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    List<JsonObject> targetHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId==%s", instanceId), 1);
+    assertThat("One holding should be created in the target tenant", targetHoldings.size(), is(1));
+    JsonObject targetHoldingsRecord1 = targetHoldings.getFirst();
 
-    // Verify Holdings ownership updated
-    Response sourceTenantHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1);
-    List<JsonObject> targetTenantHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId), 100);
-    assertEquals(1, targetTenantHoldings.size());
+    Response sourceItemResponse = itemsStorageClient.getById(firstItem.getId());
+    assertThat("Source item should still exist in storage", sourceItemResponse.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat("Source item should still be linked to the original holdings record ID", sourceItemResponse.getJson().getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord1.toString()));
 
-    JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.getFirst();
-
-    assertEquals(instanceId.toString(), sourceTenantHoldingsRecord1.getJson().getString(INSTANCE_ID));
-    assertEquals(instanceId.toString(), targetTenantHoldingsRecord1.getString(INSTANCE_ID));
-
-    // Verify related Item ownership not updated
-    Response sourceTenantItem1 = itemsClient.getById(firstItem.getId());
-    List<JsonObject> targetTenantItems1 = collegeItemsClient.getMany(String.format("holdingsRecordId=%s", targetTenantHoldingsRecord1.getString(ID)), 100);
-    assertEquals(1, targetTenantItems1.size());
-
-    JsonObject targetTenantItem1 = targetTenantItems1.getFirst();
-
-    assertThat(sourceTenantItem1.getJson().getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord1.toString()));
-    assertThat(targetTenantItem1.getString(HOLDINGS_RECORD_ID), is(targetTenantHoldingsRecord1.getString(ID)));
+    List<JsonObject> targetItems = collegeItemsClient.getMany(String.format("holdingsRecordId==%s", targetHoldingsRecord1.getString(ID)), 1);
+    assertThat("One item should be created in the target tenant", targetItems.size(), is(1));
+    JsonObject targetItem1 = targetItems.getFirst();
+    assertThat(targetItem1.getString(HOLDINGS_RECORD_ID), is(targetHoldingsRecord1.getString(ID)));
   }
 
   @Test
@@ -829,32 +833,52 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
   }
 
   @Test
-  public void shouldFailToMoveMarcHoldingIfSrsRecordNotFound() throws Exception {
-
+  public void shouldReturn400AndNotUpdateMarcHoldingWhenSrsRecordIsNotFound() throws Exception {
     UUID instanceId = UUID.randomUUID();
     JsonObject instance = smallAngryPlanet(instanceId);
-    InstanceApiClient.createInstance(okapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
-    InstanceApiClient.createInstance(consortiumOkapiClient, instance.put("source", FOLIO.getValue()));
+    InstanceApiClient.createInstance(okapiClient, instance.copy().put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.copy().put("source", FOLIO.getValue()));
 
-    final UUID holdingsId = holdingsStorageClient.create(
+    final UUID failingHoldingsId = holdingsStorageClient.create(
         new HoldingRequestBuilder()
           .forInstance(instanceId)
           .withMarcSource()
       )
       .getId();
 
+    final UUID successfulHoldingsId = holdingsStorageClient.create(
+        new HoldingRequestBuilder()
+          .forInstance(instanceId)
+      )
+      .getId();
+
     JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
-      new JsonArray(List.of(holdingsId.toString())), UUID.fromString(getMainLibraryLocation()), ApiTestSuite.COLLEGE_TENANT_ID).create();
+      new JsonArray(List.of(failingHoldingsId.toString(), successfulHoldingsId.toString())),
+      UUID.fromString(getMainLibraryLocation()),
+      ApiTestSuite.COLLEGE_TENANT_ID).create();
 
     Response response = updateHoldingsRecordsOwnership(requestBody);
+    assertThat(response.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
 
-    assertThat(response.getStatusCode(), is(500));
-    assertThat(response.getBody(), containsString("Failed to fetch all required MARC source records."));
+    JsonObject responseBody = response.getJson();
+    JsonArray notUpdatedEntities = responseBody.getJsonArray("notUpdatedEntities");
+    assertThat(notUpdatedEntities.size(), is(1));
 
-    Response sourceHoldingsResponse = holdingsStorageClient.getById(holdingsId);
-    assertThat(sourceHoldingsResponse.getStatusCode(), is(HttpStatus.SC_OK));
+    JsonObject failedEntity = notUpdatedEntities.getJsonObject(0);
+    assertThat(failedEntity.getString("entityId"), is(failingHoldingsId.toString()));
+    assertThat(failedEntity.getString("errorMessage"), containsString("Failed to fetch MARC source record"));
+
+    // marc holding without SRS record should not be moved to target tenant
+    Response failingSourceHoldingsResponse = holdingsStorageClient.getById(failingHoldingsId);
+    assertThat(failingSourceHoldingsResponse.getStatusCode(), is(HttpStatus.SC_OK));
+
+    // FOLIO holding should br moved to target tenant
+    Response successfulSourceHoldingsResponse = holdingsStorageClient.getById(successfulHoldingsId);
+    assertThat(successfulSourceHoldingsResponse.getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
+
+    // check that one holding created in target tenant
     List<JsonObject> targetHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId), 1);
-    assertThat(targetHoldings.size(), is(0));
+    assertThat(targetHoldings.size(), is(1));
   }
 
    private JsonObject buildMarcSourceRecord(UUID holdingsId) {
