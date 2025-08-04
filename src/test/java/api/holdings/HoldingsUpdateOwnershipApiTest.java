@@ -83,7 +83,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     Response postHoldingsUpdateOwnershipResponse = updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(200));
+    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(HttpStatus.SC_OK));
     assertThat(new JsonObject(postHoldingsUpdateOwnershipResponse.getBody()).getJsonArray("notUpdatedEntities").size(), is(0));
     assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
 
@@ -149,7 +149,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     Response postHoldingsUpdateOwnershipResponse = updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(200));
+    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(HttpStatus.SC_OK));
     assertThat(new JsonObject(postHoldingsUpdateOwnershipResponse.getBody()).getJsonArray("notUpdatedEntities").size(), is(0));
     assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
 
@@ -215,14 +215,13 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     InstanceApiClient.createInstance(consortiumOkapiClient, instance.put("source", FOLIO.getValue()));
 
     final UUID createHoldingsRecord1 = createHoldingForInstance(instanceId);
-
     final var firstItem = itemsClient.create(
       new ItemRequestBuilder()
         .forHolding(createHoldingsRecord1)
         .withBarcode("645398607547")
         .withStatus(ItemStatusName.AVAILABLE.value()));
 
-    final JsonObject expectedErrorResponse = new JsonObject().put("message", "Server error");
+    final JsonObject expectedErrorResponse = new JsonObject().put("message", "Internal server error during item creation");
     collegeItemsClient.emulateFailure(
       new EndpointFailureDescriptor()
         .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
@@ -231,55 +230,38 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
         .setBody(expectedErrorResponse.toString())
         .setMethod(HttpMethod.POST.name()));
 
-    holdingsStorageClient.emulateFailure(
-      new EndpointFailureDescriptor()
-        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
-        .setStatusCode(500)
-        .setContentType("application/json")
-        .setBody(expectedErrorResponse.toString())
-        .setMethod(HttpMethod.DELETE.name()));
-
     JsonObject holdingsRecordUpdateOwnershipRequestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
       new JsonArray(List.of(createHoldingsRecord1.toString())), UUID.fromString(getMainLibraryLocation()), ApiTestSuite.COLLEGE_TENANT_ID).create();
 
     Response postHoldingsUpdateOwnershipResponse = updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
     collegeItemsClient.disableFailureEmulation();
-    holdingsStorageClient.disableFailureEmulation();
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(400));
-
-    JsonArray notUpdatedEntities = postHoldingsUpdateOwnershipResponse.getJson()
-      .getJsonArray("notUpdatedEntities");
-    assertThat(notUpdatedEntities.size(), is(1));
-
-    List<JsonObject> errors = notUpdatedEntities.stream()
-      .map(obj -> (JsonObject) obj)
-      .toList();
-
-    assertTrue(errors.stream().anyMatch(error ->
-      error.getString("entityId").equals(createHoldingsRecord1.toString()) &&
-        error.getString("errorMessage").contains("Internal server exception: {\"message\":\"Server error\"}")
-    ));
-
+    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
     assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
 
-    // Verify Holdings ownership updated
-    Response sourceTenantHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1);
-    List<JsonObject> targetTenantHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId), 100);
+    JsonArray notUpdatedEntities = postHoldingsUpdateOwnershipResponse.getJson().getJsonArray("notUpdatedEntities");
+    assertThat(notUpdatedEntities.size(), is(1));
+
+    JsonObject error = notUpdatedEntities.getJsonObject(0);
+    assertThat(error.getString("entityId"), is(createHoldingsRecord1.toString()));
+    assertTrue(error.getString("errorMessage").contains("Internal server exception: {\"message\":\"Internal server error during item creation\"}"));
+
+    List<JsonObject> targetTenantHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId), 1);
     assertEquals(1, targetTenantHoldings.size());
-
     JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.getFirst();
-
-    assertEquals(instanceId.toString(), sourceTenantHoldingsRecord1.getJson().getString(INSTANCE_ID));
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord1.getString(INSTANCE_ID));
 
-    // Verify related Item ownership not updated
-    Response sourceTenantItem1 = itemsClient.getById(firstItem.getId());
-    List<JsonObject> targetTenantItems1 = collegeItemsClient.getMany(String.format("holdingsRecordId=%s", targetTenantHoldingsRecord1.getString(ID)), 100);
+    List<JsonObject> targetTenantItems = collegeItemsClient.getMany(String.format("holdingsRecordId=%s", targetTenantHoldingsRecord1.getString(ID)), 1);
+    assertEquals(0, targetTenantItems.size());
 
+    Response sourceTenantHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1);
+    assertThat(sourceTenantHoldingsRecord1.getStatusCode(), is(HttpStatus.SC_OK));
+    assertEquals(instanceId.toString(), sourceTenantHoldingsRecord1.getJson().getString(INSTANCE_ID));
+
+    Response sourceTenantItem1 = itemsClient.getById(firstItem.getId());
+    assertThat(sourceTenantItem1.getStatusCode(), is(HttpStatus.SC_OK));
     assertThat(sourceTenantItem1.getJson().getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord1.toString()));
-    assertEquals(0, targetTenantItems1.size());
   }
 
   @Test
@@ -321,6 +303,10 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertThat("There should be exactly one not-updated entity", notUpdatedEntities.size(), is(1));
     assertThat(notUpdatedEntities.getJsonObject(0).getString("entityId"), equalTo(createHoldingsRecord1.toString()));
     assertThat(notUpdatedEntities.getJsonObject(0).getString("errorMessage"), containsString("Server error"));
+
+    Response sourceHoldingsResponse = holdingsStorageClient.getById(createHoldingsRecord1);
+    assertThat("Source holding should NOT be deleted due to failure in deleting its item",
+      sourceHoldingsResponse.getStatusCode(), is(HttpStatus.SC_OK));
 
     List<JsonObject> targetHoldings = collegeHoldingsStorageClient.getMany(String.format("instanceId==%s", instanceId), 1);
     assertThat("One holding should be created in the target tenant", targetHoldings.size(), is(1));
@@ -754,7 +740,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     Response postHoldingsUpdateOwnershipResponse = updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(200));
+    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(HttpStatus.SC_OK));
     assertThat(new JsonObject(postHoldingsUpdateOwnershipResponse.getBody()).getJsonArray("notUpdatedEntities").size(), is(0));
     assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
 
@@ -798,7 +784,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     Response response = updateHoldingsRecordsOwnership(requestBody);
 
-    assertThat(response.getStatusCode(), is(200));
+    assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
     assertThat(new JsonObject(response.getBody()).getJsonArray("notUpdatedEntities").size(), is(0));
 
     //check that holding removed from source tenant
