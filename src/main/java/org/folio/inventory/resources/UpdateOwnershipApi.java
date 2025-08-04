@@ -405,11 +405,13 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                 LOGGER.info("processHoldingsOwnershipUpdate:: Created {} holdings in target tenant: {}",
                   createdHoldings.size(), updateContext.targetTenantContext.getTenantId());
 
-                List<HoldingsRecord> holdingsToDelete = getHoldingsToDelete(notUpdatedEntities, validatedHoldings);
-
                 return moveSrsRecordsForMarcHoldings(holdingsRecords, createdHoldings, updateContext.sourceContext, updateContext.targetTenantContext, notUpdatedEntities, holdingMarcSources)
                   .thenCompose(v -> transferAttachedItems(createdHoldings, notUpdatedEntities, updateContext.routingContext, updateContext.sourceContext, updateContext.targetTenantContext))
-                  .thenCompose(itemIds -> deleteSourceHoldings(holdingsToDelete, notUpdatedEntities, updateContext.sourceTenantHoldingsRecordCollection));
+                  .thenCompose(itemIds -> {
+                    // Calculate holdings to delete after SRS migration to account for any SRS errors
+                    List<HoldingsRecord> holdingsToDelete = getHoldingsToDelete(notUpdatedEntities, validatedHoldings);
+                    return deleteSourceHoldings(holdingsToDelete, notUpdatedEntities, updateContext.sourceTenantHoldingsRecordCollection);
+                  });
               });
           });
       })
