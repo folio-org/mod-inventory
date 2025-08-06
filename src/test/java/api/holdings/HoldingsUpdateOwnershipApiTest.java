@@ -44,6 +44,7 @@ import static org.folio.inventory.support.ItemUtil.TEMPORARY_LOCATION_ID_KEY;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
@@ -60,6 +61,16 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
   @Before
   public void initConsortia() throws Exception {
     createConsortiumTenant();
+
+    holdingsStorageClient.deleteAll();
+    collegeHoldingsStorageClient.deleteAll();
+
+    itemsClient.deleteAll();
+    collegeItemsClient.deleteAll();
+    boundWithPartsStorageClient.deleteAll();
+
+    sourceRecordStorageClient.deleteAll();
+    collegeSourceRecordStorageClient.deleteAll();
   }
 
   @After
@@ -801,13 +812,168 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertThat(sourceSrsResponse.getJson().getString("state"), is("DELETED"));
 
     //check that SRS record created in target tenant
-    List<JsonObject> targetSrsRecords = collegeSrsClient.getMany("matchedId==" + sourceSrsId, 1);
+    List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
     assertThat(targetSrsRecords.size(), is(1));
 
     JsonObject targetSrsRecord = targetSrsRecords.getFirst();
     assertNotEquals(sourceSrsId, targetSrsRecord.getString("id"));
     assertEquals(sourceSrsId, targetSrsRecord.getString("matchedId"));
     assertEquals("MARC_HOLDING", targetSrsRecord.getString("recordType"));
+  }
+
+  @Test
+  public void shouldFailMarcHoldingsAndMoveFolioHoldingWhenSnapshotCreationFails() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.copy().put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.copy().put("source", FOLIO.getValue()));
+
+    final UUID marcHoldingsId1 = holdingsStorageClient.create(
+        new HoldingRequestBuilder().forInstance(instanceId).withMarcSource())
+      .getId();
+    final UUID marcHoldingsId2 = holdingsStorageClient.create(
+        new HoldingRequestBuilder().forInstance(instanceId).withMarcSource())
+      .getId();
+    final UUID folioHoldingsId = holdingsStorageClient.create(
+        new HoldingRequestBuilder().forInstance(instanceId))
+      .getId();
+
+    sourceRecordStorageClient.create(buildMarcSourceRecord(marcHoldingsId1));
+    sourceRecordStorageClient.create(buildMarcSourceRecord(marcHoldingsId2));
+
+    final JsonObject expectedErrorResponse = new JsonObject()
+      .put("message", "Internal Server Error: Snapshot creation failed");
+    collegeSourceRecordStorageClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(5).toDate())
+        .setStatusCode(500)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.POST.name()));
+
+    JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
+      new JsonArray(List.of(marcHoldingsId1.toString(), marcHoldingsId2.toString(), folioHoldingsId.toString())),
+      UUID.fromString(getMainLibraryLocation()), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response response = updateHoldingsRecordsOwnership(requestBody);
+
+    collegeSourceRecordStorageClient.disableFailureEmulation();
+
+    assertThat("Response status should be 400 Bad Request due to partial failure",
+      response.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
+
+    JsonObject responseBody = response.getJson();
+    JsonArray notUpdatedEntities = responseBody.getJsonArray("notUpdatedEntities");
+    assertThat("Should have exactly two not-updated entities for MARC holdings", notUpdatedEntities.size(), is(2));
+
+    List<String> failedEntityIds = notUpdatedEntities.stream()
+      .map(obj -> ((JsonObject) obj).getString("entityId"))
+      .toList();
+    assertThat("Failed entities should be the two MARC holdings", failedEntityIds,
+      containsInAnyOrder(marcHoldingsId1.toString(), marcHoldingsId2.toString()));
+
+    //Check that FOLIO holding was moved to target tenant
+    assertThat("FOLIO holding should be deleted from source tenant",
+      holdingsStorageClient.getById(folioHoldingsId).getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
+    List<JsonObject> targetFolioHoldings = collegeHoldingsStorageClient
+      .getMany(String.format("id==%s", folioHoldingsId), 1);
+    assertThat("FOLIO holding should be created in target tenant", targetFolioHoldings.size(), is(1));
+
+    //Check that MARC holdings still exist in source tenant
+    assertThat("MARC holding 1 should still exist in source tenant",
+      holdingsStorageClient.getById(marcHoldingsId1).getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat("MARC holding 2 should still exist in source tenant",
+      holdingsStorageClient.getById(marcHoldingsId2).getStatusCode(), is(HttpStatus.SC_OK));
+
+    //Check that MARC holdings created in target tenant
+    List<JsonObject> targetMarcHoldings = collegeHoldingsStorageClient
+      .getMany(String.format("id==(%s or %s)", marcHoldingsId1, marcHoldingsId2), 2);
+    assertThat("MARC holdings are created in target tenant", targetMarcHoldings.size(), is(2));
+
+    // Check that no SRS records created in target tenant
+    List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("recordType=MARC_HOLDING", 2);
+    assertThat("No SRS records should be created in target tenant", targetSrsRecords.size(), is(0));
+  }
+
+  @Test
+  public void shouldFailOneMarcAndMoveOtherHoldingsWhenSingleSrsRecordMoveFails() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.copy().put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.copy().put("source", FOLIO.getValue()));
+
+    final UUID successfulMarcId = holdingsStorageClient.create(
+        new HoldingRequestBuilder().forInstance(instanceId).withMarcSource())
+      .getId();
+    final UUID failingMarcId = holdingsStorageClient.create(
+        new HoldingRequestBuilder().forInstance(instanceId).withMarcSource())
+      .getId();
+    final UUID folioHoldingsId = holdingsStorageClient.create(
+        new HoldingRequestBuilder().forInstance(instanceId))
+      .getId();
+
+    final String successfulSrsId = sourceRecordStorageClient.create(
+      buildMarcSourceRecord(successfulMarcId)).getJson().getString("id");
+
+    sourceRecordStorageClient.create(buildMarcSourceRecord(failingMarcId));
+
+    final JsonObject expectedErrorResponse = new JsonObject().put("message", "Internal Server Error: Record creation failed");
+    collegeSourceRecordStorageClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(5).toDate())
+        .setStatusCode(500)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.POST.name())
+        .setBodyContains(failingMarcId.toString())
+    );
+
+    JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
+      new JsonArray(List.of(successfulMarcId.toString(), failingMarcId.toString(), folioHoldingsId.toString())),
+      UUID.fromString(getMainLibraryLocation()), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response response = updateHoldingsRecordsOwnership(requestBody);
+
+    collegeSourceRecordStorageClient.disableFailureEmulation();
+
+    assertThat("Response status should be 400 Bad Request due to partial failure",
+      response.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
+
+    JsonObject responseBody = response.getJson();
+    JsonArray notUpdatedEntities = responseBody.getJsonArray("notUpdatedEntities");
+    assertThat("Should have exactly one not-updated entity", notUpdatedEntities.size(), is(1));
+    assertThat("Failed entity should be the failing MARC holding",
+      notUpdatedEntities.getJsonObject(0).getString("entityId"), is(failingMarcId.toString()));
+
+    // Check that FOLIO holding was moved to target tenant
+    assertThat("FOLIO holding should be deleted from source tenant",
+      holdingsStorageClient.getById(folioHoldingsId).getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
+    assertThat("FOLIO holding should be created in target tenant",
+      collegeHoldingsStorageClient.getMany(String.format("id==%s", folioHoldingsId), 1).size(), is(1));
+
+    // Check that successful MARC holding was moved to target tenant
+    assertThat("Successful MARC holding should be deleted from source tenant",
+      holdingsStorageClient.getById(successfulMarcId).getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
+    assertThat("Successful MARC holding should be created in target tenant",
+      collegeHoldingsStorageClient.getMany(String.format("id==%s", successfulMarcId), 1).size(), is(1));
+    Response sourceSrsForSuccess = sourceRecordStorageClient.getById(UUID.fromString(successfulSrsId));
+    assertThat("Source SRS for successful holding should be marked as DELETED",
+      sourceSrsForSuccess.getJson().getString("state"), is("DELETED"));
+
+    // Check that failing MARC holding still exists in source tenant
+    assertThat("Failing MARC holding should still exist in source tenant",
+      holdingsStorageClient.getById(failingMarcId).getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat("Failing MARC holding SHOULD BE created in target tenant despite SRS failure",
+      collegeHoldingsStorageClient.getMany(String.format("id==%s", failingMarcId), 1).size(), is(1));
+    assertThat("SRS record for failing MARC holding should NOT be created in target tenant",
+      collegeSourceRecordStorageClient.getMany(String.format("externalIdsHolder.holdingsId==%s", failingMarcId), 1).size(), is(0));
+
+    // Check that one SRS record created in target tenant for successful holding
+    // and it corresponds to the successful holding
+    List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("recordType==MARC_HOLDING", 2);
+    assertThat("Exactly one SRS record should be created in target tenant", targetSrsRecords.size(), is(1));
+    assertThat("The created SRS record should correspond to the successful holding",
+      targetSrsRecords.getFirst().getString("matchedId"), is(successfulSrsId));
   }
 
   @Test
@@ -956,7 +1122,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     // Emulate failure on snapshot creation endpoint in target tenant (college)
     final JsonObject expectedErrorResponse = new JsonObject().put("message", "Snapshot creation failed");
-    collegeSrsClient.emulateFailure(
+    collegeSourceRecordStorageClient.emulateFailure(
       new EndpointFailureDescriptor()
         .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
         .setStatusCode(500)
@@ -971,7 +1137,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     Response response = updateHoldingsRecordsOwnership(requestBody);
 
-    collegeSrsClient.disableFailureEmulation();
+    collegeSourceRecordStorageClient.disableFailureEmulation();
 
     // Verify that the operation returns 400 due to snapshot creation failure
     assertThat(response.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));

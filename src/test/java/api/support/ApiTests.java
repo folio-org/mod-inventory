@@ -41,7 +41,7 @@ public abstract class ApiTests {
   protected final ResourceClient boundWithPartsStorageClient;
   protected final InstanceRelationshipTypeFixture instanceRelationshipTypeFixture;
   protected final MarkItemFixture markItemFixture;
-  protected final ResourceClient collegeSrsClient;
+  protected final ResourceClient collegeSourceRecordStorageClient;
 
   public ApiTests() {
     holdingsStorageClient = ResourceClient.forHoldingsStorage(okapiClient);
@@ -67,7 +67,7 @@ public abstract class ApiTests {
 
     collegeHoldingsStorageClient = ResourceClient.forHoldingsStorage(collegeOkapiClient);
     collegeItemsClient = ResourceClient.forItemsStorage(collegeOkapiClient);
-    collegeSrsClient = ResourceClient.forSourceRecordStorage(collegeOkapiClient);
+    collegeSourceRecordStorageClient = ResourceClient.forSourceRecordStorage(collegeOkapiClient);
   }
 
   @BeforeClass

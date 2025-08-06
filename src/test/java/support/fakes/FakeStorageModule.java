@@ -107,11 +107,24 @@ class FakeStorageModule extends AbstractVerticle {
   private void emulateFailureIfNeeded(RoutingContext routingContext) {
     if (shouldEmulateFailure(routingContext)) {
       final String body = endpointFailureDescriptor.getBody();
+      String bodyContains = endpointFailureDescriptor.getBodyContains();
+
+      if (bodyContains != null) {
+        String requestBody = routingContext.body().asString();
+        if (requestBody != null && requestBody.contains(bodyContains)) {
+          routingContext.response()
+            .setStatusCode(endpointFailureDescriptor.getStatusCode())
+            .putHeader(HttpHeaders.CONTENT_TYPE, endpointFailureDescriptor.getContentType())
+            .end(body);
+        } else {
+          routingContext.next();
+        }
+        return;
+      }
 
       routingContext.response()
         .setStatusCode(endpointFailureDescriptor.getStatusCode())
         .putHeader(HttpHeaders.CONTENT_TYPE, endpointFailureDescriptor.getContentType())
-        .putHeader(HttpHeaders.CONTENT_LENGTH, Integer.toString(body.length()))
         .end(body);
 
     } else {

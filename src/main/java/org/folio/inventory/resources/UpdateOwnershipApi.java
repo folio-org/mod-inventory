@@ -475,21 +475,27 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
    * @param holdingMarcSources A map of source holdings ID to its fetched MARC Record.
    * @return A CompletableFuture that completes when all SRS records have been processed.
    */
-  CompletableFuture<Void> moveSrsRecordsForMarcHoldings(List<HoldingsRecord> sourceHoldings, List<HoldingsRecord> targetHoldings,
+  private CompletableFuture<Void> moveSrsRecordsForMarcHoldings(List<HoldingsRecord> sourceHoldings, List<HoldingsRecord> targetHoldings,
                                                         WebContext sourceContext, Context targetTenantContext, List<NotUpdatedEntity> notUpdatedEntities,
                                                         Map<String, Record> holdingMarcSources) {
 
     LOGGER.debug("moveSrsRecordsForMarcHoldings:: Starting SRS record migration for {} source holdings", sourceHoldings.size());
 
-    // Filter to get only MARC holdings for which we have successfully fetched an SRS record.
+    //Prepare the list of holding id's that have already been flagged as wrong
+    Set<String> failedHoldingsIds = notUpdatedEntities.stream()
+      .map(NotUpdatedEntity::getEntityId)
+      .collect(Collectors.toSet());
+
+    //Filter MARC holdings that have successfully fetched SRS records and are not in the failed list
     Set<String> successfullyFetchedHoldingsIds = holdingMarcSources.keySet();
     List<HoldingsRecord> marcHoldingsToProcess = sourceHoldings.stream()
+      .filter(h -> !failedHoldingsIds.contains(h.getId()))
       .filter(h -> MARC_SOURCE_ID.equals(h.getSourceId()))
       .filter(h -> successfullyFetchedHoldingsIds.contains(h.getId()))
       .toList();
 
     if (marcHoldingsToProcess.isEmpty()) {
-      LOGGER.info("moveSrsRecordsForMarcHoldings:: No MARC holdings with fetched SRS records found to process.");
+      LOGGER.info("moveSrsRecordsForMarcHoldings:: No valid MARC holdings with fetched SRS records found to process.");
       return CompletableFuture.completedFuture(null);
     }
 
@@ -497,48 +503,54 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .withJobExecutionId(java.util.UUID.randomUUID().toString())
       .withStatus(Snapshot.Status.PARSING_IN_PROGRESS);
 
+    //Create a snapshot. An error at this stage is fatal for the full batch.
     return snapshotService.postSnapshotInSrsAndHandleResponse(targetTenantContext, snapshot)
       .toCompletionStage().toCompletableFuture()
       .thenCompose(createdSnapshot -> {
         LOGGER.info("moveSrsRecordsForMarcHoldings:: Created a single snapshot {} for the entire operation", createdSnapshot.getJobExecutionId());
 
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-        for (HoldingsRecord sourceHolding : marcHoldingsToProcess) {
-          LOGGER.debug("moveSrsRecordsForMarcHoldings:: Processing MARC holdings: {}", sourceHolding.getId());
-          HoldingsRecord targetHolding = findMatchingTargetHolding(sourceHolding, targetHoldings);
-          if (targetHolding == null) {
-            String msg = String.format("No matching target holding found for source holding id: %s", sourceHolding.getId());
-            LOGGER.warn("moveSrsRecordsForMarcHoldings:: {}", msg);
-            notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHolding.getId()).withErrorMessage(msg));
-            continue;
-          }
+        //Process each holding individually
+        List<CompletableFuture<Void>> futures = marcHoldingsToProcess.stream()
+          .map(sourceHolding -> CompletableFuture.runAsync(() -> {
+            LOGGER.debug("moveSrsRecordsForMarcHoldings:: Processing MARC holdings: {}", sourceHolding.getId());
 
-          Record sourceRecord = holdingMarcSources.get(sourceHolding.getId());
-          if (sourceRecord == null) {
-            String msg = String.format("No MARC source record found for holdings id: %s", sourceHolding.getId());
-            LOGGER.warn("moveSrsRecordsForMarcHoldings:: {}", msg);
-            notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHolding.getId()).withErrorMessage(msg));
-            continue;
-          }
+            HoldingsRecord targetHolding = findMatchingTargetHolding(sourceHolding, targetHoldings);
+            if (targetHolding == null) {
+              String msg = String.format("No matching target holding found for source holding id: %s", sourceHolding.getId());
+              LOGGER.warn("moveSrsRecordsForMarcHoldings:: {}", msg);
+              notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHolding.getId()).withErrorMessage(msg));
+              return;
+            }
 
-          LOGGER.debug("moveSrsRecordsForMarcHoldings:: Moving SRS record for source holdings: {} to target holdings: {}",
-            sourceHolding.getId(), targetHolding.getId());
+            Record sourceRecord = holdingMarcSources.get(sourceHolding.getId());
+            LOGGER.debug("moveSrsRecordsForMarcHoldings:: Moving SRS record for source holdings: {} to target holdings: {}",
+              sourceHolding.getId(), targetHolding.getId());
 
-          futures.add(moveSingleMarcHoldingsSrsRecord(sourceHolding, sourceRecord, targetHolding,
-            sourceContext, targetTenantContext, notUpdatedEntities, createdSnapshot));
-        }
+            moveSingleMarcHoldingsSrsRecord(sourceHolding, sourceRecord, targetHolding,
+              sourceContext, targetTenantContext, notUpdatedEntities, createdSnapshot).join();
 
+          }).exceptionally(ex -> {
+            String errorMessage = String.format("Unexpected error processing holdings record %s: %s", sourceHolding.getId(), ex.getMessage());
+            LOGGER.error(errorMessage, ex);
+            notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHolding.getId()).withErrorMessage(errorMessage));
+            return null;
+          }))
+          .toList();
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
       })
-      .thenAccept(v -> LOGGER.info("moveSrsRecordsForMarcHoldings:: Successfully processed MARC SRS records"))
+      .thenAccept(v -> LOGGER.info("moveSrsRecordsForMarcHoldings:: Finished processing MARC SRS records for the batch."))
       .exceptionally(throwable -> {
-        LOGGER.error("moveSrsRecordsForMarcHoldings:: Failed to move SRS records", throwable);
-        if (throwable.getCause() instanceof BadRequestException || throwable.getCause() instanceof NotFoundException) {
-          marcHoldingsToProcess.forEach(h -> notUpdatedEntities.add(new NotUpdatedEntity()
-            .withEntityId(h.getId())
-            .withErrorMessage("Failed to create a snapshot for the operation: " + throwable.getMessage())));
-        }
-        throw new CompletionException(throwable);
+        Throwable cause = throwable instanceof CompletionException ? throwable.getCause() : throwable;
+        LOGGER.error("moveSrsRecordsForMarcHoldings:: A batch-level error occurred, likely during snapshot creation. Marking all MARC holdings in this batch as not updated.", cause);
+        String errorMessage = "Failed to process the batch of MARC records due to a system error: " + cause.getMessage();
+        marcHoldingsToProcess.forEach(h -> {
+          if (notUpdatedEntities.stream().noneMatch(e -> e.getEntityId().equals(h.getId()))) {
+            notUpdatedEntities.add(new NotUpdatedEntity()
+              .withEntityId(h.getId())
+              .withErrorMessage(errorMessage));
+          }
+        });
+        throw new CompletionException(cause);
       });
   }
 
@@ -553,7 +565,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .orElse(null);
   }
 
-  CompletableFuture<Void> moveSingleMarcHoldingsSrsRecord(HoldingsRecord sourceHolding, Record record, HoldingsRecord targetHolding,
+  private CompletableFuture<Void> moveSingleMarcHoldingsSrsRecord(HoldingsRecord sourceHolding, Record record, HoldingsRecord targetHolding,
                                                           WebContext sourceContext, Context targetTenantContext, List<NotUpdatedEntity> notUpdatedEntities, Snapshot snapshot) {
 
     LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Starting SRS record migration for holdings: {} -> {}",
