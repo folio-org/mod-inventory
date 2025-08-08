@@ -791,6 +791,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
     LOGGER.debug("createHoldings:: Creating holdings records: {}", holdingsRecords);
 
+
     List<CompletableFuture<HoldingsRecord>> createFutures = holdingsRecords.stream()
       .map(holdingsRecord ->
         holdingsRecordCollection.add(holdingsRecord)
@@ -801,7 +802,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           }).thenApply(createdHolding -> {
             LOGGER.debug("createHoldings:: Successfully created holdingsRecord with id: {} and HRID: {}",
               holdingsRecord.getId(), holdingsRecord.getHrid());
-            return holdingsRecord;
+            return createdHolding;
           }))
       .toList();
 
