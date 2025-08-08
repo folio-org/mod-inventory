@@ -809,7 +809,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     //check that SRS record from source tenant marked as DELETED
     Response sourceSrsResponse = sourceRecordStorageClient.getById(UUID.fromString(sourceSrsId));
-    assertThat(sourceSrsResponse.getJson().getString("state"), is("DELETED"));
+    assertThat(sourceSrsResponse.getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
 
     //check that SRS record created in target tenant
     List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
@@ -958,7 +958,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
       collegeHoldingsStorageClient.getMany(String.format("id==%s", successfulMarcId), 1).size(), is(1));
     Response sourceSrsForSuccess = sourceRecordStorageClient.getById(UUID.fromString(successfulSrsId));
     assertThat("Source SRS for successful holding should be marked as DELETED",
-      sourceSrsForSuccess.getJson().getString("state"), is("DELETED"));
+      sourceSrsForSuccess.getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
 
     // Check that failing MARC holding still exists in source tenant
     assertThat("Failing MARC holding should still exist in source tenant",
