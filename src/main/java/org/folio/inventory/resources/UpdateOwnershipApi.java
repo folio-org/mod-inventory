@@ -598,7 +598,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           targetTenantContext.getTenantId(), postAr.result().bodyAsString());
 
         LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Deleting source SRS record with id: {}", record.getId());
-        sourceSrsClient.deleteSourceStorageRecordsById(record.getId(), "HOLDINGS").onComplete(deleteAr -> {
+        sourceSrsClient.deleteSourceStorageRecordsById(record.getId(), "SRS_RECORD").onComplete(deleteAr -> {
           if (deleteAr.failed() || deleteAr.result().statusCode() != HttpStatus.HTTP_NO_CONTENT.toInt()) {
             String msg = String.format("Failed to delete source SRS record in source tenant=%s: %s",
               sourceContext.getTenantId(), deleteAr.cause() != null ? deleteAr.cause().getMessage() : deleteAr.result().bodyAsString());
