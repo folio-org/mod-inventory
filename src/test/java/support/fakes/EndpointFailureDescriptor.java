@@ -8,6 +8,7 @@ public class EndpointFailureDescriptor {
   private String contentType;
   private String body;
   private String method;
+  private String bodyContains;
 
   public Date getFailureExpireDate() {
     return failureExpireDate;
@@ -51,6 +52,15 @@ public class EndpointFailureDescriptor {
 
   public EndpointFailureDescriptor setMethod(String method) {
     this.method = method;
+    return this;
+  }
+
+  public String getBodyContains() {
+    return bodyContains;
+  }
+
+  public EndpointFailureDescriptor setBodyContains(String bodyContains) {
+    this.bodyContains = bodyContains;
     return this;
   }
 }
