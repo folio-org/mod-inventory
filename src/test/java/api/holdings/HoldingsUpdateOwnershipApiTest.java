@@ -903,13 +903,13 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     InstanceApiClient.createInstance(consortiumOkapiClient, instance.copy().put("source", FOLIO.getValue()));
 
     final UUID successfulMarcId = holdingsStorageClient.create(
-        new HoldingRequestBuilder().forInstance(instanceId).withMarcSource())
+        new HoldingRequestBuilder().forInstance(instanceId).withHrId("ho00000000048").withMarcSource())
       .getId();
     final UUID failingMarcId = holdingsStorageClient.create(
-        new HoldingRequestBuilder().forInstance(instanceId).withMarcSource())
+        new HoldingRequestBuilder().forInstance(instanceId).withHrId("ho00000000049").withMarcSource())
       .getId();
     final UUID folioHoldingsId = holdingsStorageClient.create(
-        new HoldingRequestBuilder().forInstance(instanceId))
+        new HoldingRequestBuilder().forInstance(instanceId).withHrId("ho00000000050"))
       .getId();
 
     final String successfulSrsId = sourceRecordStorageClient.create(

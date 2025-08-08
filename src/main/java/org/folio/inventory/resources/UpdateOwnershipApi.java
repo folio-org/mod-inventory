@@ -15,6 +15,7 @@ import static org.folio.inventory.support.MoveApiUtil.respond;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 import static org.folio.inventory.validation.UpdateOwnershipValidator.updateOwnershipHasRequiredFields;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
@@ -58,6 +59,7 @@ import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.MoveApiUtil;
+import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.jaxrs.model.Snapshot;
 
@@ -563,7 +565,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     }
   }
 
-  private CompletableFuture<Void> moveSingleMarcHoldingsSrsRecord(HoldingsRecord sourceHolding, Record record, HoldingsRecord targetHolding,
+  private static final ObjectMapper objectMapper = new ObjectMapper();
+  private CompletableFuture<Void> moveSingleMarcHoldingsSrsRecord(HoldingsRecord sourceHolding, Record marcSrsRecord, HoldingsRecord targetHolding,
                                                                   WebContext sourceContext, Context targetTenantContext, List<NotUpdatedEntity> notUpdatedEntities, Snapshot snapshot) {
 
     LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Starting SRS record migration for holdings: {} -> {}",
@@ -572,17 +575,26 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     CompletableFuture<Void> result = new CompletableFuture<>();
 
     try {
+      String jsonSourceHolding = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(sourceHolding);
+      LOGGER.debug("SourceHolding: \n{}", jsonSourceHolding);
+
+      String jsonTargetHolding = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(targetHolding);
+      LOGGER.debug("TargetHolding: \n{}", jsonTargetHolding);
+
       SourceStorageRecordsClientWrapper sourceSrsClient = clientFactory.createSourceStorageRecordsClient(sourceContext, client);
       SourceStorageRecordsClientWrapper targetSrsClient = clientFactory.createSourceStorageRecordsClient(targetTenantContext, client);
 
+      ExternalIdsHolder newExternalIds = marcSrsRecord.getExternalIdsHolder();
+      newExternalIds.setHoldingsHrid(targetHolding.getHrid());
+
       Record newRecordForTarget = new Record()
         .withSnapshotId(snapshot.getJobExecutionId())
-        .withMatchedId(record.getMatchedId())
-        .withRecordType(record.getRecordType())
-        .withParsedRecord(record.getParsedRecord())
-        .withExternalIdsHolder(record.getExternalIdsHolder())
-        .withAdditionalInfo(record.getAdditionalInfo())
-        .withRawRecord(record.getRawRecord());
+        .withMatchedId(marcSrsRecord.getMatchedId())
+        .withRecordType(marcSrsRecord.getRecordType())
+        .withParsedRecord(marcSrsRecord.getParsedRecord())
+        .withExternalIdsHolder(newExternalIds)
+        .withAdditionalInfo(marcSrsRecord.getAdditionalInfo())
+        .withRawRecord(marcSrsRecord.getRawRecord());
 
       targetSrsClient.postSourceStorageRecords(newRecordForTarget).onComplete(postAr -> {
         if (postAr.failed() || postAr.result().statusCode() != HttpStatus.HTTP_CREATED.toInt()) {
@@ -597,8 +609,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Posted SRS record to target tenant={}, response: {}",
           targetTenantContext.getTenantId(), postAr.result().bodyAsString());
 
-        LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Deleting source SRS record with id: {}", record.getId());
-        sourceSrsClient.deleteSourceStorageRecordsById(record.getId(), "SRS_RECORD").onComplete(deleteAr -> {
+        LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Deleting source SRS record with id: {}", marcSrsRecord.getId());
+        sourceSrsClient.deleteSourceStorageRecordsById(marcSrsRecord.getId(), "SRS_RECORD").onComplete(deleteAr -> {
           if (deleteAr.failed() || deleteAr.result().statusCode() != HttpStatus.HTTP_NO_CONTENT.toInt()) {
             String msg = String.format("Failed to delete source SRS record in source tenant=%s: %s",
               sourceContext.getTenantId(), deleteAr.cause() != null ? deleteAr.cause().getMessage() : deleteAr.result().bodyAsString());
@@ -608,7 +620,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
             return;
           }
 
-          LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Successfully deleted source SRS record with id: {}", record.getId());
+          LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Successfully deleted source SRS record with id: {}", marcSrsRecord.getId());
           LOGGER.info("moveSingleMarcHoldingsSrsRecord:: Successfully migrated SRS record for holdings: {} -> {}", sourceHolding.getId(), targetHolding.getId());
           result.complete(null);
         });
