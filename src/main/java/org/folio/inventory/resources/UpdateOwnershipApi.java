@@ -598,7 +598,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           targetTenantContext.getTenantId(), postAr.result().bodyAsString());
 
         LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Deleting source SRS record with id: {}", record.getId());
-        sourceSrsClient.deleteSourceStorageRecordsById(record.getId(), "MARC_HOLDING").onComplete(deleteAr -> {
+        sourceSrsClient.deleteSourceStorageRecordsById(record.getId(), "HOLDINGS").onComplete(deleteAr -> {
           if (deleteAr.failed() || deleteAr.result().statusCode() != HttpStatus.HTTP_NO_CONTENT.toInt()) {
             String msg = String.format("Failed to delete source SRS record in source tenant=%s: %s",
               sourceContext.getTenantId(), deleteAr.cause() != null ? deleteAr.cause().getMessage() : deleteAr.result().bodyAsString());
@@ -673,11 +673,25 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
   private CompletableFuture<List<String>> transferAttachedItems(List<HoldingsRecord> holdingsRecordsWrappers,
                                                                 List<NotUpdatedEntity> notUpdatedEntities,
-                                                                RoutingContext routingContext, WebContext context, Context targetTenantContext) {
-    List<String> sourceHoldingsRecordsIds = new ArrayList<>();
 
+                                                                RoutingContext routingContext, WebContext context, Context targetTenantContext) {
+    List<String> sourceHoldingsRecordsIds;
     try {
-      sourceHoldingsRecordsIds = holdingsRecordsWrappers.stream().map(HoldingsRecord::getId).toList();
+
+      Set<String> failedHoldingsIds = notUpdatedEntities.stream()
+        .map(NotUpdatedEntity::getEntityId)
+        .collect(Collectors.toSet());
+
+      List<HoldingsRecord> successfulHoldings = holdingsRecordsWrappers.stream()
+        .filter(h -> !failedHoldingsIds.contains(h.getId()))
+        .toList();
+
+      if (successfulHoldings.isEmpty()) {
+        LOGGER.debug("transferAttachedItems:: No successful holdings to transfer items for.");
+        return CompletableFuture.completedFuture(new ArrayList<>());
+      }
+
+      sourceHoldingsRecordsIds = successfulHoldings.stream().map(HoldingsRecord::getId).toList();
 
       LOGGER.debug("transferAttachedItems:: Transfer items of holdingsRecordIds: {}, to tenant: {}",
         sourceHoldingsRecordsIds, targetTenantContext.getTenantId());
@@ -702,8 +716,9 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           return CompletableFuture.completedFuture(new ArrayList<>());
         });
     } catch (Exception e) {
+      List<String> idsForLog = holdingsRecordsWrappers.stream().map(HoldingsRecord::getId).toList();
       LOGGER.warn("transferAttachedItems:: Error during transfer attached items for holdings {}, to tenant: {}",
-        sourceHoldingsRecordsIds, targetTenantContext.getTenantId(), e);
+        idsForLog, targetTenantContext.getTenantId(), e);
       return CompletableFuture.failedFuture(e);
     }
   }
