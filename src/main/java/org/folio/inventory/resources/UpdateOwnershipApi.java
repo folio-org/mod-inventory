@@ -550,11 +550,11 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         return CompletableFuture.completedFuture(null);
       }
 
-      Record sourceRecord = holdingMarcSources.get(sourceHolding.getId());
+      Record sourceHoldingRecord = holdingMarcSources.get(sourceHolding.getId());
       LOGGER.debug("moveSrsRecordsForMarcHoldings:: Moving SRS record for source holdings: {} to target holdings: {}",
         sourceHolding.getId(), targetHolding.getId());
 
-      return moveSingleMarcHoldingsSrsRecord(sourceHolding, sourceRecord, targetHolding,
+      return moveSingleMarcHoldingsSrsRecord(sourceHolding, sourceHoldingRecord, targetHolding,
         sourceContext, targetTenantContext, notUpdatedEntities, createdSnapshot);
 
     } catch (Exception ex) {
@@ -580,6 +580,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
       String jsonTargetHolding = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(targetHolding);
       LOGGER.debug("TargetHolding: \n{}", jsonTargetHolding);
+      LOGGER.debug("Target holding HRID: {}", targetHolding.getHrid());
 
       SourceStorageRecordsClientWrapper sourceSrsClient = clientFactory.createSourceStorageRecordsClient(sourceContext, client);
       SourceStorageRecordsClientWrapper targetSrsClient = clientFactory.createSourceStorageRecordsClient(targetTenantContext, client);
@@ -797,7 +798,11 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
             LOGGER.warn("createHoldings:: Error during creating holdingsRecord with id: {}", holdingsRecord, e);
             notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(holdingsRecord.getId()).withErrorMessage(e.getMessage()));
             throw new CompletionException(e);
-          }).thenApply(h -> holdingsRecord))
+          }).thenApply(createdHolding -> {
+            LOGGER.debug("createHoldings:: Successfully created holdingsRecord with id: {} and HRID: {}",
+              holdingsRecord.getId(), holdingsRecord.getHrid());
+            return holdingsRecord;
+          }))
       .toList();
 
     return CompletableFuture.allOf(createFutures.toArray(new CompletableFuture[0]))
