@@ -585,7 +585,9 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
     try {
       String jsonTargetHolding = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(targetHolding);
-      LOGGER.trace("TargetHolding: \n{}", jsonTargetHolding);
+      LOGGER.trace("moveSingleMarcHoldingsSrsRecord:: targetHolding: \n{}", jsonTargetHolding);
+      LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Preparing to move SRS record for holdings: {}, hrId: {}",
+        targetHolding.getId(), targetHolding.getHrid());
 
       SourceStorageRecordsClientWrapper sourceSrsClient = clientFactory.createSourceStorageRecordsClient(sourceContext, client);
       SourceStorageRecordsClientWrapper targetSrsClient = clientFactory.createSourceStorageRecordsClient(targetTenantContext, client);
@@ -616,7 +618,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           return;
         }
 
-        LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Posted SRS record to target tenant={}, response: {}",
+        LOGGER.trace("moveSingleMarcHoldingsSrsRecord:: Posted SRS record to target tenant={}, response: {}",
           targetTenantContext.getTenantId(), postAr.result().bodyAsString());
 
         LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Deleting source SRS record with id: {}", marcSrsRecord.getId());
