@@ -13,7 +13,11 @@ import static api.ApiTestSuite.TENANT_ID;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.HttpStatus.HTTP_INTERNAL_SERVER_ERROR;
 import static org.folio.HttpStatus.HTTP_NO_CONTENT;
-import static org.folio.inventory.common.dao.PostgresConnectionOptions.*;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_DATABASE;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_HOST;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_PASSWORD;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_PORT;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_USERNAME;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 

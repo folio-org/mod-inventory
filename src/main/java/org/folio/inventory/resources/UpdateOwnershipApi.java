@@ -595,7 +595,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         .withParsedRecord(marcSrsRecord.getParsedRecord())
         .withExternalIdsHolder(newExternalIds)
         .withAdditionalInfo(marcSrsRecord.getAdditionalInfo())
-        .withRawRecord(marcSrsRecord.getRawRecord());
+        .withRawRecord(marcSrsRecord.getRawRecord())
+        .withDeleted(marcSrsRecord.getDeleted())
+        .withState(marcSrsRecord.getState())
+        .withLeaderRecordStatus(marcSrsRecord.getLeaderRecordStatus());
 
       targetSrsClient.postSourceStorageRecords(newRecordForTarget).onComplete(postAr -> {
         if (postAr.failed() || postAr.result().statusCode() != HttpStatus.HTTP_CREATED.toInt()) {
