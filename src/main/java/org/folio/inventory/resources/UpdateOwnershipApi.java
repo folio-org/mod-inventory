@@ -15,10 +15,12 @@ import static org.folio.inventory.support.MoveApiUtil.respond;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 import static org.folio.inventory.validation.UpdateOwnershipValidator.updateOwnershipHasRequiredFields;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -61,11 +63,15 @@ import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.MoveApiUtil;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
+import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.jaxrs.model.Snapshot;
 
 public class UpdateOwnershipApi extends AbstractInventoryResource {
+
   private static final Logger LOGGER = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+  private static final ObjectMapper objectMapper = new ObjectMapper();
+
   public static final String INSTANCE_NOT_SHARED = "Instance with id: %s is not shared";
   public static final String INSTANCE_RELATED_TO_HOLDINGS_RECORD_NOT_SHARED = "Instance with id: %s related to holdings record with id: %s is not shared";
   public static final String INSTANCE_NOT_FOUND_AT_SOURCE_TENANT = "Instance with id: %s not found at source tenant, tenant: %s";
@@ -575,7 +581,6 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     }
   }
 
-  private static final ObjectMapper objectMapper = new ObjectMapper();
   private CompletableFuture<Void> moveSingleMarcHoldingsSrsRecord(HoldingsRecord sourceHolding, Record marcSrsRecord, HoldingsRecord targetHolding,
                                                                   WebContext sourceContext, Context targetTenantContext, List<NotUpdatedEntity> notUpdatedEntities, Snapshot snapshot) {
 
@@ -593,25 +598,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       SourceStorageRecordsClientWrapper sourceSrsClient = clientFactory.createSourceStorageRecordsClient(sourceContext, client);
       SourceStorageRecordsClientWrapper targetSrsClient = clientFactory.createSourceStorageRecordsClient(targetTenantContext, client);
 
-      ExternalIdsHolder newExternalIds = marcSrsRecord.getExternalIdsHolder();
-      newExternalIds.setHoldingsHrid(targetHolding.getHrid());
-
       String sourceParsedContent = marcSrsRecord.getParsedRecord().getContent().toString();
-      //JsonNode sourceNodeTree = objectMapper.readTree(sourceParsedContent);
       LOGGER.info("moveSingleMarcHoldingsSrsRecord:: targetParsedContent {}", sourceParsedContent);
 
-      Record newRecordForTarget = new Record()
-        .withLeaderRecordStatus(marcSrsRecord.getLeaderRecordStatus())
-        .withSnapshotId(snapshot.getJobExecutionId())
-        .withMatchedId(marcSrsRecord.getMatchedId())
-        .withExternalIdsHolder(newExternalIds)
-        .withRecordType(marcSrsRecord.getRecordType())
-        .withState(marcSrsRecord.getState())
-        .withOrder(marcSrsRecord.getOrder())
-        .withParsedRecord(marcSrsRecord.getParsedRecord()) //TODO
-        .withAdditionalInfo(marcSrsRecord.getAdditionalInfo())
-        .withRawRecord(marcSrsRecord.getRawRecord())
-        .withDeleted(marcSrsRecord.getDeleted());
+      Record newRecordForTarget = buildTargetSrsRecord(marcSrsRecord, targetHolding, snapshot);
 
       targetSrsClient.postSourceStorageRecords(newRecordForTarget).onComplete(postAr -> {
         if (postAr.failed() || postAr.result().statusCode() != HttpStatus.HTTP_CREATED.toInt()) {
@@ -650,6 +640,56 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     }
 
     return result;
+  }
+
+  /**
+   * Creates a new SRS Record for the target tenant by copying data from the source record
+   * and updating key fields like HRID in externalIdsHolder and the 001 field in parsedRecord.
+   *
+   * @param sourceSrsRecord The original SRS record from the source tenant.
+   * @param targetHolding   The newly created holdings record in the target tenant, containing the new HRID.
+   * @param snapshot        The snapshot under which the new SRS record will be created.
+   * @return A new, ready-to-post {@link Record} object.
+   * @throws JsonProcessingException if serialization of parsedRecord content fails.
+   */
+  private Record buildTargetSrsRecord(Record sourceSrsRecord, HoldingsRecord targetHolding, Snapshot snapshot) throws JsonProcessingException {
+
+    LOGGER.info("buildTargetSrsRecord:: Building target SRS record for holdings: {}, hrId: {}",
+      targetHolding.getId(), targetHolding.getHrid());
+
+    ExternalIdsHolder newExternalIds = sourceSrsRecord.getExternalIdsHolder();
+    newExternalIds.setHoldingsHrid(targetHolding.getHrid());
+
+    ParsedRecord sourceParsedRecord = sourceSrsRecord.getParsedRecord();
+    String contentAsJsonString = objectMapper.writeValueAsString(sourceParsedRecord.getContent());
+    JsonObject parsedContentCopy = new JsonObject(contentAsJsonString);
+    JsonArray fields = parsedContentCopy.getJsonArray("fields");
+    if (fields != null) {
+      for (int i = 0; i < fields.size(); i++) {
+        if (fields.getValue(i) instanceof JsonObject field && field.containsKey("001")) {
+          field.put("001", targetHolding.getHrid());
+          LOGGER.info("buildTargetSrsRecord:: Updated field 001 with new HRID: {}", targetHolding.getHrid());
+          break;
+        }
+      }
+    }
+
+    ParsedRecord newParsedRecord = new ParsedRecord()
+      .withId(sourceParsedRecord.getId())
+      .withContent(parsedContentCopy);
+
+    return new Record()
+      .withSnapshotId(snapshot.getJobExecutionId())
+      .withMatchedId(sourceSrsRecord.getMatchedId())
+      .withRecordType(sourceSrsRecord.getRecordType())
+      .withExternalIdsHolder(newExternalIds)
+      .withParsedRecord(newParsedRecord)
+      .withRawRecord(sourceSrsRecord.getRawRecord())
+      .withAdditionalInfo(sourceSrsRecord.getAdditionalInfo())
+      .withState(sourceSrsRecord.getState())
+      .withLeaderRecordStatus(sourceSrsRecord.getLeaderRecordStatus())
+      .withOrder(sourceSrsRecord.getOrder())
+      .withDeleted(sourceSrsRecord.getDeleted());
   }
 
   /**
