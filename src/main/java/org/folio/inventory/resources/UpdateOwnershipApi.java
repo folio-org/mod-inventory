@@ -674,9 +674,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       }
     }
 
+    Map<String, Object> contentAsMap = parsedContentCopy.getMap();
     ParsedRecord newParsedRecord = new ParsedRecord()
       .withId(sourceParsedRecord.getId())
-      .withContent(parsedContentCopy);
+      .withContent(contentAsMap);
 
     return new Record()
       .withSnapshotId(snapshot.getJobExecutionId())
