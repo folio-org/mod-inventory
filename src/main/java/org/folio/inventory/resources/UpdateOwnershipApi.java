@@ -15,6 +15,7 @@ import static org.folio.inventory.support.MoveApiUtil.respond;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 import static org.folio.inventory.validation.UpdateOwnershipValidator.updateOwnershipHasRequiredFields;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
@@ -595,6 +596,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       ExternalIdsHolder newExternalIds = marcSrsRecord.getExternalIdsHolder();
       newExternalIds.setHoldingsHrid(targetHolding.getHrid());
 
+      String sourceParsedContent = marcSrsRecord.getParsedRecord().getContent().toString();
+      JsonNode sourceNodeTree = objectMapper.readTree(sourceParsedContent);
+      LOGGER.info("moveSingleMarcHoldingsSrsRecord:: targetParsedContent {}", sourceParsedContent);
+
       Record newRecordForTarget = new Record()
         .withLeaderRecordStatus(marcSrsRecord.getLeaderRecordStatus())
         .withSnapshotId(snapshot.getJobExecutionId())
@@ -602,8 +607,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         .withExternalIdsHolder(newExternalIds)
         .withRecordType(marcSrsRecord.getRecordType())
         .withState(marcSrsRecord.getState())
-        .withOrder(marcSrsRecord.getOrder() != null ? marcSrsRecord.getOrder() + 1 : 0)
-        .withParsedRecord(marcSrsRecord.getParsedRecord())
+        .withOrder(marcSrsRecord.getOrder())
+        .withParsedRecord(marcSrsRecord.getParsedRecord()) //TODO
         .withAdditionalInfo(marcSrsRecord.getAdditionalInfo())
         .withRawRecord(marcSrsRecord.getRawRecord())
         .withDeleted(marcSrsRecord.getDeleted());
@@ -618,7 +623,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           return;
         }
 
-        LOGGER.trace("moveSingleMarcHoldingsSrsRecord:: Posted SRS record to target tenant={}, response: {}",
+        LOGGER.info("moveSingleMarcHoldingsSrsRecord:: Posted SRS record to target tenant={}, response: {}",
           targetTenantContext.getTenantId(), postAr.result().bodyAsString());
 
         LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Deleting source SRS record with id: {}", marcSrsRecord.getId());
