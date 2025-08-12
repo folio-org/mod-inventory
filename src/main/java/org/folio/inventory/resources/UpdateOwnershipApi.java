@@ -2,6 +2,8 @@ package org.folio.inventory.resources;
 
 import static java.lang.String.format;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.FIELDS;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_001;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.resources.Holdings.MARC_SOURCE_ID;
@@ -662,11 +664,11 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     ParsedRecord sourceParsedRecord = sourceSrsRecord.getParsedRecord();
     String contentAsJsonString = objectMapper.writeValueAsString(sourceParsedRecord.getContent());
     JsonObject parsedContentCopy = new JsonObject(contentAsJsonString);
-    JsonArray fields = parsedContentCopy.getJsonArray("fields");
+    JsonArray fields = parsedContentCopy.getJsonArray(FIELDS);
     if (fields != null) {
       for (int i = 0; i < fields.size(); i++) {
-        if (fields.getValue(i) instanceof JsonObject field && field.containsKey("001")) {
-          field.put("001", targetHolding.getHrid());
+        if (fields.getValue(i) instanceof JsonObject field && field.containsKey(TAG_001)) {
+          field.put(TAG_001, targetHolding.getHrid());
           LOGGER.info("buildTargetSrsRecord:: Updated field 001 with new HRID: {}", targetHolding.getHrid());
           break;
         }
@@ -678,6 +680,11 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .withId(sourceParsedRecord.getId())
       .withContent(contentAsMap);
 
+    Integer order = sourceSrsRecord.getOrder();
+    LOGGER.info("buildTargetSrsRecord:: 1 order: {}", order);
+    order = sourceSrsRecord.getOrder() != null ? sourceSrsRecord.getOrder() : 0;
+    LOGGER.info("buildTargetSrsRecord:: 2 order: {}", order);
+
     return new Record()
       .withSnapshotId(snapshot.getJobExecutionId())
       .withMatchedId(sourceSrsRecord.getMatchedId())
@@ -688,7 +695,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .withAdditionalInfo(sourceSrsRecord.getAdditionalInfo())
       .withState(sourceSrsRecord.getState())
       .withLeaderRecordStatus(sourceSrsRecord.getLeaderRecordStatus())
-      .withOrder(sourceSrsRecord.getOrder())
+      .withOrder(order)
       .withDeleted(sourceSrsRecord.getDeleted());
   }
 
