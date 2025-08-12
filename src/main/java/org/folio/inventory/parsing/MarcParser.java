@@ -11,7 +11,10 @@ import org.folio.inventory.exceptions.InvalidMarcConfigException;
 
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 public class MarcParser {
 

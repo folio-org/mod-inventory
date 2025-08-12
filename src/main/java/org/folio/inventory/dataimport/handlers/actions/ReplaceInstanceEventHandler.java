@@ -17,6 +17,7 @@ import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.exceptions.DataImportException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -90,8 +91,9 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
                                      PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
                                      MappingMetadataCache mappingMetadataCache,
                                      HttpClient client,
-                                     ConsortiumService consortiumService) {
-    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client);
+                                     ConsortiumService consortiumService,
+                                     SnapshotService snapshotService) {
+    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, snapshotService, client);
     this.consortiumService = consortiumService;
   }
 
@@ -307,12 +309,12 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       .stream()
       .filter(pr -> isNotEmpty(pr.id))
       .map(pr -> pr.id)
-      .collect(Collectors.toList()));
+      .toList());
     precedingSucceedingIds.addAll(instanceToUpdate.getSucceedingTitles()
       .stream()
       .filter(pr -> isNotEmpty(pr.id))
       .map(pr -> pr.id)
-      .collect(Collectors.toList()));
+      .toList());
     instanceAsJson.put("id", instanceToUpdate.getId());
     instanceAsJson.put(HRID_KEY, instanceToUpdate.getHrid());
     if (instanceToUpdate.getSource() != null && (!(instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO.getValue())

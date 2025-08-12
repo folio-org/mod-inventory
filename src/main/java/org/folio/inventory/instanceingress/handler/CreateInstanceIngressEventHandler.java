@@ -17,6 +17,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
+import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.services.IdStorageService;
@@ -36,8 +37,9 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
                                            IdStorageService idStorageService,
                                            HttpClient httpClient,
                                            Context context,
-                                           Storage storage) {
-    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, idStorageService, null, httpClient);
+                                           Storage storage,
+                                           SnapshotService snapshotService) {
+    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, idStorageService, null, snapshotService, httpClient);
     this.instanceCollection = storage.getInstanceCollection(context);
     this.context = context;
   }
