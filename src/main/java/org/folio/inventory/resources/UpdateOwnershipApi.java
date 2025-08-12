@@ -602,7 +602,6 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       LOGGER.info("moveSingleMarcHoldingsSrsRecord:: targetParsedContent {}", sourceParsedContent);
 
       Record newRecordForTarget = buildTargetSrsRecord(marcSrsRecord, targetHolding, snapshot);
-
       targetSrsClient.postSourceStorageRecords(newRecordForTarget).onComplete(postAr -> {
         if (postAr.failed() || postAr.result().statusCode() != HttpStatus.HTTP_CREATED.toInt()) {
           String msg = String.format("Failed to post SRS record to target tenant=%s: %s",
@@ -613,7 +612,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           return;
         }
 
-        LOGGER.info("moveSingleMarcHoldingsSrsRecord:: Posted SRS record to target tenant={}, response: {}",
+        LOGGER.trace("moveSingleMarcHoldingsSrsRecord:: Posted SRS record to target tenant={}, response: \n{}",
           targetTenantContext.getTenantId(), postAr.result().bodyAsString());
 
         LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Deleting source SRS record with id: {}", marcSrsRecord.getId());
