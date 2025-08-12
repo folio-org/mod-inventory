@@ -677,12 +677,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .withId(sourceParsedRecord.getId())
       .withContent(contentAsMap);
 
-    Integer order = sourceSrsRecord.getOrder();
-    LOGGER.info("buildTargetSrsRecord:: 1 order: {}", order);
-    order = sourceSrsRecord.getOrder() != null ? sourceSrsRecord.getOrder() : 0;
-    LOGGER.info("buildTargetSrsRecord:: 2 order: {}", order);
-    if (order == 0) order = order + 1;
-    LOGGER.info("buildTargetSrsRecord:: 3 order: {}", order);
+    Integer order = sourceSrsRecord.getOrder() != null ? sourceSrsRecord.getOrder() + 1 : 0;
+    LOGGER.info("buildTargetSrsRecord:: order: {}", order);
 
     return new Record()
       .withSnapshotId(snapshot.getJobExecutionId())
