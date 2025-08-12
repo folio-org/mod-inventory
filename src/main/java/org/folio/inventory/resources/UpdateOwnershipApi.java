@@ -597,7 +597,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       newExternalIds.setHoldingsHrid(targetHolding.getHrid());
 
       String sourceParsedContent = marcSrsRecord.getParsedRecord().getContent().toString();
-      JsonNode sourceNodeTree = objectMapper.readTree(sourceParsedContent);
+      //JsonNode sourceNodeTree = objectMapper.readTree(sourceParsedContent);
       LOGGER.info("moveSingleMarcHoldingsSrsRecord:: targetParsedContent {}", sourceParsedContent);
 
       Record newRecordForTarget = new Record()
