@@ -600,9 +600,6 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       SourceStorageRecordsClientWrapper sourceSrsClient = clientFactory.createSourceStorageRecordsClient(sourceContext, client);
       SourceStorageRecordsClientWrapper targetSrsClient = clientFactory.createSourceStorageRecordsClient(targetTenantContext, client);
 
-      String sourceParsedContent = marcSrsRecord.getParsedRecord().getContent().toString();
-      LOGGER.info("moveSingleMarcHoldingsSrsRecord:: targetParsedContent {}", sourceParsedContent);
-
       Record newRecordForTarget = buildTargetSrsRecord(marcSrsRecord, targetHolding, snapshot);
       targetSrsClient.postSourceStorageRecords(newRecordForTarget).onComplete(postAr -> {
         if (postAr.failed() || postAr.result().statusCode() != HttpStatus.HTTP_CREATED.toInt()) {
@@ -684,6 +681,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     LOGGER.info("buildTargetSrsRecord:: 1 order: {}", order);
     order = sourceSrsRecord.getOrder() != null ? sourceSrsRecord.getOrder() : 0;
     LOGGER.info("buildTargetSrsRecord:: 2 order: {}", order);
+    if (order == 0) order = order + 1;
+    LOGGER.info("buildTargetSrsRecord:: 3 order: {}", order);
 
     return new Record()
       .withSnapshotId(snapshot.getJobExecutionId())
