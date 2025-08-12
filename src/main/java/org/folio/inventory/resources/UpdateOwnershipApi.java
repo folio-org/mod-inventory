@@ -18,7 +18,6 @@ import static org.folio.inventory.support.http.server.JsonResponse.unprocessable
 import static org.folio.inventory.validation.UpdateOwnershipValidator.updateOwnershipHasRequiredFields;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
@@ -677,9 +676,6 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .withId(sourceParsedRecord.getId())
       .withContent(contentAsMap);
 
-    Integer order = sourceSrsRecord.getOrder() != null ? sourceSrsRecord.getOrder() + 1 : 0;
-    LOGGER.info("buildTargetSrsRecord:: order: {}", order);
-
     return new Record()
       .withSnapshotId(snapshot.getJobExecutionId())
       .withMatchedId(sourceSrsRecord.getMatchedId())
@@ -690,7 +686,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .withAdditionalInfo(sourceSrsRecord.getAdditionalInfo())
       .withState(sourceSrsRecord.getState())
       .withLeaderRecordStatus(sourceSrsRecord.getLeaderRecordStatus())
-      .withOrder(order)
+      .withOrder(sourceSrsRecord.getOrder() != null ? sourceSrsRecord.getOrder() + 1 : 0)
       .withDeleted(sourceSrsRecord.getDeleted());
   }
 
