@@ -37,6 +37,7 @@ import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
+import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -89,6 +90,8 @@ public class CreateInstanceIngressEventHandlerUnitTest {
   private Storage storage;
   @Mock
   private InstanceCollection instanceCollection;
+  @Mock
+  private SnapshotService snapshotService;
   private CreateInstanceIngressEventHandler handler;
 
   @Before
@@ -99,7 +102,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
     doReturn(USER_ID).when(context).getUserId();
     doReturn(instanceCollection).when(storage).getInstanceCollection(context);
     handler = spy(new CreateInstanceIngressEventHandler(precedingSucceedingTitlesHelper,
-      mappingMetadataCache, idStorageService, httpClient, context, storage));
+      mappingMetadataCache, idStorageService, httpClient, context, storage, snapshotService));
   }
 
   @Test
@@ -280,6 +283,8 @@ public class CreateInstanceIngressEventHandlerUnitTest {
       successHandler.accept(new Success<>(i.getArgument(0)));
       return null;
     }).when(instanceCollection).add(any(), any(), any());
+    doReturn(failedFuture("Failed to create snapshot in SRS, snapshot id: test-id"))
+      .when(handler).postSnapshotInSrsAndHandleResponse(anyString(), any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
@@ -321,6 +326,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
     doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
     doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).postSourceStorageRecords(any());
+    doReturn(succeededFuture()).when(handler).postSnapshotInSrsAndHandleResponse(anyString(), any(), any());
 
     var expectedMessage = "Failed to create MARC record in SRS, instanceId: ";
 
@@ -364,6 +370,7 @@ public class CreateInstanceIngressEventHandlerUnitTest {
     doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(buffer(Json.encode(new Record())), HttpStatus.SC_CREATED);
     doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).postSourceStorageRecords(any());
+    doReturn(succeededFuture()).when(handler).postSnapshotInSrsAndHandleResponse(anyString(), any(), any());
 
     // when
     var future = handler.handle(event);
