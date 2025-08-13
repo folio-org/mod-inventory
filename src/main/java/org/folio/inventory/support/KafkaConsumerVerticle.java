@@ -20,6 +20,8 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
@@ -69,6 +71,7 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
       .loadLimit(getLoadLimit(loadLimitPropertyKey))
       .globalLoadSensor(new GlobalLoadSensor())
       .subscriptionDefinition(getSubscriptionDefinition(getKafkaConfig().getEnvId(), eventType, namespacedTopic))
+      .groupInstanceId(getClass().getSimpleName() + "-" + UUID.randomUUID())
       .build();
     consumerWrappers.add(kafkaConsumerWrapper);
     return kafkaConsumerWrapper;
