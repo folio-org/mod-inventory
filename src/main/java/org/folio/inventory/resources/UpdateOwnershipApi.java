@@ -686,7 +686,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .withAdditionalInfo(sourceSrsRecord.getAdditionalInfo())
       .withState(sourceSrsRecord.getState())
       .withLeaderRecordStatus(sourceSrsRecord.getLeaderRecordStatus())
-      .withOrder(sourceSrsRecord.getOrder() != null ? sourceSrsRecord.getOrder() + 1 : 0)
+      .withOrder(sourceSrsRecord.getOrder() != null ? sourceSrsRecord.getOrder() : 0)
       .withDeleted(sourceSrsRecord.getDeleted());
   }
 
