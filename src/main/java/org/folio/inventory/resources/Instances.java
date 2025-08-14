@@ -165,10 +165,9 @@ public class Instances extends AbstractInstances {
         try {
           URL url = context.absoluteUrl(format("%s/%s",
             INSTANCES_PATH, response.getId()));
-          RedirectResponse.created(routingContext.response(), url.toString());
+          RedirectResponse.created(routingContext.response(), url.toString(), response.getJsonForResponse(context));
         } catch (MalformedURLException e) {
-          log.warn(
-            format("Failed to create self link for instance: %s", e.toString()));
+          log.warn("Failed to create self link for instance, cause:", e);
         }
         }).exceptionally(doExceptionally(routingContext));
   }
