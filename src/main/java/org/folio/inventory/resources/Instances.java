@@ -141,7 +141,7 @@ public class Instances extends AbstractInstances {
   private void create(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
-    JsonObject instanceRequest = routingContext.getBodyAsJson();
+    JsonObject instanceRequest = routingContext.body().asJsonObject();
 
     if (StringUtils.isBlank(instanceRequest.getString(Instance.TITLE_KEY))) {
       ClientErrorResponse.badRequest(routingContext.response(),

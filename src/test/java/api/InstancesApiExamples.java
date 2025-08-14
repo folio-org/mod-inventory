@@ -79,7 +79,6 @@ public class InstancesApiExamples extends ApiTests {
   @Test
   public void canCreateInstanceWithoutAnIDAndHRID()
     throws InterruptedException,
-    MalformedURLException,
     TimeoutException,
     ExecutionException {
 
@@ -116,14 +115,9 @@ public class InstancesApiExamples extends ApiTests {
 
     assertThat(postResponse.getStatusCode(), is(201));
     assertThat(location, is(notNullValue()));
+    assertThat(postResponse.getBody(), is(notNullValue()));
 
-    final var getCompleted = okapiClient.get(location);
-
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
-
-    assertThat(getResponse.getStatusCode(), is(200));
-
-    JsonObject createdInstance = getResponse.getJson();
+    JsonObject createdInstance = postResponse.getJson();
 
     assertThat(createdInstance.containsKey("administrativeNotes"), is(true));
 
