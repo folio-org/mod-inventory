@@ -1,3 +1,6 @@
+## 21.1.8 2025-08-15
+*ECS | MARC holdings record cannot be opened via "quickMARC" after Ownership update[MODINV-1266](https://folio-org.atlassian.net/browse/MODINV-1266)
+
 ## 21.1.7 2025-06-30
 * Support CREATE action for MARC holdings record on shared Instance from member tenant on ECS environment [MODINV-1240](https://folio-org.atlassian.net/browse/MODINV-1240)
 
