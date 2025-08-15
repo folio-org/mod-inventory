@@ -5,7 +5,8 @@
 * Adds additionalCallNumbers to the item and holding [MODINV-1241](https://folio-org.atlassian.net/browse/MODINV-1241)
 * Addition of the order field to the existing item APIs [MODINV-1249](https://folio-org.atlassian.net/browse/MODINV-1249)
 * Add instance-authority links logic on MARC Instance update [MODINV-1068](https://folio-org.atlassian.net/browse/MODINV-1068)
-* Subscribe to JobExecution status change and add cache  [MODINV-973](https://folio-org.atlassian.net/browse/MODINV-973)
+* Subscribe to JobExecution status change and add cache [MODINV-973](https://folio-org.atlassian.net/browse/MODINV-973)
+* POST to /inventory/instances does not return newly-created object [MODINV-1078](https://folio-org.atlassian.net/browse/MODINV-1078)
 
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)

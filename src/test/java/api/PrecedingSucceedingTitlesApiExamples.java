@@ -213,7 +213,6 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
 
   @Test
   public void titleIsRequiredToCreateInstancesUsingBatch() {
-
     final JsonObject instanceWithValidPrecedingTitle = smallAngryPlanet(UUID.randomUUID())
       .put(PRECEDING_TITLES_KEY, new JsonArray()
         .add(createOpenBibliographyUnconnectedTitle(UUID.randomUUID().toString())));
