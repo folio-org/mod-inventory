@@ -130,7 +130,7 @@ public class Instances extends AbstractInstances {
       .whenComplete((result, ex) -> {
         if (ex == null) {
           JsonResponse.success(routingContext.response(),
-            toRepresentation(result, context));
+            toRepresentation(result));
         } else {
           log.warn("Exception occurred", ex);
           handleFailure(getKnownException(ex), routingContext);
@@ -165,7 +165,7 @@ public class Instances extends AbstractInstances {
         try {
           URL url = context.absoluteUrl(format("%s/%s",
             INSTANCES_PATH, response.getId()));
-          RedirectResponse.created(routingContext.response(), url.toString(), response.getJsonForResponse(context));
+          RedirectResponse.created(routingContext.response(), url.toString(), response.getJsonForResponse());
         } catch (MalformedURLException e) {
           log.warn("Failed to create self link for instance, cause:", e);
         }
@@ -174,7 +174,7 @@ public class Instances extends AbstractInstances {
 
   private void update(RoutingContext rContext) {
     WebContext wContext = new WebContext(rContext);
-    JsonObject instanceRequest = rContext.getBodyAsJson();
+    JsonObject instanceRequest = rContext.body().asJsonObject();
     Instance updatedInstance = Instance.fromJson(instanceRequest);
     InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
 
@@ -399,7 +399,7 @@ public class Instances extends AbstractInstances {
             .thenCompose(response -> fetchInstanceRelationships(it, routingContext, context))
             .thenCompose(response -> fetchPrecedingSucceedingTitles(it, routingContext, context))
             .thenCompose(response -> setBoundWithFlag(it, routingContext, context))
-            .thenAccept(response -> successResponse(routingContext, context, response));
+            .thenAccept(response -> successResponse(routingContext, response));
         } else {
           ClientErrorResponse.notFound(routingContext.response());
         }
@@ -618,10 +618,10 @@ public class Instances extends AbstractInstances {
     return completedFuture(null);
   }
 
-  private void successResponse(RoutingContext routingContext, WebContext context,
-    Instance instance) {
+  private void successResponse(RoutingContext routingContext,
+                               Instance instance) {
 
-    JsonResponse.success(routingContext.response(), instance.getJsonForResponse(context));
+    JsonResponse.success(routingContext.response(), instance.getJsonForResponse());
   }
 
   private CompletableFuture<InstancesResponse> withInstancesRelationships(
@@ -761,12 +761,12 @@ public class Instances extends AbstractInstances {
       List<CompletableFuture<PrecedingSucceedingTitle>> precedingTitleCompletableFutures =
         relationsList.stream().filter(rel -> isPrecedingTitle(instance, rel))
           .map(rel -> getPrecedingSucceedingTitle(routingContext, context, rel,
-            PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY)).collect(Collectors.toList());
+            PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY)).toList();
 
       List<CompletableFuture<PrecedingSucceedingTitle>> succeedingTitleCompletableFutures =
         relationsList.stream().filter(rel -> isSucceedingTitle(instance, rel))
           .map(rel -> getPrecedingSucceedingTitle(routingContext, context, rel,
-            PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY)).collect(Collectors.toList());
+            PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY)).toList();
 
       return completedFuture(instance)
         .thenCompose(r -> withPrecedingTitles(instance, precedingTitleCompletableFutures))

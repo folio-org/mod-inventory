@@ -252,11 +252,10 @@ public class Instance {
 
   /**
    *
-   * @param context context of the incoming web request
    * @return JSON representation of the Instance, compatible with Inventory's
    * Instance schema
    */
-  public JsonObject getJsonForResponse(WebContext context) {
+  public JsonObject getJsonForResponse() {
     JsonObject json = new JsonObject();
 
     json.put(ID, getId());

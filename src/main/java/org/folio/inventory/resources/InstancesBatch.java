@@ -85,11 +85,11 @@ public class InstancesBatch extends AbstractInstances {
           if (!createdInstances.isEmpty()) {
             updateRelatedRecords(validInstances, createdInstances, routingContext, webContext).
               onComplete(ar -> {
-                JsonObject responseBody = getBatchResponse(createdInstances, errorMessages, webContext);
+                JsonObject responseBody = getBatchResponse(createdInstances, errorMessages);
                 RedirectResponse.created(routingContext.response(), Buffer.buffer(responseBody.encodePrettily()));
               });
           } else {
-            JsonObject responseBody = getBatchResponse(createdInstances, errorMessages, webContext);
+            JsonObject responseBody = getBatchResponse(createdInstances, errorMessages);
             RedirectResponse.serverError(routingContext.response(), Buffer.buffer(responseBody.encodePrettily()));
           }
         },
@@ -166,9 +166,9 @@ public class InstancesBatch extends AbstractInstances {
     RedirectResponse.serverError(routingContext.response(), Buffer.buffer(responseBody.encodePrettily()));
   }
 
-  private JsonObject getBatchResponse(List<Instance> createdInstances, List<String> errorMessages, WebContext webContext) {
+  private JsonObject getBatchResponse(List<Instance> createdInstances, List<String> errorMessages) {
     List<JsonObject> jsonInstances = createdInstances.stream()
-      .map(instance -> instance.getJsonForResponse(webContext))
+      .map(instance -> instance.getJsonForResponse())
       .collect(Collectors.toList());
 
     return new JsonObject()

@@ -8,7 +8,11 @@ import io.vertx.core.json.JsonObject;
 
 import static org.folio.inventory.client.util.ClientWrapperUtil.APPLICATION_JSON;
 
-public class RedirectResponse {
+public final class RedirectResponse {
+
+  private RedirectResponse() {
+    throw new UnsupportedOperationException("Cannot instantiate utility class");
+  }
 
   /**
    * Ends up response with CREATED(201) status, writes "Location" header,
