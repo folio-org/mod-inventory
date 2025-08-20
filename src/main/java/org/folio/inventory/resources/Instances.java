@@ -174,7 +174,7 @@ public class Instances extends AbstractInstances {
 
   private void update(RoutingContext rContext) {
     WebContext wContext = new WebContext(rContext);
-    JsonObject instanceRequest = rContext.getBodyAsJson();
+    JsonObject instanceRequest = rContext.body().asJsonObject();
     Instance updatedInstance = Instance.fromJson(instanceRequest);
     InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
 
@@ -761,12 +761,12 @@ public class Instances extends AbstractInstances {
       List<CompletableFuture<PrecedingSucceedingTitle>> precedingTitleCompletableFutures =
         relationsList.stream().filter(rel -> isPrecedingTitle(instance, rel))
           .map(rel -> getPrecedingSucceedingTitle(routingContext, context, rel,
-            PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY)).collect(Collectors.toList());
+            PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY)).toList();
 
       List<CompletableFuture<PrecedingSucceedingTitle>> succeedingTitleCompletableFutures =
         relationsList.stream().filter(rel -> isSucceedingTitle(instance, rel))
           .map(rel -> getPrecedingSucceedingTitle(routingContext, context, rel,
-            PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY)).collect(Collectors.toList());
+            PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY)).toList();
 
       return completedFuture(instance)
         .thenCompose(r -> withPrecedingTitles(instance, precedingTitleCompletableFutures))

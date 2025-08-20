@@ -99,10 +99,10 @@ public abstract class AbstractInstances {
 
     JsonObject json = result.getJson();
     List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
-    Map<String, InstanceRelationship> existingRelationships = new HashMap();
+    Map<String, InstanceRelationship> existingRelationships = new HashMap<>();
     relationsList.stream().map(InstanceRelationship::new).forEachOrdered(relObj ->
       existingRelationships.put(relObj.id, relObj));
-    Map<String, InstanceRelationship> updatingRelationships = new HashMap();
+    Map<String, InstanceRelationship> updatingRelationships = new HashMap<>();
     if (instance.getParentInstances() != null) {
       instance.getParentInstances().forEach(parent -> {
         String id = (parent.id == null ? UUID.randomUUID().toString() : parent.id);
@@ -200,7 +200,7 @@ public abstract class AbstractInstances {
   private Map<String, PrecedingSucceedingTitle> getExistedPrecedingSucceedingTitles(
     List<JsonObject> relationsList) {
 
-    Map<String, PrecedingSucceedingTitle> existingPrecedingSucceedingTitles = new HashMap();
+    Map<String, PrecedingSucceedingTitle> existingPrecedingSucceedingTitles = new HashMap<>();
     relationsList.stream().map(PrecedingSucceedingTitle::from).forEachOrdered(relObj ->
       existingPrecedingSucceedingTitles.put(relObj.id, relObj));
 
@@ -244,7 +244,7 @@ public abstract class AbstractInstances {
   }
 
   private Map<String, PrecedingSucceedingTitle> getUpdatingPrecedingSucceedingTitles(Instance instance) {
-    Map<String, PrecedingSucceedingTitle> updatingPrecedingSucceedingTitles = new HashMap();
+    Map<String, PrecedingSucceedingTitle> updatingPrecedingSucceedingTitles = new HashMap<>();
 
     updatePrecedingTitles(instance, updatingPrecedingSucceedingTitles);
     updateSucceedingTitles(instance, updatingPrecedingSucceedingTitles);
