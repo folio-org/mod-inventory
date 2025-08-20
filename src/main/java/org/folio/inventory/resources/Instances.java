@@ -141,7 +141,7 @@ public class Instances extends AbstractInstances {
   private void create(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
-    JsonObject instanceRequest = routingContext.getBodyAsJson();
+    JsonObject instanceRequest = routingContext.body().asJsonObject();
 
     if (StringUtils.isBlank(instanceRequest.getString(Instance.TITLE_KEY))) {
       ClientErrorResponse.badRequest(routingContext.response(),
@@ -165,17 +165,16 @@ public class Instances extends AbstractInstances {
         try {
           URL url = context.absoluteUrl(format("%s/%s",
             INSTANCES_PATH, response.getId()));
-          RedirectResponse.created(routingContext.response(), url.toString());
+          RedirectResponse.created(routingContext.response(), url.toString(), response.getJsonForResponse(context));
         } catch (MalformedURLException e) {
-          log.warn(
-            format("Failed to create self link for instance: %s", e.toString()));
+          log.warn("Failed to create self link for instance, cause:", e);
         }
         }).exceptionally(doExceptionally(routingContext));
   }
 
   private void update(RoutingContext rContext) {
     WebContext wContext = new WebContext(rContext);
-    JsonObject instanceRequest = rContext.getBodyAsJson();
+    JsonObject instanceRequest = rContext.body().asJsonObject();
     Instance updatedInstance = Instance.fromJson(instanceRequest);
     InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
 
@@ -762,12 +761,12 @@ public class Instances extends AbstractInstances {
       List<CompletableFuture<PrecedingSucceedingTitle>> precedingTitleCompletableFutures =
         relationsList.stream().filter(rel -> isPrecedingTitle(instance, rel))
           .map(rel -> getPrecedingSucceedingTitle(routingContext, context, rel,
-            PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY)).collect(Collectors.toList());
+            PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY)).toList();
 
       List<CompletableFuture<PrecedingSucceedingTitle>> succeedingTitleCompletableFutures =
         relationsList.stream().filter(rel -> isSucceedingTitle(instance, rel))
           .map(rel -> getPrecedingSucceedingTitle(routingContext, context, rel,
-            PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY)).collect(Collectors.toList());
+            PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY)).toList();
 
       return completedFuture(instance)
         .thenCompose(r -> withPrecedingTitles(instance, precedingTitleCompletableFutures))

@@ -34,10 +34,7 @@ import io.vertx.core.json.JsonObject;
 public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
 
   @Test
-  public void canCreateAnInstanceWithUnconnectedPrecedingTitles()
-    throws InterruptedException, MalformedURLException, TimeoutException,
-    ExecutionException {
-
+  public void canCreateAnInstanceWithUnconnectedPrecedingTitles() {
     String precedingSucceedingTitleId1 = UUID.randomUUID().toString();
     String precedingSucceedingTitleId2 = UUID.randomUUID().toString();
     JsonArray precedingTitles = getUnconnectedPrecedingSucceedingTitle(
@@ -57,10 +54,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   @Test
-  public void canCreateAnInstanceWithUnconnectedSucceedingTitles()
-    throws InterruptedException, MalformedURLException, TimeoutException,
-    ExecutionException {
-
+  public void canCreateAnInstanceWithUnconnectedSucceedingTitles() {
     String precedingSucceedingTitleId1 = UUID.randomUUID().toString();
     String precedingSucceedingTitleId2 = UUID.randomUUID().toString();
     JsonArray succeedingTitles = getUnconnectedPrecedingSucceedingTitle(
@@ -218,9 +212,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   @Test
-  public void titleIsRequiredToCreateInstancesUsingBatch()
-    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
-
+  public void titleIsRequiredToCreateInstancesUsingBatch() {
     final JsonObject instanceWithValidPrecedingTitle = smallAngryPlanet(UUID.randomUUID())
       .put(PRECEDING_TITLES_KEY, new JsonArray()
         .add(createOpenBibliographyUnconnectedTitle(UUID.randomUUID().toString())));
@@ -306,10 +298,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   @Test
-  public void canCreateAnInstanceWithConnectedPrecedingTitles()
-    throws InterruptedException, MalformedURLException, TimeoutException,
-    ExecutionException {
-
+  public void canCreateAnInstanceWithConnectedPrecedingTitles() {
     UUID nodId = UUID.randomUUID();
     UUID uprootedId = UUID.randomUUID();
     String nodPrecedingTitleId = UUID.randomUUID().toString();
@@ -328,7 +317,10 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
 
     IndividualResource createdInstance = instancesClient.create(smallAngryPlanetJson);
 
-    JsonArray actualPrecedingTitles = createdInstance.getJson().getJsonArray("precedingTitles");
+    // Fetch the created instance because POST response body does not include all data for the preceding/succeeding titles fields
+    Response getResponse = instancesClient.getById(createdInstance.getId());
+    assertThat(getResponse.getStatusCode(), is(200));
+    JsonArray actualPrecedingTitles = getResponse.getJson().getJsonArray("precedingTitles");
     JsonObject actualPrecedingTitle1 = getRecordById(actualPrecedingTitles, nodPrecedingTitleId);
     JsonObject actualPrecedingTitle2 = getRecordById(actualPrecedingTitles, uprootedPrecedingTitleId);
 
@@ -340,10 +332,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   @Test
-  public void canCreateAnInstanceWithConnectedSucceedingTitles()
-    throws InterruptedException, MalformedURLException, TimeoutException,
-    ExecutionException {
-
+  public void canCreateAnInstanceWithConnectedSucceedingTitles() {
     UUID nodId = UUID.randomUUID();
     UUID uprootedId = UUID.randomUUID();
     String nodPrecedingTitleId = UUID.randomUUID().toString();
@@ -362,7 +351,9 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
 
     IndividualResource createdInstance = instancesClient.create(smallAngryPlanetJson);
 
-    JsonArray actualSucceedingTitles = createdInstance.getJson().getJsonArray("succeedingTitles");
+    Response getResponse = instancesClient.getById(createdInstance.getId());
+    assertThat(getResponse.getStatusCode(), is(200));
+    JsonArray actualSucceedingTitles = getResponse.getJson().getJsonArray("succeedingTitles");
     JsonObject actualSucceedingTitle1 = getRecordById(actualSucceedingTitles, nodPrecedingTitleId);
     JsonObject actualSucceedingTitle2 = getRecordById(actualSucceedingTitles, uprootedPrecedingTitleId);
 
@@ -472,10 +463,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   @Test
-  public void canCreateAnInstanceWithConnectedSucceedingAndPrecedingTitles()
-    throws InterruptedException, MalformedURLException, TimeoutException,
-    ExecutionException {
-
+  public void canCreateAnInstanceWithConnectedSucceedingAndPrecedingTitles() {
     UUID nodId = UUID.randomUUID();
     UUID uprootedId = UUID.randomUUID();
     String nodPrecedingTitleId = UUID.randomUUID().toString();
@@ -503,14 +491,16 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
 
     IndividualResource createdInstance = instancesClient.create(smallAngryPlanetJson);
 
-    JsonArray actualPrecedingTitles = createdInstance.getJson().getJsonArray("precedingTitles");
+    Response getResponse = instancesClient.getById(createdInstance.getId());
+    assertThat(getResponse.getStatusCode(), is(200));
+    JsonArray actualPrecedingTitles = getResponse.getJson().getJsonArray("precedingTitles");
     JsonObject actualPrecedingTitle1 = getRecordById(actualPrecedingTitles, nodPrecedingTitleId);
     JsonObject actualPrecedingTitle2 = getRecordById(actualPrecedingTitles, unconnectedPrecedingTitleId);
 
     assertPrecedingTitles(actualPrecedingTitle1, nod.getJson(), nod.getId().toString());
     assertPrecedingTitles(actualPrecedingTitle2, unconnectedPrecedingTitle, null);
 
-    JsonArray actualSucceedingTitles = createdInstance.getJson().getJsonArray("succeedingTitles");
+    JsonArray actualSucceedingTitles = getResponse.getJson().getJsonArray("succeedingTitles");
     JsonObject actualSucceedingTitle1 = getRecordById(actualSucceedingTitles, uprootedSucceedingTitleId);
     JsonObject actualSucceedingTitle2 = getRecordById(actualSucceedingTitles, unconnectedSucceedingTitleId);
 
@@ -522,8 +512,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   @Test
-  public void canCreateBatchOfInstancesWithPrecedingSucceedingTitles()
-    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+  public void canCreateBatchOfInstancesWithPrecedingSucceedingTitles() {
     String precedingSucceedingTitleId1 = UUID.randomUUID().toString();
     String precedingSucceedingTitleId2 = UUID.randomUUID().toString();
     JsonArray precedingTitles = getUnconnectedPrecedingSucceedingTitle(
@@ -562,8 +551,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   private void verifyRelatedInstancePrecedingTitle(IndividualResource precedingInstance,
-    IndividualResource succeedingInstance) throws MalformedURLException,
-    InterruptedException, ExecutionException, TimeoutException {
+    IndividualResource succeedingInstance) {
 
     Response response = instancesClient.getById(precedingInstance.getId());
     JsonArray precedingTitles = response.getJson().getJsonArray("precedingTitles");
@@ -572,8 +560,7 @@ public class PrecedingSucceedingTitlesApiExamples extends ApiTests {
   }
 
   private void verifyRelatedInstanceSucceedingTitle(IndividualResource succeedingInstance,
-    IndividualResource precedingInstance) throws MalformedURLException,
-    InterruptedException, ExecutionException, TimeoutException {
+    IndividualResource precedingInstance) {
 
     Response response = instancesClient.getById(succeedingInstance.getId());
     JsonArray succeedingTitles = response.getJson().getJsonArray("succeedingTitles");

@@ -79,7 +79,6 @@ public class InstancesApiExamples extends ApiTests {
   @Test
   public void canCreateInstanceWithoutAnIDAndHRID()
     throws InterruptedException,
-    MalformedURLException,
     TimeoutException,
     ExecutionException {
 
@@ -116,14 +115,9 @@ public class InstancesApiExamples extends ApiTests {
 
     assertThat(postResponse.getStatusCode(), is(201));
     assertThat(location, is(notNullValue()));
+    assertThat(postResponse.getBody(), is(notNullValue()));
 
-    final var getCompleted = okapiClient.get(location);
-
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
-
-    assertThat(getResponse.getStatusCode(), is(200));
-
-    JsonObject createdInstance = getResponse.getJson();
+    JsonObject createdInstance = postResponse.getJson();
 
     assertThat(createdInstance.containsKey("administrativeNotes"), is(true));
 
@@ -174,7 +168,6 @@ public class InstancesApiExamples extends ApiTests {
   @Test
   public void canCreateAnInstanceWithAnIDAndHRID()
     throws InterruptedException,
-    MalformedURLException,
     TimeoutException,
     ExecutionException {
 
@@ -370,7 +363,6 @@ public class InstancesApiExamples extends ApiTests {
   @Test
   public void instanceTitleIsMandatory()
     throws InterruptedException,
-    MalformedURLException,
     TimeoutException,
     ExecutionException {
 
@@ -588,15 +580,12 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void canNotUpdateAnExistingMARCInstanceIfBlockedFieldsAreChanged()
-    throws MalformedURLException {
-
+  public void canNotUpdateAnExistingMARCInstanceIfBlockedFieldsAreChanged() {
     UUID id = UUID.randomUUID();
     createInstance(treasureIslandInstance(id));
     JsonObject instanceForUpdate = marcInstanceWithDefaultBlockedFields(id);
 
     for (String field : config.getInstanceBlockedFields()) {
-      URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(), id));
       // Put Instance for update
       Response putResponse = updateInstance(instanceForUpdate);
 
@@ -690,7 +679,6 @@ public class InstancesApiExamples extends ApiTests {
   @Test
   public void canDeleteAllInstances()
     throws InterruptedException,
-    MalformedURLException,
     TimeoutException,
     ExecutionException {
 
@@ -824,7 +812,6 @@ public class InstancesApiExamples extends ApiTests {
   @Test
   public void canGetAllInstances()
     throws InterruptedException,
-    MalformedURLException,
     TimeoutException,
     ExecutionException {
 
@@ -928,7 +915,6 @@ public class InstancesApiExamples extends ApiTests {
   @Test
   public void cannotFindAnUnknownInstance()
     throws InterruptedException,
-    MalformedURLException,
     TimeoutException,
     ExecutionException {
 
@@ -941,7 +927,7 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void cannotChangeHRID() throws Exception {
+  public void cannotChangeHRID() {
     UUID instanceId = UUID.randomUUID();
     JsonObject createdInstance = createInstance(smallAngryPlanet(instanceId));
 
@@ -961,7 +947,7 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
-  public void cannotRemoveHRID() throws Exception {
+  public void cannotRemoveHRID() {
     UUID instanceId = UUID.randomUUID();
     JsonObject createdInstance = createInstance(smallAngryPlanet(instanceId));
 
