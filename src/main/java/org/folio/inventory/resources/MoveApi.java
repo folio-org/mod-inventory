@@ -18,6 +18,7 @@ import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -26,6 +27,7 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.domain.HoldingsRecordCollection;
+import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.exceptions.BadRequestException;
@@ -35,13 +37,13 @@ import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.MoveApiUtil;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
-import org.folio.inventory.support.http.server.ValidationError;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import org.folio.inventory.support.http.server.ValidationError;
 
 public class MoveApi extends AbstractInventoryResource {
   private static final Logger LOGGER = LogManager.getLogger(MethodHandles.lookup().lookupClass());
@@ -113,6 +115,8 @@ public class MoveApi extends AbstractInventoryResource {
   }
 
   private void moveHoldings(RoutingContext routingContext) {
+    LOGGER.info("moveHoldings:: Staring holdings move operation.");
+
     WebContext context = new WebContext(routingContext);
     JsonObject holdingsMoveJsonRequest = routingContext.body().asJsonObject();
 
@@ -121,60 +125,51 @@ public class MoveApi extends AbstractInventoryResource {
       unprocessableEntity(routingContext.response(), validationError.get());
       return;
     }
+
     String toInstanceId = holdingsMoveJsonRequest.getString(TO_INSTANCE_ID);
     List<String> holdingsRecordsIdsToUpdate = toListOfStrings(holdingsMoveJsonRequest.getJsonArray(HOLDINGS_RECORD_IDS));
+
+    LOGGER.info("moveHoldings:: Attempting to move {} holdings records to instanceId {}",
+      holdingsRecordsIdsToUpdate.size(), toInstanceId);
+
     storage.getInstanceCollection(context)
       .findById(toInstanceId)
-      .thenCompose(instance -> {
-        if (instance != null) {
-          return CompletableFuture.completedFuture(instance);
+      .handle((localInstance, error) -> {
+        if (error != null) {
+          if (error.getCause() instanceof BadRequestException) {
+            LOGGER.info("moveHoldings:: Instance {} not found locally, proceeding to check consortium.", toInstanceId);
+            return null;
+          } else {
+            LOGGER.error("moveHoldings:: Failed to query local instance storage for instanceId {}", toInstanceId, error);
+            throw new CompletionException(error);
+          }
         }
-        // Instance not found → check central tenant
-        return consortiumService.getConsortiumConfiguration(context)
-          .toCompletionStage()
-          .toCompletableFuture()
-          .thenCompose(consortiumConfig -> {
-            if (consortiumConfig.isPresent()) {
-              Context centralTenantContext = constructContext(
-                consortiumConfig.get().getCentralTenantId(), context.getToken(), context.getOkapiLocation(), context.getUserId(), context.getRequestId()
-              );
-
-              return storage.getInstanceCollection(centralTenantContext)
-                .findById(toInstanceId)
-                .thenApply(sharedInstance -> {
-                  if (sharedInstance == null) {
-                    LOGGER.warn(format(INSTANCE_NOT_FOUND, toInstanceId));
-                    throw new BadRequestException(format(INSTANCE_NOT_FOUND, toInstanceId));
-                  }
-                  LOGGER.info("shared instance with id={} found in central tenant", sharedInstance.getId());
-                  return sharedInstance;
-                });
-            } else {
-              LOGGER.warn(format(TENANT_NOT_IN_CONSORTIA, context.getTenantId()));
-              throw new BadRequestException(format(INSTANCE_NOT_FOUND, toInstanceId));
-            }
-          });
+        if (localInstance != null) {
+          LOGGER.info("moveHoldings:: Instance {} found locally.", toInstanceId);
+        }
+        return localInstance;
       })
-      .thenAccept(instance -> {
-        try {
-          CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(
-            createHttpClient(client, routingContext, context), context);
-          MultipleRecordsFetchClient holdingsRecordFetchClient = createHoldingsRecordsFetchClient(holdingsStorageClient);
-
-          holdingsRecordFetchClient.find(holdingsRecordsIdsToUpdate, MoveApiUtil::fetchByIdCql)
-            .thenAccept(jsons -> {
-              List<HoldingsRecord> holdingsRecordsToUpdate = updateInstanceIdForHoldings(toInstanceId, jsons);
-              updateHoldings(routingContext, context, holdingsRecordsIdsToUpdate, holdingsRecordsToUpdate);
-            })
-            .exceptionally(e -> {
-              ServerErrorResponse.internalError(routingContext.response(), e);
-              return null;
-            });
-        } catch (Exception e) {
-          ServerErrorResponse.internalError(routingContext.response(), e);
+      .thenCompose(localInstance -> {
+        if (localInstance != null) {
+          return CompletableFuture.completedFuture(localInstance);
         }
+        return findInstanceInConsortium(context, toInstanceId);
+      })
+      .thenAccept(foundInstance -> {
+        if (foundInstance == null) {
+          LOGGER.warn("moveHoldings:: Instance {} not found locally or in consortium. Aborting move operation.", toInstanceId);
+          throw new BadRequestException(format(INSTANCE_NOT_FOUND, toInstanceId));
+        }
+        LOGGER.info("moveHoldings:: Target instance {} found. Proceeding to update holdings records.", foundInstance.getId());
+        updateHoldingsForInstance(routingContext, context, foundInstance, holdingsRecordsIdsToUpdate);
       })
       .exceptionally(e -> {
+        if (e.getCause() instanceof BadRequestException) {
+          LOGGER.error("moveHoldings:: Bad request while attempting to move holdings to instanceId {}: {}", toInstanceId, e.getCause().getMessage());
+        } else {
+          LOGGER.error("moveHoldings:: Failed to complete move holdings operation for instanceId {}", toInstanceId, e);
+        }
+
         if (e.getCause() instanceof BadRequestException) {
           unprocessableEntity(routingContext.response(), e.getCause().getMessage());
         } else {
@@ -183,6 +178,138 @@ public class MoveApi extends AbstractInventoryResource {
         return null;
       });
   }
+
+  private void updateHoldingsForInstance(RoutingContext routingContext, WebContext context, Instance instance, List<String> holdingsRecordsIdsToUpdate) {
+    try {
+      CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(createHttpClient(client, routingContext, context), context);
+      MultipleRecordsFetchClient holdingsRecordFetchClient = createHoldingsRecordsFetchClient(holdingsStorageClient);
+
+      LOGGER.info("updateHoldingsForInstance:: Fetching {} holdings records to be moved.", holdingsRecordsIdsToUpdate.size());
+
+      holdingsRecordFetchClient.find(holdingsRecordsIdsToUpdate, MoveApiUtil::fetchByIdCql)
+        .thenAccept(jsons -> {
+          LOGGER.info("updateHoldingsForInstance:: Found {} of {} holdings records. Preparing to update their instanceId to {}.",
+            jsons.size(), holdingsRecordsIdsToUpdate.size(), instance.getId());
+
+          if (jsons.isEmpty() && !holdingsRecordsIdsToUpdate.isEmpty()) {
+            LOGGER.warn("updateHoldingsForInstance:: None of the requested holdings records [{}] were found for moving.", holdingsRecordsIdsToUpdate);
+          }
+
+          List<HoldingsRecord> holdingsRecordsToUpdate = updateInstanceIdForHoldings(instance.getId(), jsons);
+          updateHoldings(routingContext, context, holdingsRecordsIdsToUpdate, holdingsRecordsToUpdate);
+        })
+        .exceptionally(e -> {
+          LOGGER.error("updateHoldingsForInstance:: Failed to fetch holdings records for moving. IDs: {}", holdingsRecordsIdsToUpdate, e);
+          ServerErrorResponse.internalError(routingContext.response(), e);
+          return null;
+        });
+    } catch (Exception e) {
+      LOGGER.error("updateHoldingsForInstance:: Failed to initialize storage clients for updating holdings.", e);
+      ServerErrorResponse.internalError(routingContext.response(), e);
+    }
+  }
+
+  private CompletableFuture<Instance> findInstanceInConsortium(Context context, String toInstanceId) {
+
+    LOGGER.info("findInstanceInConsortium:: Attempting to find instance {} in consortium.", toInstanceId);
+
+    return consortiumService.getConsortiumConfiguration(context)
+      .toCompletionStage().toCompletableFuture()
+      .thenCompose(consortiumConfig -> {
+        if (consortiumConfig.isPresent()) {
+          LOGGER.info("findInstanceInConsortium:: Tenant is part of consortium '{}'. Searching in central tenant '{}'.",
+            consortiumConfig.get().getConsortiumId(), consortiumConfig.get().getCentralTenantId());
+
+          Context centralTenantContext = constructContext(
+            consortiumConfig.get().getCentralTenantId(), context.getToken(), context.getOkapiLocation(),
+            context.getUserId(), context.getRequestId()
+          );
+          return storage.getInstanceCollection(centralTenantContext).findById(toInstanceId)
+            .thenApply(sharedInstance -> {
+              if (sharedInstance != null) {
+                LOGGER.info("findInstanceInConsortium:: Successfully found shared instance {} in central tenant.", toInstanceId);
+              } else {
+                LOGGER.info("findInstanceInConsortium:: Instance {} was not found in central tenant.", toInstanceId);
+              }
+              return sharedInstance;
+            });
+        }
+        LOGGER.info("findInstanceInConsortium:: Tenant is not part of a consortium. Skipping search in central tenant.");
+        return CompletableFuture.completedFuture(null);
+      });
+  }
+
+//  private void moveHoldingsOld(RoutingContext routingContext) {
+//    WebContext context = new WebContext(routingContext);
+//    JsonObject holdingsMoveJsonRequest = routingContext.body().asJsonObject();
+//
+//    Optional<ValidationError> validationError = holdingsMoveHasRequiredFields(holdingsMoveJsonRequest);
+//    if (validationError.isPresent()) {
+//      unprocessableEntity(routingContext.response(), validationError.get());
+//      return;
+//    }
+//    String toInstanceId = holdingsMoveJsonRequest.getString(TO_INSTANCE_ID);
+//    List<String> holdingsRecordsIdsToUpdate = toListOfStrings(holdingsMoveJsonRequest.getJsonArray(HOLDINGS_RECORD_IDS));
+//
+//    storage.getInstanceCollection(context)
+//      .findById(toInstanceId)
+//      .thenCompose(localInstance -> {
+//        if (localInstance != null) {
+//          return CompletableFuture.completedFuture(localInstance);
+//        }
+//        // Instance not found → check central tenant
+//        return consortiumService.getConsortiumConfiguration(context)
+//          .toCompletionStage()
+//          .toCompletableFuture()
+//          .thenCompose(consortiumConfig -> {
+//            if (consortiumConfig.isPresent()) {
+//              Context centralTenantContext = constructContext(
+//                consortiumConfig.get().getCentralTenantId(), context.getToken(), context.getOkapiLocation(), context.getUserId(), context.getRequestId()
+//              );
+//              return storage.getInstanceCollection(centralTenantContext)
+//                .findById(toInstanceId)
+//                .thenApply(sharedInstance -> {
+//                  if (sharedInstance == null) {
+//                    LOGGER.warn(format(INSTANCE_NOT_FOUND, toInstanceId));
+//                    throw new BadRequestException(format(INSTANCE_NOT_FOUND, toInstanceId));
+//                  }
+//                  LOGGER.info("shared instance with id={} found in central tenant", sharedInstance.getId());
+//                  return sharedInstance;
+//                });
+//            } else {
+//              LOGGER.warn(format(TENANT_NOT_IN_CONSORTIA, context.getTenantId()));
+//              throw new BadRequestException(format(INSTANCE_NOT_FOUND, toInstanceId));
+//            }
+//          });
+//      })
+//      .thenAccept(instance -> {
+//        try {
+//          CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(
+//            createHttpClient(client, routingContext, context), context);
+//          MultipleRecordsFetchClient holdingsRecordFetchClient = createHoldingsRecordsFetchClient(holdingsStorageClient);
+//
+//          holdingsRecordFetchClient.find(holdingsRecordsIdsToUpdate, MoveApiUtil::fetchByIdCql)
+//            .thenAccept(jsons -> {
+//              List<HoldingsRecord> holdingsRecordsToUpdate = updateInstanceIdForHoldings(toInstanceId, jsons);
+//              updateHoldings(routingContext, context, holdingsRecordsIdsToUpdate, holdingsRecordsToUpdate);
+//            })
+//            .exceptionally(e -> {
+//              ServerErrorResponse.internalError(routingContext.response(), e);
+//              return null;
+//            });
+//        } catch (Exception e) {
+//          ServerErrorResponse.internalError(routingContext.response(), e);
+//        }
+//      })
+//      .exceptionally(e -> {
+//        if (e.getCause() instanceof BadRequestException) {
+//          unprocessableEntity(routingContext.response(), e.getCause().getMessage());
+//        } else {
+//          ServerErrorResponse.internalError(routingContext.response(), e);
+//        }
+//        return null;
+//      });
+//  }
 
   /**
    * Updates the holdingId and sets the order field to null (storage will recalculate order if it doesn't exist)
