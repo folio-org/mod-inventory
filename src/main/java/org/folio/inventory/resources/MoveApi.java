@@ -2,7 +2,6 @@ package org.folio.inventory.resources;
 
 import static java.lang.String.format;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
-import static org.folio.inventory.resources.UpdateOwnershipApi.TENANT_NOT_IN_CONSORTIA;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.MoveApiUtil.createHoldingsRecordsFetchClient;
 import static org.folio.inventory.support.MoveApiUtil.createHoldingsStorageClient;
@@ -115,6 +114,7 @@ public class MoveApi extends AbstractInventoryResource {
   }
 
   private void moveHoldings(RoutingContext routingContext) {
+
     LOGGER.info("moveHoldings:: Staring holdings move operation.");
 
     WebContext context = new WebContext(routingContext);
@@ -139,10 +139,9 @@ public class MoveApi extends AbstractInventoryResource {
           if (error.getCause() instanceof BadRequestException) {
             LOGGER.info("moveHoldings:: Instance {} not found locally, proceeding to check consortium.", toInstanceId);
             return null;
-          } else {
-            LOGGER.error("moveHoldings:: Failed to query local instance storage for instanceId {}", toInstanceId, error);
-            throw new CompletionException(error);
           }
+          LOGGER.error("moveHoldings:: Failed to query local instance storage for instanceId {}", toInstanceId, error);
+          throw new CompletionException(error);
         }
         if (localInstance != null) {
           LOGGER.info("moveHoldings:: Instance {} found locally.", toInstanceId);
@@ -166,13 +165,9 @@ public class MoveApi extends AbstractInventoryResource {
       .exceptionally(e -> {
         if (e.getCause() instanceof BadRequestException) {
           LOGGER.error("moveHoldings:: Bad request while attempting to move holdings to instanceId {}: {}", toInstanceId, e.getCause().getMessage());
-        } else {
-          LOGGER.error("moveHoldings:: Failed to complete move holdings operation for instanceId {}", toInstanceId, e);
-        }
-
-        if (e.getCause() instanceof BadRequestException) {
           unprocessableEntity(routingContext.response(), e.getCause().getMessage());
         } else {
+          LOGGER.error("moveHoldings:: Failed to complete move holdings operation for instanceId {}", toInstanceId, e);
           ServerErrorResponse.internalError(routingContext.response(), e);
         }
         return null;
@@ -180,6 +175,10 @@ public class MoveApi extends AbstractInventoryResource {
   }
 
   private void updateHoldingsForInstance(RoutingContext routingContext, WebContext context, Instance instance, List<String> holdingsRecordsIdsToUpdate) {
+
+    LOGGER.info("updateHoldingsForInstance:: Preparing to update {} holdings records to point to instanceId {}.",
+      holdingsRecordsIdsToUpdate.size(), instance.getId());
+
     try {
       CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(createHttpClient(client, routingContext, context), context);
       MultipleRecordsFetchClient holdingsRecordFetchClient = createHoldingsRecordsFetchClient(holdingsStorageClient);
@@ -238,78 +237,6 @@ public class MoveApi extends AbstractInventoryResource {
         return CompletableFuture.completedFuture(null);
       });
   }
-
-//  private void moveHoldingsOld(RoutingContext routingContext) {
-//    WebContext context = new WebContext(routingContext);
-//    JsonObject holdingsMoveJsonRequest = routingContext.body().asJsonObject();
-//
-//    Optional<ValidationError> validationError = holdingsMoveHasRequiredFields(holdingsMoveJsonRequest);
-//    if (validationError.isPresent()) {
-//      unprocessableEntity(routingContext.response(), validationError.get());
-//      return;
-//    }
-//    String toInstanceId = holdingsMoveJsonRequest.getString(TO_INSTANCE_ID);
-//    List<String> holdingsRecordsIdsToUpdate = toListOfStrings(holdingsMoveJsonRequest.getJsonArray(HOLDINGS_RECORD_IDS));
-//
-//    storage.getInstanceCollection(context)
-//      .findById(toInstanceId)
-//      .thenCompose(localInstance -> {
-//        if (localInstance != null) {
-//          return CompletableFuture.completedFuture(localInstance);
-//        }
-//        // Instance not found → check central tenant
-//        return consortiumService.getConsortiumConfiguration(context)
-//          .toCompletionStage()
-//          .toCompletableFuture()
-//          .thenCompose(consortiumConfig -> {
-//            if (consortiumConfig.isPresent()) {
-//              Context centralTenantContext = constructContext(
-//                consortiumConfig.get().getCentralTenantId(), context.getToken(), context.getOkapiLocation(), context.getUserId(), context.getRequestId()
-//              );
-//              return storage.getInstanceCollection(centralTenantContext)
-//                .findById(toInstanceId)
-//                .thenApply(sharedInstance -> {
-//                  if (sharedInstance == null) {
-//                    LOGGER.warn(format(INSTANCE_NOT_FOUND, toInstanceId));
-//                    throw new BadRequestException(format(INSTANCE_NOT_FOUND, toInstanceId));
-//                  }
-//                  LOGGER.info("shared instance with id={} found in central tenant", sharedInstance.getId());
-//                  return sharedInstance;
-//                });
-//            } else {
-//              LOGGER.warn(format(TENANT_NOT_IN_CONSORTIA, context.getTenantId()));
-//              throw new BadRequestException(format(INSTANCE_NOT_FOUND, toInstanceId));
-//            }
-//          });
-//      })
-//      .thenAccept(instance -> {
-//        try {
-//          CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(
-//            createHttpClient(client, routingContext, context), context);
-//          MultipleRecordsFetchClient holdingsRecordFetchClient = createHoldingsRecordsFetchClient(holdingsStorageClient);
-//
-//          holdingsRecordFetchClient.find(holdingsRecordsIdsToUpdate, MoveApiUtil::fetchByIdCql)
-//            .thenAccept(jsons -> {
-//              List<HoldingsRecord> holdingsRecordsToUpdate = updateInstanceIdForHoldings(toInstanceId, jsons);
-//              updateHoldings(routingContext, context, holdingsRecordsIdsToUpdate, holdingsRecordsToUpdate);
-//            })
-//            .exceptionally(e -> {
-//              ServerErrorResponse.internalError(routingContext.response(), e);
-//              return null;
-//            });
-//        } catch (Exception e) {
-//          ServerErrorResponse.internalError(routingContext.response(), e);
-//        }
-//      })
-//      .exceptionally(e -> {
-//        if (e.getCause() instanceof BadRequestException) {
-//          unprocessableEntity(routingContext.response(), e.getCause().getMessage());
-//        } else {
-//          ServerErrorResponse.internalError(routingContext.response(), e);
-//        }
-//        return null;
-//      });
-//  }
 
   /**
    * Updates the holdingId and sets the order field to null (storage will recalculate order if it doesn't exist)
