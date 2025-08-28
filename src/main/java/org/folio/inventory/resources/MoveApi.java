@@ -69,12 +69,14 @@ public class MoveApi extends AbstractInventoryResource {
   }
 
   private void moveItems(RoutingContext routingContext) {
+    LOGGER.info("moveItems:: Starting items move operation.");
     final var context = new WebContext(routingContext);
     final var itemsMoveJsonRequest = routingContext.body().asJsonObject();
 
     final var validationError = itemsMoveHasRequiredFields(itemsMoveJsonRequest);
 
     if (validationError.isPresent()) {
+      LOGGER.warn("moveItems:: Validation error: {}", validationError.get().message);
       unprocessableEntity(routingContext.response(), validationError.get());
       return;
     }
@@ -96,32 +98,34 @@ public class MoveApi extends AbstractInventoryResource {
                 updateItems(routingContext, context, itemIdsToUpdate, itemsToUpdate);
               })
               .exceptionally(e -> {
+                LOGGER.error("moveItems:: Failed to fetch items for moving. IDs: {}", itemIdsToUpdate, e);
                 ServerErrorResponse.internalError(routingContext.response(), e);
                 return null;
               });
           } catch (Exception e) {
+            LOGGER.error("moveItems:: Failed moving items to holding with id={}.", toHoldingsRecordId, e);
             ServerErrorResponse.internalError(routingContext.response(), e);
           }
         } else {
-          unprocessableEntity(routingContext.response(),
-              format("Holding with id=%s not found", toHoldingsRecordId));
+          LOGGER.error("moveItems:: Holding with id={} not found. Aborting move operation.", toHoldingsRecordId);
+          unprocessableEntity(routingContext.response(), format("Holding with id=%s not found", toHoldingsRecordId));
         }
       })
     .exceptionally(e -> {
+      LOGGER.error("moveItems:: Failed to complete move items operation for holdingsRecordId {}", toHoldingsRecordId, e);
       ServerErrorResponse.internalError(routingContext.response(), e);
       return null;
     });
   }
 
   private void moveHoldings(RoutingContext routingContext) {
-
     LOGGER.info("moveHoldings:: Staring holdings move operation.");
-
     WebContext context = new WebContext(routingContext);
     JsonObject holdingsMoveJsonRequest = routingContext.body().asJsonObject();
 
     Optional<ValidationError> validationError = holdingsMoveHasRequiredFields(holdingsMoveJsonRequest);
     if (validationError.isPresent()) {
+      LOGGER.warn("moveHoldings:: Validation error: {}", validationError.get().message);
       unprocessableEntity(routingContext.response(), validationError.get());
       return;
     }
@@ -175,10 +179,8 @@ public class MoveApi extends AbstractInventoryResource {
   }
 
   private void updateHoldingsForInstance(RoutingContext routingContext, WebContext context, Instance instance, List<String> holdingsRecordsIdsToUpdate) {
-
     LOGGER.info("updateHoldingsForInstance:: Preparing to update {} holdings records to point to instanceId {}.",
       holdingsRecordsIdsToUpdate.size(), instance.getId());
-
     try {
       CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(createHttpClient(client, routingContext, context), context);
       MultipleRecordsFetchClient holdingsRecordFetchClient = createHoldingsRecordsFetchClient(holdingsStorageClient);
@@ -209,9 +211,7 @@ public class MoveApi extends AbstractInventoryResource {
   }
 
   private CompletableFuture<Instance> findInstanceInConsortium(Context context, String toInstanceId) {
-
     LOGGER.info("findInstanceInConsortium:: Attempting to find instance {} in consortium.", toInstanceId);
-
     return consortiumService.getConsortiumConfiguration(context)
       .toCompletionStage().toCompletableFuture()
       .thenCompose(consortiumConfig -> {
