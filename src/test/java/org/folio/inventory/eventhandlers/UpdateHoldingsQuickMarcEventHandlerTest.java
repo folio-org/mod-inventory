@@ -54,7 +54,6 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   private static final String HOLDINGS_RECORD_WITHOUT_CELL_NUMBER_PATH = "src/test/resources/handlers/holdings-record-without-call-number.json";
   private static final String HOLDINGS_ID = "65cb2bf0-d4c2-4886-8ad0-b76f1ba75d61";
   private static final String HOLDINGS_TYPE_ID = "fe19bae4-da28-472b-be90-d442e2428eadx";
-  private static final Integer HOLDINGS_VERSION = 1;
 
   @Mock
   private Storage storage;
@@ -126,14 +125,12 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     eventPayload.put("MARC_HOLDING", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", Json.encode(mappingParameters));
-    eventPayload.put("RELATED_RECORD_VERSION", HOLDINGS_VERSION.toString());
 
     Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
     HoldingsRecord updatedHoldings = future.result();
 
     Assert.assertNotNull(updatedHoldings);
     Assert.assertEquals(HOLDINGS_ID, updatedHoldings.getId());
-    Assert.assertEquals(HOLDINGS_VERSION, updatedHoldings.getVersion());
 
     Assert.assertNull(updatedHoldings.getHoldingsTypeId());
     Assert.assertNotNull(updatedHoldings.getHoldingsStatements());
@@ -162,14 +159,12 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     eventPayload.put("MARC_HOLDING", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", Json.encode(mappingParameters));
-    eventPayload.put("RELATED_RECORD_VERSION", HOLDINGS_VERSION.toString());
 
     Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
     HoldingsRecord updatedHoldings = future.result();
 
     Assert.assertNotNull(updatedHoldings);
     Assert.assertEquals(HOLDINGS_ID, updatedHoldings.getId());
-    Assert.assertEquals(HOLDINGS_VERSION, updatedHoldings.getVersion());
 
     Assert.assertNull(updatedHoldings.getHoldingsTypeId());
     Assert.assertNull(updatedHoldings.getCallNumber());
@@ -197,14 +192,12 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     eventPayload.put("MARC_HOLDING", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", Json.encode(new MappingParameters()));
-    eventPayload.put("RELATED_RECORD_VERSION", HOLDINGS_VERSION.toString());
 
     Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
     HoldingsRecord updatedHoldings = future.result();
 
     Assert.assertNotNull(updatedHoldings);
     Assert.assertEquals(HOLDINGS_ID, updatedHoldings.getId());
-    Assert.assertEquals(HOLDINGS_VERSION, updatedHoldings.getVersion());
     Assert.assertEquals(expectedUserId, updatedHoldings.getMetadata().getUpdatedByUserId());
   }
 
@@ -220,14 +213,12 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     eventPayload.put("MARC_HOLDING", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", Json.encode(new MappingParameters()));
-    eventPayload.put("RELATED_RECORD_VERSION", HOLDINGS_VERSION.toString());
 
     Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
     HoldingsRecord updatedHoldings = future.result();
 
     Assert.assertNotNull(updatedHoldings);
     Assert.assertEquals(HOLDINGS_ID, updatedHoldings.getId());
-    Assert.assertEquals(HOLDINGS_VERSION, updatedHoldings.getVersion());
     Assert.assertEquals(expectedUserId, updatedHoldings.getMetadata().getUpdatedByUserId());
   }
 
@@ -242,7 +233,6 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     eventPayload.put("MARC_HOLDING", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", Json.encode(new MappingParameters()));
-    eventPayload.put("RELATED_RECORD_VERSION", HOLDINGS_VERSION.toString());
 
     Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
 

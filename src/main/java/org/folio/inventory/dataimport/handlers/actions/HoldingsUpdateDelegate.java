@@ -34,7 +34,6 @@ public class HoldingsUpdateDelegate {
 
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
-  private static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
   private static final String MARC_FORMAT = "MARC_HOLDINGS";
   private static final String MARC_NAME = "MARC";
 
@@ -61,7 +60,6 @@ public class HoldingsUpdateDelegate {
       HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
 
       return getHoldingsRecordById(holdingsId, holdingsRecordCollection)
-        .onSuccess(existingHoldingsRecord -> fillVersion(existingHoldingsRecord, eventPayload))
         .compose(existingHoldingsRecord -> findSourceId(context)
           .compose(sourceId -> {
             mappedHoldings.setSourceId(sourceId);
@@ -98,12 +96,6 @@ public class HoldingsUpdateDelegate {
         promise.fail(failure.getReason());
       });
     return promise.future();
-  }
-
-  private void fillVersion(HoldingsRecord existingHoldingsRecord, Map<String, String> eventPayload) {
-    if (eventPayload.containsKey(QM_RELATED_RECORD_VERSION_KEY)) {
-      existingHoldingsRecord.setVersion(Integer.parseInt(eventPayload.get(QM_RELATED_RECORD_VERSION_KEY)));
-    }
   }
 
   private Future<HoldingsRecord> mergeRecords(HoldingsRecord existingRecord, Holdings mappedRecord) {

@@ -28,6 +28,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.QMEventTypes;
 import org.folio.inventory.dataimport.handlers.actions.AuthorityUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
@@ -47,7 +48,6 @@ import org.folio.kafka.services.KafkaProducerRecordBuilder;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.EventMetadata;
-import org.folio.rest.jaxrs.model.ParsedRecordDto;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.util.OkapiConnectionParams;
 
@@ -57,8 +57,8 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
 
   private static final AtomicLong indexer = new AtomicLong();
   private static final String RECORD_TYPE_KEY = "RECORD_TYPE";
-  private static final String PARSED_RECORD_DTO_KEY = "PARSED_RECORD_DTO";
-  private static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
+  private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
+  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.qm.ol.retry.number", "5"));
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final HoldingsUpdateDelegate holdingsUpdateDelegate;
@@ -116,13 +116,31 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   private Future<Record.RecordType> processPayload(Map<String, String> eventPayload, Context context) {
     try {
       var recordType = Record.RecordType.fromValue(eventPayload.get(RECORD_TYPE_KEY));
-      var parsedRecordDto = Json.decodeValue(eventPayload.get(PARSED_RECORD_DTO_KEY), ParsedRecordDto.class);
-      eventPayload.put(QM_RELATED_RECORD_VERSION_KEY, parsedRecordDto.getRelatedRecordVersion());
-      return getQuickMarcEventHandler(context, recordType).handle(eventPayload).map(recordType);
+      return processWithRetry(eventPayload, context, recordType);
     } catch (Exception e) {
       LOGGER.warn("Error during processPayload: ", e);
       return Future.failedFuture(e);
     }
+  }
+
+  private Future<Record.RecordType> processWithRetry(Map<String, String> eventPayload, Context context, Record.RecordType recordType) {
+    int currentRetryNumber = eventPayload.containsKey(CURRENT_RETRY_NUMBER)
+      ? Integer.parseInt(eventPayload.get(CURRENT_RETRY_NUMBER))
+      : 0;
+
+    return getQuickMarcEventHandler(context, recordType).handle(eventPayload)
+      .map(recordType)
+      .recover(throwable -> {
+        if (throwable instanceof OptimisticLockingException && currentRetryNumber < MAX_RETRIES_COUNT) {
+          LOGGER.warn("Optimistic locking error occurred. Retrying {}/{}...", currentRetryNumber + 1, MAX_RETRIES_COUNT);
+          eventPayload.put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
+          return processWithRetry(eventPayload, context, recordType);
+        } else {
+          LOGGER.error("Failed to process payload after {} retries. Error: {}", currentRetryNumber, throwable.getMessage());
+          eventPayload.remove(CURRENT_RETRY_NUMBER);
+          return Future.failedFuture(throwable);
+        }
+      });
   }
 
   private AbstractQuickMarcEventHandler<?> getQuickMarcEventHandler(Context context, Record.RecordType recordType) {
