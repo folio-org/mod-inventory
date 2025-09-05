@@ -34,6 +34,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventTypes;
 import org.folio.inventory.consortium.cache.ConsortiumDataCache;
+import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
 import org.folio.inventory.dataimport.consumers.DataImportKafkaHandler;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.support.KafkaConsumerVerticle;
@@ -76,13 +77,19 @@ public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
   private static final String LOAD_LIMIT_PROPERTY = "DataImportConsumer";
   private static final String MAX_DISTRIBUTION_PROPERTY = "DataImportConsumerVerticle";
 
+  private final CancelledJobsIdsCache cancelledJobsIdsCache;
+
+  public DataImportConsumerVerticle(CancelledJobsIdsCache cancelledJobsIdsCache) {
+    this.cancelledJobsIdsCache = cancelledJobsIdsCache;
+  }
+
   @Override
   public void start(Promise<Void> startPromise) {
     EventManager.registerKafkaEventPublisher(getKafkaConfig(), vertx, getMaxDistributionNumber(MAX_DISTRIBUTION_PROPERTY));
     var consortiumDataCache = new ConsortiumDataCache(vertx, getHttpClient());
 
     var dataImportKafkaHandler = new DataImportKafkaHandler(vertx, getStorage(), getHttpClient(), getProfileSnapshotCache(),
-      getKafkaConfig(), getMappingMetadataCache(), consortiumDataCache);
+      getKafkaConfig(), getMappingMetadataCache(), consortiumDataCache, cancelledJobsIdsCache);
 
     var futures = EVENT_TYPES.stream()
       .map(type -> super.createConsumer(type.value(), LOAD_LIMIT_PROPERTY))
