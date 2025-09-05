@@ -96,11 +96,11 @@ import static org.folio.okapi.common.XOkapiHeaders.PERMISSIONS;
 
 public class DataImportKafkaHandler implements AsyncRecordHandler<String, String> {
 
+  public static final String PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
   private static final Logger LOGGER = LogManager.getLogger(DataImportKafkaHandler.class);
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String USER_ID_HEADER = "userId";
-  private static final String PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
 
   private final Vertx vertx;
   private final ProfileSnapshotCache profileSnapshotCache;
@@ -162,13 +162,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       Promise<String> promise = Promise.promise();
       Event event = Json.decodeValue(kafkaRecord.value(), Event.class);
       DataImportEventPayload eventPayload = Json.decodeValue(event.getEventPayload(), DataImportEventPayload.class);
-
-      if (cancelledJobsIdCache.contains(UUID.fromString(eventPayload.getJobExecutionId()))) {
-        LOGGER.info("Skip processing of event, topic: '{}', tenantId: '{}', jobExecutionId: '{}' because the job has been cancelled",
-          kafkaRecord.topic(), eventPayload.getTenant(), eventPayload.getJobExecutionId());
-        return Future.succeededFuture(kafkaRecord.key());
-      }
-
       Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(kafkaRecord.headers());
       String recordId = headersMap.get(RECORD_ID_HEADER);
       String chunkId = headersMap.get(CHUNK_ID_HEADER);
@@ -176,6 +169,12 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
       String jobExecutionId = eventPayload.getJobExecutionId();
       LOGGER.info("Data import event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", eventPayload.getEventType(), recordId, jobExecutionId, chunkId);
+
+      if (cancelledJobsIdCache.contains(UUID.fromString(eventPayload.getJobExecutionId()))) {
+        LOGGER.info("Skip processing of event, topic: '{}', tenantId: '{}', jobExecutionId: '{}' because the job has been cancelled",
+          kafkaRecord.topic(), eventPayload.getTenant(), eventPayload.getJobExecutionId());
+        return Future.succeededFuture(kafkaRecord.key());
+      }
 
       if (isNull(userId)) {
         LOGGER.error("Data import event payload has been received with userId is null");
