@@ -160,8 +160,8 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   public Future<String> handle(KafkaConsumerRecord<String, String> kafkaRecord) {
     try {
       Promise<String> promise = Promise.promise();
-      Event event = Json.decodeValue(kafkaRecord.value(), Event.class);
-      DataImportEventPayload eventPayload = Json.decodeValue(event.getEventPayload(), DataImportEventPayload.class);
+      DataImportEventPayload eventPayload = Json.decodeValue(
+        Json.decodeValue(kafkaRecord.value(), Event.class).getEventPayload(), DataImportEventPayload.class);
       Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(kafkaRecord.headers());
       String recordId = headersMap.get(RECORD_ID_HEADER);
       String chunkId = headersMap.get(CHUNK_ID_HEADER);
