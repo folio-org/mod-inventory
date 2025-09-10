@@ -65,7 +65,7 @@ public class HoldingsCollectionServiceTest {
     var instanceId = String.valueOf(UUID.randomUUID());
     doAnswer(invocationOnMock -> {
 
-      Instance instance = new Instance(instanceId, "2", String.valueOf(UUID.randomUUID()),
+      Instance instance = new Instance(instanceId, 2, String.valueOf(UUID.randomUUID()),
         String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
       List<Instance> instanceList = Collections.singletonList(instance);
       MultipleRecords<Instance> result = new MultipleRecords<>(instanceList, 1);

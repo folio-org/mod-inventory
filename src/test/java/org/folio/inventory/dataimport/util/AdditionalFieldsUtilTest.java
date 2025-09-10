@@ -251,7 +251,7 @@ public class AdditionalFieldsUtilTest {
     String instanceId = UUID.randomUUID().toString();
     String instanceHrId = UUID.randomUUID().toString();
     Record srcRecord = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId).withInstanceHrid(UUID.randomUUID().toString()));
-    Instance instance = new Instance(instanceId, "0", instanceHrId, "", "", "");
+    Instance instance = new Instance(instanceId, 0, instanceHrId, "", "", "");
     Assert.assertTrue(AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance));
 
     srcRecord.getExternalIdsHolder().setInstanceHrid(null);
@@ -263,15 +263,15 @@ public class AdditionalFieldsUtilTest {
     String instanceId = UUID.randomUUID().toString();
     String instanceHrId = UUID.randomUUID().toString();
     Record srcRecord = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId).withInstanceHrid(instanceHrId));
-    Instance instance = new Instance(instanceId, "0", instanceHrId, "", "", "");
+    Instance instance = new Instance(instanceId, 0, instanceHrId, "", "", "");
     assertFalse(AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance));
 
     srcRecord.getExternalIdsHolder().withInstanceId(instanceId);
-    instance = new Instance(UUID.randomUUID().toString(), "0", instanceHrId, "", "", "");
+    instance = new Instance(UUID.randomUUID().toString(), 0, instanceHrId, "", "", "");
     assertFalse(AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance));
 
     srcRecord.getExternalIdsHolder().withInstanceId(null).withInstanceHrid(null);
-    instance = new Instance(UUID.randomUUID().toString(), "0", instanceHrId, "", "", "");
+    instance = new Instance(UUID.randomUUID().toString(), 0, instanceHrId, "", "", "");
     assertFalse(AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance));
   }
 
@@ -280,7 +280,7 @@ public class AdditionalFieldsUtilTest {
     String instanceId = UUID.randomUUID().toString();
     String instanceHrId = UUID.randomUUID().toString();
     Record srcRecord = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId).withInstanceHrid(instanceHrId));
-    Instance instance = new Instance(null, "0", instanceHrId, "", "", "");
+    Instance instance = new Instance(null, 0, instanceHrId, "", "", "");
     AdditionalFieldsUtil.isFieldsFillingNeeded(srcRecord, instance);
   }
 

@@ -186,7 +186,7 @@ public class ExternalInstanceCollectionBadRequestExamples {
   private static Instance createInstance() {
     return new Instance(
       UUID.randomUUID().toString(),
-      "4",
+      4,
       null,
       null, "Nod", UUID.randomUUID().toString());
   }
