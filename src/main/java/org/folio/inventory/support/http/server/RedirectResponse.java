@@ -2,11 +2,12 @@ package org.folio.inventory.support.http.server;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 
+import static javax.ws.rs.core.HttpHeaders.LOCATION;
 import static org.folio.inventory.client.util.ClientWrapperUtil.APPLICATION_JSON;
+import static org.folio.inventory.client.util.ClientWrapperUtil.CONTENT_TYPE;
 
 public final class RedirectResponse {
 
@@ -70,8 +71,8 @@ public final class RedirectResponse {
 
   private static void locationResponse(HttpServerResponse response, String url,
                                        JsonObject body, int status) {
-    response.headers().set(HttpHeaders.LOCATION, url);
-    response.headers().set(HttpHeaders.CONTENT_TYPE, APPLICATION_JSON);
+    response.headers().set(LOCATION, url);
+    response.headers().set(CONTENT_TYPE, APPLICATION_JSON);
     response.setStatusCode(status);
     response.end(Buffer.buffer(body.encodePrettily()));
   }
