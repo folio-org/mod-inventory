@@ -246,4 +246,42 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
     }));
   }
 
+  @Test
+  public void t(TestContext context) {
+    // given
+    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
+      .willReturn(WireMock.serverError().withBody(Json.encode(profileSnapshotWrapper))));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", profileSnapshotWrapper.getId())));
+
+    Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
+    String expectedKafkaRecordKey = "test_key";
+    List<KafkaHeader> headers = List.of(
+      KafkaHeader.header(RECORD_ID_HEADER, UUID.randomUUID().toString()),
+      KafkaHeader.header(CHUNK_ID_HEADER, UUID.randomUUID().toString())
+    );
+    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
+    when(kafkaRecord.value()).thenReturn(Json.encode(event));
+    when(kafkaRecord.headers()).thenReturn(headers);
+
+    EventHandler mockedEventHandler = mock(EventHandler.class);
+    when(mockedEventHandler.isEligible(any(DataImportEventPayload.class))).thenReturn(true);
+    when(mockedEventHandler.handle(any(DataImportEventPayload.class)))
+      .thenReturn(CompletableFuture.completedFuture(new DataImportEventPayload().withContext(new HashMap<>(Map.of("TEST_ENTITY_KEY", "TEST_ENTITY_VALUE")))));
+    EventManager.registerEventHandler(mockedEventHandler);
+
+    // when
+    Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
+
+    // then
+    future.onComplete(context.asyncAssertFailure(e -> {
+      verify(mockedEventHandler, never()).isEligible(any(DataImportEventPayload.class));
+      verify(mockedEventHandler, never()).handle(any(DataImportEventPayload.class));
+    }));
+  }
+
 }
