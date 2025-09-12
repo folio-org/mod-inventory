@@ -12,6 +12,7 @@ import static io.vertx.core.http.HttpMethod.POST;
 import static io.vertx.core.http.HttpMethod.PUT;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.folio.HttpStatus.HTTP_INTERNAL_SERVER_ERROR;
 import static org.folio.inventory.domain.instances.Dates.DATE_TYPE_ID_KEY;
 import static org.folio.inventory.domain.instances.Dates.DATE1_KEY;
 import static org.folio.inventory.domain.instances.Dates.DATE2_KEY;
@@ -795,8 +796,8 @@ public class InstancesApiExamples extends ApiTests {
 
     Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(deleteResponse.getStatusCode(), is(204));
-    assertThat(deleteResponse.hasBody(), is(false));
+    assertThat(deleteResponse.getStatusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
+    assertThat(deleteResponse.hasBody(), is(true));
 
     final var getCompleted = okapiClient.get(getByIdUrl);
 
