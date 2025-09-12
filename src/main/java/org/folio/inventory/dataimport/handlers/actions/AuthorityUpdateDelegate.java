@@ -31,7 +31,6 @@ public class AuthorityUpdateDelegate {
 
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
-  private static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
   private static final String MARC_FORMAT = "MARC_AUTHORITY";
 
   private final Storage storage;
@@ -57,7 +56,6 @@ public class AuthorityUpdateDelegate {
       AuthorityRecordCollection authorityRecordCollection = storage.getAuthorityRecordCollection(context);
 
       return getAuthorityRecordById(authorityId, authorityRecordCollection)
-        .onSuccess(existingAuthorityRecord -> fillVersion(existingAuthorityRecord, eventPayload))
         .compose(existingAuthorityRecord -> mergeRecords(existingAuthorityRecord, mappedAuthority))
         .compose(updatedAuthorityRecord -> updateAuthorityRecord(updatedAuthorityRecord, authorityRecordCollection));
     } catch (Exception e) {
@@ -96,12 +94,6 @@ public class AuthorityUpdateDelegate {
   private void completeExceptionally(Promise<?> promise, String message) {
     LOGGER.error(message);
     promise.fail(new DataImportException(message));
-  }
-
-  private void fillVersion(Authority existingAuthorityRecord, Map<String, String> eventPayload) {
-    if (eventPayload.containsKey(QM_RELATED_RECORD_VERSION_KEY)) {
-      existingAuthorityRecord.setVersion(Integer.parseInt(eventPayload.get(QM_RELATED_RECORD_VERSION_KEY)));
-    }
   }
 
   private Future<Authority> mergeRecords(Authority existingRecord, Authority mappedRecord) {

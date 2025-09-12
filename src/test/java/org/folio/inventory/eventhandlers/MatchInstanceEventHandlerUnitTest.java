@@ -175,7 +175,7 @@ public class MatchInstanceEventHandlerUnitTest {
     String centralTenantId = "consortium";
     String consortiumId = "consortiumId";
 
-    Instance instance = new Instance(UUID.randomUUID().toString(), "5", INSTANCE_HRID, "MARC", "Wonderful", "12334");
+    Instance instance = new Instance(UUID.randomUUID().toString(), 5, INSTANCE_HRID, "MARC", "Wonderful", "12334");
 
     InstanceCollection instanceCollectionCentralTenant = Mockito.mock(InstanceCollection.class);
     when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(instanceCollectionCentralTenant);
@@ -218,7 +218,7 @@ public class MatchInstanceEventHandlerUnitTest {
     String centralTenantId = "consortium";
     String consortiumId = "consortiumId";
 
-    Instance instance = new Instance(INSTANCE_ID, "5", UUID.randomUUID().toString(), "CONSORTIUM-MARC", "Wonderful", "12334");
+    Instance instance = new Instance(INSTANCE_ID, 5, UUID.randomUUID().toString(), "CONSORTIUM-MARC", "Wonderful", "12334");
 
     InstanceCollection instanceCollectionCentralTenant = Mockito.mock(InstanceCollection.class);
     when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(instanceCollectionCentralTenant);
@@ -318,7 +318,7 @@ public class MatchInstanceEventHandlerUnitTest {
     InstanceCollection instanceCollectionCentralTenant = Mockito.mock(InstanceCollection.class);
     when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(instanceCollectionCentralTenant);
 
-    Instance instance = new Instance(UUID.randomUUID().toString(), "5", INSTANCE_HRID, "MARC", "Wonderful", "12334");
+    Instance instance = new Instance(UUID.randomUUID().toString(), 5, INSTANCE_HRID, "MARC", "Wonderful", "12334");
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -365,7 +365,7 @@ public class MatchInstanceEventHandlerUnitTest {
     String centralTenantId = "consortium";
     String consortiumId = "consortiumId";
 
-    Instance instance = new Instance(UUID.randomUUID().toString(), "5", INSTANCE_HRID, "MARC", "Wonderful", "12334");
+    Instance instance = new Instance(UUID.randomUUID().toString(), 5, INSTANCE_HRID, "MARC", "Wonderful", "12334");
 
     InstanceCollection instanceCollectionCentralTenant = Mockito.mock(InstanceCollection.class);
     when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(instanceCollectionCentralTenant);
@@ -415,7 +415,7 @@ public class MatchInstanceEventHandlerUnitTest {
     String centralTenantId = "consortium";
     String consortiumId = "consortiumId";
 
-    Instance instance = new Instance(UUID.randomUUID().toString(), "5", INSTANCE_HRID, "MARC", "Wonderful", "12334");
+    Instance instance = new Instance(UUID.randomUUID().toString(), 5, INSTANCE_HRID, "MARC", "Wonderful", "12334");
 
     InstanceCollection instanceCollectionCentralTenant = Mockito.mock(InstanceCollection.class);
     when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(instanceCollectionCentralTenant);
@@ -685,8 +685,8 @@ public class MatchInstanceEventHandlerUnitTest {
     throws UnsupportedEncodingException {
     Async async = testContext.async();
     List<Instance> matchedInstances = List.of(
-      new Instance(UUID.randomUUID().toString(), "1", "in1", "MARC", "Wonderful", "12334"),
-      new Instance(UUID.randomUUID().toString(), "1", "in2", "MARC", "Wonderful", "12334"));
+      new Instance(UUID.randomUUID().toString(), 1, "in1", "MARC", "Wonderful", "12334"),
+      new Instance(UUID.randomUUID().toString(), 1, "in2", "MARC", "Wonderful", "12334"));
 
     doAnswer(invocation -> {
       Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(2);
@@ -726,8 +726,8 @@ public class MatchInstanceEventHandlerUnitTest {
     throws UnsupportedEncodingException {
     Async async = testContext.async();
     List<Instance> matchedInstances = List.of(
-      new Instance(UUID.randomUUID().toString(), "1", "in1", "MARC", "Wonderful", "12334"),
-      new Instance(UUID.randomUUID().toString(), "1", "in2", "MARC", "Wonderful", "12334"));
+      new Instance(UUID.randomUUID().toString(), 1, "in1", "MARC", "Wonderful", "12334"),
+      new Instance(UUID.randomUUID().toString(), 1, "in2", "MARC", "Wonderful", "12334"));
 
     doAnswer(invocation -> {
       Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(2);
@@ -816,7 +816,7 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   private Instance createInstance() {
-    return new Instance(INSTANCE_ID, "5", INSTANCE_HRID, "MARC", "Wonderful", "12334");
+    return new Instance(INSTANCE_ID, 5, INSTANCE_HRID, "MARC", "Wonderful", "12334");
   }
 
 }

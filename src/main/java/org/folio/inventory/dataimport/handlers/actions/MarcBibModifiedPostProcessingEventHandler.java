@@ -101,9 +101,9 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
             dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
             Instance resultedInstance = instanceUpdatePromise.future().result();
             if (resultedInstance.getVersion() != null) {
-              int currentVersion = Integer.parseInt(resultedInstance.getVersion());
+              int currentVersion = resultedInstance.getVersion();
               int incrementedVersion = currentVersion + 1;
-              resultedInstance.setVersion(String.valueOf(incrementedVersion));
+              resultedInstance.setVersion(incrementedVersion);
             }
             dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(resultedInstance));
             future.complete(dataImportEventPayload);

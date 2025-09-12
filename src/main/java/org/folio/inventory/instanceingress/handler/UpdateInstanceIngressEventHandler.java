@@ -88,7 +88,7 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
     return InstanceUtil.findInstanceById(instanceId, instanceCollection)
       .compose(existingInstance -> {
         instance.setHrid(existingInstance.getHrid());
-        instance.setVersion(Integer.parseInt(existingInstance.getVersion()));
+        instance.setVersion(existingInstance.getVersion());
         return Future.succeededFuture(instance);
       })
       .onFailure(e -> {

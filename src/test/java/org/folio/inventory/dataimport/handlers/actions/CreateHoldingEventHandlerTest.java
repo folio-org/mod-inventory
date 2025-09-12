@@ -196,7 +196,7 @@ public class CreateHoldingEventHandlerTest {
   @Test
   public void shouldProcessEvent() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
@@ -228,7 +228,7 @@ public class CreateHoldingEventHandlerTest {
   @Test
   public void shouldProcessEventAndCreateShadowInstanceIfConsortiumEnabledAndInstanceNotExistAtLocalStorage() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
@@ -292,7 +292,7 @@ public class CreateHoldingEventHandlerTest {
   @Test
   public void shouldProcessEventAndNotCreateShadowInstanceIfConsortiumEnabledAndInstanceExistAtLocalStorage() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
@@ -357,7 +357,7 @@ public class CreateHoldingEventHandlerTest {
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
 
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
@@ -390,7 +390,7 @@ public class CreateHoldingEventHandlerTest {
     List<String> locations = List.of(permanentLocationId, UUID.randomUUID().toString());
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
@@ -436,7 +436,7 @@ public class CreateHoldingEventHandlerTest {
     }).when(holdingsRecordsCollection).add(argThat(holdingsRecord -> holdingsRecord.getPermanentLocationId().equals(permanentLocationId2)), any(), any());
 
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
@@ -532,7 +532,7 @@ public class CreateHoldingEventHandlerTest {
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(""));
 
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, "8", String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, 8, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
@@ -568,7 +568,7 @@ public class CreateHoldingEventHandlerTest {
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
 
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
@@ -595,7 +595,7 @@ public class CreateHoldingEventHandlerTest {
     }).when(holdingsRecordsCollection).add(any(), any(), any());
 
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, "5", String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
@@ -655,7 +655,7 @@ public class CreateHoldingEventHandlerTest {
   @Test(expected = ExecutionException.class)
   public void shouldNotProcessEventIfNoContextMarcBibliographic() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, "9", String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, 9, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     HashMap<String, String> context = new HashMap<>();
     context.put("InvalidField", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
@@ -725,7 +725,7 @@ public class CreateHoldingEventHandlerTest {
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(UUID.randomUUID().toString()), StringValue.of(UUID.randomUUID().toString()));
 
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, "7", String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, 7, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();

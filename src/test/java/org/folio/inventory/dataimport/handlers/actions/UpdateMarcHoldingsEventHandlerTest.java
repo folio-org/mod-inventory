@@ -644,7 +644,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
   @SneakyThrows
   private void mockSuccessFindByCql(String instanceId, InstanceCollection instanceRecordCollection) {
     doAnswer(invocationOnMock -> {
-      Instance instance = new Instance(instanceId, "2", String.valueOf(UUID.randomUUID()),
+      Instance instance = new Instance(instanceId, 2, String.valueOf(UUID.randomUUID()),
         String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
       List<Instance> instanceList = Collections.singletonList(instance);
       MultipleRecords<Instance> result = new MultipleRecords<>(instanceList, 1);
