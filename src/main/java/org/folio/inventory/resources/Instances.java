@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
+import io.vertx.core.Future;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.inventory.common.WebContext;
@@ -39,6 +40,8 @@ import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
+import org.folio.inventory.exceptions.InternalServerErrorException;
+import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.services.InstanceRelationshipsService;
 import org.folio.inventory.storage.Storage;
@@ -211,18 +214,26 @@ public class Instances extends AbstractInstances {
     }
   }
 
-  private void deleteSourceStorageRecord(WebContext wContext, String instanceId) {
+  private CompletableFuture<Void> deleteSourceStorageRecord(WebContext wContext, String instanceId) {
     try {
       SourceStorageRecordsClient srsClient = getSourceStorageRecordsClient(wContext);
-      srsClient.deleteSourceStorageRecordsById(instanceId, INSTANCE_ID_TYPE, httpClientResponse -> {
-        if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_NO_CONTENT.toInt()) {
-          log.info(format("Source storage record was successfully deleted in SRS. InstanceID: %s", instanceId));
-        } else {
-          log.error(format("Source storage record was not deleted. InstanceID: %s StatusCode: %s", instanceId, httpClientResponse.result().statusCode()));
-        }
-      });
+      return srsClient.deleteSourceStorageRecordsById(instanceId, INSTANCE_ID_TYPE)
+        .toCompletionStage()
+        .toCompletableFuture()
+        .thenCompose(response -> {
+          if (response.statusCode() == HttpStatus.HTTP_NO_CONTENT.toInt()) {
+            log.info("deleteSourceStorageRecord:: Source storage record was successfully deleted in SRS. InstanceID: {}", instanceId);
+            return CompletableFuture.completedFuture(null);
+          } else {
+            String errorMessage = format("Failed to delete source storage record by instanceID: %s, statusCode: %s, body: %s",
+              instanceId, response.statusCode(), response.bodyAsString());
+            log.warn("deleteSourceStorageRecord:: {}", errorMessage);
+            return CompletableFuture.failedFuture(new InternalServerErrorException(errorMessage));
+          }
+        });
     } catch (Exception e) {
-      log.error("Error during source storage record deletion in SRS", e);
+      log.error("deleteSourceStorageRecord:: Error during source storage record deletion in SRS by instanceId: {}", instanceId, e);
+      return CompletableFuture.failedFuture(e);
     }
   }
 
@@ -361,30 +372,27 @@ public class Instances extends AbstractInstances {
   private void softDelete(RoutingContext routingContext) {
     WebContext webContext = new WebContext(routingContext);
     InstanceCollection instanceCollection = storage.getInstanceCollection(webContext);
-    instanceCollection.findById(routingContext.request().getParam("id"),
-    it -> {
-      Instance instance = it.getResult();
-      if (instance != null) {
-        updateVisibility(instance, routingContext, instanceCollection);
-        if (isInstanceControlledByRecord(instance)) {
-          deleteSourceStorageRecord(webContext, instance.getId());
-        }
-      } else {
-        ClientErrorResponse.notFound(routingContext.response());
-      }
-    }, FailureResponseConsumer.serverError(routingContext.response()));
+    instanceCollection.findById(routingContext.request().getParam("id"))
+      .thenCompose(instance -> instance == null
+        ? failedFuture(new NotFoundException("Instance not found"))
+        : updateVisibility(instance, instanceCollection))
+    .thenCompose(instance -> isInstanceControlledByRecord(instance)
+        ? deleteSourceStorageRecord(webContext, instance.getId())
+        : CompletableFuture.completedFuture(null))
+      .thenAccept(v -> noContent(routingContext.response()))
+      .exceptionally(doExceptionally(routingContext));
   }
 
-  private void updateVisibility(Instance instance, RoutingContext routingContext,  InstanceCollection instanceCollection) {
+  private CompletableFuture<Instance> updateVisibility(Instance instance, InstanceCollection instanceCollection) {
     instance.setDiscoverySuppress(true);
     instance.setStaffSuppress(true);
     instance.setDeleted(true);
-    instanceCollection.update(instance, v -> {
-      log.info("staffSuppress, discoverySuppress and deleted properties are set to true for instance {}",
-        instance.getId());
-      noContent(routingContext.response());
-      },
-      FailureResponseConsumer.serverError(routingContext.response()));
+    return instanceCollection.update(instance)
+      .thenApply(v -> {
+        log.info("updateVisibility:: staffSuppress, discoverySuppress and deleted properties are set to true for instance with id: '{}'",
+          instance.getId());
+        return instance;
+      });
   }
 
   private void getById(RoutingContext routingContext) {
