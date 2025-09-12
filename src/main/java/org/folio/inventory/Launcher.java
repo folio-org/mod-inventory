@@ -113,8 +113,9 @@ public class Launcher {
     CompletableFuture<String> future6 = new CompletableFuture<>();
     CompletableFuture<String> future7 = new CompletableFuture<>();
 
-    vertxAssistant.deployVerticle(DataImportConsumerVerticle.class.getName(),
-      consumerVerticlesConfig, dataImportConsumerVerticleNumber, future1);
+    vertxAssistant.deployVerticle(() -> new DataImportConsumerVerticle(cancelledJobsIdsCache),
+      DataImportConsumerVerticle.class.getName(), consumerVerticlesConfig,
+      dataImportConsumerVerticleNumber, future1);
     vertxAssistant.deployVerticle(MarcHridSetConsumerVerticle.class.getName(),
       consumerVerticlesConfig, instanceHridSetConsumerVerticleNumber, future2);
     vertxAssistant.deployVerticle(QuickMarcConsumerVerticle.class.getName(),
@@ -125,6 +126,7 @@ public class Launcher {
       consumerVerticlesConfig, consortiumInstanceSharingVerticleNumber, future5);
     vertxAssistant.deployVerticle(InstanceIngressConsumerVerticle.class.getName(),
       consumerVerticlesConfig, instanceIngressConsumerVerticleNumber, future6);
+
     vertxAssistant.deployVerticle(() -> new CancelledJobExecutionConsumerVerticle(cancelledJobsIdsCache),
       CancelledJobExecutionConsumerVerticle.class.getName(),
       consumerVerticlesConfig, CANCELLED_JOBS_CONSUMER_VERTICLE_INSTANCES_NUMBER, future7);

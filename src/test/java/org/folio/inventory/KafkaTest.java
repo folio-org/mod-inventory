@@ -48,7 +48,7 @@ public abstract class KafkaTest {
 
   @AfterClass
   public static void afterAll() {
-    stopKafka();
     vertxAssistant.stop();
+    stopKafka();
   }
 }

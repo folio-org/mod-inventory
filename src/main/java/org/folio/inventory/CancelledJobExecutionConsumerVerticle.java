@@ -68,7 +68,7 @@ public class CancelledJobExecutionConsumerVerticle extends KafkaConsumerVerticle
       return Future.succeededFuture(kafkaRecord.key());
     } catch (Exception e) {
       LOGGER.warn("handle:: Failed to process cancelled job, key: '{}', from topic: '{}'",
-        kafkaRecord.key(), kafkaRecord.topic());
+        kafkaRecord.key(), kafkaRecord.topic(), e);
      return Future.failedFuture(e);
     }
   }
