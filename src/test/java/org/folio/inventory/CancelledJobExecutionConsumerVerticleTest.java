@@ -24,6 +24,7 @@ import java.util.stream.Stream;
 import static java.time.Duration.ofSeconds;
 import static org.folio.DataImportEventTypes.DI_JOB_CANCELLED;
 import static org.folio.inventory.KafkaUtility.sendEvent;
+import static org.junit.Assert.assertTrue;
 import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
 
 @RunWith(VertxUnitRunner.class)
@@ -46,18 +47,16 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
   }
 
   @Test
-  @SuppressWarnings("squid:S2699")
   public void shouldReadAndPutMultipleJobIdsToCache() throws ExecutionException, InterruptedException {
     List<String> ids = generateJobIds(100);
 
     sendJobIdsToKafka(ids);
 
-    await().atMost(ofSeconds(3)).until(() -> ids.stream()
-      .allMatch(id -> cancelledJobsIdsCache.contains(id)));
+    await().atMost(ofSeconds(3))
+      .untilAsserted(() -> ids.forEach(id -> assertTrue(cancelledJobsIdsCache.contains((id)))));
   }
 
   @Test
-  @SuppressWarnings("squid:S2699")
   public void shouldReadAllEventsFromTopicIfVerticleWasRestarted(TestContext context)
     throws ExecutionException, InterruptedException {
 
@@ -82,10 +81,10 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
     async2.await(3000);
     // verify that the verticle has read all events
     // including previously consumed events and newly produced events
-    await().atMost(ofSeconds(3)).until(() -> idsBatch1.stream()
-      .allMatch(id -> cancelledJobsIdsCache.contains(id)));
-    await().atMost(ofSeconds(3)).until(() -> idsBatch2.stream()
-      .allMatch(id -> cancelledJobsIdsCache.contains(id)));
+    await().atMost(ofSeconds(3))
+    .untilAsserted(() -> idsBatch1.forEach(id -> assertTrue(cancelledJobsIdsCache.contains((id)))));
+    await().atMost(ofSeconds(3))
+      .untilAsserted(() -> idsBatch2.forEach(id -> assertTrue(cancelledJobsIdsCache.contains((id)))));
   }
 
   private Future<String> deployVerticle(CancelledJobsIdsCache cancelledJobsIdsCache) {
