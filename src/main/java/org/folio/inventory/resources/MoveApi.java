@@ -140,10 +140,6 @@ public class MoveApi extends AbstractInventoryResource {
       .findById(toInstanceId)
       .handle((localInstance, error) -> {
         if (error != null) {
-          if (error.getCause() instanceof BadRequestException) {
-            LOGGER.info("moveHoldings:: Instance {} not found locally, proceeding to check consortium.", toInstanceId);
-            return null;
-          }
           LOGGER.error("moveHoldings:: Failed to query local instance storage for instanceId {}", toInstanceId, error);
           throw new CompletionException(error);
         }
