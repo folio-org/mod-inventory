@@ -44,7 +44,6 @@ public class UpdateAuthorityQuickMarcEventHandlerTest {
   private static final String AUTHORITY_PATH = "src/test/resources/handlers/authority.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/authority-record.json";
   private static final String AUTHORITY_ID = "b90cb1bc-601f-45d7-b99e-b11efd281dcd";
-  private static final Integer AUTHORITY_VERSION = 1;
 
   @Mock
   private Storage storage;
@@ -99,14 +98,12 @@ public class UpdateAuthorityQuickMarcEventHandlerTest {
     eventPayload.put("MARC_AUTHORITY", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
-    eventPayload.put("RELATED_RECORD_VERSION", AUTHORITY_VERSION.toString());
 
     Future<Authority> future = updateAuthorityQuickMarcEventHandler.handle(eventPayload);
     Authority updatedAuthority = future.result();
 
     Assert.assertNotNull(updatedAuthority);
     Assert.assertEquals(AUTHORITY_ID, updatedAuthority.getId());
-    Assert.assertEquals(AUTHORITY_VERSION, updatedAuthority.getVersion());
 
     Assert.assertNotNull(updatedAuthority.getIdentifiers());
     Assert.assertEquals(4, updatedAuthority.getIdentifiers().size());

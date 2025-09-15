@@ -31,7 +31,6 @@ public class InstanceUpdateDelegate {
 
   public static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   public static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
-  public static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
 
   private final Storage storage;
 
@@ -52,7 +51,6 @@ public class InstanceUpdateDelegate {
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
       return InstanceUtil.findInstanceById(instanceId, instanceCollection)
-        .onSuccess(existingInstance -> fillVersion(existingInstance, eventPayload))
         .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
         .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection));
     } catch (Exception e) {
@@ -81,12 +79,6 @@ public class InstanceUpdateDelegate {
     }
   }
 
-  private void fillVersion(Instance existingInstance, Map<String, String> eventPayload) {
-    if (eventPayload.containsKey(QM_RELATED_RECORD_VERSION_KEY)) {
-      existingInstance.setVersion(eventPayload.get(QM_RELATED_RECORD_VERSION_KEY));
-    }
-  }
-
   private JsonObject retrieveParsedContent(ParsedRecord parsedRecord) {
     return parsedRecord.getContent() instanceof String
       ? new JsonObject(parsedRecord.getContent().toString())
@@ -96,6 +88,7 @@ public class InstanceUpdateDelegate {
   private Future<Instance> updateInstance(Instance existingInstance, org.folio.Instance mappedInstance) {
     try {
       mappedInstance.setId(existingInstance.getId());
+      mappedInstance.setVersion(existingInstance.getVersion());
       if (isNotTrue(existingInstance.getDeleted()) && isTrue(mappedInstance.getDeleted())) {
         mappedInstance.withDiscoverySuppress(true);
         mappedInstance.withStaffSuppress(true);

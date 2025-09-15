@@ -47,7 +47,6 @@ import org.folio.kafka.services.KafkaProducerRecordBuilder;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.EventMetadata;
-import org.folio.rest.jaxrs.model.ParsedRecordDto;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.util.OkapiConnectionParams;
 
@@ -57,8 +56,6 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
 
   private static final AtomicLong indexer = new AtomicLong();
   private static final String RECORD_TYPE_KEY = "RECORD_TYPE";
-  private static final String PARSED_RECORD_DTO_KEY = "PARSED_RECORD_DTO";
-  private static final String QM_RELATED_RECORD_VERSION_KEY = "RELATED_RECORD_VERSION";
 
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final HoldingsUpdateDelegate holdingsUpdateDelegate;
@@ -116,8 +113,6 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   private Future<Record.RecordType> processPayload(Map<String, String> eventPayload, Context context) {
     try {
       var recordType = Record.RecordType.fromValue(eventPayload.get(RECORD_TYPE_KEY));
-      var parsedRecordDto = Json.decodeValue(eventPayload.get(PARSED_RECORD_DTO_KEY), ParsedRecordDto.class);
-      eventPayload.put(QM_RELATED_RECORD_VERSION_KEY, parsedRecordDto.getRelatedRecordVersion());
       return getQuickMarcEventHandler(context, recordType).handle(eventPayload).map(recordType);
     } catch (Exception e) {
       LOGGER.warn("Error during processPayload: ", e);

@@ -81,7 +81,7 @@ public class Instance {
 
   private final String id;
   @JsonProperty("_version")
-  private String version;
+  private Integer version;
   private final String hrid;
   private String matchKey;
   private String sourceUri;
@@ -129,7 +129,7 @@ public class Instance {
 
   public Instance(
     String id,
-    String version,
+    Integer version,
     String hrid,
     String source,
     String title,
@@ -154,7 +154,7 @@ public class Instance {
 
     return new Instance(
       instanceJson.getString(ID),
-      instanceJson.getString(VERSION_KEY),
+      instanceJson.getInteger(VERSION_KEY),
       instanceJson.getString(HRID_KEY),
       instanceJson.getString(SOURCE_KEY),
       instanceJson.getString(TITLE_KEY),
@@ -557,7 +557,7 @@ public class Instance {
     return this;
   }
 
-  public Instance setVersion(String version) {
+  public Instance setVersion(Integer version) {
     this.version = version;
     return this;
   }
@@ -581,7 +581,7 @@ public class Instance {
     return id;
   }
 
-  public String getVersion() {
+  public Integer getVersion() {
     return version;
   }
 
@@ -887,9 +887,7 @@ public class Instance {
 
   private static void putIfNotNull(JsonObject target, String propertyName, Object value) {
     if (value != null) {
-      if (value instanceof List) {
-        target.put(propertyName, value);
-      } else if (value instanceof Boolean) {
+      if (value instanceof List || value instanceof Boolean || value instanceof Integer) {
         target.put(propertyName, value);
       } else {
         target.put(propertyName, new JsonObject(Json.encode(value)));

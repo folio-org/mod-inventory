@@ -200,8 +200,7 @@ public class QuickMarcKafkaHandlerTest extends KafkaTest {
     payload.put("MAPPING_RULES", bibMappingRules.encode());
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
     payload.put("PARSED_RECORD_DTO", Json.encode(new ParsedRecordDto()
-      .withRecordType(ParsedRecordDto.RecordType.MARC_BIB)
-      .withRelatedRecordVersion("1")));
+      .withRecordType(ParsedRecordDto.RecordType.MARC_BIB)));
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
@@ -238,8 +237,7 @@ public class QuickMarcKafkaHandlerTest extends KafkaTest {
     payload.put("MAPPING_RULES", holdingsMappingRules.encode());
     payload.put("MAPPING_PARAMS", Json.encode(mappingParameters));
     payload.put("PARSED_RECORD_DTO", Json.encode(new ParsedRecordDto()
-      .withRecordType(ParsedRecordDto.RecordType.MARC_HOLDING)
-      .withRelatedRecordVersion("1")));
+      .withRecordType(ParsedRecordDto.RecordType.MARC_HOLDING)));
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
@@ -271,8 +269,7 @@ public class QuickMarcKafkaHandlerTest extends KafkaTest {
     payload.put("MAPPING_RULES", authorityMappingRules.encode());
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
     payload.put("PARSED_RECORD_DTO", Json.encode(new ParsedRecordDto()
-      .withRecordType(ParsedRecordDto.RecordType.MARC_AUTHORITY)
-      .withRelatedRecordVersion("1")));
+      .withRecordType(ParsedRecordDto.RecordType.MARC_AUTHORITY)));
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
@@ -310,8 +307,7 @@ public class QuickMarcKafkaHandlerTest extends KafkaTest {
     payload.put("MAPPING_RULES", authorityMappingRules.encode());
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
     payload.put("PARSED_RECORD_DTO", Json.encode(new ParsedRecordDto()
-      .withRecordType(ParsedRecordDto.RecordType.MARC_AUTHORITY)
-      .withRelatedRecordVersion("1")));
+      .withRecordType(ParsedRecordDto.RecordType.MARC_AUTHORITY)));
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
@@ -349,8 +345,7 @@ public class QuickMarcKafkaHandlerTest extends KafkaTest {
     payload.put("MAPPING_RULES", authorityMappingRules.encode());
     payload.put("MAPPING_PARAMS", new JsonObject().encode());
     payload.put("PARSED_RECORD_DTO", Json.encode(new ParsedRecordDto()
-      .withRecordType(ParsedRecordDto.RecordType.MARC_AUTHORITY)
-      .withRelatedRecordVersion("1")));
+      .withRecordType(ParsedRecordDto.RecordType.MARC_AUTHORITY)));
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";

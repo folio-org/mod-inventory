@@ -1262,7 +1262,7 @@ public class ReplaceInstanceEventHandlerTest {
 
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
 
-    Instance returnedInstance = new Instance(UUID.randomUUID().toString(), String.valueOf(INSTANCE_VERSION), UUID.randomUUID().toString(), "source", "title", instanceTypeId);
+    Instance returnedInstance = new Instance(UUID.randomUUID().toString(), INSTANCE_VERSION, UUID.randomUUID().toString(), "source", "title", instanceTypeId);
     returnedInstance.setTags(List.of("firstTag"));
 
     mockInstance(MARC_INSTANCE_SOURCE);
@@ -1534,7 +1534,7 @@ public class ReplaceInstanceEventHandlerTest {
       .put("discoverySuppress", false)
       .encode());
 
-    Instance returnedInstance = new Instance(instanceId, String.valueOf(INSTANCE_VERSION),
+    Instance returnedInstance = new Instance(instanceId, INSTANCE_VERSION,
       UUID.randomUUID().toString(), MARC_INSTANCE_SOURCE, "title", "instanceTypeId")
       .setDiscoverySuppress(false);
 
@@ -1616,7 +1616,7 @@ public class ReplaceInstanceEventHandlerTest {
     HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
     when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(Future.succeededFuture(respForPass));
 
-    Instance returnedInstance = new Instance(instanceTypeId, String.valueOf(INSTANCE_VERSION),
+    Instance returnedInstance = new Instance(instanceTypeId, INSTANCE_VERSION,
       UUID.randomUUID().toString(), MARC_INSTANCE_SOURCE, "title", "instanceTypeId");
 
     doAnswer(invocationOnMock -> {
@@ -1695,7 +1695,7 @@ public class ReplaceInstanceEventHandlerTest {
     HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
     when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(Future.succeededFuture(respForPass));
 
-    Instance returnedInstance = new Instance(instanceTypeId, String.valueOf(INSTANCE_VERSION),
+    Instance returnedInstance = new Instance(instanceTypeId, INSTANCE_VERSION,
       hrId, MARC_INSTANCE_SOURCE, "title", "instanceTypeId");
 
     doAnswer(invocationOnMock -> {
@@ -1956,7 +1956,7 @@ public class ReplaceInstanceEventHandlerTest {
   }
 
   private void mockInstance(String sourceType, boolean deleted) {
-    Instance returnedInstance = new Instance(instanceId.toString(), String.valueOf(INSTANCE_VERSION),
+    Instance returnedInstance = new Instance(instanceId.toString(), INSTANCE_VERSION,
       instanceHrid, sourceType, "title", "instanceTypeId");
     returnedInstance.setDeleted(deleted);
     returnedInstance.setDiscoverySuppress(deleted);
