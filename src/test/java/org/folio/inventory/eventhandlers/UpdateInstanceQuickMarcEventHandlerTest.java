@@ -2,7 +2,6 @@ package org.folio.inventory.eventhandlers;
 
 import static org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate.MAPPING_PARAMS_KEY;
 import static org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate.MAPPING_RULES_KEY;
-import static org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate.QM_RELATED_RECORD_VERSION_KEY;
 import static org.folio.inventory.dataimport.handlers.quickmarc.AbstractQuickMarcEventHandler.RECORD_TYPE_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -61,7 +60,6 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
   private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
   private static final String DELETED_RECORD_PATH = "src/test/resources/handlers/deleted-bib-record.json";
   private static final String INSTANCE_ID = "ddd266ef-07ac-4117-be13-d418b8cd6902";
-  private static final String INSTANCE_VERSION = "1";
 
   @Mock
   private Storage storage;
@@ -127,14 +125,12 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     eventPayload.put("MARC_BIB", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
-    eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
 
     Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
     Instance updatedInstance = future.result();
 
     Assert.assertNotNull(updatedInstance);
     Assert.assertEquals(INSTANCE_ID, updatedInstance.getId());
-    Assert.assertEquals(INSTANCE_VERSION, updatedInstance.getVersion());
     Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     Assert.assertNotNull(
       updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().orElse(null));
@@ -163,7 +159,6 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     eventPayload.put("MARC_BIB", record.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
-    eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
 
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
@@ -187,14 +182,12 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     eventPayload.put("MARC_BIB", Json.encode(record));
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
-    eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
 
     Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
     Instance updatedInstance = future.result();
 
     Assert.assertNotNull(updatedInstance);
     Assert.assertEquals(INSTANCE_ID, updatedInstance.getId());
-    Assert.assertEquals(INSTANCE_VERSION, updatedInstance.getVersion());
     Assert.assertTrue(existingInstance.getPrecedingTitles().isEmpty());
     Assert.assertTrue(existingInstance.getSucceedingTitles().isEmpty());
     Assert.assertEquals(1, updatedInstance.getPrecedingTitles().size());
@@ -223,14 +216,12 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     eventPayload.put("MARC_BIB", staffSuppressedRecord.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
-    eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
 
     Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
     Instance updatedInstance = future.result();
 
     Assert.assertNotNull(updatedInstance);
     Assert.assertEquals(INSTANCE_ID, updatedInstance.getId());
-    Assert.assertEquals(INSTANCE_VERSION, updatedInstance.getVersion());
     Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     Assert.assertNotNull(
       updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().orElse(null));
@@ -260,14 +251,12 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     eventPayload.put("MARC_BIB", deletedRecord.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
-    eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
 
     Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
     Instance updatedInstance = future.result();
 
     Assert.assertNotNull(updatedInstance);
     Assert.assertEquals(INSTANCE_ID, updatedInstance.getId());
-    Assert.assertEquals(INSTANCE_VERSION, updatedInstance.getVersion());
     Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     Assert.assertNotNull(
       updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().orElse(null));
@@ -305,14 +294,12 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     eventPayload.put("MARC_BIB", deletedRecord.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
-    eventPayload.put("RELATED_RECORD_VERSION", INSTANCE_VERSION);
 
     Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
     Instance updatedInstance = future.result();
 
     Assert.assertNotNull(updatedInstance);
     Assert.assertEquals(INSTANCE_ID, updatedInstance.getId());
-    Assert.assertEquals(INSTANCE_VERSION, updatedInstance.getVersion());
     Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     Assert.assertNotNull(
       updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().orElse(null));
@@ -343,14 +330,12 @@ public class UpdateInstanceQuickMarcEventHandlerTest {
     eventPayload.put("MARC_BIB", record.encode());
     eventPayload.put(MAPPING_RULES_KEY, mappingRulesWithoutDeletedMapping.encode());
     eventPayload.put(MAPPING_PARAMS_KEY, new JsonObject().encode());
-    eventPayload.put(QM_RELATED_RECORD_VERSION_KEY, INSTANCE_VERSION);
 
     Future<Instance> future = updateInstanceEventHandler.handle(eventPayload);
     Instance updatedInstance = future.result();
 
     assertNotNull(updatedInstance);
     assertEquals(INSTANCE_ID, updatedInstance.getId());
-    assertEquals(INSTANCE_VERSION, updatedInstance.getVersion());
     assertEquals("Victorian environmental nightmares and something else/ Laurence W. Mazzeno, Ronald D. Morrison, editors.", updatedInstance.getTitle());
 
     ArgumentCaptor<Context> argument = ArgumentCaptor.forClass(Context.class);

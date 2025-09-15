@@ -15,7 +15,7 @@ public class ValidationUtilTest {
 
   @Test
   public void shouldHaveNoErrorIfNatureAreAsUUID() {
-    Instance instance = new Instance(UUID.randomUUID().toString(), "1", "001", "MARC", "Title", UUID.randomUUID().toString());
+    Instance instance = new Instance(UUID.randomUUID().toString(), 1, "001", "MARC", "Title", UUID.randomUUID().toString());
     instance.setNatureOfContentTermIds(Arrays.asList(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
     List<String> errors = ValidationUtil.validateUUIDs(instance);
     Assert.assertEquals(0, errors.size());
@@ -23,7 +23,7 @@ public class ValidationUtilTest {
 
   @Test
   public void shouldHaveSeveralErrorsIfSomeNatureAreNotAsUUID() {
-    Instance instance = new Instance(UUID.randomUUID().toString(), "1", "001", "MARC", "Title", UUID.randomUUID().toString());
+    Instance instance = new Instance(UUID.randomUUID().toString(), 1, "001", "MARC", "Title", UUID.randomUUID().toString());
     instance.setNatureOfContentTermIds(Arrays.asList(UUID.randomUUID().toString(), "not uuid value", UUID.randomUUID().toString(), UUID.randomUUID().toString(), "second not UUID value"));
     List<String> errors = ValidationUtil.validateUUIDs(instance);
     Assert.assertEquals(2, errors.size());

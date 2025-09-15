@@ -8,7 +8,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ChildInstance;
@@ -50,7 +49,7 @@ public class InstanceUtil {
     //Fields which are not affects by default mapping.
     org.folio.Instance tmp = new org.folio.Instance()
       .withId(existing.getId())
-      .withVersion(asIntegerOrNull(existing.getVersion()))
+      .withVersion(existing.getVersion())
       .withDiscoverySuppress(existing.getDiscoverySuppress())
       .withStaffSuppress(existing.getStaffSuppress())
       .withDeleted(existing.getDeleted())
@@ -109,14 +108,6 @@ public class InstanceUtil {
     mergedInstanceAsJson.put(PARENT_INSTANCES_PROPERTY, parents);
     mergedInstanceAsJson.put(CHILDREN_INSTANCES_PROPERTY, children);
     return mergedInstanceAsJson;
-  }
-
-  /**
-   * Returns the value if s can be parsed as Integer. Returns null if s is null.
-   *
-   */
-  private static Integer asIntegerOrNull(String s) {
-    return NumberUtils.isParsable(s) ? Integer.parseInt(s) : null;
   }
 
   public static Future<Instance> findInstanceById(String instanceId, InstanceCollection instanceCollection) {
