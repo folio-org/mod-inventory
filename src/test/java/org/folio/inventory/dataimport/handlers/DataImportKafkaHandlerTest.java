@@ -212,7 +212,7 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
     // given
     String expectedKafkaRecordKey = "test_key";
     String cancelledJobId = UUID.randomUUID().toString();
-    cancelledJobsIdCache.put(UUID.fromString(cancelledJobId));
+    cancelledJobsIdCache.put(cancelledJobId);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(cancelledJobId)

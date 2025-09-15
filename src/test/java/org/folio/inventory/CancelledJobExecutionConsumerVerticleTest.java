@@ -53,7 +53,7 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
     sendJobIdsToKafka(ids);
 
     await().atMost(ofSeconds(3)).until(() -> ids.stream()
-      .allMatch(id -> cancelledJobsIdsCache.contains(UUID.fromString(id))));
+      .allMatch(id -> cancelledJobsIdsCache.contains(id)));
   }
 
   @Test
@@ -64,7 +64,7 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
     List<String> idsBatch1 = generateJobIds(100);
     sendJobIdsToKafka(idsBatch1);
     await().atMost(ofSeconds(3)).until(() -> idsBatch1.stream()
-      .allMatch(id -> cancelledJobsIdsCache.contains(UUID.fromString(id))));
+      .allMatch(id -> cancelledJobsIdsCache.contains(id)));
 
     // stop currently deployed verticle
     Async async = context.async();
@@ -83,9 +83,9 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
     // verify that the verticle has read all events
     // including previously consumed events and newly produced events
     await().atMost(ofSeconds(3)).until(() -> idsBatch1.stream()
-      .allMatch(id -> cancelledJobsIdsCache.contains(UUID.fromString(id))));
+      .allMatch(id -> cancelledJobsIdsCache.contains(id)));
     await().atMost(ofSeconds(3)).until(() -> idsBatch2.stream()
-      .allMatch(id -> cancelledJobsIdsCache.contains(UUID.fromString(id))));
+      .allMatch(id -> cancelledJobsIdsCache.contains(id)));
   }
 
   private Future<String> deployVerticle(CancelledJobsIdsCache cancelledJobsIdsCache) {

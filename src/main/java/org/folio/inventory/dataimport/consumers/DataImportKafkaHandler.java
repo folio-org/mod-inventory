@@ -84,7 +84,6 @@ import org.folio.rest.jaxrs.model.Event;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import static java.lang.String.format;
@@ -170,7 +169,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       String jobExecutionId = eventPayload.getJobExecutionId();
       LOGGER.info("Data import event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", eventPayload.getEventType(), recordId, jobExecutionId, chunkId);
 
-      if (cancelledJobsIdCache.contains(UUID.fromString(eventPayload.getJobExecutionId()))) {
+      if (cancelledJobsIdCache.contains(eventPayload.getJobExecutionId())) {
         LOGGER.info("Skip processing of event, topic: '{}', tenantId: '{}', jobExecutionId: '{}' because the job has been cancelled",
           kafkaRecord.topic(), eventPayload.getTenant(), eventPayload.getJobExecutionId());
         return Future.succeededFuture(kafkaRecord.key());

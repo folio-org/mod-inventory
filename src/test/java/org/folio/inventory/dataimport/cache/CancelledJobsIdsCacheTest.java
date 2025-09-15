@@ -20,14 +20,14 @@ public class CancelledJobsIdsCacheTest {
 
   @Test
   public void shouldIdAddToCache() {
-    UUID jobId = UUID.randomUUID();
+    String jobId = UUID.randomUUID().toString();
     cache.put(jobId);
     assertTrue(cache.contains(jobId));
   }
 
   @Test
   public void shouldReturnFalseForNonExistentId() {
-    UUID jobId = UUID.randomUUID();
+    String jobId = UUID.randomUUID().toString();
     assertFalse(cache.contains(jobId));
   }
 

@@ -3,7 +3,6 @@ package org.folio.inventory.dataimport.cache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public class CancelledJobsIdsCache {
@@ -11,7 +10,7 @@ public class CancelledJobsIdsCache {
   public static final String EXPIRATION_TIME_PARAMETER = "inventory.cancelled-jobs-cache.expiration.time.minutes";
   private static final String DEFAULT_EXPIRATION_TIME_MINUTES = "1440";
 
-  private final Cache<UUID, Boolean> cache;
+  private final Cache<String, Boolean> cache;
 
   public CancelledJobsIdsCache() {
     int expirationTimeMinutes = Integer.parseInt(System.getProperty(EXPIRATION_TIME_PARAMETER,
@@ -25,19 +24,19 @@ public class CancelledJobsIdsCache {
   /**
    * Puts the specified {@code jobId} into the cache.
    *
-   * @param jobId the UUID to put into the cache
+   * @param jobId the import job id to put into the cache
    */
-  public void put(UUID jobId) {
+  public void put(String jobId) {
     cache.put(jobId, Boolean.TRUE);
   }
 
   /**
    * Checks if the cache contains the specified {@code jobId}.
    *
-   * @param jobId the job UUID to check
+   * @param jobId the job id to check
    * @return {@code true} if the cache contains the {@code jobId}, {@code false} otherwise
    */
-  public boolean contains(UUID jobId) {
+  public boolean contains(String jobId) {
     return cache.asMap().containsKey(jobId);
   }
 
