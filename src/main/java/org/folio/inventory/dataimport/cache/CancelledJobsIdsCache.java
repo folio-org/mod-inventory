@@ -24,7 +24,7 @@ public class CancelledJobsIdsCache {
   /**
    * Puts the specified {@code jobId} into the cache.
    *
-   * @param jobId the import job id to put into the cache
+   * @param jobId import job id to put into the cache
    */
   public void put(String jobId) {
     cache.put(jobId, Boolean.TRUE);
@@ -33,7 +33,7 @@ public class CancelledJobsIdsCache {
   /**
    * Checks if the cache contains the specified {@code jobId}.
    *
-   * @param jobId the job id to check
+   * @param jobId import job id to check
    * @return {@code true} if the cache contains the {@code jobId}, {@code false} otherwise
    */
   public boolean contains(String jobId) {
