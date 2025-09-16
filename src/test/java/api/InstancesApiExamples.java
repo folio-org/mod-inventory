@@ -8,6 +8,7 @@ import static api.support.InstanceSamples.taoOfPooh;
 import static api.support.InstanceSamples.temeraire;
 import static api.support.InstanceSamples.treasureIslandInstance;
 import static api.support.InstanceSamples.uprooted;
+import static io.vertx.core.http.HttpMethod.DELETE;
 import static io.vertx.core.http.HttpMethod.POST;
 import static io.vertx.core.http.HttpMethod.PUT;
 import static java.util.Arrays.asList;
@@ -35,6 +36,7 @@ import static org.junit.Assert.assertTrue;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.List;
 import java.util.UUID;
@@ -75,6 +77,7 @@ public class InstancesApiExamples extends ApiTests {
   @After
   public void disableFailureEmulation() throws Exception {
     instancesStorageClient.disableFailureEmulation();
+    sourceRecordStorageClient.disableFailureEmulation();
   }
 
   @Test
@@ -811,6 +814,37 @@ public class InstancesApiExamples extends ApiTests {
 
     Response getDeletedSourceRecordResponse = sourceRecordStorageClient.getById(instanceId);
     assertEquals(getDeletedSourceRecordResponse.getStatusCode(), HttpStatus.HTTP_NOT_FOUND.toInt());
+  }
+
+  @Test
+  @SneakyThrows
+  public void canSoftDeleteInstanceIfFailedToMarkSourceRecordAsDeleted() {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instanceToDelete = createInstance(marcInstanceWithDefaultBlockedFields(instanceId));
+
+    sourceRecordStorageClient.emulateFailure(new EndpointFailureDescriptor()
+      .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
+      .setBody("Internal server error")
+      .setContentType("plain/text")
+      .setStatusCode(500)
+      .setMethod(DELETE.name()));
+
+    URL softDeleteUrl = URI.create(String.format("%s/%s/%s",
+      ApiRoot.instances(), instanceToDelete.getString("id"), "mark-deleted" )).toURL();
+    URL getByIdUrl = URI.create(
+      String.format("%s/%s", ApiRoot.instances(), instanceToDelete.getString("id"))).toURL();
+
+    final var deleteCompleted = okapiClient.delete(softDeleteUrl);
+    Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
+
+    assertThat(deleteResponse.getStatusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
+    assertThat(deleteResponse.hasBody(), is(true));
+
+    final var getCompleted = okapiClient.get(getByIdUrl);
+
+    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    assertTrue(getResponse.getJson().getBoolean("staffSuppress"));
+    assertTrue(getResponse.getJson().getBoolean("discoverySuppress"));
   }
 
   @Test
