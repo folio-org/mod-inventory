@@ -5,6 +5,7 @@ import static org.folio.inventory.common.FutureAssistance.allOf;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
+import static org.folio.inventory.support.ItemUtil.HOLDINGS_RECORD_ID;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 import static org.folio.inventory.validation.ItemStatusValidator.itemHasCorrectStatus;
 import static org.folio.inventory.validation.ItemsValidator.claimedReturnedMarkedAsMissing;
@@ -63,6 +64,7 @@ import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.inventory.support.http.server.ValidationError;
 import org.folio.inventory.validation.ItemsValidator;
+import org.folio.util.StringUtil;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonArray;
@@ -122,9 +124,10 @@ public class Items extends AbstractInventoryResource {
     RoutingContext routingContext, WebContext webContext, Clients clients) {
 
     final var itemStatusName = ItemStatusURL.getItemStatusNameForUrl(routingContext.request().uri());
-    if (itemStatusName.isEmpty())
+    if (itemStatusName.isEmpty()) {
       log.error("Item status for url $URL$ not found.".replace("$URL$", routingContext.request().uri()),
         new Exception());
+    }
 
     final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
       .getItemCollection(webContext), clients);
@@ -945,7 +948,7 @@ public class Items extends AbstractInventoryResource {
                     .thenCompose(
                       instances -> {
                         JsonArray boundWithTitles =
-                          buildBoundWithTitlesArray(holdingsRecords, instances);
+                          buildBoundWithTitlesArray(boundWithParts, holdingsRecords, instances);
                         item
                           .withBoundWithTitles(boundWithTitles)
                           .withIsBoundWith(true);
@@ -959,22 +962,31 @@ public class Items extends AbstractInventoryResource {
   /**
    * Constructs a JSON array of boundWithTitles containing Instance and
    * holdingsRecord information
+   *
+   * @param boundWithParts The sort order to be used for the array
    * @param holdingsRecords The holdings records that should populate the array
    * @param instances The Instances that should populate the array
    * @return JSON array of boundWithTitles
    */
-  private JsonArray buildBoundWithTitlesArray (List<JsonObject> holdingsRecords, List<JsonObject> instances) {
+  private JsonArray buildBoundWithTitlesArray (
+      JsonArray boundWithParts, List<JsonObject> holdingsRecords, List<JsonObject> instances) {
+
     JsonArray boundWithTitles = new JsonArray();
 
     final var instancesByIdMap = new HashMap<String, JsonObject>();
-
     instances.forEach( instance ->
       instancesByIdMap.put( instance.getString( "id" ), instance ));
 
-    holdingsRecords.forEach( holdingsRecord -> {
+    final var holdingsRecordsByIdMap = new HashMap<String, JsonObject>();
+    holdingsRecords.forEach(holdingsRecord ->
+      holdingsRecordsByIdMap.put(holdingsRecord.getString("id"), holdingsRecord));
+
+    boundWithParts.forEach(boundWithPart -> {
       JsonObject boundWithTitle = new JsonObject();
       JsonObject briefHoldingsRecord = new JsonObject();
       JsonObject briefInstance = new JsonObject();
+      var holdingsRecordId = ((JsonObject) boundWithPart).getString(HOLDINGS_RECORD_ID);
+      var holdingsRecord = holdingsRecordsByIdMap.get(holdingsRecordId);
       String instanceId = holdingsRecord.getString(INSTANCE_ID_PROPERTY);
       briefHoldingsRecord.put( "id", holdingsRecord.getString( "id" ) );
       briefHoldingsRecord.put( "hrid", holdingsRecord.getString( "hrid" ) );
@@ -1078,23 +1090,17 @@ public class Items extends AbstractInventoryResource {
         .build();
   }
 
-  private CompletableFuture<Response> getBoundWithPartsForItemFuture(
-    Item item,
-    CollectionResourceClient boundWithPartsClient)
-  {
+  private static CompletableFuture<Response> getBoundWithPartsForItemFuture(
+      Item item,
+      CollectionResourceClient boundWithPartsClient) {
 
-    CompletableFuture<Response> future = new CompletableFuture<>();
+    var boundWithPartsByItemIdQuery =
+        "itemId==" + StringUtil.cqlEncode(item.getId()) + " sortBy metadata.createdDate";
 
-    String boundWithPartsByItemIdQuery = String.format("itemId==(%s)",
-      item.getId());
-
-    boundWithPartsClient.getMany(
-      boundWithPartsByItemIdQuery,
-      1000,
-      0,
-      future::complete);
-
-    return future;
+    return boundWithPartsClient.getMany(
+        boundWithPartsByItemIdQuery,
+        1000,
+        0);
   }
 
   private void setBoundWithFlagsOnItems(MultipleRecords<Item> wrappedItems,

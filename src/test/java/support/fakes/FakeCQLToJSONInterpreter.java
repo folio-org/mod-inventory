@@ -1,10 +1,13 @@
 package support.fakes;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -26,7 +29,8 @@ public class FakeCQLToJSONInterpreter {
     this.diagnosticsEnabled = diagnosticsEnabled;
   }
 
-  public List<JsonObject> execute(Collection<JsonObject> records, String query) {
+  public List<JsonObject> execute(Collection<JsonObject> records, String encodedQuery) {
+    var query = encodedQuery == null ? null : URLDecoder.decode(encodedQuery, StandardCharsets.UTF_8);
     ImmutablePair<String, String> queryAndSort = splitQueryAndSort(query);
 
     if(containsSort(queryAndSort)) {
