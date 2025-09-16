@@ -62,13 +62,13 @@ public class CancelledJobExecutionConsumerVerticle extends KafkaConsumerVerticle
       LOGGER.debug("handle:: Received cancelled job event, key: '{}', tenantId: '{}'", kafkaRecord.key(), tenantId);
 
       String jobId = Json.decodeValue(kafkaRecord.value(), Event.class).getEventPayload();
-      cancelledJobsIdsCache.put(UUID.fromString(jobId));
+      cancelledJobsIdsCache.put(jobId);
       LOGGER.info("handle:: Processed cancelled job, jobId: '{}', tenantId: '{}', topic: '{}'",
         jobId, tenantId, kafkaRecord.topic());
       return Future.succeededFuture(kafkaRecord.key());
     } catch (Exception e) {
       LOGGER.warn("handle:: Failed to process cancelled job, key: '{}', from topic: '{}'",
-        kafkaRecord.key(), kafkaRecord.topic());
+        kafkaRecord.key(), kafkaRecord.topic(), e);
      return Future.failedFuture(e);
     }
   }

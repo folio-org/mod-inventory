@@ -7,6 +7,7 @@
 * Add instance-authority links logic on MARC Instance update [MODINV-1068](https://folio-org.atlassian.net/browse/MODINV-1068)
 * Subscribe to JobExecution status change and add cache [MODINV-973](https://folio-org.atlassian.net/browse/MODINV-973)
 * POST to /inventory/instances does not return newly-created object [MODINV-1078](https://folio-org.atlassian.net/browse/MODINV-1078)
+* Do not process event if JobExecution status is Cancelled [MODINV-975](https://folio-org.atlassian.net/browse/MODINV-975)
 
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)
