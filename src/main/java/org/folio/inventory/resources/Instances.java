@@ -26,7 +26,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
-import io.vertx.core.Future;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.inventory.common.WebContext;
@@ -222,11 +221,13 @@ public class Instances extends AbstractInstances {
         .toCompletableFuture()
         .thenCompose(response -> {
           if (response.statusCode() == HttpStatus.HTTP_NO_CONTENT.toInt()) {
-            log.info("deleteSourceStorageRecord:: Source storage record was successfully deleted in SRS. InstanceID: {}", instanceId);
+            log.info("deleteSourceStorageRecord:: MARC record was successfully marked as deleted in SRS. instanceID: {}", instanceId);
             return CompletableFuture.completedFuture(null);
           } else {
-            String errorMessage = format("Failed to delete source storage record by instanceID: %s, statusCode: %s, body: %s",
-              instanceId, response.statusCode(), response.bodyAsString());
+            String errorMessage = response.statusCode() == HttpStatus.HTTP_NOT_FOUND.toInt()
+              ? format("MARC record was not set for deletion because it was not found by instance ID: %s", instanceId)
+              : format("Failed to set MARC record for deletion by instanceID: %s, statusCode: %s, body: %s",
+                instanceId, response.statusCode(), response.bodyAsString());
             log.warn("deleteSourceStorageRecord:: {}", errorMessage);
             return CompletableFuture.failedFuture(new InternalServerErrorException(errorMessage));
           }

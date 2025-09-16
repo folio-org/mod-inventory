@@ -796,8 +796,11 @@ public class InstancesApiExamples extends ApiTests {
 
     Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
 
+    String expectedMessage = String.format(
+      "MARC record was not set for deletion because it was not found by instance ID: %s", instanceId);
     assertThat(deleteResponse.getStatusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
     assertThat(deleteResponse.hasBody(), is(true));
+    assertThat(deleteResponse.getBody(), is(expectedMessage));
 
     final var getCompleted = okapiClient.get(getByIdUrl);
 
