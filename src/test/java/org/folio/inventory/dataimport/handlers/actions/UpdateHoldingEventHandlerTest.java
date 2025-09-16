@@ -1349,7 +1349,7 @@ public class UpdateHoldingEventHandlerTest {
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
 
     String instanceId = String.valueOf(UUID.randomUUID());
-    Instance instance = new Instance(instanceId, "9", String.valueOf(UUID.randomUUID()),
+    Instance instance = new Instance(instanceId, 9, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     HashMap<String, String> context = new HashMap<>();
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));

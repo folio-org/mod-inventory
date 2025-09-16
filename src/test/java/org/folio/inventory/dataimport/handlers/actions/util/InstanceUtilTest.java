@@ -64,7 +64,7 @@ public class InstanceUtilTest {
     tagList.add("Tag2");
 
     org.folio.inventory.domain.instances.Instance existing =
-      new org.folio.inventory.domain.instances.Instance("30773a27-b485-4dab-aeb6-b8c04fa3cb17", "7", "in000000001",
+      new org.folio.inventory.domain.instances.Instance("30773a27-b485-4dab-aeb6-b8c04fa3cb17", 7, "in000000001",
           "source", "title", "30773a27-b485-4dab-aeb6-b8c04fa3cb19");
     existing.setStatisticalCodeIds(statisticalCodeIds);
     existing.setDiscoverySuppress(true);
@@ -112,6 +112,6 @@ public class InstanceUtilTest {
     org.folio.Instance mapped = new org.folio.Instance().withVersion(3);
     org.folio.inventory.domain.instances.Instance merged = InstanceUtil.mergeFieldsWhichAreNotControlled(existing, mapped);
     assertEquals("id", merged.getId());
-    assertEquals("3", merged.getVersion());
+    assertEquals(3, (int) merged.getVersion());
   }
 }

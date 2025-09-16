@@ -608,7 +608,7 @@ public class MarcInstanceSharingHandlerImplTest {
     String targetInstanceHrid = "consin001";
     Record record = sourceStorageRecordsResponseBuffer.bodyAsJson(Record.class);
 
-    Instance localSourceInstance = new Instance(instanceId, "1", "001", "MARC", "testTitle", UUID.randomUUID().toString())
+    Instance localSourceInstance = new Instance(instanceId, 1, "001", "MARC", "testTitle", UUID.randomUUID().toString())
       .setDiscoverySuppress(Boolean.TRUE)
       .setStaffSuppress(Boolean.TRUE)
       .setDeleted(Boolean.TRUE)
@@ -618,7 +618,7 @@ public class MarcInstanceSharingHandlerImplTest {
       .setAdministrativeNotes(List.of("test-note"))
       .setNatureOfContentTermIds(List.of(UUID.randomUUID().toString()));
 
-    Instance importedTargetInstance = new Instance(instanceId, "1", targetInstanceHrid, "MARC", "testTitle", UUID.randomUUID().toString());
+    Instance importedTargetInstance = new Instance(instanceId, 1, targetInstanceHrid, "MARC", "testTitle", UUID.randomUUID().toString());
 
     SharingInstance sharingInstanceMetadata = new SharingInstance()
       .withInstanceIdentifier(UUID.fromString(instanceId))

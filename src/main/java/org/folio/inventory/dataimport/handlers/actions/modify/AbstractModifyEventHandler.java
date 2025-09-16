@@ -171,8 +171,8 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
         payload.getContext().remove(CURRENT_RETRY_NUMBER);
         Instance resultedInstance = instanceUpdatePromise.future().result();
         if (resultedInstance.getVersion() != null) {
-          int currentVersion = Integer.parseInt(resultedInstance.getVersion());
-          resultedInstance.setVersion(String.valueOf(++currentVersion));
+          int currentVersion = resultedInstance.getVersion();
+          resultedInstance.setVersion(++currentVersion);
         }
         payload.getContext().put(INSTANCE.value(), Json.encode(resultedInstance));
         promise.complete();

@@ -183,7 +183,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
-   var existedInstance = new Instance(event.getId(), "1",
+   var existedInstance = new Instance(event.getId(), 1,
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
@@ -215,7 +215,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
-   var existedInstance = new Instance(event.getId(), "1",
+   var existedInstance = new Instance(event.getId(), 1,
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
@@ -251,7 +251,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
-   var existedInstance = new Instance(event.getId(), "1",
+   var existedInstance = new Instance(event.getId(), 1,
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
@@ -288,7 +288,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
-   var existedInstance = new Instance(event.getId(), "1",
+   var existedInstance = new Instance(event.getId(), 1,
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
@@ -327,7 +327,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
-   var existedInstance = new Instance(event.getId(), "1",
+   var existedInstance = new Instance(event.getId(), 1,
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
@@ -370,7 +370,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
-   var existedInstance = new Instance(event.getId(), "1",
+   var existedInstance = new Instance(event.getId(), 1,
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
@@ -416,7 +416,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
-   var existedInstance = new Instance(event.getId(), "1",
+   var existedInstance = new Instance(event.getId(), 1,
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
@@ -463,7 +463,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
-   var existedInstance = new Instance(event.getId(), "1",
+   var existedInstance = new Instance(event.getId(), 1,
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
@@ -520,7 +520,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
       .withMappingRules(mappingRules.encode())
       .withMappingParams(Json.encode(new MappingParameters())))))
       .when(mappingMetadataCache).getByRecordType(metadataCacheKey(), context, MARC_BIB_RECORD_TYPE);
-   var existedInstance = new Instance(event.getId(), "1",
+   var existedInstance = new Instance(event.getId(), 1,
       UUID.randomUUID().toString(), null, null, null);
     doAnswer(i -> {
       Consumer<Success<Instance>> successHandler = i.getArgument(1);
