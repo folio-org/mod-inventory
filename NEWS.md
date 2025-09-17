@@ -1,4 +1,5 @@
 ## 21.2.0 2025-xx-xx
+* ECS: Improve logs in move holdings operation for [MODINV-1276](https://folio-org.atlassian.net/browse/MODINV-1276)
 * ECS: Moving holdings to another instance produces error if the instance does not already have an associated holdings with active affiliation [MODINV-1213](https://folio-org.atlassian.net/browse/MODINV-1213)
 * Error editing the "Temporary" field in the holding [MODINV-1189](https://folio-org.atlassian.net/browse/MODINV-1189)
 * Source of Instance changes from LINKED_DATA to MARC when a linked authority is updated [MODINV-1176](https://folio-org.atlassian.net/browse/MODINV-1176)
