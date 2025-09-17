@@ -1,3 +1,6 @@
+## 21.0.17 2025-09-22
+* ECS: Improve logs in move holdings operation [MODINV-1276](https://folio-org.atlassian.net/browse/MODINV-1276)
+
 ## 21.0.16 2025-07-04
 * Implement marc bib submatch [MODINV-1252](https://issues.folio.org/browse/MODINV-1252) (MODINV-1114)
 
