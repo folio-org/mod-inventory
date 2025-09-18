@@ -11,7 +11,6 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
@@ -22,6 +21,7 @@ import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.inventory.KafkaTest;
 import org.folio.inventory.consortium.cache.ConsortiumDataCache;
+import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.dataimport.consumers.DataImportKafkaHandler;
@@ -48,6 +48,7 @@ import java.util.concurrent.CompletableFuture;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
+import static org.folio.inventory.dataimport.consumers.DataImportKafkaHandler.PROFILE_SNAPSHOT_ID_KEY;
 import static org.folio.okapi.common.XOkapiHeaders.PERMISSIONS;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
@@ -56,6 +57,7 @@ import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -114,6 +116,8 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
 
+  private CancelledJobsIdsCache cancelledJobsIdCache;
+
   @Before
   public void setUp() {
     MockitoAnnotations.openMocks(this);
@@ -122,11 +126,13 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
     HttpClient client = vertxAssistant.getVertx().createHttpClient();
+    cancelledJobsIdCache = new CancelledJobsIdsCache();
     dataImportKafkaHandler = new DataImportKafkaHandler(vertxAssistant.getVertx(), mockedStorage, client,
       new ProfileSnapshotCache(vertxAssistant.getVertx(), client, 3600),
       kafkaConfig,
       MappingMetadataCache.getInstance(vertxAssistant.getVertx(), client),
-      new ConsortiumDataCache(vertxAssistant.getVertx(), client));
+      new ConsortiumDataCache(vertxAssistant.getVertx(), client),
+      cancelledJobsIdCache);
 
     EventManager.clearEventHandlers();
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertxAssistant.getVertx(), 1);
@@ -137,6 +143,7 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
     // given
     String expectedPermissions = JsonArray.of("test-permission").encode();
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken("test-token")
@@ -175,8 +182,8 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
   @Test
   public void shouldReturnFailedFutureWhenProcessingCoreHandlerFailed(TestContext context) {
     // given
-    Async async = context.async();
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withTenant("diku")
       .withOkapiUrl(mockServer.baseUrl())
@@ -196,10 +203,47 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
     Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
 
     // then
-    future.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      async.complete();
-    });
+    future.onComplete(context.asyncAssertFailure(v ->
+      verify(mockedEventHandler).handle(any(DataImportEventPayload.class))));
   }
-}
 
+  @Test
+  public void shouldReturnSucceededFutureAndSkipEventProcessingIfEventPayloadContainsCancelledJobExecutionId(TestContext context) {
+    // given
+    String expectedKafkaRecordKey = "test_key";
+    String cancelledJobId = UUID.randomUUID().toString();
+    cancelledJobsIdCache.put(cancelledJobId);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(cancelledJobId)
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(new HashMap<>(Map.of(PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId())));
+
+    Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
+    List<KafkaHeader> headers = List.of(
+      KafkaHeader.header(RECORD_ID_HEADER, UUID.randomUUID().toString()),
+      KafkaHeader.header(CHUNK_ID_HEADER, UUID.randomUUID().toString())
+    );
+    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
+    when(kafkaRecord.value()).thenReturn(Json.encode(event));
+    when(kafkaRecord.headers()).thenReturn(headers);
+
+    EventHandler mockedEventHandler = mock(EventHandler.class);
+    when(mockedEventHandler.isEligible(any(DataImportEventPayload.class))).thenReturn(true);
+    when(mockedEventHandler.handle(any(DataImportEventPayload.class)))
+      .thenReturn(CompletableFuture.completedFuture(dataImportEventPayload));
+    EventManager.registerEventHandler(mockedEventHandler);
+
+    // when
+    Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
+
+    // then
+    future.onComplete(context.asyncAssertSuccess(actualKafkaRecordKey -> {
+      context.assertEquals(expectedKafkaRecordKey, actualKafkaRecordKey);
+      verify(mockedEventHandler, never()).isEligible(any(DataImportEventPayload.class));
+      verify(mockedEventHandler, never()).handle(any(DataImportEventPayload.class));
+    }));
+  }
+
+}

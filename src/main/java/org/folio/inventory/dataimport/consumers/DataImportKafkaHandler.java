@@ -24,6 +24,7 @@ import org.folio.inventory.dataimport.HoldingsMapperFactory;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.ItemsMapperFactory;
+import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.dataimport.handlers.actions.CreateAuthorityEventHandler;
@@ -94,11 +95,11 @@ import static org.folio.okapi.common.XOkapiHeaders.PERMISSIONS;
 
 public class DataImportKafkaHandler implements AsyncRecordHandler<String, String> {
 
+  public static final String PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
   private static final Logger LOGGER = LogManager.getLogger(DataImportKafkaHandler.class);
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String USER_ID_HEADER = "userId";
-  private static final String PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
 
   private final Vertx vertx;
   private final ProfileSnapshotCache profileSnapshotCache;
@@ -106,16 +107,19 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   private final KafkaConfig kafkaConfig;
   private final OrderHelperService orderHelperService;
   private final ConsortiumService consortiumService;
+  private final CancelledJobsIdsCache cancelledJobsIdCache;
 
   public DataImportKafkaHandler(Vertx vertx, Storage storage, HttpClient client,
                                 ProfileSnapshotCache profileSnapshotCache,
                                 KafkaConfig kafkaConfig,
                                 MappingMetadataCache mappingMetadataCache,
-                                ConsortiumDataCache consortiumDataCache) {
+                                ConsortiumDataCache consortiumDataCache,
+                                CancelledJobsIdsCache cancelledJobsIdCache) {
     this.vertx = vertx;
     this.profileSnapshotCache = profileSnapshotCache;
     this.mappingMetadataCache = mappingMetadataCache;
     this.kafkaConfig = kafkaConfig;
+    this.cancelledJobsIdCache = cancelledJobsIdCache;
     orderHelperService = new OrderHelperServiceImpl(profileSnapshotCache);
     consortiumService = new ConsortiumServiceImpl(client, consortiumDataCache);
     registerDataImportProcessingHandlers(storage, client);
@@ -155,8 +159,8 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   public Future<String> handle(KafkaConsumerRecord<String, String> kafkaRecord) {
     try {
       Promise<String> promise = Promise.promise();
-      Event event = Json.decodeValue(kafkaRecord.value(), Event.class);
-      DataImportEventPayload eventPayload = Json.decodeValue(event.getEventPayload(), DataImportEventPayload.class);
+      DataImportEventPayload eventPayload = Json.decodeValue(
+        Json.decodeValue(kafkaRecord.value(), Event.class).getEventPayload(), DataImportEventPayload.class);
       Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(kafkaRecord.headers());
       String recordId = headersMap.get(RECORD_ID_HEADER);
       String chunkId = headersMap.get(CHUNK_ID_HEADER);
@@ -164,6 +168,12 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
       String jobExecutionId = eventPayload.getJobExecutionId();
       LOGGER.info("Data import event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", eventPayload.getEventType(), recordId, jobExecutionId, chunkId);
+
+      if (cancelledJobsIdCache.contains(eventPayload.getJobExecutionId())) {
+        LOGGER.info("Skip processing of event, topic: '{}', tenantId: '{}', jobExecutionId: '{}' because the job has been cancelled",
+          kafkaRecord.topic(), eventPayload.getTenant(), eventPayload.getJobExecutionId());
+        return Future.succeededFuture(kafkaRecord.key());
+      }
 
       if (isNull(userId)) {
         LOGGER.error("Data import event payload has been received with userId is null");
@@ -195,7 +205,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
         });
       return promise.future();
     } catch (Exception e) {
-      LOGGER.error(format("Failed to process data import kafka record from topic %s", kafkaRecord.topic()), e);
+      LOGGER.error("Failed to process data import kafka record from topic: {}", kafkaRecord.topic(), e);
       return Future.failedFuture(e);
     }
   }

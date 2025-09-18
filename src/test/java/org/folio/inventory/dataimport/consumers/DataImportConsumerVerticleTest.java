@@ -25,7 +25,6 @@ import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
@@ -42,6 +41,7 @@ import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.inventory.DataImportConsumerVerticle;
 import org.folio.inventory.KafkaTest;
+import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.rest.jaxrs.model.Event;
@@ -105,11 +105,10 @@ public class DataImportConsumerVerticleTest extends KafkaTest {
 
   @BeforeClass
   public static void setUpClass(TestContext context) {
-    Async async = context.async();
-
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertxAssistant.getVertx(), 1);
-    vertxAssistant.getVertx().deployVerticle(DataImportConsumerVerticle.class.getName(),
-      deploymentOptions, deployAr -> async.complete());
+    CancelledJobsIdsCache cancelledJobsIdsCache = new CancelledJobsIdsCache();
+    vertxAssistant.getVertx().deployVerticle(() -> new DataImportConsumerVerticle(cancelledJobsIdsCache),
+      deploymentOptions, context.asyncAssertSuccess());
   }
 
   @Before
@@ -134,6 +133,7 @@ public class DataImportConsumerVerticleTest extends KafkaTest {
     throws InterruptedException, ExecutionException {
     // given
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
