@@ -336,8 +336,12 @@ public class BoundWithTests extends ApiTests {
         "/inventory/items/" + item.getId())
       .toCompletableFuture().get(5, SECONDS);
 
-    assertThat("Item has boundWithTitles array with 200 titles",
-      itemResponse.getJson().getJsonArray( "boundWithTitles" ).size(), is(200));
+    var boundWithTitles = itemResponse.getJson().getJsonArray("boundWithTitles");
+    assertThat("Item has boundWithTitles array with 200 titles", boundWithTitles.size(), is(200));
+    for (int i = 1; i<=200; i++) {
+      var title = boundWithTitles.getJsonObject(i - 1).getJsonObject("briefInstance").getString("title");
+      assertThat("sorted by createdDate", title, is("Instance " + i));
+    }
   }
 
   @Test

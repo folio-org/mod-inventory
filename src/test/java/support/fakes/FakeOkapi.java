@@ -1,8 +1,11 @@
 package support.fakes;
 
+import java.time.Instant;
+
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import support.fakes.processors.StorageConstraintsProcessors;
 import support.fakes.processors.StorageRecordPreProcessors;
@@ -18,6 +21,7 @@ public class FakeOkapi extends AbstractVerticle {
     return address;
   }
 
+  @Override
   public void start(Promise<Void> startFuture) {
     System.out.println("Starting fake modules");
 
@@ -55,6 +59,7 @@ public class FakeOkapi extends AbstractVerticle {
       });
   }
 
+  @Override
   public void stop(Promise<Void> stopFuture) {
     System.out.println("Stopping fake modules");
 
@@ -96,6 +101,7 @@ public class FakeOkapi extends AbstractVerticle {
       .withRootPath("/inventory-storage/bound-with-parts")
       .withCollectionPropertyName("boundWithParts")
       .withRequiredProperties("holdingsRecordId", "itemId")
+      .withDefault("metadata", () -> JsonObject.of("createdDate", Instant.now().toString()))
       .create().register(router);
 
     new FakeStorageModuleBuilder()
