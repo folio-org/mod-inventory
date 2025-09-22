@@ -38,8 +38,6 @@ public class ConsortiumServiceImpl implements ConsortiumService {
 
   @Override
   public Future<SharingInstance> createShadowInstance(Context context, String instanceId, ConsortiumConfiguration consortiumConfiguration) {
-    LOGGER.info("createShadowInstance:: Creating shadow instance for instanceId: {} in tenantId: {}",
-      instanceId, context.getTenantId());
     Context centralTenantContext = constructContext(consortiumConfiguration.getCentralTenantId(), context.getToken(), context.getOkapiLocation(), context.getUserId(), context.getRequestId());
     SharingInstance sharingInstance = new SharingInstance();
     sharingInstance.setSourceTenantId(consortiumConfiguration.getCentralTenantId());
@@ -50,7 +48,6 @@ public class ConsortiumServiceImpl implements ConsortiumService {
 
   @Override
   public Future<Optional<ConsortiumConfiguration>> getConsortiumConfiguration(Context context) {
-    LOGGER.info("getConsortiumConfiguration:: Retrieving consortium configuration for tenantId: {}", context.getTenantId());
     Map<String, String> headers = Map.of(XOkapiHeaders.URL, context.getOkapiLocation(),
       XOkapiHeaders.TENANT, context.getTenantId(), XOkapiHeaders.TOKEN, context.getToken());
     return consortiumDataCache.getConsortiumData(context.getTenantId(), headers);
@@ -59,9 +56,6 @@ public class ConsortiumServiceImpl implements ConsortiumService {
   // Returns successful future if the sharing status is "IN_PROGRESS" or "COMPLETE"
   @Override
   public Future<SharingInstance> shareInstance(Context context, String consortiumId, SharingInstance sharingInstance) {
-    LOGGER.info("shareInstance:: Sharing instance with id: {} from sourceTenantId: {} to targetTenantId: {}",
-      sharingInstance.getInstanceIdentifier(), sharingInstance.getSourceTenantId(), sharingInstance.getTargetTenantId());
-
     Map<String, String> headers = Map.of(HttpHeaders.CONTENT_TYPE.toString(), APPLICATION_JSON);
     CompletableFuture<SharingInstance> completableFuture = createOkapiHttpClient(context, httpClient)
       .thenCompose(client ->

@@ -55,7 +55,6 @@ public class ConsortiumDataCache {
    * if the specified {@code tenantId} is not included to any consortium, then returns future with empty Optional
    */
   public Future<Optional<ConsortiumConfiguration>> getConsortiumData(String tenantId, Map<String, String> headers) {
-    LOG.info("getConsortiumData:: Retrieving consortium data for tenantId: '{}'", tenantId);
     try {
       return Future.fromCompletionStage(cache.get(tenantId, (key, executor) -> loadConsortiumData(key, headers)));
     } catch (Exception e) {
@@ -65,7 +64,6 @@ public class ConsortiumDataCache {
   }
 
   private CompletableFuture<Optional<ConsortiumConfiguration>> loadConsortiumData(String tenantId, Map<String, String> headers) {
-    LOG.info("loadConsortiumData:: Loading consortium data for tenantId: '{}'", tenantId);
     String okapiUrl = headers.get(URL);
     WebClient client = WebClient.wrap(httpClient);
     HttpRequest<Buffer> request = client.requestAbs(GET, okapiUrl + USER_TENANTS_PATH);

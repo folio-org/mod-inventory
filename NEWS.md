@@ -1,14 +1,36 @@
-## 21.2.0 2025-xx-xx
-* ECS: Improve logs in move holdings operation for [MODINV-1276](https://folio-org.atlassian.net/browse/MODINV-1276)
-* ECS: Moving holdings to another instance produces error if the instance does not already have an associated holdings with active affiliation [MODINV-1213](https://folio-org.atlassian.net/browse/MODINV-1213)
+## 21.1.9 2025-08-18
+* Configure consumer groupInstanceId [MODINV-1272](https://folio-org.atlassian.net/browse/MODINV-1272)
+
+## 21.1.8 2025-08-15
+*ECS | MARC holdings record cannot be opened via "quickMARC" after Ownership update[MODINV-1266](https://folio-org.atlassian.net/browse/MODINV-1266)
+
+## 21.1.7 2025-06-30
+* Support CREATE action for MARC holdings record on shared Instance from member tenant on ECS environment [MODINV-1240](https://folio-org.atlassian.net/browse/MODINV-1240)
+
+## 21.1.6 2025-05-20
+* Deleted from Inventory MARC records are not matching during update [MODINV-1232](https://folio-org.atlassian.net/browse/MODINV-1232)
+
+## 21.1.5 2025-05-08
+* ECS: Moving holdings to another instance produces error if the instance does not already have an associated holdings with active affiliation [MODINV-1225](https://folio-org.atlassian.net/browse/MODINV-1225)
+* Upgrade data-import-processing-core to v4.4.3 to fix vulnerabilities [MODINV-1224](https://folio-org.atlassian.net/browse/MODINV-1224)
+
+## 21.1.4 2025-05-02
 * Error editing the "Temporary" field in the holding [MODINV-1189](https://folio-org.atlassian.net/browse/MODINV-1189)
-* Source of Instance changes from LINKED_DATA to MARC when a linked authority is updated [MODINV-1176](https://folio-org.atlassian.net/browse/MODINV-1176)
-* Adds additionalCallNumbers to the item and holding [MODINV-1241](https://folio-org.atlassian.net/browse/MODINV-1241)
-* Addition of the order field to the existing item APIs [MODINV-1249](https://folio-org.atlassian.net/browse/MODINV-1249)
-* Add instance-authority links logic on MARC Instance update [MODINV-1068](https://folio-org.atlassian.net/browse/MODINV-1068)
-* Subscribe to JobExecution status change and add cache [MODINV-973](https://folio-org.atlassian.net/browse/MODINV-973)
-* POST to /inventory/instances does not return newly-created object [MODINV-1078](https://folio-org.atlassian.net/browse/MODINV-1078)
-* Do not process event if JobExecution status is Cancelled [MODINV-975](https://folio-org.atlassian.net/browse/MODINV-975)
+* Unable to update holdings or item ownership on LOC stage [MODINV-1175](https://folio-org.atlassian.net/browse/MODINV-1175)
+
+## 21.1.3 2025-04-18
+* Use a separate cache for MappingMetadata for each tenant [MODINV-1205](https://folio-org.atlassian.net/browse/MODINV-1205)
+
+## 21.1.2 2025-04-16
+* Upgrade dependencies kafka-client 3.9.0, Vert.x 4.5.13 for fixing vulnerabilities [MODINV-1182](https://folio-org.atlassian.net/browse/MODINV-1182)
+* Cannot edit MARC bib record on non-ECS environment due to error [MODINV-1190](https://folio-org.atlassian.net/browse/MODINV-1190)
+* 001 to HRID matching creates phantom Identifier [MODINV-1183](https://folio-org.atlassian.net/browse/MODINV-1183)
+* Updating MARC bib record removes Date 1, Date 2 and Date type fields [MODINV-1186](https://folio-org.atlassian.net/browse/MODINV-1186)
+
+## 21.1.1 2025-04-07
+* Suppressing from discovery MARC instances makes records also staff suppressed [MODINV-1180](https://folio-org.atlassian.net/browse/MODINV-1180)
+* Missing module permissions on mark-missing endpoints [MODINV-1174](https://folio-org.atlassian.net/browse/MODINV-1174)
+* Introduce new post retrieve api to fetch inventory item [MODINV-1188](https://folio-org.atlassian.net/browse/MODINV-1188)
 
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)
