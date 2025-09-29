@@ -10,6 +10,7 @@
 * POST to /inventory/instances does not return newly-created object [MODINV-1078](https://folio-org.atlassian.net/browse/MODINV-1078)
 * Do not process event if JobExecution status is Cancelled [MODINV-975](https://folio-org.atlassian.net/browse/MODINV-975)
 * Ensure sorting of bound-with parts by createdDate [MODINV-1280](https://folio-org.atlassian.net/browse/MODINV-1280)
+* No validation applied when edit "discoverySuppress", "staffSuppress" for deleted Instance [MODINV-1215](https://folio-org.atlassian.net/browse/MODINV-1215)
 
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)

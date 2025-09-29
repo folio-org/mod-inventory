@@ -39,6 +39,7 @@ import org.folio.inventory.domain.instances.InstanceRelationship;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
+import org.folio.inventory.exceptions.BadRequestException;
 import org.folio.inventory.exceptions.InternalServerErrorException;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
@@ -67,6 +68,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 
 
 public class Instances extends AbstractInstances {
+  public static final String SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE = "staffSuppress and discoverySuppress cannot be set to false if instance is marked as deleted";
   private static final String BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Instance is controlled by MARC record, these fields are blocked and can not be updated: ";
   private static final String ID = "id";
   private static final String INSTANCE_ID = "instanceId";
@@ -154,6 +156,7 @@ public class Instances extends AbstractInstances {
     Instance newInstance = Instance.fromJson(instanceRequest);
 
     completedFuture(newInstance)
+      .thenCompose(this::refuseWhenSuppressFlagsInvalid)
       .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
       .thenCompose(instance -> storage.getInstanceCollection(context).add(instance))
       .thenCompose(response -> {
@@ -181,6 +184,7 @@ public class Instances extends AbstractInstances {
     InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
 
     completedFuture(updatedInstance)
+      .thenCompose(this::refuseWhenSuppressFlagsInvalid)
       .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
       .thenCompose(instance -> instanceCollection.findById(rContext.request().getParam("id")))
       .thenCompose(InstancesValidators::refuseWhenInstanceNotFound)
@@ -549,7 +553,7 @@ public class Instances extends AbstractInstances {
                        boundWithParts2.stream()
                          .map(boundWithPart2 -> boundWithPart2.getString( "itemId" ))
                          .distinct()
-                         .collect(Collectors.toList());
+                         .toList();
                      for (String itemId : boundWithItemIds) {
                        holdingsRecordsThatAreBoundWith.add(itemHoldingsMap.get(itemId));
                      }
@@ -885,5 +889,14 @@ public class Instances extends AbstractInstances {
     }
 
     return completedFuture(existingInstance);
+  }
+
+  private CompletionStage<Instance> refuseWhenSuppressFlagsInvalid(Instance instance) {
+    if (isTrue(instance.getDeleted())
+      && (isFalse(instance.getStaffSuppress()) || isFalse(instance.getDiscoverySuppress()))) {
+      log.error("refuseWhenSuppressFlagsInvalid:: Error during instance processing, cause: {}", SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE);
+      return failedFuture(new BadRequestException(SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE));
+    }
+    return completedFuture(instance);
   }
 }

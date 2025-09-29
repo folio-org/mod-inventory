@@ -22,6 +22,7 @@ import static org.folio.inventory.domain.instances.Instance.DATES_KEY;
 import static org.folio.inventory.domain.instances.Instance.PRECEDING_TITLES_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
+import static org.folio.inventory.resources.Instances.SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
@@ -234,6 +235,27 @@ public class InstancesApiExamples extends ApiTests {
   }
 
   @Test
+  public void canNotCreateInstanceIfDeletedIsTrueAndSuppressionFlagsAreFalse()
+    throws InterruptedException,
+    TimeoutException,
+    ExecutionException {
+
+    JsonObject newInstanceRequest = smallAngryPlanet(UUID.randomUUID())
+      .put("staffSuppress", false)
+      .put("discoverySuppress", false)
+      .put("deleted", true);
+
+    final var postCompleted = okapiClient
+      .post(ApiRoot.instances(), newInstanceRequest);
+
+    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
+
+    assertThat(postResponse.getStatusCode(), is(400));
+    assertTrue(postResponse.hasBody());
+    assertEquals(SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE, postResponse.getBody());
+  }
+
+  @Test
   public void canCreateBatchOfInstances() throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
     // Prepare request data
     String angryPlanetInstanceId = UUID.randomUUID().toString();
@@ -263,8 +285,8 @@ public class InstancesApiExamples extends ApiTests {
 
     // Assertions
     assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.CREATED.code()));
-    assertEquals(postResponse.getJson().getJsonArray("instances").size(), 2);
-    assertEquals(postResponse.getJson().getJsonArray("errorMessages").size(), 0);
+    assertEquals(2, postResponse.getJson().getJsonArray("instances").size());
+    assertEquals(0, postResponse.getJson().getJsonArray("errorMessages").size());
     assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(2));
 
     // Get and assert angryPlanetInstance
@@ -320,8 +342,8 @@ public class InstancesApiExamples extends ApiTests {
 
     // Assertions
     assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
-    assertEquals(postResponse.getJson().getJsonArray("instances").size(), 0);
-    assertEquals(postResponse.getJson().getJsonArray("errorMessages").size(), 1);
+    assertEquals(0, postResponse.getJson().getJsonArray("instances").size());
+    assertEquals(1, postResponse.getJson().getJsonArray("errorMessages").size());
     assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(0));
   }
 
@@ -359,8 +381,8 @@ public class InstancesApiExamples extends ApiTests {
 
     // Assertions
     assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.CREATED.code()));
-    assertEquals(postResponse.getJson().getJsonArray("instances").size(), 2);
-    assertEquals(postResponse.getJson().getJsonArray("errorMessages").size(), 1);
+    assertEquals(2, postResponse.getJson().getJsonArray("instances").size());
+    assertEquals(1, postResponse.getJson().getJsonArray("errorMessages").size());
     assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(2));
   }
 
@@ -410,10 +432,12 @@ public class InstancesApiExamples extends ApiTests {
         new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()))
       .put("subjects", new JsonArray().add(
         new Subject(null,  null, sourceId, typeId)))
+      .put("staffSuppress", true)
+      .put("discoverySuppress", true)
       .put("deleted", true);
 
-    URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(),
-      newInstance.getString("id")));
+    URL instanceLocation = URI.create(String.format("%s/%s", ApiRoot.instances(),
+      newInstance.getString("id"))).toURL();
 
     Response putResponse = updateInstance(updateInstanceRequest);
 
@@ -678,6 +702,26 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(updatedInstance.getString("title"), is(newInstance.getString("title")));
     assertThat(updatedInstance.getString("source"), is(newInstance.getString("source")));
     assertThat(updatedInstance.getString("sourceRecordFormat"), is(instanceForUpdate.getString("sourceRecordFormat")));
+  }
+
+  @Test
+  public void canNotUpdateInstanceMarkedForDeletionIfSuppressionFlagsAreChangedToFalse() {
+    JsonObject newInstanceRequest = smallAngryPlanet(UUID.randomUUID())
+      .put("staffSuppress", true)
+      .put("discoverySuppress", true)
+      .put("deleted", true);
+    JsonObject newInstance = createInstance(newInstanceRequest);
+    assertTrue(newInstance.getBoolean("deleted"));
+
+    JsonObject updateInstanceRequest = newInstance.copy()
+      .put("discoverySuppress", false)
+      .put("staffSuppress", false);
+
+    Response putResponse = updateInstance(updateInstanceRequest);
+
+    assertThat(putResponse.getStatusCode(), is(400));
+    assertTrue(putResponse.hasBody());
+    assertEquals(SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE, putResponse.getBody());
   }
 
   @Test
