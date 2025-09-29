@@ -68,7 +68,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 
 
 public class Instances extends AbstractInstances {
-  public static final String FLAGS_SUPPRESSION_INCONSISTENCY_MESSAGE = "staffSuppress and discoverySuppress cannot be set to false if instance is marked as deleted";
+  public static final String SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE = "staffSuppress and discoverySuppress cannot be set to false if instance is marked as deleted";
   private static final String BLOCKED_FIELDS_UPDATE_ERROR_MESSAGE = "Instance is controlled by MARC record, these fields are blocked and can not be updated: ";
   private static final String ID = "id";
   private static final String INSTANCE_ID = "instanceId";
@@ -553,7 +553,7 @@ public class Instances extends AbstractInstances {
                        boundWithParts2.stream()
                          .map(boundWithPart2 -> boundWithPart2.getString( "itemId" ))
                          .distinct()
-                         .collect(Collectors.toList());
+                         .toList();
                      for (String itemId : boundWithItemIds) {
                        holdingsRecordsThatAreBoundWith.add(itemHoldingsMap.get(itemId));
                      }
@@ -894,8 +894,8 @@ public class Instances extends AbstractInstances {
   private CompletionStage<Instance> refuseWhenSuppressFlagsInvalid(Instance instance) {
     if (isTrue(instance.getDeleted())
       && (isFalse(instance.getStaffSuppress()) || isFalse(instance.getDiscoverySuppress()))) {
-      log.error("refuseWhenSuppressFlagsInvalid:: Error during instance processing, cause: {}", FLAGS_SUPPRESSION_INCONSISTENCY_MESSAGE);
-      return failedFuture(new BadRequestException(FLAGS_SUPPRESSION_INCONSISTENCY_MESSAGE));
+      log.error("refuseWhenSuppressFlagsInvalid:: Error during instance processing, cause: {}", SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE);
+      return failedFuture(new BadRequestException(SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE));
     }
     return completedFuture(instance);
   }

@@ -22,7 +22,7 @@ import static org.folio.inventory.domain.instances.Instance.DATES_KEY;
 import static org.folio.inventory.domain.instances.Instance.PRECEDING_TITLES_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAGS_KEY;
 import static org.folio.inventory.domain.instances.Instance.TAG_LIST_KEY;
-import static org.folio.inventory.resources.Instances.FLAGS_SUPPRESSION_INCONSISTENCY_MESSAGE;
+import static org.folio.inventory.resources.Instances.SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE;
 import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
@@ -252,7 +252,7 @@ public class InstancesApiExamples extends ApiTests {
 
     assertThat(postResponse.getStatusCode(), is(400));
     assertTrue(postResponse.hasBody());
-    assertEquals(FLAGS_SUPPRESSION_INCONSISTENCY_MESSAGE, postResponse.getBody());
+    assertEquals(SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE, postResponse.getBody());
   }
 
   @Test
@@ -285,8 +285,8 @@ public class InstancesApiExamples extends ApiTests {
 
     // Assertions
     assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.CREATED.code()));
-    assertEquals(postResponse.getJson().getJsonArray("instances").size(), 2);
-    assertEquals(postResponse.getJson().getJsonArray("errorMessages").size(), 0);
+    assertEquals(2, postResponse.getJson().getJsonArray("instances").size());
+    assertEquals(0, postResponse.getJson().getJsonArray("errorMessages").size());
     assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(2));
 
     // Get and assert angryPlanetInstance
@@ -342,8 +342,8 @@ public class InstancesApiExamples extends ApiTests {
 
     // Assertions
     assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
-    assertEquals(postResponse.getJson().getJsonArray("instances").size(), 0);
-    assertEquals(postResponse.getJson().getJsonArray("errorMessages").size(), 1);
+    assertEquals(0, postResponse.getJson().getJsonArray("instances").size());
+    assertEquals(1, postResponse.getJson().getJsonArray("errorMessages").size());
     assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(0));
   }
 
@@ -381,8 +381,8 @@ public class InstancesApiExamples extends ApiTests {
 
     // Assertions
     assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.CREATED.code()));
-    assertEquals(postResponse.getJson().getJsonArray("instances").size(), 2);
-    assertEquals(postResponse.getJson().getJsonArray("errorMessages").size(), 1);
+    assertEquals(2, postResponse.getJson().getJsonArray("instances").size());
+    assertEquals(1, postResponse.getJson().getJsonArray("errorMessages").size());
     assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(2));
   }
 
@@ -436,8 +436,8 @@ public class InstancesApiExamples extends ApiTests {
       .put("discoverySuppress", true)
       .put("deleted", true);
 
-    URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(),
-      newInstance.getString("id")));
+    URL instanceLocation = URI.create(String.format("%s/%s", ApiRoot.instances(),
+      newInstance.getString("id"))).toURL();
 
     Response putResponse = updateInstance(updateInstanceRequest);
 
@@ -721,7 +721,7 @@ public class InstancesApiExamples extends ApiTests {
 
     assertThat(putResponse.getStatusCode(), is(400));
     assertTrue(putResponse.hasBody());
-    assertEquals(FLAGS_SUPPRESSION_INCONSISTENCY_MESSAGE, putResponse.getBody());
+    assertEquals(SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE, putResponse.getBody());
   }
 
   @Test
