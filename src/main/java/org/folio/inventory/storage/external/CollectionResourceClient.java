@@ -1,12 +1,13 @@
 package org.folio.inventory.storage.external;
 
-import static org.folio.util.StringUtil.urlEncode;
+import static org.folio.util.PercentCodec.encode;
 
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 
 import java.net.URL;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 public class CollectionResourceClient {
@@ -61,11 +62,24 @@ public class CollectionResourceClient {
     Integer pageOffset,
     Consumer<Response> responseHandler) {
 
+    getMany(cqlQuery, pageLimit, pageOffset)
+    .thenAccept(responseHandler);
+  }
+
+  /**
+   * Run the query using some limit and offset.
+   *
+   * @param cqlQuery the query without percent (url) encoding
+   */
+  public CompletableFuture<Response> getMany(
+    String cqlQuery,
+    Integer pageLimit,
+    Integer pageOffset) {
+
     String url = collectionRoot + "?"
-        + (isProvided(cqlQuery) ? ("query=" + urlEncode(cqlQuery) + "&") : "")
+        + (isProvided(cqlQuery) ? ("query=" + encode(cqlQuery) + "&") : "")
         + "limit=" + pageLimit + "&offset=" + pageOffset;
-    client.get(url)
-      .thenAccept(responseHandler);
+    return client.get(url).toCompletableFuture();
   }
 
   /**

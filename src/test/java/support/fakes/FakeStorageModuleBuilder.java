@@ -118,10 +118,10 @@ public class FakeStorageModuleBuilder {
     return withRequiredProperties(Arrays.asList(requiredProperties));
   }
 
-  FakeStorageModuleBuilder withDefault(String property, Object value) {
+  FakeStorageModuleBuilder withDefault(String property, Supplier<Object> supplier) {
     final Map<String, Supplier<Object>> newDefaults = new HashMap<>(this.defaultProperties);
 
-    newDefaults.put(property, () -> value);
+    newDefaults.put(property, supplier);
 
     return new FakeStorageModuleBuilder(
       this.rootPath,
