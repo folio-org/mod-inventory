@@ -2,11 +2,11 @@ package org.folio.inventory.dataimport.handlers.quickmarc;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
+import io.vertx.core.json.Json;
 import java.util.Map;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -21,7 +21,7 @@ public abstract class AbstractQuickMarcEventHandler<T> {
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
 
-  public Future<T> handle(Map<String, String> eventPayload) {
+  public Future<T> handle(Map<String, Object> eventPayload) {
     Promise<T> promise = Promise.promise();
     try {
       if (isValidPayload(eventPayload)) {
@@ -30,8 +30,9 @@ public abstract class AbstractQuickMarcEventHandler<T> {
         promise.fail(new EventProcessingException(message));
         return promise.future();
       }
-
-      Record marcRecord = new JsonObject(eventPayload.get(eventPayload.get(RECORD_TYPE_KEY))).mapTo(Record.class);
+      var recordType = eventPayload.get(RECORD_TYPE_KEY).toString();
+      Map<String, Object> recordTypeMap = ((Map<String, Object>) eventPayload.get(recordType));
+      Record marcRecord = Json.CODEC.fromValue(recordTypeMap, Record.class);
       updateEntity(eventPayload, marcRecord, promise);
     } catch (Exception e) {
       LOGGER.error("Failed to update entity", e);
@@ -40,14 +41,14 @@ public abstract class AbstractQuickMarcEventHandler<T> {
     return promise.future();
   }
 
-  protected abstract void updateEntity(Map<String, String> eventPayload, Record marcRecord, Promise<T> handler);
+  protected abstract void updateEntity(Map<String, Object> eventPayload, Record marcRecord, Promise<T> handler);
 
-  private boolean isValidPayload(Map<String, String> eventPayload) {
+  private boolean isValidPayload(Map<String, Object> eventPayload) {
     return eventPayload == null
-      || isEmpty(eventPayload.get(RECORD_TYPE_KEY))
-      || isEmpty(eventPayload.get(eventPayload.get(RECORD_TYPE_KEY)))
-      || isEmpty(eventPayload.get(MAPPING_RULES_KEY))
-      || isEmpty(eventPayload.get(MAPPING_PARAMS_KEY));
+      || isEmpty(eventPayload.get(RECORD_TYPE_KEY).toString())
+      || isEmpty(eventPayload.get(eventPayload.get(RECORD_TYPE_KEY).toString()).toString())
+      || isEmpty(eventPayload.get(MAPPING_RULES_KEY).toString())
+      || isEmpty(eventPayload.get(MAPPING_PARAMS_KEY).toString());
   }
 
 }

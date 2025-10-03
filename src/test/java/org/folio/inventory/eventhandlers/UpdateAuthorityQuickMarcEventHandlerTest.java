@@ -99,7 +99,7 @@ public class UpdateAuthorityQuickMarcEventHandlerTest {
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 
-    Future<Authority> future = updateAuthorityQuickMarcEventHandler.handle(eventPayload);
+    Future<Authority> future = updateAuthorityQuickMarcEventHandler.handle(new HashMap<>());
     Authority updatedAuthority = future.result();
 
     Assert.assertNotNull(updatedAuthority);
@@ -125,7 +125,7 @@ public class UpdateAuthorityQuickMarcEventHandlerTest {
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 
-    Future<Authority> future = updateAuthorityQuickMarcEventHandler.handle(eventPayload);
+    Future<Authority> future = updateAuthorityQuickMarcEventHandler.handle(new HashMap<>());
 
     Assert.assertTrue(future.failed());
   }
@@ -144,7 +144,7 @@ public class UpdateAuthorityQuickMarcEventHandlerTest {
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 
-    Future<Authority> future = updateAuthorityQuickMarcEventHandler.handle(eventPayload);
+    Future<Authority> future = updateAuthorityQuickMarcEventHandler.handle(new HashMap<>());
 
     Assert.assertTrue(future.failed());
   }
@@ -163,7 +163,7 @@ public class UpdateAuthorityQuickMarcEventHandlerTest {
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 
-    Future<Authority> future = updateAuthorityQuickMarcEventHandler.handle(eventPayload);
+    Future<Authority> future = updateAuthorityQuickMarcEventHandler.handle(new HashMap<>());
 
     Assert.assertTrue(future.failed());
     Assert.assertTrue(future.cause() instanceof OptimisticLockingException);

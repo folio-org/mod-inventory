@@ -25,8 +25,8 @@ public class UpdateInstanceQuickMarcEventHandler extends AbstractQuickMarcEventH
   }
 
   @Override
-  protected void updateEntity(Map<String, String> eventPayload, Record marcRecord, Promise<Instance> handler) {
-    Future<Instance> instanceUpdateFuture = instanceUpdateDelegate.handle(eventPayload, marcRecord, context);
+  protected void updateEntity(Map<String, Object> eventPayload, Record marcRecord, Promise<Instance> handler) {
+    Future<Instance> instanceUpdateFuture = instanceUpdateDelegate.handleMap(eventPayload, marcRecord, context);
 
     instanceUpdateFuture
       .compose(updatedInstance -> precedingSucceedingTitlesHelper.updatePrecedingSucceedingTitles(updatedInstance, context))

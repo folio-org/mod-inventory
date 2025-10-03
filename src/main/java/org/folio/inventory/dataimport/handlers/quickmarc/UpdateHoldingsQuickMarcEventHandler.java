@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.handlers.quickmarc;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import io.vertx.core.Promise;
@@ -20,8 +21,8 @@ public class UpdateHoldingsQuickMarcEventHandler extends AbstractQuickMarcEventH
   }
 
   @Override
-  protected void updateEntity(Map<String, String> eventPayload, Record marcRecord, Promise<HoldingsRecord> handler) {
-    holdingsUpdateDelegate.handle(eventPayload, marcRecord, context)
+  protected void updateEntity(Map<String, Object> eventPayload, Record marcRecord, Promise<HoldingsRecord> handler) {
+    holdingsUpdateDelegate.handle(new HashMap<>(), marcRecord, context)
       .onSuccess(handler::complete)
       .onFailure(handler::fail);
   }
