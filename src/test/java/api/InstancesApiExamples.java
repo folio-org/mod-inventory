@@ -11,6 +11,7 @@ import static api.support.InstanceSamples.uprooted;
 import static io.vertx.core.http.HttpMethod.DELETE;
 import static io.vertx.core.http.HttpMethod.POST;
 import static io.vertx.core.http.HttpMethod.PUT;
+import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.HttpStatus.HTTP_INTERNAL_SERVER_ERROR;
@@ -34,6 +35,7 @@ import static org.joda.time.DateTimeZone.UTC;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
 import java.net.MalformedURLException;
@@ -520,6 +522,86 @@ public class InstancesApiExamples extends ApiTests {
     Response putResponse = updateInstance(updateInstanceRequest);
 
     assertThat(putResponse.getStatusCode(), is(204));
+  }
+
+  @Test
+  @SneakyThrows
+  public void shouldReturnErrorIfFailedToUpdateSuppressFromDiscoveryInSrs() {
+
+    UUID id = UUID.randomUUID();
+    // Create new Instance (marked as deleted)
+    JsonObject newInstance = createInstance(treasureIslandInstance(id)
+      .put("deleted", true)
+      .put("staffSuppress", true)
+      .put("discoverySuppress", true));
+
+    // Emulate failure on Source Record Storage side during updating suppression flags
+    sourceRecordStorageClient.emulateFailure(new EndpointFailureDescriptor()
+      .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
+      .setBody("Internal server error")
+      .setContentType("plain/text")
+      .setStatusCode(500)
+      .setMethod(PUT.name()));
+
+    JsonObject instanceForUpdate = newInstance.copy()
+      .put("staffSuppress", true)
+      .put("discoverySuppress", false)
+      .put("deleted", false);
+    URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id")));
+
+    // Put Instance for update
+    Response putResponse = updateInstance(instanceForUpdate);
+    assertThat(putResponse.getStatusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
+    assertThat(putResponse.hasBody(), is(true));
+    assertThat(putResponse.getBody(), is(format("Failed to update suppress from discovery flag for record in SRS. InstanceID: %s, StatusCode: 500", id)));
+
+    // Get existing Instance
+    final var getCompleted = okapiClient.get(instanceLocation);
+    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    assertThat(getResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
+    assertTrue(getResponse.getJson().getBoolean("staffSuppress"));
+    assertFalse(getResponse.getJson().getBoolean("discoverySuppress"));
+    assertFalse(getResponse.getJson().getBoolean("deleted"));
+  }
+
+  @Test
+  @SneakyThrows
+  public void shouldReturnErrorIfFailedToUndeleteInSrs() {
+
+    UUID id = UUID.randomUUID();
+    // Create new Instance (marked as deleted)
+    JsonObject newInstance = createInstance(treasureIslandInstance(id)
+      .put("deleted", true)
+      .put("staffSuppress", true)
+      .put("discoverySuppress", true));
+
+    // Emulate failure on Source Record Storage side during updating suppression flags
+    sourceRecordStorageClient.emulateFailure(new EndpointFailureDescriptor()
+      .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
+      .setBody("Internal server error")
+      .setContentType("plain/text")
+      .setStatusCode(500)
+      .setMethod(POST.name()));
+
+    JsonObject instanceForUpdate = newInstance.copy()
+      .put("staffSuppress", true)
+      .put("discoverySuppress", true)
+      .put("deleted", false);
+    URL instanceLocation = new URL(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id")));
+
+    // Put Instance for update
+    Response putResponse = updateInstance(instanceForUpdate);
+    assertThat(putResponse.getStatusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
+    assertThat(putResponse.hasBody(), is(true));
+    assertThat(putResponse.getBody(), is(format("The instance wasn't undeleted in SRS. InstanceID: %s, SC: 500", id)));
+
+    // Get existing Instance
+    final var getCompleted = okapiClient.get(instanceLocation);
+    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    assertThat(getResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
+    assertTrue(getResponse.getJson().getBoolean("staffSuppress"));
+    assertTrue(getResponse.getJson().getBoolean("discoverySuppress"));
+    assertFalse(getResponse.getJson().getBoolean("deleted"));
   }
 
   @Test

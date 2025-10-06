@@ -201,19 +201,26 @@ public class Instances extends AbstractInstances {
    * @param srsClient       - SourceStorageRecordsClient
    * @param updatedInstance - Updated instance entity
    */
-  private void updateSuppressFromDiscoveryFlag(SourceStorageRecordsClient srsClient, Instance updatedInstance) {
+  private CompletableFuture<Void> updateSuppressFromDiscoveryFlag(SourceStorageRecordsClient srsClient, Instance updatedInstance) {
     try {
-      srsClient.putSourceStorageRecordsSuppressFromDiscoveryById(updatedInstance.getId(), INSTANCE_ID_TYPE, updatedInstance.getDiscoverySuppress(), httpClientResponse -> {
-        if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_OK.toInt()) {
-          log.info(format("Suppress from discovery flag was successfully updated for record in SRS. InstanceID: %s",
-            updatedInstance.getId()));
-        } else {
-          log.error(format("Suppress from discovery wasn't changed for SRS record. InstanceID: %s StatusCode: %s",
-            updatedInstance.getId(), httpClientResponse.result().statusCode()));
-        }
-      });
+      return srsClient.putSourceStorageRecordsSuppressFromDiscoveryById(updatedInstance.getId(), INSTANCE_ID_TYPE, updatedInstance.getDiscoverySuppress())
+        .toCompletionStage()
+        .toCompletableFuture()
+        .thenCompose(httpClientResponse -> {
+          if (httpClientResponse.statusCode() == HttpStatus.HTTP_OK.toInt()) {
+            log.info(format("Suppress from discovery flag was successfully updated for record in SRS. InstanceID: %s",
+              updatedInstance.getId()));
+            return CompletableFuture.completedFuture(null);
+          } else {
+            String errorMessage = format("Failed to update suppress from discovery flag for record in SRS. InstanceID: %s, StatusCode: %s",
+              updatedInstance.getId(), httpClientResponse.statusCode());
+            log.error(errorMessage);
+            return CompletableFuture.failedFuture(new InternalServerErrorException(errorMessage));
+          }
+        });
     } catch (Exception e) {
       log.error("Error during updating suppress from discovery flag for record in SRS", e);
+      return CompletableFuture.failedFuture(e);
     }
   }
 
@@ -242,19 +249,26 @@ public class Instances extends AbstractInstances {
     }
   }
 
-  private void unDeleteSourceStorageRecord(SourceStorageRecordsClient srsClient, Instance updatedInstance) {
+  private CompletableFuture<Void> unDeleteSourceStorageRecord(SourceStorageRecordsClient srsClient, Instance updatedInstance) {
     var id = updatedInstance.getId();
     try {
-      srsClient.postSourceStorageRecordsUnDeleteById(id, INSTANCE_ID_TYPE, httpClientResponse -> {
-        if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_NO_CONTENT.toInt()) {
+      return srsClient.postSourceStorageRecordsUnDeleteById(id, INSTANCE_ID_TYPE)
+        .toCompletionStage()
+        .toCompletableFuture()
+        .thenCompose(httpClientResponse -> {
+        if (httpClientResponse.statusCode() == HttpStatus.HTTP_NO_CONTENT.toInt()) {
           log.info(format("The instance was successfully undeleted in SRS. InstanceID: %s", id));
+          return CompletableFuture.completedFuture(null);
         } else {
-          log.error(format("The instance wasn't undeleted in SRS. InstanceID: %s, SC: %s", id,
-            httpClientResponse.result().statusCode()));
+          String errorMessage = format("The instance wasn't undeleted in SRS. InstanceID: %s, SC: %s", id,
+            httpClientResponse.statusCode());
+          log.error(errorMessage);
+          return CompletableFuture.failedFuture(new InternalServerErrorException(errorMessage));
         }
       });
     } catch (Exception e) {
       log.error(format("Error during undelete operation for the instance: %s", id), e);
+      return CompletableFuture.failedFuture(e);
     }
   }
 
@@ -289,35 +303,34 @@ public class Instances extends AbstractInstances {
       updatedInstance,
       v -> {
         updateRelatedRecords(rContext, wContext, updatedInstance)
-          .whenComplete((result, ex) -> {
-            if (ex != null) {
-              log.warn("Exception occurred", ex);
-              handleFailure(getKnownException(ex), rContext);
-            } else {
-              noContent(rContext.response());
-            }
-          });
-        updateVisibilityFlagsInSrs(existingInstance, updatedInstance, wContext);
+          .thenCompose(ignored -> updateVisibilityFlagsInSrs(existingInstance, updatedInstance, wContext))
+          .thenAccept(ignored -> noContent(rContext.response()))
+          .exceptionally(doExceptionally(rContext));
       },
       FailureResponseConsumer.serverError(rContext.response()));
   }
 
-  private void updateVisibilityFlagsInSrs(Instance existing, Instance updated, WebContext wContext) {
+  private CompletableFuture<Void> updateVisibilityFlagsInSrs(Instance existing, Instance updated, WebContext wContext) {
     if (!isInstanceControlledByRecord(updated)) {
-      return;
+      return CompletableFuture.completedFuture(null);
     }
     if (isTrue(updated.getDeleted()) && notEqual(existing.getDeleted(), updated.getDeleted())) {
-      deleteSourceStorageRecord(wContext, updated.getId());
+      return deleteSourceStorageRecord(wContext, updated.getId());
     } else if (isFalse(updated.getDeleted())) {
-      var srsClient = getSourceStorageRecordsClient(wContext);
+      SourceStorageRecordsClient srsClient = getSourceStorageRecordsClient(wContext);
+      CompletableFuture<Void> future = CompletableFuture.completedFuture(null);
+
       if (notEqual(existing.getDiscoverySuppress(), updated.getDiscoverySuppress())) {
-        updateSuppressFromDiscoveryFlag(srsClient, updated);
+        future = future.thenCompose(v -> updateSuppressFromDiscoveryFlag(srsClient, updated));
       }
       if (notEqual(existing.getDeleted(), updated.getDeleted())) {
-        unDeleteSourceStorageRecord(srsClient, updated);
+        future = future.thenCompose(v -> unDeleteSourceStorageRecord(srsClient, updated));
       }
+      return future;
     }
+    return CompletableFuture.completedFuture(null);
   }
+
 
   /**
    * Compares existing instance with it's version for update,
