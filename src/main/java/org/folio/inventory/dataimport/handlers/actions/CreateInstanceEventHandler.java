@@ -123,9 +123,9 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                 return prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()), mappingParameters);
               })
               .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId, recordId, chunkId))))
-            .compose(v -> {
+            .compose(instance -> {
               InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-              JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, instanceId, jobExecutionId);
+              JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, instanceId, jobExecutionId, instance);
               List<String> requiredFieldsErrors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, INSTANCE_REQUIRED_FIELDS);
               if (!requiredFieldsErrors.isEmpty()) {
                 String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", requiredFieldsErrors,
@@ -182,8 +182,9 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     return future;
   }
 
-  private JsonObject prepareInstance(DataImportEventPayload dataImportEventPayload, String instanceId, String jobExecutionId) {
-    JsonObject instanceAsJson = new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value()));
+  private JsonObject prepareInstance(DataImportEventPayload dataImportEventPayload, String instanceId, String jobExecutionId,
+                                     org.folio.Instance instance) {
+    JsonObject instanceAsJson = JsonObject.mapFrom(instance);
     if (instanceAsJson.getJsonObject(INSTANCE_PATH) != null) {
       instanceAsJson = instanceAsJson.getJsonObject(INSTANCE_PATH);
     }
@@ -214,12 +215,12 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     return DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING.value();
   }
 
-  private Future<Void> prepareAndExecuteMapping(DataImportEventPayload dataImportEventPayload, JsonObject mappingRules, MappingParameters mappingParameters) {
+  private Future<org.folio.Instance> prepareAndExecuteMapping(DataImportEventPayload dataImportEventPayload, JsonObject mappingRules, MappingParameters mappingParameters) {
     try {
       prepareEvent(dataImportEventPayload);
-      defaultMapRecordToInstance(dataImportEventPayload, mappingRules, mappingParameters);
+      var instance = defaultMapRecordToInstance(dataImportEventPayload, mappingRules, mappingParameters);
       MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
-      return Future.succeededFuture();
+      return Future.succeededFuture(instance);
     } catch (Exception e) {
       LOGGER.warn("Error during preparing and executing mapping:", e);
       return Future.failedFuture(e);

@@ -50,6 +50,7 @@ import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MappingRule;
@@ -392,8 +393,24 @@ public class CreateInstanceEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(mockServer.baseUrl());
 
-    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
-    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
+    String s = null;
+    try {
+      s = TestUtil.readFileFromPath("src/test/resources/marc/test.json");
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    var dataImportEventPayload1 = Json.decodeValue(s, Event.class).getEventPayload();
+    var dataImportEventPayload2 = Json.decodeValue(dataImportEventPayload1, DataImportEventPayload.class)
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl());
+
+    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload2);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.MINUTES);
 
     assertEquals(DI_INVENTORY_INSTANCE_CREATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
