@@ -121,8 +121,8 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
             .map(parametersOptional -> parametersOptional.orElseThrow(() ->
               new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
                 recordId, chunkId))))
-            .onSuccess(mappingMetadata -> defaultMapRecordToHoldings(dataImportEventPayload, mappingMetadata))
-            .map(v -> processMappingResult(dataImportEventPayload, holdingsId))
+            .map(mappingMetadata -> defaultMapRecordToHoldings(dataImportEventPayload, mappingMetadata))
+            .map(holdings -> processMappingResult(holdings, holdingsId))
             .compose(holdingJson -> findInstanceIdByHrid(dataImportEventPayload, holdingJson, context)
               .map(instanceId -> {
                 holdingJson.put(INSTANCE_ID_FIELD, instanceId);
@@ -136,7 +136,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
             .compose(holdingJson -> {
               dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingJson.encode());
               var holdingsRecords = storage.getHoldingsRecordCollection(context);
-              HoldingsRecord holding = Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord.class);
+              HoldingsRecord holding = holdingJson.mapTo(HoldingsRecord.class);
               return addHoldings(holding, holdingsRecords);
             })
             .onSuccess(createdHoldings -> {
@@ -164,21 +164,17 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
     return future;
   }
 
-  private JsonObject processMappingResult(DataImportEventPayload dataImportEventPayload, String holdingsId) {
-    var holdingAsJson = new JsonObject(dataImportEventPayload.getContext().get(HOLDINGS.value()));
-    if (holdingAsJson.getJsonObject(HOLDINGS_PATH) != null) {
-      holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH);
-    }
-    holdingAsJson.put("id", holdingsId);
-    holdingAsJson.remove("hrid");
+  private JsonObject processMappingResult(Holdings holdings, String holdingsId) {
+    holdings.setId(holdingsId);
+    holdings.setHrid(null);
+    var holdingAsJson = JsonObject.mapFrom(holdings);
     checkIfPermanentLocationIdExists(holdingAsJson);
 
     LOGGER.debug("Creating holdings with id: {}", holdingsId);
-
     return holdingAsJson;
   }
 
-  private void defaultMapRecordToHoldings(DataImportEventPayload dataImportEventPayload, MappingMetadataDto mappingMetadata) {
+  private Holdings defaultMapRecordToHoldings(DataImportEventPayload dataImportEventPayload, MappingMetadataDto mappingMetadata) {
     try {
       HashMap<String, String> context = dataImportEventPayload.getContext();
       var mappingRules = new JsonObject(mappingMetadata.getMappingRules());
@@ -188,6 +184,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
       RecordMapper<Holdings> recordMapper = RecordMapperBuilder.buildMapper(MARC_FORMAT);
       var holdings = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(new JsonObject().put(HOLDINGS_PATH, JsonObject.mapFrom(holdings))));
+      return holdings;
     } catch (Exception e) {
       LOGGER.error("Failed to map Record to Holdings", e);
       throw new JsonMappingException("Error in default mapper.", e);

@@ -125,7 +125,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
               .orElseGet(() -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId, recordId, chunkId))))
             .compose(instance -> {
               InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-              JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, instanceId, jobExecutionId, instance);
+              JsonObject instanceAsJson = prepareInstance(instance, instanceId, jobExecutionId);
               List<String> requiredFieldsErrors = EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, INSTANCE_REQUIRED_FIELDS);
               if (!requiredFieldsErrors.isEmpty()) {
                 String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", requiredFieldsErrors,
@@ -182,16 +182,11 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     return future;
   }
 
-  private JsonObject prepareInstance(DataImportEventPayload dataImportEventPayload, String instanceId, String jobExecutionId,
-                                     org.folio.Instance instance) {
-    JsonObject instanceAsJson = JsonObject.mapFrom(instance);
-    if (instanceAsJson.getJsonObject(INSTANCE_PATH) != null) {
-      instanceAsJson = instanceAsJson.getJsonObject(INSTANCE_PATH);
-    }
-    instanceAsJson.put(ID, instanceId);
-    instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
-    instanceAsJson.remove(HRID_KEY);
-
+  private JsonObject prepareInstance(org.folio.Instance instance, String instanceId, String jobExecutionId) {
+    instance.setId(instanceId);
+    instance.setSource(MARC_FORMAT);
+    instance.setHrid(null);
+    var instanceAsJson = JsonObject.mapFrom(instance);
     LOGGER.debug("Creating instance with id: {} by jobExecutionId: {}", instanceId, jobExecutionId);
     return instanceAsJson;
   }
