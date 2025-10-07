@@ -104,15 +104,15 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     }
   }
 
-  private Future<Boolean> sendErrorEvent(OkapiConnectionParams params, Map<String, Object> eventPayload,
+  private Future<Boolean> sendErrorEvent(OkapiConnectionParams params, Map<String, String> eventPayload,
                                          Throwable throwable) {
     eventPayload.put("ERROR", throwable.getMessage());
     return sendEvent(eventPayload, QM_ERROR, params);
   }
 
-  private Future<Record.RecordType> processPayload(Map<String, Object> eventPayload, Context context) {
+  private Future<Record.RecordType> processPayload(Map<String, String> eventPayload, Context context) {
     try {
-      var recordType = Record.RecordType.fromValue(eventPayload.get(RECORD_TYPE_KEY).toString());
+      var recordType = Record.RecordType.fromValue(eventPayload.get(RECORD_TYPE_KEY));
       return getQuickMarcEventHandler(context, recordType).handle(eventPayload).map(recordType);
     } catch (Exception e) {
       LOGGER.warn("Error during processPayload: ", e);
@@ -138,7 +138,7 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
   }
 
   @SuppressWarnings("unchecked")
-  private Future<Map<String, Object>> getEventPayload(Event event) {
+  private Future<Map<String, String>> getEventPayload(Event event) {
     try {
       var eventPayload = Json.decodeValue(event.getEventPayload(), HashMap.class);
       return Future.succeededFuture(eventPayload);

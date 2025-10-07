@@ -59,26 +59,6 @@ public class InstanceUpdateDelegate {
     }
   }
 
-  public Future<Instance> handleMap(Map<String, Object> eventPayload, Record marcRecord, Context context) {
-    try {
-      JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY).toString());
-      MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY).toString()).mapTo(MappingParameters.class);
-      JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
-      String instanceId = marcRecord.getExternalIdsHolder().getInstanceId();
-      LOGGER.info("Instance update with instanceId: {}", instanceId);
-      RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_BIB_RECORD_FORMAT);
-      var mappedInstance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
-      InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-
-      return InstanceUtil.findInstanceById(instanceId, instanceCollection)
-        .compose(existingInstance -> updateInstance(existingInstance, mappedInstance))
-        .compose(updatedInstance -> updateInstanceInStorage(updatedInstance, instanceCollection));
-    } catch (Exception e) {
-      LOGGER.error("Error updating inventory instance", e);
-      return Future.failedFuture(e);
-    }
-  }
-
   public Instance handleBlocking(Map<String, String> eventPayload, Record marcRecord, Context context) throws Exception {
     logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
     try {

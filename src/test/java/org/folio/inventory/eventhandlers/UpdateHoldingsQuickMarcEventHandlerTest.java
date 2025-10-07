@@ -126,7 +126,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", Json.encode(mappingParameters));
 
-    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(new HashMap<>());
+    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
     HoldingsRecord updatedHoldings = future.result();
 
     Assert.assertNotNull(updatedHoldings);
@@ -160,7 +160,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", Json.encode(mappingParameters));
 
-    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(new HashMap<>());
+    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
     HoldingsRecord updatedHoldings = future.result();
 
     Assert.assertNotNull(updatedHoldings);
@@ -193,7 +193,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", Json.encode(new MappingParameters()));
 
-    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(new HashMap<>());
+    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
     HoldingsRecord updatedHoldings = future.result();
 
     Assert.assertNotNull(updatedHoldings);
@@ -214,7 +214,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", Json.encode(new MappingParameters()));
 
-    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(new HashMap<>());
+    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
     HoldingsRecord updatedHoldings = future.result();
 
     Assert.assertNotNull(updatedHoldings);
@@ -234,7 +234,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", Json.encode(new MappingParameters()));
 
-    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(new HashMap<>());
+    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
 
     Assert.assertTrue(future.failed());
   }
@@ -247,7 +247,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", new JsonObject().encode());
 
-    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(new HashMap<>());
+    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
 
     Assert.assertTrue(future.failed());
   }
@@ -272,7 +272,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", Json.encode(mappingParameters));
 
-    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(new HashMap<>());
+    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
 
     Assert.assertTrue(future.failed());
   }
