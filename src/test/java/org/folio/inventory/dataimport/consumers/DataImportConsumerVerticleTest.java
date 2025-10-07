@@ -42,7 +42,6 @@ import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.inventory.DataImportConsumerVerticle;
 import org.folio.inventory.KafkaTest;
-import org.folio.inventory.TestUtil;
 import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
@@ -149,13 +148,9 @@ public class DataImportConsumerVerticleTest extends KafkaTest {
     headers.put(RECORD_ID_HEADER, UUID.randomUUID().toString());
     headers.put(CHUNK_ID_HEADER, UUID.randomUUID().toString());
 
-    var s = TestUtil.readFileFromPath("src/test/resources/marc/test.json");
-    var dataImportEventPayload1 = Json.decodeValue(s, DataImportEventPayload.class);
-
-
     // when
     sendEvent(headers, TENANT_ID,
-      DI_INCOMING_MARC_BIB_RECORD_PARSED.value(), event.getId(), s);
+      DI_INCOMING_MARC_BIB_RECORD_PARSED.value(), event.getId(), Json.encode(event));
 
     // then
     var observedValues = checkKafkaEventSent(TENANT_ID, DI_COMPLETED.value(), 30000);

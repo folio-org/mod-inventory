@@ -23,10 +23,8 @@ import static org.junit.Assert.assertTrue;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -53,7 +51,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.Parameterized;
 import org.marc4j.MarcException;
-import org.marc4j.MarcJsonReader;
 import org.marc4j.marc.Subfield;
 
 @RunWith(BlockJUnit4ClassRunner.class)
@@ -63,50 +60,6 @@ public class AdditionalFieldsUtilTest {
   private static final String PARSED_RECORD = "src/test/resources/marc/parsedRecord.json";
   private static final String REORDERED_PARSED_RECORD = "src/test/resources/marc/reorderedParsedRecord.json";
   private static final String REORDERING_RESULT_RECORD = "src/test/resources/marc/reorderingResultRecord.json";
-
-  @Test
-  public void name() {
-    String input = """
-      "{\"leader\":\"00165ndc a2200073uu 4500\",\"fields\":[{\"001\":\"in00000000003\"},{\"005\":\"20251006122459.7\"},{\"008\":\"251002c           bde                   \"},{\"245\":{\"subfields\":[{\"a\":\"Test \\dsdasss9\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
-      """;
-
-    String input2 = """
-      {
-         "leader": "00165ndc a2200073uu 4500",
-         "fields": [
-           {
-             "001": "in00000000003"
-           },
-           {
-             "005": "20251006122459.7"
-           },
-           {
-             "008": "251002c           bde                   "
-           },
-           {
-             "245": {
-               "subfields": [
-                 {
-                   "a": "Test \\\\dsdasss9"
-                 }
-               ],
-               "ind1": " ",
-               "ind2": " "
-             }
-           }
-         ]
-       }
-      """;
-    MarcJsonReader marcJsonReader =
-      new MarcJsonReader(
-        new ByteArrayInputStream(
-          input2.getBytes(StandardCharsets.UTF_8)));
-    if (marcJsonReader.hasNext()) {
-      var next = marcJsonReader.next();
-      System.out.println(next);
-    }
-
-  }
 
   @Test
   public void shouldAddInstanceIdSubfield() throws IOException {
