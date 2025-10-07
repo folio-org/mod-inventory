@@ -165,7 +165,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
     try {
       var mappingRules = new JsonObject(mappingMetadata.getMappingRules());
       var mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
-      var marcRecord = new JsonObject(getMarcHoldingRecordAsString(payload)).mapTo(Record.class);
+      var marcRecord = Json.decodeValue(getMarcHoldingRecordAsString(payload), Record.class);
       var parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
       String holdingsId = marcRecord.getExternalIdsHolder().getHoldingsId();
       LOGGER.info("Holdings update with holdingId: {}", holdingsId);
@@ -187,7 +187,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
 
   private Future<HoldingsRecord> processHolding(Holdings holdings, Context context, DataImportEventPayload payload) {
     var holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
-    HoldingsRecord mappedRecord = Json.decodeValue(Json.encode(JsonObject.mapFrom(holdings)), HoldingsRecord.class);
+    HoldingsRecord mappedRecord = JsonObject.mapFrom(holdings).mapTo(HoldingsRecord.class);
     Promise<HoldingsRecord> promise = Promise.promise();
     holdingsRecordCollection.findById(mappedRecord.getId()).thenAccept(actualRecord -> {
       if (actualRecord == null) {
