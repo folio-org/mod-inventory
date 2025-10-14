@@ -59,6 +59,7 @@ import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.exceptions.DataImportException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -102,8 +103,10 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
                                      PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
                                      MappingMetadataCache mappingMetadataCache,
                                      HttpClient client,
-                                     ConsortiumService consortiumService, InstanceLinkClient instanceLinkClient) {
-    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client);
+                                     ConsortiumService consortiumService,
+                                     SnapshotService snapshotService,
+                                     InstanceLinkClient instanceLinkClient) {
+    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, snapshotService, client);
     this.consortiumService = consortiumService;
     this.instanceLinkClient = instanceLinkClient;
   }
