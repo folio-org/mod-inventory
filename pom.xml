@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>mod-inventory</artifactId>
   <groupId>org.folio</groupId>
-  <version>21.1.11-SNAPSHOT</version>
+  <version>21.1.12-SNAPSHOT</version>
   <licenses>
     <license>
       <name>Apache License 2.0</name>
@@ -307,7 +307,7 @@
     <liquibase.version>4.9.1</liquibase.version>
     <kafkaclients.version>3.9.0</kafkaclients.version>
     <junit.version>4.13.2</junit.version>
-    <data-import-processing-core.version>4.4.4</data-import-processing-core.version>
+    <data-import-processing-core.version>4.4.5</data-import-processing-core.version>
     <folio-module-descriptor-validator.version>1.0.0</folio-module-descriptor-validator.version>
   </properties>
 

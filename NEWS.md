@@ -1,3 +1,6 @@
+## 21.1.11 2025-10-14
+* Add instance-authority links logic on MARC Instance update [MODINV-1068](https://folio-org.atlassian.net/browse/MODINV-1068)
+
 ## 21.1.9 2025-08-18
 * Configure consumer groupInstanceId [MODINV-1272](https://folio-org.atlassian.net/browse/MODINV-1272)
 
