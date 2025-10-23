@@ -192,6 +192,7 @@ public class InstancesApiExamples extends ApiTests {
         .put("contributorNameTypeId", ApiTestSuite.getPersonalContributorNameType())
         .put("name", "Chambers, Becky")))
       .put("source", "Local")
+      .put("tags", null)
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
 
     final var postCompleted = okapiClient
@@ -234,6 +235,7 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(firstContributor.getString("name"), is("Chambers, Becky"));
 
     assertThat(createdInstance.getString("hrid"), is(hrid));
+    assertThat(createdInstance.getJsonObject("tags"), notNullValue());
   }
 
   @Test

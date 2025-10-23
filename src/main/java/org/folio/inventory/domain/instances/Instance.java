@@ -863,7 +863,7 @@ public class Instance {
     if (instanceRequest.containsKey(TAGS_KEY)) {
       try {
         final JsonObject tags = instanceRequest.getJsonObject(TAGS_KEY);
-        return tags.containsKey(TAG_LIST_KEY) ?
+        return tags != null && tags.containsKey(TAG_LIST_KEY) ?
           JsonArrayHelper.toListOfStrings(tags.getJsonArray(TAG_LIST_KEY)) : new ArrayList<>();
       } catch (ClassCastException e) {
         return JsonArrayHelper.toListOfStrings(instanceRequest.getJsonArray(TAGS_KEY));
