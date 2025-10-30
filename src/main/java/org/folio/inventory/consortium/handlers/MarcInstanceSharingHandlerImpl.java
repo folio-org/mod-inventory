@@ -168,16 +168,19 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
         }
 
         List<Link> sharedAuthorityLinks = localAuthoritiesIds.isEmpty() ? entityLinks : getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
+        var targetTenantContext = constructContext(sharingInstanceMetadata.getTargetTenantId(), context.getToken(), context.getOkapiLocation(), context.getUserId(), context.getRequestId());
         if (!sharedAuthorityLinks.isEmpty()) {
           /*
            * Updating instance-authority links to contain only links to shared authority, as far as instance will be shared
            */
-          Context targetTenantContext = constructContext(sharingInstanceMetadata.getTargetTenantId(), context.getToken(), context.getOkapiLocation(), context.getUserId(), context.getRequestId());
-          LOGGER.debug("relinkAuthorities:: Linking shared authorities: {} to instance: {}, tenant: %s {}",
+          LOGGER.info("relinkAuthorities:: Linking shared authorities: {} to instance: {}, tenant: %s {}",
             sharedAuthorityLinks, instanceId, targetTenantContext.getTenantId());
           return entitiesLinksService.putInstanceAuthorityLinks(targetTenantContext, instanceId, sharedAuthorityLinks).map(marcRecord);
+        } else {
+          LOGGER.info("relinkAuthorities:: No shared authorities left to link to instance: {}, tenant: {}. Removing all local authority links.",
+            instanceId, targetTenantContext.getTenantId());
+          return entitiesLinksService.putInstanceAuthorityLinks(targetTenantContext, instanceId, List.of()).map(marcRecord);
         }
-        return Future.succeededFuture(marcRecord);
       });
   }
 
