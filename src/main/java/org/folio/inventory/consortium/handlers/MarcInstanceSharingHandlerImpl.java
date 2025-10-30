@@ -147,8 +147,8 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
   }
 
   private Future<Record> relinkAuthorities(List<Link> entityLinks, List<LinkingRuleDto> linkingRules, Record marcRecord,
-                                                String instanceId, Context context, SharingInstance sharingInstanceMetadata,
-                                                AuthorityRecordCollection authorityRecordCollection) {
+                                           String instanceId, Context context, SharingInstance sharingInstanceMetadata,
+                                           AuthorityRecordCollection authorityRecordCollection) {
 
     return getLocalAuthoritiesIdsList(entityLinks, authorityRecordCollection)
       .compose(localAuthoritiesIds -> {
@@ -167,21 +167,30 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
           }
         }
 
-        List<Link> sharedAuthorityLinks = localAuthoritiesIds.isEmpty() ? entityLinks : getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
-        var targetTenantContext = constructContext(sharingInstanceMetadata.getTargetTenantId(), context.getToken(), context.getOkapiLocation(), context.getUserId(), context.getRequestId());
+        var sharedAuthorityLinks = localAuthoritiesIds.isEmpty() ? entityLinks : getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
         if (!sharedAuthorityLinks.isEmpty()) {
           /*
            * Updating instance-authority links to contain only links to shared authority, as far as instance will be shared
            */
+          var targetTenantContext = getTenantContext(context, sharingInstanceMetadata.getTargetTenantId());
           LOGGER.info("relinkAuthorities:: Linking shared authorities: {} to instance: {}, tenant: %s {}",
             sharedAuthorityLinks, instanceId, targetTenantContext.getTenantId());
           return entitiesLinksService.putInstanceAuthorityLinks(targetTenantContext, instanceId, sharedAuthorityLinks).map(marcRecord);
         } else {
-          LOGGER.info("relinkAuthorities:: No shared authorities left to link to instance: {}, tenant: {}. Removing all local authority links.",
-            instanceId, targetTenantContext.getTenantId());
-          return entitiesLinksService.putInstanceAuthorityLinks(targetTenantContext, instanceId, List.of()).map(marcRecord);
+          // if local authorities were linked only
+          if (!entityLinks.isEmpty()) {
+            var sourceTenantContext = getTenantContext(context, sharingInstanceMetadata.getSourceTenantId());
+            LOGGER.info("relinkAuthorities:: remove instance-authority links for instance: {}, source tenant: {}",
+              instanceId, sourceTenantContext.getTenantId());
+            return entitiesLinksService.putInstanceAuthorityLinks(sourceTenantContext, instanceId, List.of()).map(marcRecord);
+          }
         }
+        return Future.succeededFuture(marcRecord);
       });
+  }
+
+  private Context getTenantContext(Context context, String tenantId) {
+    return constructContext(tenantId, context.getToken(), context.getOkapiLocation(), context.getUserId(), context.getRequestId());
   }
 
   private Future<List<String>> getLocalAuthoritiesIdsList(List<Link> entityLinks, AuthorityRecordCollection authorityRecordCollection) {
