@@ -12,6 +12,7 @@
 * Ensure sorting of bound-with parts by createdDate [MODINV-1280](https://folio-org.atlassian.net/browse/MODINV-1280)
 * No validation applied when edit "discoverySuppress", "staffSuppress" for deleted Instance [MODINV-1215](https://folio-org.atlassian.net/browse/MODINV-1215)
 * Fix processing of NULL "tags" field [MODINV-1261](https://folio-org.atlassian.net/browse/MODINV-1261)
+* Fix relinking of MARC Authorities when promoting a local MARC bibliographic record to shared [MODINV-1293](https://folio-org.atlassian.net/browse/MODINV-1293)
 
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)

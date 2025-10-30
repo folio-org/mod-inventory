@@ -147,38 +147,71 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
   }
 
   private Future<Record> relinkAuthorities(List<Link> entityLinks, List<LinkingRuleDto> linkingRules, Record marcRecord,
-                                                String instanceId, Context context, SharingInstance sharingInstanceMetadata,
-                                                AuthorityRecordCollection authorityRecordCollection) {
+                                           String instanceId, Context context, SharingInstance sharingInstanceMetadata,
+                                           AuthorityRecordCollection authorityRecordCollection) {
 
-    return getLocalAuthoritiesIdsList(entityLinks, authorityRecordCollection)
-      .compose(localAuthoritiesIds -> {
-        if (!localAuthoritiesIds.isEmpty()) {
-          List<String> fields = linkingRules.stream().map(LinkingRuleDto::getBibField).toList();
-          LOGGER.debug("relinkAuthorities:: Unlinking local authorities: {} from instance: {}, tenant: %s {}",
-            localAuthoritiesIds, instanceId, context.getTenantId());
-          /*
-           * Removing $9 subfields containing local authorities ids from fields specified at linking-rules
-           */
-          try {
-            MarcRecordUtil.removeSubfieldsThatContainsValues(marcRecord, fields, '9', localAuthoritiesIds);
-          } catch (Exception e) {
-            LOGGER.warn(format("unlinkLocalAuthorities:: Error during remove of 9 subfields from record: %s", marcRecord.getId()), e);
-            return Future.failedFuture(new ConsortiumException("Error of unlinking local authorities from marc record during Instance sharing process"));
-          }
-        }
+    return updateLinksForSourceTenant(List.of(), instanceId, context, sharingInstanceMetadata)
+      .compose(v -> getLocalAuthoritiesIdsList(entityLinks, authorityRecordCollection)
+        .compose(localAuthoritiesIds -> {
+          var unlinkLocalAuthoritiesFuture = localAuthoritiesIds.isEmpty()
+            ? Future.succeededFuture()
+            : unlinkLocalAuthorities(linkingRules, marcRecord, instanceId, context, localAuthoritiesIds);
 
-        List<Link> sharedAuthorityLinks = localAuthoritiesIds.isEmpty() ? entityLinks : getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
-        if (!sharedAuthorityLinks.isEmpty()) {
-          /*
-           * Updating instance-authority links to contain only links to shared authority, as far as instance will be shared
-           */
-          Context targetTenantContext = constructContext(sharingInstanceMetadata.getTargetTenantId(), context.getToken(), context.getOkapiLocation(), context.getUserId(), context.getRequestId());
-          LOGGER.debug("relinkAuthorities:: Linking shared authorities: {} to instance: {}, tenant: %s {}",
-            sharedAuthorityLinks, instanceId, targetTenantContext.getTenantId());
-          return entitiesLinksService.putInstanceAuthorityLinks(targetTenantContext, instanceId, sharedAuthorityLinks).map(marcRecord);
-        }
-        return Future.succeededFuture(marcRecord);
-      });
+          return unlinkLocalAuthoritiesFuture.compose(v2 -> {
+            var sharedAuthorityLinks = localAuthoritiesIds.isEmpty()
+              ? entityLinks
+              : getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
+
+            return sharedAuthorityLinks.isEmpty()
+              ? Future.succeededFuture(marcRecord)
+              : linkSharedAuthoritiesToTargetTenantInstance(marcRecord, instanceId, context, sharingInstanceMetadata, sharedAuthorityLinks);
+          });
+        })
+        .recover(cause -> rollbackAuthorityLinksForSourceTenant(entityLinks, instanceId, context, sharingInstanceMetadata, cause))
+      );
+  }
+
+  private Future<Record> rollbackAuthorityLinksForSourceTenant(List<Link> entityLinks, String instanceId, Context context, SharingInstance sharingInstanceMetadata, Throwable cause) {
+    LOGGER.warn("Rollback authority links update for source tenant: {} and instance: {}", sharingInstanceMetadata.getSourceTenantId(), instanceId);
+
+    updateLinksForSourceTenant(entityLinks, instanceId, context, sharingInstanceMetadata)
+      .onFailure(e -> LOGGER.error("Error during rollback authority links update for source tenant: {} and instance: {}",
+        sharingInstanceMetadata.getSourceTenantId(), instanceId, e));
+
+    return Future.failedFuture(new ConsortiumException(cause != null ? cause.getMessage() : "Error updating shared authorities in MARC record"));
+  }
+
+  private Future<Void> unlinkLocalAuthorities(List<LinkingRuleDto> linkingRules, Record marcRecord, String instanceId,
+                                              Context context, List<String> localAuthoritiesIds) {
+    var fields = linkingRules.stream().map(LinkingRuleDto::getBibField).toList();
+    LOGGER.debug("unlinkLocalAuthorities:: Unlinking local authorities: {} from instance: {}, tenant: {}", localAuthoritiesIds, instanceId, context.getTenantId());
+
+    try {
+      MarcRecordUtil.removeSubfieldsThatContainsValues(marcRecord, fields, '9', localAuthoritiesIds);
+      return Future.succeededFuture();
+    } catch (Exception e) {
+      LOGGER.warn("unlinkLocalAuthorities:: Error removing $9 subfields from record: {}", marcRecord.getId(), e);
+      return Future.failedFuture(new ConsortiumException("Error unlinking local authorities during instance sharing"));
+    }
+  }
+
+  private Future<Record> linkSharedAuthoritiesToTargetTenantInstance(Record marcRecord, String instanceId,
+                                                                     Context context, SharingInstance sharingInstanceMetadata,
+                                                                     List<Link> sharedAuthorityLinks) {
+
+    var targetTenantContext = getTenantContext(context, sharingInstanceMetadata.getTargetTenantId());
+    LOGGER.debug("linkSharedAuthoritiesToTargetTenantInstance:: Linking shared authorities: {} to instance: {}, tenant: {}", sharedAuthorityLinks, instanceId, targetTenantContext.getTenantId());
+    return entitiesLinksService.putInstanceAuthorityLinks(targetTenantContext, instanceId, sharedAuthorityLinks).map(marcRecord);
+  }
+
+  private Future<Void> updateLinksForSourceTenant(List<Link> entityLinks, String instanceId, Context context, SharingInstance sharingInstanceMetadata) {
+    var sourceTenantContext = getTenantContext(context, sharingInstanceMetadata.getSourceTenantId());
+    LOGGER.debug("updateLinksForSourceTenant:: Updating authority links for source tenant: {} and instance: {}", sourceTenantContext.getTenantId(), instanceId);
+    return entitiesLinksService.putInstanceAuthorityLinks(sourceTenantContext, instanceId, entityLinks);
+  }
+
+  private Context getTenantContext(Context context, String tenantId) {
+    return constructContext(tenantId, context.getToken(), context.getOkapiLocation(), context.getUserId(), context.getRequestId());
   }
 
   private Future<List<String>> getLocalAuthoritiesIdsList(List<Link> entityLinks, AuthorityRecordCollection authorityRecordCollection) {

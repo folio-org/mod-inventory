@@ -67,6 +67,10 @@ public class EntitiesLinksServiceImpl implements EntitiesLinksService {
 
   @Override
   public Future<Void> putInstanceAuthorityLinks(Context context, String instanceId, List<Link> entityLinks) {
+    if (!entityLinks.isEmpty()) {
+      // Reset IDs to support creating/updating new links and avoid optimistic locking errors.
+      entityLinks.forEach(link -> link.setId(null));
+    }
     JsonObject body = new JsonObject().put(LINKS, new JsonArray(entityLinks));
     CompletableFuture<Void> completableFuture = createOkapiHttpClient(context, httpClient)
       .thenCompose(client ->
