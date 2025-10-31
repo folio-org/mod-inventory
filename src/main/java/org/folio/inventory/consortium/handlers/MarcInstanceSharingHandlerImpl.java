@@ -152,41 +152,55 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
     return getLocalAuthoritiesIdsList(entityLinks, authorityRecordCollection)
       .compose(localAuthoritiesIds -> {
-        if (!localAuthoritiesIds.isEmpty()) {
-          List<String> fields = linkingRules.stream().map(LinkingRuleDto::getBibField).toList();
-          LOGGER.debug("relinkAuthorities:: Unlinking local authorities: {} from instance: {}, tenant: %s {}",
-            localAuthoritiesIds, instanceId, context.getTenantId());
-          /*
-           * Removing $9 subfields containing local authorities ids from fields specified at linking-rules
-           */
-          try {
-            MarcRecordUtil.removeSubfieldsThatContainsValues(marcRecord, fields, '9', localAuthoritiesIds);
-          } catch (Exception e) {
-            LOGGER.warn(format("unlinkLocalAuthorities:: Error during remove of 9 subfields from record: %s", marcRecord.getId()), e);
-            return Future.failedFuture(new ConsortiumException("Error of unlinking local authorities from marc record during Instance sharing process"));
-          }
-        }
+        var unlinkLocalAuthoritiesFuture = localAuthoritiesIds.isEmpty()
+          ? Future.succeededFuture()
+          : unlinkLocalAuthorities(linkingRules, marcRecord, instanceId, context, sharingInstanceMetadata, localAuthoritiesIds);
 
-        var sharedAuthorityLinks = localAuthoritiesIds.isEmpty() ? entityLinks : getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
-        if (!sharedAuthorityLinks.isEmpty()) {
-          /*
-           * Updating instance-authority links to contain only links to shared authority, as far as instance will be shared
-           */
-          var targetTenantContext = getTenantContext(context, sharingInstanceMetadata.getTargetTenantId());
-          LOGGER.info("relinkAuthorities:: Linking shared authorities: {} to instance: {}, tenant: %s {}",
-            sharedAuthorityLinks, instanceId, targetTenantContext.getTenantId());
-          return entitiesLinksService.putInstanceAuthorityLinks(targetTenantContext, instanceId, sharedAuthorityLinks).map(marcRecord);
-        } else {
-          // if local authorities were linked only
-          if (!entityLinks.isEmpty()) {
-            var sourceTenantContext = getTenantContext(context, sharingInstanceMetadata.getSourceTenantId());
-            LOGGER.info("relinkAuthorities:: remove instance-authority links for instance: {}, source tenant: {}",
-              instanceId, sourceTenantContext.getTenantId());
-            return entitiesLinksService.putInstanceAuthorityLinks(sourceTenantContext, instanceId, List.of()).map(marcRecord);
-          }
-        }
-        return Future.succeededFuture(marcRecord);
+        return unlinkLocalAuthoritiesFuture.compose(v -> {
+          var sharedAuthorityLinks = localAuthoritiesIds.isEmpty()
+            ? entityLinks
+            : getSharedAuthorityLinks(entityLinks, localAuthoritiesIds);
+
+          return sharedAuthorityLinks.isEmpty()
+            ? Future.succeededFuture(marcRecord)
+            : linkSharedAuthoritiesToTargetTenantInstance(entityLinks, marcRecord, instanceId, context, sharingInstanceMetadata, localAuthoritiesIds, sharedAuthorityLinks);
+        });
       });
+  }
+
+  private Future<Void> unlinkLocalAuthorities(List<LinkingRuleDto> linkingRules, Record marcRecord, String instanceId, Context context, SharingInstance sharingInstanceMetadata, List<String> localAuthoritiesIds) {
+    var fields = linkingRules.stream().map(LinkingRuleDto::getBibField).toList();
+    LOGGER.debug("Unlinking local authorities: {} from instance: {}, tenant: {}", localAuthoritiesIds, instanceId, context.getTenantId());
+
+    try {
+      MarcRecordUtil.removeSubfieldsThatContainsValues(marcRecord, fields, '9', localAuthoritiesIds);
+    } catch (Exception e) {
+      LOGGER.warn("Error removing $9 subfields from record: {}", marcRecord.getId(), e);
+      return Future.failedFuture(new ConsortiumException("Error unlinking local authorities during instance sharing"));
+    }
+
+    return updateLinksForSourceTenant(List.of(), instanceId, context, sharingInstanceMetadata)
+      .onFailure(cause -> LOGGER.warn("Error unlinking authority links from instance: {}", instanceId, cause))
+      .recover(cause -> Future.failedFuture(new ConsortiumException("Error unlinking local authorities from MARC record")));
+  }
+
+  private Future<Record> linkSharedAuthoritiesToTargetTenantInstance(List<Link> entityLinks, Record marcRecord, String instanceId, Context context, SharingInstance sharingInstanceMetadata, List<String> localAuthoritiesIds, List<Link> sharedAuthorityLinks) {
+    var targetTenantContext = getTenantContext(context, sharingInstanceMetadata.getTargetTenantId());
+    LOGGER.info("Linking shared authorities: {} to instance: {}, tenant: {}", sharedAuthorityLinks, instanceId, targetTenantContext.getTenantId());
+
+    var consortiumUpdateResult = entitiesLinksService.putInstanceAuthorityLinks(targetTenantContext, instanceId, sharedAuthorityLinks);
+    if (!consortiumUpdateResult.succeeded() && !localAuthoritiesIds.isEmpty()) {
+      LOGGER.warn("Rollback authority links update for tenant: {} and instance: {}", targetTenantContext.getTenantId(), instanceId);
+      updateLinksForSourceTenant(entityLinks, instanceId, context, sharingInstanceMetadata);
+      return Future.failedFuture(new ConsortiumException("Error updating shared authorities in MARC record"));
+    }
+    return consortiumUpdateResult.map(marcRecord);
+  }
+
+  private Future<Void> updateLinksForSourceTenant(List<Link> entityLinks, String instanceId, Context context, SharingInstance sharingInstanceMetadata) {
+    var sourceTenantContext = getTenantContext(context, sharingInstanceMetadata.getSourceTenantId());
+    LOGGER.warn("Updating authority links for source tenant: {} and instance: {}", sourceTenantContext.getTenantId(), instanceId);
+    return entitiesLinksService.putInstanceAuthorityLinks(sourceTenantContext, instanceId, entityLinks);
   }
 
   private Context getTenantContext(Context context, String tenantId) {
