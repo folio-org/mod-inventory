@@ -29,14 +29,13 @@ import java.util.UUID;
 
 @RunWith(VertxUnitRunner.class)
 public class EntitiesLinksServiceTest {
-  private final Vertx vertx = Vertx.vertx();
-  private EntitiesLinksService entitiesLinksService = new EntitiesLinksServiceImpl(vertx, vertx.createHttpClient());
+  private static final String AUTHORITY_ID = "58600684-c647-408d-bf3e-756e9055a988";
+  private static final String INSTANCE_AUTHORITY_LINKS_BODY = "{\"links\":[{\"id\":1,\"authorityId\":\"58600684-c647-408d-bf3e-756e9055a988\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":1,\"status\":\"ACTUAL\"}],\"totalRecords\":1}";
+  private static final String INSTANCE_AUTHORITY_LINKS = "{\"links\":[{\"authorityId\":\"58600684-c647-408d-bf3e-756e9055a988\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":1,\"status\":\"ACTUAL\"}]}";
+  private static final String LINKING_RULES_INSTANCE_AUTHORITY = "[{\"id\":1,\"bibField\":\"100\",\"authorityField\":\"100\",\"authoritySubfields\":[\"a\",\"b\",\"c\",\"d\",\"j\",\"q\"],\"validation\":{\"existence\":[{\"t\":false}]},\"autoLinkingEnabled\":true}]";
 
-  private String baseUrl;
-  private final String authorityId = "58600684-c647-408d-bf3e-756e9055a988";
-  private final String INSTANCE_AUTHORITY_LINKS_BODY = "{\"links\":[{\"id\":1,\"authorityId\":\"58600684-c647-408d-bf3e-756e9055a988\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":1,\"status\":\"ACTUAL\"}],\"totalRecords\":1}";
-  private final String INSTANCE_AUTHORITY_LINKS = "{\"links\":[{\"id\":1,\"authorityId\":\"58600684-c647-408d-bf3e-756e9055a988\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":1,\"status\":\"ACTUAL\"}]}";
-  private final String LINKING_RULES_INSTANCE_AUTHORITY = "[{\"id\":1,\"bibField\":\"100\",\"authorityField\":\"100\",\"authoritySubfields\":[\"a\",\"b\",\"c\",\"d\",\"j\",\"q\"],\"validation\":{\"existence\":[{\"t\":false}]},\"autoLinkingEnabled\":true}]";
+  private final Vertx vertx = Vertx.vertx();
+  private final EntitiesLinksService entitiesLinksService = new EntitiesLinksServiceImpl(vertx, vertx.createHttpClient());
   private final String localTenant = "tenant";
   private final String token = "token";
   private final String instanceId = UUID.randomUUID().toString();
@@ -50,7 +49,7 @@ public class EntitiesLinksServiceTest {
 
   @Before
   public void setUp() {
-    baseUrl = mockServer.baseUrl();
+    var baseUrl = mockServer.baseUrl();
     context = EventHandlingUtil.constructContext(localTenant, token, baseUrl);
     JsonObject instanceAuthorityLinksResponse = new JsonObject(INSTANCE_AUTHORITY_LINKS_BODY);
     JsonArray linkingRulesResponse = new JsonArray(LINKING_RULES_INSTANCE_AUTHORITY);
@@ -72,7 +71,7 @@ public class EntitiesLinksServiceTest {
     entitiesLinksService.getInstanceAuthorityLinks(context, instanceId).onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       testContext.assertTrue(!ar.result().isEmpty());
-      testContext.assertEquals(ar.result().get(0).getAuthorityId(), authorityId);
+      testContext.assertEquals(ar.result().getFirst().getAuthorityId(), AUTHORITY_ID);
       async.complete();
     });
   }
@@ -120,8 +119,8 @@ public class EntitiesLinksServiceTest {
     entitiesLinksService.getLinkingRules(context).onComplete(ar -> {
       testContext.assertTrue(ar.succeeded());
       testContext.assertTrue(!ar.result().isEmpty());
-      testContext.assertEquals(ar.result().get(0).getId(), 1);
-      testContext.assertEquals(ar.result().get(0).getBibField(), "100");
+      testContext.assertEquals(ar.result().getFirst().getId(), 1);
+      testContext.assertEquals(ar.result().getFirst().getBibField(), "100");
       async.complete();
     });
   }
