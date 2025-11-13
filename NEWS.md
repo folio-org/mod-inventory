@@ -1,5 +1,5 @@
 ## 21.1.12 2025-11-13
-* Update data-import-processing-core to v4.4.4 to allow 035 matching only by Exactly Match criterion [MODDICORE-473](https://folio-org.atlassian.net/browse/MODDICORE-473)
+* Update data-import-processing-core to v4.4.6 to allow 035 matching only by Exactly Match criterion [MODDICORE-473](https://folio-org.atlassian.net/browse/MODDICORE-473)
 
 ## 21.1.11 2025-10-14
 * Add instance-authority links logic on MARC Instance update [MODINV-1068](https://folio-org.atlassian.net/browse/MODINV-1068)
