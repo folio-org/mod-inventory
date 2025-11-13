@@ -637,7 +637,7 @@ public class MarcInstanceSharingHandlerImplTest {
     var instanceId = UUID.randomUUID().toString();
     var targetInstanceHrid = "consin001";
 
-    var localSourceInstance = new Instance(instanceId, 1, "001", "MARC", "testTitle", UUID.randomUUID().toString())
+    var localSourceInstance = new Instance(instanceId, "1", "001", "MARC", "testTitle", UUID.randomUUID().toString())
       .setDiscoverySuppress(Boolean.TRUE)
       .setStaffSuppress(Boolean.TRUE)
       .setDeleted(Boolean.TRUE)
@@ -647,13 +647,7 @@ public class MarcInstanceSharingHandlerImplTest {
       .setAdministrativeNotes(List.of("test-note"))
       .setNatureOfContentTermIds(List.of(UUID.randomUUID().toString()));
 
-    Instance importedTargetInstance = new Instance(instanceId, "1", targetInstanceHrid, "MARC", "testTitle", UUID.randomUUID().toString());
-
-    SharingInstance sharingInstanceMetadata = new SharingInstance()
-      .withInstanceIdentifier(UUID.fromString(instanceId))
-      .withSourceTenantId("diku")
-      .withTargetTenantId(CONSORTIUM_TENANT);
-    var importedTargetInstance = new Instance(instanceId, 1, targetInstanceHrid, "MARC", "testTitle", UUID.randomUUID().toString());
+    var importedTargetInstance = new Instance(instanceId, "1", targetInstanceHrid, "MARC", "testTitle", UUID.randomUUID().toString());
 
     doReturn(Future.succeededFuture(instanceId)).when(marcHandler).updateSourceRecordSuppressFromDiscoveryByInstanceId(any(), anyBoolean(), any());
     when(restDataImportHelper.importMarcRecord(any(), any(), any())).thenReturn(Future.succeededFuture("COMMITTED"));

@@ -1,3 +1,6 @@
+## 21.1.13 2025-11-13
+* Fix relinking of MARC Authorities when promoting a local MARC bibliographic record to shared [MODINV-1293](https://folio-org.atlassian.net/browse/MODINV-1293)
+
 ## 21.1.12 2025-11-13
 * Update data-import-processing-core to v4.4.6 to allow 035 matching only by Exactly Match criterion [MODDICORE-473](https://folio-org.atlassian.net/browse/MODDICORE-473)
 
