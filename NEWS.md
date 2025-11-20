@@ -1,3 +1,6 @@
+## 21.1.14 2025-11-20
+* Add new field "Instance Source URI" to Inventory Instance [MODINV-1283](https://folio-org.atlassian.net/browse/MODINV-1283)
+
 ## 21.1.13 2025-11-13
 * Fix relinking of MARC Authorities when promoting a local MARC bibliographic record to shared [MODINV-1293](https://folio-org.atlassian.net/browse/MODINV-1293)
 
