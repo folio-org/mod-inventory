@@ -118,7 +118,7 @@ public class InstanceUtilTest {
   @Test
   public void mergeInstanceWithSourceUri() {
     org.folio.inventory.domain.instances.Instance existing =
-      new org.folio.inventory.domain.instances.Instance("30773a27-b485-4dab-aeb6-b8c04fa3cb17", 1, "in000000001",
+      new org.folio.inventory.domain.instances.Instance("30773a27-b485-4dab-aeb6-b8c04fa3cb17", "1", "in000000001",
         "source", "title", "30773a27-b485-4dab-aeb6-b8c04fa3cb19");
     existing.setSourceUri("http://some.uri");
     org.folio.Instance mapped = new Instance()
@@ -128,7 +128,7 @@ public class InstanceUtilTest {
 
     org.folio.inventory.domain.instances.Instance merged = InstanceUtil.mergeFieldsWhichAreNotControlled(existing, mapped);
     assertEquals(existing.getId(), merged.getId());
-    assertEquals(mapped.getVersion(), merged.getVersion());
+    assertEquals(mapped.getVersion().toString(), merged.getVersion());
     assertEquals(existing.getSourceUri(), merged.getSourceUri());
   }
 }
