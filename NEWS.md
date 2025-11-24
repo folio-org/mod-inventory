@@ -1,3 +1,6 @@
+## 21.1.15 2025-11-24
+* Fix removal of the sourceUri field during DI update [MODINV-1307](https://folio-org.atlassian.net/browse/MODINV-1307)
+
 ## 21.1.14 2025-11-20
 * Add new field "Instance Source URI" to Inventory Instance [MODINV-1283](https://folio-org.atlassian.net/browse/MODINV-1283)
 
