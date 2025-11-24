@@ -28,8 +28,6 @@ public class InstanceUtil {
   private static final String PARENT_INSTANCES_PROPERTY = "parentInstances";
   private static final String CHILDREN_INSTANCES_PROPERTY = "childInstances";
 
-
-
   private InstanceUtil() {}
 
   /**
@@ -51,6 +49,7 @@ public class InstanceUtil {
     org.folio.Instance tmp = new org.folio.Instance()
       .withId(existing.getId())
       .withVersion(asIntegerOrNull(existing.getVersion()))
+      .withSourceUri(existing.getSourceUri())
       .withDiscoverySuppress(existing.getDiscoverySuppress())
       .withStaffSuppress(existing.getStaffSuppress())
       .withDeleted(existing.getDeleted())
