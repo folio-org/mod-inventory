@@ -188,11 +188,10 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   private void sendEventToKafka(LinkUpdateReport linkUpdateReport, List<KafkaHeader> kafkaHeaders) {
     try {
       var kafkaRecord = createKafkaProducerRecord(linkUpdateReport, kafkaHeaders);
-      KafkaProducer<String, String> producer = createProducer(LINKS_STATS.topicName(), kafkaConfig);
+      var producer = createProducer(LINKS_STATS.fullTopicName(linkUpdateReport.getTenant()), kafkaConfig);
       producer.send(kafkaRecord)
-        .<Void>mapEmpty()
-        .eventually(v -> producer.flush())
-        .eventually(v -> producer.close())
+        .eventually(() -> producer.flush())
+        .eventually(() -> producer.close())
         .onSuccess(res -> LOGGER.info("Event with type {}, jobId {} was sent to kafka", LINKS_STATS.topicName(), linkUpdateReport.getJobId()))
         .onFailure(err -> {
           var cause = err.getCause();
@@ -204,20 +203,15 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   }
 
   private KafkaProducerRecord<String, String> createKafkaProducerRecord(LinkUpdateReport linkUpdateReport, List<KafkaHeader> kafkaHeaders) {
-    var topicName = formatTopicName(kafkaConfig.getEnvId(), linkUpdateReport.getTenant(), LINKS_STATS.topicName());
     var key = String.valueOf(INDEXER.incrementAndGet() % maxDistributionNumber);
     var kafkaRecord = new KafkaProducerRecordBuilder<String, Object>(linkUpdateReport.getTenant())
       .key(key)
       .value(linkUpdateReport)
-      .topic(topicName)
+      .topic(LINKS_STATS.fullTopicName(linkUpdateReport.getTenant()))
       .build();
 
     kafkaRecord.addHeaders(kafkaHeaders);
     return kafkaRecord;
-  }
-
-  private static String formatTopicName(String env, String tenant, String eventType) {
-    return String.join(".", env, tenant, eventType);
   }
 
   private void ensureEventPayloadWithMappingMetadata(Map<String, String> eventPayload, MappingMetadataDto mappingMetadataDto) {
