@@ -74,6 +74,9 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload payload) {
     logParametersEventHandler(LOGGER, payload);
+    LOGGER.info("handle:: Retrieving MARC record from payload: {}",
+      new JsonObject(payload.getContext().get(modifiedEntityType().value())).encodePrettily());
+
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
       HashMap<String, String> payloadContext = payload.getContext();
@@ -190,6 +193,8 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
   }
 
   private Record getRecord(Map<String, String> payloadForInstanceUpdate) {
+    LOGGER.info("getRecord:: Retrieving modified MARC record from payload: {}",
+      new JsonObject(payloadForInstanceUpdate.get(modifiedEntityType().value())).encodePrettily());
     return new JsonObject(payloadForInstanceUpdate.get(modifiedEntityType().value())).mapTo(Record.class);
   }
 
