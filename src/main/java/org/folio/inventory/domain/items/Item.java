@@ -61,7 +61,7 @@ public class Item {
   private String itemLevelCallNumberPrefix;
   private String itemLevelCallNumberSuffix;
   private String itemLevelCallNumberTypeId;
-  private List<EffectiveCallNumberComponents> additionalCallNumbers = new ArrayList<>();
+  private List<AdditionalCallNumberComponents> additionalCallNumbers = new ArrayList<>();
   private String volume;
   private String accessionNumber;
   private String itemIdentifier;
@@ -231,12 +231,12 @@ public class Item {
     return this;
   }
 
-  public Item withAdditionalCallNumbers(List<EffectiveCallNumberComponents> additionalCallNumbers) {
+  public Item withAdditionalCallNumbers(List<AdditionalCallNumberComponents> additionalCallNumbers) {
     this.additionalCallNumbers = additionalCallNumbers;
     return this;
   }
 
-  public List<EffectiveCallNumberComponents> getAdditionalCallNumbers() {
+  public List<AdditionalCallNumberComponents> getAdditionalCallNumbers() {
     return additionalCallNumbers;
   }
 

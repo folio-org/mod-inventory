@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.folio.inventory.domain.items.AdditionalCallNumberComponents;
 import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.EffectiveCallNumberComponents;
 import org.folio.inventory.domain.items.Item;
@@ -86,9 +87,9 @@ public final class ItemUtil {
       itemFromServer.getJsonObject(Item.TAGS_KEY).getJsonArray(Item.TAG_LIST_KEY))
       : new ArrayList<>();
 
-    List<EffectiveCallNumberComponents> additionalCallNumbers = toList(
+    List<AdditionalCallNumberComponents> additionalCallNumbers = toList(
         itemFromServer.getJsonArray(Item.ADDITIONAL_CALL_NUMBERS_KEY, new JsonArray())).stream()
-      .map(EffectiveCallNumberComponents::from)
+      .map(AdditionalCallNumberComponents::from)
       .toList();
 
     return new Item(
@@ -238,9 +239,9 @@ public final class ItemUtil {
     List<String> tags = itemRequest.containsKey(Item.TAGS_KEY)
       ? getTags(itemRequest) : new ArrayList<>();
 
-    List<EffectiveCallNumberComponents> additionalCallNumbers = toList(
+    List<AdditionalCallNumberComponents> additionalCallNumbers = toList(
         itemRequest.getJsonArray(Item.ADDITIONAL_CALL_NUMBERS_KEY, new JsonArray())).stream()
-      .map(EffectiveCallNumberComponents::from)
+      .map(AdditionalCallNumberComponents::from)
       .toList();
 
     String materialTypeId = getNestedProperty(itemRequest, MATERIAL_TYPE, ID);

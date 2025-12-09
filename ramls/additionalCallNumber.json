@@ -3,23 +3,23 @@
   "description": "An additional call number",
   "type": "object",
   "properties": {
-    "typeId": {
+    "additionalCallNumberTypeId": {
       "type": "string",
       "description": "unique ID for the type of call number, a UUID",
       "$ref": "./uuid.json"
     },
-    "prefix": {
+    "additionalCallNumberPrefix": {
       "type": "string",
       "description": "Prefix of the call number."
     },
-    "callNumber": {
+    "additionalCallNumber": {
       "type": "string",
       "description": "Call Number is an identifier assigned to an item or holding, usually printed on a label attached to the item."
     },
-    "suffix": {
+    "additionalCallNumberSuffix": {
       "type": "string",
       "description": "Suffix of the call number."
     }
   },
-  "required": ["callNumber"]
+  "required": ["additionalCallNumber"]
 }

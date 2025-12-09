@@ -4,10 +4,8 @@ import api.ApiTestSuite;
 import api.support.ApiTests;
 import api.support.InstanceApiClient;
 import api.support.builders.HoldingRequestBuilder;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
-import org.folio.inventory.domain.items.EffectiveCallNumberComponents;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.junit.Test;
@@ -22,6 +20,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.folio.inventory.domain.items.AdditionalCallNumberComponents;
 import static api.support.InstanceSamples.smallAngryPlanet;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
@@ -104,8 +103,8 @@ public class HoldingApiExample extends ApiTests {
   public void canCreateHoldingWithAdditionalCallNumbers() throws Exception {
     JsonObject instance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
-    List<EffectiveCallNumberComponents> additionalCallNumbers = new ArrayList<>();
-    additionalCallNumbers.add(new EffectiveCallNumberComponents("123", "prefix", "suffix", "typeId"));
+    List<AdditionalCallNumberComponents> additionalCallNumbers = new ArrayList<>();
+    additionalCallNumbers.add(new AdditionalCallNumberComponents("123", "prefix", "suffix", "typeId"));
     JsonObject holding = new HoldingRequestBuilder().forInstance(UUID.fromString(instance.getString("id")))
       .withAdditionalCallNumbers(additionalCallNumbers).create();
     assertThat(createHolding(holding).getStatusCode(), is(201));

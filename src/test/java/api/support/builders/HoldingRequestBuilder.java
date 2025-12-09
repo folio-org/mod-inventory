@@ -6,7 +6,7 @@ import io.vertx.core.json.JsonObject;
 import java.util.List;
 import java.util.UUID;
 
-import org.folio.inventory.domain.items.EffectiveCallNumberComponents;
+import org.folio.inventory.domain.items.AdditionalCallNumberComponents;
 
 public class HoldingRequestBuilder extends AbstractBuilder {
 
@@ -20,7 +20,7 @@ public class HoldingRequestBuilder extends AbstractBuilder {
   private final String callNumberSuffix;
   private final String callNumberPrefix;
   private final String callNumberTypeId;
-  private final List<EffectiveCallNumberComponents> additionalCallNumbers;
+  private final List<AdditionalCallNumberComponents> additionalCallNumbers;
   private final UUID sourceId;
   private final List<String> administrativeNotes;
   private final String hrId;
@@ -48,7 +48,7 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       String callNumberSuffix,
       String callNumberPrefix,
       String callNumberTypeId,
-      List<EffectiveCallNumberComponents> additionalCallNumbers,
+      List<AdditionalCallNumberComponents> additionalCallNumbers,
       UUID sourceId,
       List<String> administrativeNotes,
       String hrId) {
@@ -216,7 +216,7 @@ public class HoldingRequestBuilder extends AbstractBuilder {
         this.hrId);
   }
 
-  public HoldingRequestBuilder withAdditionalCallNumbers(List<EffectiveCallNumberComponents> additionalCallNumbers) {
+  public HoldingRequestBuilder withAdditionalCallNumbers(List<AdditionalCallNumberComponents> additionalCallNumbers) {
     return new HoldingRequestBuilder(
         this.instanceId,
         this.permanentLocationId,

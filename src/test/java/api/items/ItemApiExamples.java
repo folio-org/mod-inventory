@@ -47,8 +47,8 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.inventory.domain.items.AdditionalCallNumberComponents;
 import org.folio.inventory.domain.items.CQLQueryRequestDto;
-import org.folio.inventory.domain.items.EffectiveCallNumberComponents;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.IndividualResource;
@@ -1719,33 +1719,32 @@ public class ItemApiExamples extends ApiTests {
     ExecutionException {
 
     UUID holdingId = createInstanceAndHolding();
-    JsonArray additionalCallNumbers = new JsonArray();
+    List<AdditionalCallNumberComponents> additionalCallNumbers = new ArrayList<>();
     final String callNumber = "123";
     final String prefix = "A";
     final String suffix = "Z";
     final String typeId = CALL_NUMBER_TYPE_ID;
-    additionalCallNumbers
-      .add(new EffectiveCallNumberComponents(callNumber, prefix, suffix, typeId));
+    additionalCallNumbers.add(new AdditionalCallNumberComponents(callNumber, prefix, suffix, typeId));
     IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
       .withAdditionalCallNumbers(additionalCallNumbers));
 
-    final JsonObject itemLevelCallNumbers = createdItem.getJson().getJsonArray("additionalCallNumbers")
+    final JsonObject additionalCallNumbers1 = createdItem.getJson().getJsonArray("additionalCallNumbers")
       .getJsonObject(0);
 
-    final String additionalCallNumber = itemLevelCallNumbers.getString("callNumber");
-    final String additionalCallNumberPrefix = itemLevelCallNumbers.getString("prefix");
-    final String additionalCallNumberSuffix = itemLevelCallNumbers.getString("suffix");
-    final String additionalCallNumberTypeId = itemLevelCallNumbers.getString("typeId");
+    final String additionalCallNumber = additionalCallNumbers1.getString("additionalCallNumber");
+    final String additionalCallNumberPrefix = additionalCallNumbers1.getString("additionalCallNumberPrefix");
+    final String additionalCallNumberSuffix = additionalCallNumbers1.getString("additionalCallNumberSuffix");
+    final String additionalCallNumberTypeId = additionalCallNumbers1.getString("additionalCallNumberTypeId");
     assertThat(additionalCallNumber, is(callNumber));
     assertThat(additionalCallNumberPrefix, is(prefix));
     assertThat(additionalCallNumberSuffix, is(suffix));
     assertThat(additionalCallNumberTypeId, is(typeId));
 
-    JsonArray updatedAdditionalCallNumbers = new JsonArray();
+    List<AdditionalCallNumberComponents> updatedAdditionalCallNumbers = new ArrayList<>();
     final String newCallNumber = "321";
     updatedAdditionalCallNumbers
-      .add(new EffectiveCallNumberComponents(newCallNumber, prefix, suffix, typeId));
+      .add(new AdditionalCallNumberComponents(newCallNumber, prefix, suffix, typeId));
     JsonObject itemToUpdate = createdItem.getJson().copy()
       .put("additionalCallNumbers", updatedAdditionalCallNumbers);
 
@@ -1753,7 +1752,7 @@ public class ItemApiExamples extends ApiTests {
     final JsonObject updatedItem = itemsClient.getById(createdItem.getId()).getJson();
 
     final String updatedAdditionalCallNumber = updatedItem.getJsonArray("additionalCallNumbers").getJsonObject(0)
-      .getString("callNumber");
+      .getString("additionalCallNumber");
     assertThat(updatedAdditionalCallNumber, is(newCallNumber));
   }
 
@@ -1764,18 +1763,17 @@ public class ItemApiExamples extends ApiTests {
     ExecutionException {
 
     UUID holdingId = createInstanceAndHolding();
-    JsonArray additionalCallNumbers = new JsonArray();
+    List<AdditionalCallNumberComponents> additionalCallNumbers = new ArrayList<>();
     final String callNumber = "123";
-    additionalCallNumbers
-      .add(new EffectiveCallNumberComponents(callNumber, null, null, null));
+    additionalCallNumbers.add(new AdditionalCallNumberComponents(callNumber, null, null, null));
     IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
       .withAdditionalCallNumbers(additionalCallNumbers));
 
-    final JsonObject itemLevelCallNumbers = createdItem.getJson().getJsonArray("additionalCallNumbers")
+    final JsonObject additionalCallNumbers1 = createdItem.getJson().getJsonArray("additionalCallNumbers")
       .getJsonObject(0);
 
-    final String additionalCallNumber = itemLevelCallNumbers.getString("callNumber");
+    final String additionalCallNumber = additionalCallNumbers1.getString("additionalCallNumber");
     assertThat(additionalCallNumber, is(callNumber));
   }
   @Test
@@ -1785,24 +1783,23 @@ public class ItemApiExamples extends ApiTests {
     ExecutionException {
 
     UUID holdingId = createInstanceAndHolding();
-    JsonArray additionalCallNumbers = new JsonArray();
+    List<AdditionalCallNumberComponents> additionalCallNumbers = new ArrayList<>();
     final String callNumber = "123";
     final String prefix = "A";
     final String suffix = "Z";
     final String typeId = CALL_NUMBER_TYPE_ID;
-    additionalCallNumbers
-      .add(new EffectiveCallNumberComponents(callNumber, prefix, suffix, typeId));
+    additionalCallNumbers.add(new AdditionalCallNumberComponents(callNumber, prefix, suffix, typeId));
     IndividualResource createdItem = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
       .withAdditionalCallNumbers(additionalCallNumbers));
 
-    final JsonObject itemLevelCallNumbers = createdItem.getJson().getJsonArray("additionalCallNumbers")
+    final JsonObject additionalCallNumbers1 = createdItem.getJson().getJsonArray("additionalCallNumbers")
       .getJsonObject(0);
 
-    final String additionalCallNumber = itemLevelCallNumbers.getString("callNumber");
-    final String additionalCallNumberPrefix = itemLevelCallNumbers.getString("prefix");
-    final String additionalCallNumberSuffix = itemLevelCallNumbers.getString("suffix");
-    final String additionalCallNumberTypeId = itemLevelCallNumbers.getString("typeId");
+    final String additionalCallNumber = additionalCallNumbers1.getString("additionalCallNumber");
+    final String additionalCallNumberPrefix = additionalCallNumbers1.getString("additionalCallNumberPrefix");
+    final String additionalCallNumberSuffix = additionalCallNumbers1.getString("additionalCallNumberSuffix");
+    final String additionalCallNumberTypeId = additionalCallNumbers1.getString("additionalCallNumberTypeId");
     assertThat(additionalCallNumber, is(callNumber));
     assertThat(additionalCallNumberPrefix, is(prefix));
     assertThat(additionalCallNumberSuffix, is(suffix));

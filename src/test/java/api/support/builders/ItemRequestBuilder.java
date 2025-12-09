@@ -1,8 +1,10 @@
 package api.support.builders;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
+import org.folio.inventory.domain.items.AdditionalCallNumberComponents;
 import org.folio.inventory.domain.items.Item;
 
 import api.ApiTestSuite;
@@ -34,7 +36,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
   private final String itemLevelCallNumberPrefix;
   private final String itemLevelCallNumberSuffix;
   private final String itemLevelCallNumberTypeId;
-  private final JsonArray additionalCallNumbers;
+  private final List<AdditionalCallNumberComponents> additionalCallNumbers;
   private final String hrid;
   private final String copyNumber;
   private final Integer order;
@@ -68,7 +70,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
     String itemLevelCallNumberPrefix,
     String itemLevelCallNumberSuffix,
     String itemLevelCallNumberTypeId,
-    JsonArray additionalCallNumbers,
+    List<AdditionalCallNumberComponents> additionalCallNumbers,
     String hrid,
     String copyNumber,
     JsonArray administrativeNotes,
@@ -133,12 +135,12 @@ public class ItemRequestBuilder extends AbstractBuilder {
     includeWhenPresent(itemRequest, "itemLevelCallNumberSuffix", itemLevelCallNumberSuffix);
     includeWhenPresent(itemRequest, "itemLevelCallNumberPrefix", itemLevelCallNumberPrefix);
     includeWhenPresent(itemRequest, "itemLevelCallNumberTypeId", itemLevelCallNumberTypeId);
-    includeWhenPresent(itemRequest, "additionalCallNumbers", additionalCallNumbers);
     includeWhenPresent(itemRequest, "hrid", hrid);
     includeWhenPresent(itemRequest, "inTransitDestinationServicePointId", inTransitDestinationServicePointId);
     includeWhenPresent(itemRequest, "lastCheckIn", lastCheckIn);
     includeWhenPresent(itemRequest, Item.COPY_NUMBER_KEY, copyNumber);
     itemRequest.put(Item.ORDER_KEY, order);
+    itemRequest.put("additionalCallNumbers", additionalCallNumbers);
 
     return itemRequest;
   }
@@ -799,7 +801,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
         this.order);
   }
 
-  public ItemRequestBuilder withAdditionalCallNumbers(JsonArray additionalCallNumbers) {
+  public ItemRequestBuilder withAdditionalCallNumbers(List<AdditionalCallNumberComponents> additionalCallNumbers) {
     return new ItemRequestBuilder(
         this.id,
         this.holdingId,
