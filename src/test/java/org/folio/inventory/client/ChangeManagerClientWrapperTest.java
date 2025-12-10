@@ -50,6 +50,7 @@ public class ChangeManagerClientWrapperTest {
   private ParsedRecordDto stubParsedRecordDto;
   private static final String TOKEN = "token";
   private static final String USER_ID = "userId";
+  private static final String REQUEST_ID = "requestId";
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -59,8 +60,8 @@ public class ChangeManagerClientWrapperTest {
 
   @Before
   public void setUp() {
-    changeManagerClientWrapper = new ChangeManagerClientWrapper(mockServer.baseUrl(), TENANT_ID, TOKEN, USER_ID,
-      vertx.createHttpClient());
+    changeManagerClientWrapper = new ChangeManagerClientWrapper(mockServer.baseUrl(), TENANT_ID, TOKEN,
+      USER_ID, REQUEST_ID, vertx.createHttpClient());
 
     stubRawRecordsDto = new RawRecordsDto().withId(UUID.randomUUID().toString());
     stubInitJobExecutionsRqDto = new InitJobExecutionsRqDto().withParentJobId(UUID.randomUUID().toString());

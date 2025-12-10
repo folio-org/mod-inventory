@@ -77,7 +77,8 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
         return Future.failedFuture(message);
       }
 
-      Context context = EventHandlingUtil.constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
+      Context context = EventHandlingUtil.constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER),
+        headersMap.get(OKAPI_USER_ID), headersMap.get(OKAPI_REQUEST_ID));
       Record marcRecord = new JsonObject(eventPayload.get(MARC_BIB_RECORD_FORMAT)).mapTo(Record.class);
 
       mappingMetadataCache.get(jobExecutionId, context)

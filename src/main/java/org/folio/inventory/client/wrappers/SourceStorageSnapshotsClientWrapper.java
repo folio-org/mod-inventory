@@ -13,34 +13,36 @@ import static org.folio.inventory.client.util.ClientWrapperUtil.createRequest;
 import static org.folio.inventory.client.util.ClientWrapperUtil.getBuffer;
 
 /**
- * Wrapper class for SourceStorageSnapshotsClient to handle POST and PUT HTTP requests with x-okapi-user-id header.
+ * Wrapper class for SourceStorageSnapshotsClient to handle POST and PUT HTTP requests with x-okapi-user-id and x-okapi-request-id headers.
  */
 public class SourceStorageSnapshotsClientWrapper extends SourceStorageSnapshotsClient {
   private final String tenantId;
   private final String token;
   private final String okapiUrl;
   private final String userId;
+  private final String requestId;
   private final WebClient webClient;
 
-  public SourceStorageSnapshotsClientWrapper(String okapiUrl, String tenantId, String token, String userId, HttpClient httpClient) {
+  public SourceStorageSnapshotsClientWrapper(String okapiUrl, String tenantId, String token, String userId, String requestId, HttpClient httpClient) {
     super(okapiUrl, tenantId, token, httpClient);
     this.okapiUrl = okapiUrl;
     this.tenantId = tenantId;
     this.token = token;
     this.userId = userId;
+    this.requestId = requestId;
     this.webClient = WebClient.wrap(httpClient);
   }
 
   @Override
   public Future<HttpResponse<Buffer>> postSourceStorageSnapshots(Snapshot snapshot) {
-    return createRequest(HttpMethod.POST, okapiUrl + "/source-storage/snapshots", okapiUrl, tenantId, token, userId, webClient)
+    return createRequest(HttpMethod.POST, okapiUrl + "/source-storage/snapshots", okapiUrl, tenantId, token, userId, requestId, webClient)
       .sendBuffer(getBuffer(snapshot));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putSourceStorageSnapshotsByJobExecutionId(String jobExecutionId, Snapshot snapshot) {
     return createRequest(HttpMethod.PUT, okapiUrl + "/source-storage/snapshots/" + jobExecutionId,
-      okapiUrl, tenantId, token, userId, webClient)
+      okapiUrl, tenantId, token, userId, requestId, webClient)
       .sendBuffer(getBuffer(snapshot));
   }
 }

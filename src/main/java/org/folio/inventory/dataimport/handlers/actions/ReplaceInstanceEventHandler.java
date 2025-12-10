@@ -14,6 +14,7 @@ import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.inventory.consortium.util.MarcRecordUtil.isSubfieldExist;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
@@ -139,7 +140,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         dataImportEventPayload.getJobExecutionId(), payloadContext.get(INCOMING_RECORD_ID));
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
-        payloadContext.get(PAYLOAD_USER_ID));
+        payloadContext.get(PAYLOAD_USER_ID), payloadContext.get(OKAPI_REQUEST_ID));
       Instance instanceToUpdate = Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
 
       if (instanceToUpdate.getSource() != null && instanceToUpdate.getSource().equals(LINKED_DATA.getValue())) {
@@ -166,7 +167,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           .compose(consortiumConfigurationOptional -> {
             if (consortiumConfigurationOptional.isPresent()) {
               String centralTenantId = consortiumConfigurationOptional.get().getCentralTenantId();
-              Context centralTenantContext = EventHandlingUtil.constructContext(centralTenantId, context.getToken(), context.getOkapiLocation(), payloadContext.get(PAYLOAD_USER_ID));
+              Context centralTenantContext = EventHandlingUtil.constructContext(centralTenantId, context.getToken(), context.getOkapiLocation(),
+                payloadContext.get(PAYLOAD_USER_ID), payloadContext.get(OKAPI_REQUEST_ID));
               InstanceCollection instanceCollection = storage.getInstanceCollection(centralTenantContext);
               InstanceUtil.findInstanceById(instanceToUpdate.getId(), instanceCollection)
                 .onSuccess(existedCentralTenantInstance -> {
@@ -188,7 +190,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           });
       } else {
         String targetInstanceTenantId = dataImportEventPayload.getContext().getOrDefault(CENTRAL_TENANT_ID, dataImportEventPayload.getTenant());
-        Context instanceUpdateContext = EventHandlingUtil.constructContext(targetInstanceTenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), payloadContext.get(PAYLOAD_USER_ID));
+        Context instanceUpdateContext = EventHandlingUtil.constructContext(targetInstanceTenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
+          payloadContext.get(PAYLOAD_USER_ID), payloadContext.get(OKAPI_REQUEST_ID));
         InstanceCollection instanceCollection = storage.getInstanceCollection(instanceUpdateContext);
 
         InstanceUtil.findInstanceById(instanceToUpdate.getId(), instanceCollection)
@@ -274,7 +277,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
               LOGGER.debug("processInstanceUpdate:: processing FOLIO Instance with id: {}", instance.getId());
               executeFieldsManipulation(instance, targetRecord);
               return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection,
-                tenantId, context.getUserId());
+                tenantId, context.getUserId(), context.getRequestId());
             }
             if (instanceToUpdate.getSource().equals(MARC.getValue())) {
               LOGGER.debug("processInstanceUpdate:: processing MARC Instance with id: {}", instance.getId());
@@ -284,11 +287,11 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
                 LOGGER.debug("processInstanceUpdate:: Instance with id: {} has no related marc bib. Creating new record in SRS", instance.getId());
                 String matchedId = UUID.randomUUID().toString();
                 return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord.withId(matchedId).withMatchedId(matchedId),
-                  instance, instanceCollection, tenantId, context.getUserId());
+                  instance, instanceCollection, tenantId, context.getUserId(), context.getRequestId());
               }
               LOGGER.debug("processInstanceUpdate:: Instance with id: {} has related marc bib with id: {}. Updating record in SRS", instance.getId(), targetRecord.getMatchedId());
               return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance,
-                targetRecord.getMatchedId(), tenantId, context.getUserId());
+                targetRecord.getMatchedId(), tenantId, context.getUserId(), context.getRequestId());
             }
             return Future.succeededFuture(instance);
           }).compose(ar -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(ar))
@@ -314,7 +317,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       .withStatus(Snapshot.Status.COMMITTED)
       .withProcessingStartedDate(new Date());
 
-    var context = EventHandlingUtil.constructContext(tenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), dataImportEventPayload.getContext().get(PAYLOAD_USER_ID));
+    var context = EventHandlingUtil.constructContext(tenantId, dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
+      dataImportEventPayload.getContext().get(PAYLOAD_USER_ID), dataImportEventPayload.getContext().get(OKAPI_REQUEST_ID));
     return postSnapshotInSrsAndHandleResponse(context, snapshot);
   }
 
@@ -381,13 +385,15 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private Future<Void> prepareRecordForMapping(DataImportEventPayload eventPayload,
                                                List<MarcFieldProtectionSetting> marcFieldProtectionSettings,
                                                Instance instance, MappingParameters mappingParameters, String tenantId) {
+    String userId = eventPayload.getContext().get(PAYLOAD_USER_ID);
+    String requestId = eventPayload.getContext().get(OKAPI_REQUEST_ID);
     if (MARC_INSTANCE_SOURCE.equals(instance.getSource()) || CONSORTIUM_MARC.getValue().equals(instance.getSource())) {
-      SourceStorageRecordsClient client = getSourceStorageRecordsClient(eventPayload.getOkapiUrl(), eventPayload.getToken(), tenantId, null);
+      SourceStorageRecordsClient client = getSourceStorageRecordsClient(eventPayload.getOkapiUrl(), eventPayload.getToken(), tenantId, userId, requestId);
       return getRecordByInstanceId(client, instance.getId())
         .compose(existingRecord -> {
           var linkingRules = Optional.ofNullable(mappingParameters.getLinkingRules());
           var context = constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl(),
-            eventPayload.getContext().get(PAYLOAD_USER_ID));
+            userId, requestId);
           var incomingRecord = Json.decodeValue(eventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
 
           return loadInstanceLink(existingRecord, instance.getId(), context)

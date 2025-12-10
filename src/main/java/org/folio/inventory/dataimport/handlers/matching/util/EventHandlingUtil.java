@@ -28,10 +28,6 @@ public final class EventHandlingUtil {
     return constructContext(tenantId, token, okapiUrl, null, null);
   }
 
-  public static Context constructContext(String tenantId, String token, String okapiUrl, String userId) {
-    return constructContext(tenantId, token, okapiUrl, userId, null);
-  }
-
   public static Context constructContext(String tenantId, String token, String okapiUrl, String userId, String requestId) {
     return new Context() {
       @Override

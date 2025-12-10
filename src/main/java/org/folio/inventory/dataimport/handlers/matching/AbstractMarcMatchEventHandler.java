@@ -273,22 +273,23 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
   private Future<RecordsMatchingContext> createRecordsMatchingContext(DataImportEventPayload payload) {
     String userId = payload.getContext().get(USER_ID_HEADER);
+    String requestId = payload.getContext().get(EventHandlingUtil.OKAPI_REQUEST_ID);
     RecordsMatchingContext recordsMatchingContext = new RecordsMatchingContext();
     recordsMatchingContext.setLocalTenantRecordsClient(new SourceStorageRecordsClientWrapper(
-      payload.getOkapiUrl(), payload.getTenant(), payload.getToken(), userId, httpClient));
+      payload.getOkapiUrl(), payload.getTenant(), payload.getToken(), userId, requestId, httpClient));
 
     if (!isMatchingOnCentralTenantRequired()) {
       return Future.succeededFuture(recordsMatchingContext);
     }
 
     Context context = EventHandlingUtil.constructContext(payload.getTenant(), payload.getToken(),
-      payload.getOkapiUrl(), userId);
+      payload.getOkapiUrl(), userId, requestId);
 
     return consortiumService.getConsortiumConfiguration(context).map(consortiumConfigurationOptional -> {
       consortiumConfigurationOptional.ifPresent(consortiumConfiguration -> {
         recordsMatchingContext.setCentralTenantId(consortiumConfiguration.getCentralTenantId());
         recordsMatchingContext.setCentralTenantRecordsClient(new SourceStorageRecordsClientWrapper(
-          payload.getOkapiUrl(), consortiumConfiguration.getCentralTenantId(), payload.getToken(), userId, httpClient));
+          payload.getOkapiUrl(), consortiumConfiguration.getCentralTenantId(), payload.getToken(), userId, requestId, httpClient));
       });
       return recordsMatchingContext;
     });

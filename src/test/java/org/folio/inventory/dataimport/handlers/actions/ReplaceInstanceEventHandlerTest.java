@@ -17,6 +17,7 @@ import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEve
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.CENTRAL_RECORD_UPDATE_PERMISSION;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.MARC_BIB_RECORD_CREATED;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.USER_HAS_NO_PERMISSION_MSG;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.LEADER_STATUS_DELETED;
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.normalize;
@@ -25,6 +26,7 @@ import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.MARC;
 import static org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle.TITLE_KEY;
 import static org.folio.okapi.common.XOkapiHeaders.PERMISSIONS;
+import static org.folio.okapi.common.XOkapiHeaders.REQUEST_ID;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
@@ -347,8 +349,8 @@ public class ReplaceInstanceEventHandlerTest {
       return null;
     }).when(instanceRecordCollection).update(any(), any(Consumer.class), any(Consumer.class));
 
-    doReturn(sourceStorageClient).when(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
+    doReturn(sourceStorageClient).when(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(replaceInstanceEventHandler).getSourceStorageSnapshotsClient(any(), any(), any(), any(), any());
 
     doAnswer(invocationOnMock -> completedStage(createResponse(201, null)))
       .when(mockedClient).post(any(URL.class), any(JsonObject.class));
@@ -734,7 +736,7 @@ public class ReplaceInstanceEventHandlerTest {
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
     assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
-    verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
+    verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any(), any());
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
     ArgumentCaptor<Context> contextCaptorForSnapshot = ArgumentCaptor.forClass(Context.class);
     ArgumentCaptor<Snapshot> snapshotCaptor = ArgumentCaptor.forClass(Snapshot.class);
@@ -832,6 +834,7 @@ public class ReplaceInstanceEventHandlerTest {
     HashMap<String, String> context = new HashMap<>();
     context.put(CENTRAL_TENANT_ID_KEY, consortiumTenant);
     context.put(PAYLOAD_USER_ID, USER_ID);
+    context.put(OKAPI_REQUEST_ID, REQUEST_ID);
     context.put(PERMISSIONS, JsonArray.of(CENTRAL_RECORD_UPDATE_PERMISSION).encode());
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put(INSTANCE.value(), new JsonObject()
@@ -880,7 +883,8 @@ public class ReplaceInstanceEventHandlerTest {
     assertEquals(consortiumTenant, contextCaptor.getValue().getTenantId());
 
     verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
-    verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), argThat(USER_ID::equals));
+    verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(),
+      argThat(tenantId -> tenantId.equals(consortiumTenant)), argThat(USER_ID::equals), argThat(REQUEST_ID::equals));
 
     ArgumentCaptor<Context> contextCaptorForSnapshot = ArgumentCaptor.forClass(Context.class);
     ArgumentCaptor<Snapshot> snapshotCaptor = ArgumentCaptor.forClass(Snapshot.class);
@@ -911,6 +915,8 @@ public class ReplaceInstanceEventHandlerTest {
     context.put(CENTRAL_TENANT_ID_KEY, consortiumTenant);
     context.put(PERMISSIONS, JsonArray.of(CENTRAL_RECORD_UPDATE_PERMISSION).encode());
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(PAYLOAD_USER_ID, USER_ID);
+    context.put(OKAPI_REQUEST_ID, REQUEST_ID);
     context.put(INSTANCE.value(), new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put("hrid", UUID.randomUUID().toString())
@@ -957,7 +963,8 @@ public class ReplaceInstanceEventHandlerTest {
     assertEquals(consortiumTenant, contextCaptor.getValue().getTenantId());
 
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
-    verify(replaceInstanceEventHandler, times(2)).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(consortiumTenant)), any());
+    verify(replaceInstanceEventHandler, times(2)).getSourceStorageRecordsClient(any(), any(),
+      argThat(tenantId -> tenantId.equals(consortiumTenant)), argThat(USER_ID::equals), argThat(REQUEST_ID::equals));
 
     ArgumentCaptor<Context> contextCaptorForSnapshot = ArgumentCaptor.forClass(Context.class);
     ArgumentCaptor<Snapshot> snapshotCaptor = ArgumentCaptor.forClass(Snapshot.class);

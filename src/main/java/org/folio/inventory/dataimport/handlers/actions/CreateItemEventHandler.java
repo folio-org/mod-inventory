@@ -56,6 +56,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
@@ -136,7 +137,7 @@ public class CreateItemEventHandler implements EventHandler {
       recordToItemFuture.onSuccess(res -> {
         String deduplicationItemId = res.getEntityId();
         Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
-          payloadContext.get(PAYLOAD_USER_ID));
+          payloadContext.get(PAYLOAD_USER_ID), payloadContext.get(OKAPI_REQUEST_ID));
         ItemCollection itemCollection = storage.getItemCollection(context);
 
         mappingMetadataCache.get(jobExecutionId, context)

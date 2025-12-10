@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
@@ -45,7 +46,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     LoadResult loadResult = new LoadResult();
     loadResult.setEntityType(getEntityType().value());
     Context context = constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl(),
-      eventPayload.getContext().get(PAYLOAD_USER_ID));
+      eventPayload.getContext().get(PAYLOAD_USER_ID), eventPayload.getContext().get(OKAPI_REQUEST_ID));
     boolean canProcessMultiMatchResult = canProcessMultiMatchResult(eventPayload);
     PagingParameters pagingParameters = buildPagingParameters(canProcessMultiMatchResult);
 

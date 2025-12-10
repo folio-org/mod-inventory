@@ -165,7 +165,7 @@ public class Holdings {
   private void updateSuppressFromDiscoveryFlag(WebContext wContext, RoutingContext rContext, HoldingsRecord updatedHoldings) {
     try {
       new SourceStorageRecordsClientWrapper(wContext.getOkapiLocation(), wContext.getTenantId(),
-        wContext.getToken(), wContext.getUserId(), client)
+        wContext.getToken(), wContext.getUserId(), wContext.getRequestId(), client)
         .putSourceStorageRecordsSuppressFromDiscoveryById(updatedHoldings.getId(), HOLDING_ID_TYPE, updatedHoldings.getDiscoverySuppress(), httpClientResponse -> {
           if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_OK.toInt()) {
             LOGGER.info(format("Suppress from discovery flag was updated for record in SRS. Holding id: %s",

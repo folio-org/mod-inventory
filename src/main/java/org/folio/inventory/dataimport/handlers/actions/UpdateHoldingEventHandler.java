@@ -46,6 +46,7 @@ import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
 import static org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler.getItemFromJson;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
@@ -115,7 +116,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
         return future;
       }
       Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
-        dataImportEventPayload.getContext().get(PAYLOAD_USER_ID));
+        dataImportEventPayload.getContext().get(PAYLOAD_USER_ID), dataImportEventPayload.getContext().get(OKAPI_REQUEST_ID));
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);

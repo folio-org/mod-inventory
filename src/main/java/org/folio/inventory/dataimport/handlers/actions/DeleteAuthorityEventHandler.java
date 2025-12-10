@@ -22,6 +22,7 @@ import static io.vertx.core.json.JsonObject.mapFrom;
 import static java.lang.String.format;
 import static org.folio.ActionProfile.Action.DELETE;
 import static org.folio.ActionProfile.FolioRecord.MARC_AUTHORITY;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
@@ -56,7 +57,7 @@ public class DeleteAuthorityEventHandler implements EventHandler {
       }
 
       var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(),
-        payload.getContext().get(PAYLOAD_USER_ID));
+        payload.getContext().get(PAYLOAD_USER_ID), payload.getContext().get(OKAPI_REQUEST_ID));
       AuthorityRecordCollection authorityRecordCollection = storage.getAuthorityRecordCollection(context);
       String id = payload.getContext().get(AUTHORITY_RECORD_ID);
       LOGGER.info("Delete authority with id: {}", id);

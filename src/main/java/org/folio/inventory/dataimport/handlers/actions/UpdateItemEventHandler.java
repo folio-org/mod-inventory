@@ -58,6 +58,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
 import static org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler.getItemFromJson;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
@@ -133,7 +134,7 @@ public class UpdateItemEventHandler implements EventHandler {
       LOGGER.info("handle:: Processing UpdateItemEventHandler starting with jobExecutionId: {}, incomingRecordId: {}.",
         dataImportEventPayload.getJobExecutionId(), dataImportEventPayload.getContext().get(INCOMING_RECORD_ID));
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
-        payloadContext.get(PAYLOAD_USER_ID));
+        payloadContext.get(PAYLOAD_USER_ID), payloadContext.get(OKAPI_REQUEST_ID));
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);

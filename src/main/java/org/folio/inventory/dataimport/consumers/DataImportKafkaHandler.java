@@ -90,6 +90,7 @@ import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.folio.DataImportEventTypes.DI_ERROR;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
 import static org.folio.okapi.common.XOkapiHeaders.PERMISSIONS;
 
@@ -165,6 +166,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       String recordId = headersMap.get(RECORD_ID_HEADER);
       String chunkId = headersMap.get(CHUNK_ID_HEADER);
       String userId = extractUserId(eventPayload, headersMap);
+      String requestId = headersMap.get(OKAPI_REQUEST_ID);
 
       String jobExecutionId = eventPayload.getJobExecutionId();
       LOGGER.info("Data import event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", eventPayload.getEventType(), recordId, jobExecutionId, chunkId);
@@ -181,10 +183,11 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       eventPayload.getContext().put(RECORD_ID_HEADER, recordId);
       eventPayload.getContext().put(CHUNK_ID_HEADER, chunkId);
       eventPayload.getContext().put(USER_ID_HEADER, userId);
+      eventPayload.getContext().put(OKAPI_REQUEST_ID, requestId);
       populateWithPermissionsHeader(eventPayload, headersMap);
 
       Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl(),
-        eventPayload.getContext().get(USER_ID_HEADER));
+        userId, requestId);
       String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
       profileSnapshotCache.get(jobProfileSnapshotId, context)
         .onFailure(e -> sendPayloadWithDiError(eventPayload))

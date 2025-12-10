@@ -69,6 +69,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
   public static final String OKAPI_URL = "okapiUrl";
   public static final String TOKEN = "token";
   public static final String USER_ID = "userId";
+  public static final String REQUEST_ID = "requestId";
 
   @Rule
   public MockitoRule initRule = MockitoJUnit.rule();
@@ -342,7 +343,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     var titles = List.of(JsonObject.of("id", "123"));
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
-    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any(), any());
 
     var expectedMessage = "Failed to create snapshot in SRS, snapshot id: ";
     doReturn(failedFuture(new EventProcessingException(expectedMessage)))
@@ -385,7 +386,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     var titles = List.of(JsonObject.of("id", "123"));
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
-    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any(), any());
     var snapshot = new Snapshot().withJobExecutionId(UUID.randomUUID().toString());
     doReturn(succeededFuture(snapshot)).when(snapshotService).postSnapshotInSrsAndHandleResponse(any(), any());
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
@@ -431,7 +432,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     var titles = List.of(JsonObject.of("id", "123"));
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
-    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any(), any());
     var snapshot = new Snapshot().withJobExecutionId(UUID.randomUUID().toString());
     doReturn(succeededFuture(snapshot)).when(snapshotService).postSnapshotInSrsAndHandleResponse(any(), any());
     var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"id\":\"5e525f1e-d373-4a07-9aff-b80856bacfef\"}"), HttpStatus.SC_OK);
@@ -478,8 +479,8 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     var titles = List.of(JsonObject.of("id", "123"));
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
-    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any(), any());
+    doReturn(sourceStorageSnapshotsClient).when(handler).getSourceStorageSnapshotsClient(any(), any(), any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient).postSourceStorageSnapshots(any());
     var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"id\":\"5e525f1e-d373-4a07-9aff-b80856bacfef\"}"), HttpStatus.SC_OK);
@@ -535,7 +536,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     var titles = List.of(JsonObject.of("id", "123"));
     doReturn(succeededFuture(titles)).when(precedingSucceedingTitlesHelper).getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
-    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any(), any());
     var existedRecordResponse = buildHttpResponseWithBuffer(BufferImpl.buffer("{\"matchedId\":\"" + initialSrsId + "\"}"), HttpStatus.SC_OK);
     doReturn(succeededFuture(existedRecordResponse)).when(sourceStorageClient).getSourceStorageRecordsFormattedById(any(), any());
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_OK);
@@ -559,7 +560,7 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
 
     var recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
-    verify(handler).getSourceStorageRecordsClient(any(), any(), argThat(TENANT::equals), argThat(USER_ID::equals));
+    verify(handler).getSourceStorageRecordsClient(any(), any(), argThat(TENANT::equals), argThat(USER_ID::equals), any());
 
     var snapshotCaptor = ArgumentCaptor.forClass(Snapshot.class);
     var contextCaptor = ArgumentCaptor.forClass(Context.class);

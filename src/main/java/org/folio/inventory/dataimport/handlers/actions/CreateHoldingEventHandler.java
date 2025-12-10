@@ -45,6 +45,7 @@ import static org.apache.logging.log4j.util.Strings.isNotEmpty;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
@@ -98,7 +99,7 @@ public class CreateHoldingEventHandler implements EventHandler {
       }
 
       Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
-        payloadContext.get(PAYLOAD_USER_ID));
+        payloadContext.get(PAYLOAD_USER_ID), payloadContext.get(OKAPI_REQUEST_ID));
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       String recordId = payloadContext.get(RECORD_ID_HEADER);
       String chunkId = payloadContext.get(CHUNK_ID_HEADER);
