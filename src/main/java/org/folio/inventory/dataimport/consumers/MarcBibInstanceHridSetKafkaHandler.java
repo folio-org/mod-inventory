@@ -95,7 +95,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
               processOLError(record, promise, eventPayload, ar);
             } else {
               eventPayload.remove(CURRENT_RETRY_NUMBER);
-              LOGGER.error("Failed to set MarcBib Hrid by jobExecutionId {}", jobExecutionId, ar.cause());
+              LOGGER.error("Failed to set MarcBib Hrid by jobExecutionId: {} recordId: {} chunkId: {}", jobExecutionId, recordId, chunkId, ar.cause());
               promise.fail(ar.cause());
             }
           }

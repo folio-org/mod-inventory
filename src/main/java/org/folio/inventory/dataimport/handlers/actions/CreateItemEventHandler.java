@@ -111,16 +111,18 @@ public class CreateItemEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
+    String jobExecutionId = dataImportEventPayload.getJobExecutionId();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_CREATED.value());
 
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || isBlank(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))) {
-        LOGGER.warn("handle:: " + PAYLOAD_HAS_NO_DATA_MSG);
+        LOGGER.warn("handle:: " + PAYLOAD_HAS_NO_DATA_MSG + " jobExecutionId: {}", jobExecutionId);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
+      String recordId = payloadContext.get(RECORD_ID_HEADER);
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
-        LOGGER.warn("handle:: " + ACTION_HAS_NO_MAPPING_MSG);
+        LOGGER.warn("handle:: " + ACTION_HAS_NO_MAPPING_MSG + " jobExecutionId: {} recordId: {}", jobExecutionId, recordId);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
@@ -128,8 +130,6 @@ public class CreateItemEventHandler implements EventHandler {
       dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
       dataImportEventPayload.getContext().put(ITEM.value(), new JsonArray().encode());
 
-      String jobExecutionId = dataImportEventPayload.getJobExecutionId();
-      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
       LOGGER.info("handle:: Create items with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
 

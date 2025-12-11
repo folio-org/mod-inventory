@@ -120,6 +120,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) { // NOSONAR
     logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
+    String jobExecutionId = dataImportEventPayload.getJobExecutionId();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_UPDATED.value());
 
@@ -129,15 +130,17 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         || isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))
         || isEmpty(dataImportEventPayload.getContext().get(INSTANCE.value()))
       ) {
-        LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
+        LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG + " jobExecutionId: {}", jobExecutionId);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
+      String recordId = payloadContext.get(RECORD_ID_HEADER);
+      String chunkId = payloadContext.get(CHUNK_ID_HEADER);
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
-        LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
+        LOGGER.error(ACTION_HAS_NO_MAPPING_MSG + " jobExecutionId: {} recordId: {}", jobExecutionId, recordId);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
-      LOGGER.info("handle:: Processing ReplaceInstanceEventHandler starting with jobExecutionId: {} and incomingRecordId: {}.",
-        dataImportEventPayload.getJobExecutionId(), payloadContext.get(INCOMING_RECORD_ID));
+      LOGGER.info("handle:: Processing ReplaceInstanceEventHandler starting with jobExecutionId: {} recordId: {} incomingRecordId: {}",
+        jobExecutionId, recordId, payloadContext.get(INCOMING_RECORD_ID));
 
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
         payloadContext.get(PAYLOAD_USER_ID), payloadContext.get(OKAPI_REQUEST_ID));
@@ -151,12 +154,12 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
       if (isNotBlank(payloadContext.get(CENTRAL_TENANT_ID)) && isCentralTenantInstanceUpdateForbidden(payloadContext)) {
         LOGGER.warn("handle:: Failed to process instance update, reason: '{}', jobExecutionId: '{}', recordId: '{}', chunkId: '{}'",
-          USER_HAS_NO_PERMISSION_MSG, dataImportEventPayload.getJobExecutionId(), payloadContext.get(RECORD_ID_HEADER), payloadContext.get(CHUNK_ID_HEADER));
+          USER_HAS_NO_PERMISSION_MSG, jobExecutionId, recordId, chunkId);
         return CompletableFuture.failedFuture(new EventProcessingException(USER_HAS_NO_PERMISSION_MSG));
       }
 
       if (isShadowInstance(instanceToUpdate)) {
-        LOGGER.info("handle:: Processing Consortium Instance jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
+        LOGGER.info("handle:: Processing Consortium Instance jobExecutionId: {} recordId: {}", jobExecutionId, recordId);
         if (isCentralTenantInstanceUpdateForbidden(payloadContext)) {
           LOGGER.warn("handle:: Failed to process instance update, reason: '{}', jobExecutionId: '{}', recordId: '{}', chunkId: '{}'",
             USER_HAS_NO_PERMISSION_MSG, dataImportEventPayload.getJobExecutionId(), payloadContext.get(RECORD_ID_HEADER), payloadContext.get(CHUNK_ID_HEADER));
@@ -178,12 +181,12 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
                   dataImportEventPayload.getContext().put(CENTRAL_TENANT_ID, centralTenantId);
                 })
                 .onFailure(e -> {
-                  LOGGER.warn("Error retrieving inventory Instance from central tenant", e);
+                  LOGGER.warn("Error retrieving inventory Instance from central tenant jobExecutionId: '{}' recordId: '{}' chunkId: '{}'", jobExecutionId, recordId, chunkId, e);
                   future.completeExceptionally(e);
                 });
             } else {
-              LOGGER.warn("handle:: Can't retrieve centralTenantId updating Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'", dataImportEventPayload.getJobExecutionId(),
-                dataImportEventPayload.getContext().get(RECORD_ID_HEADER), dataImportEventPayload.getContext().get(CHUNK_ID_HEADER));
+              LOGGER.warn("handle:: Can't retrieve centralTenantId updating Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
+                jobExecutionId, recordId, chunkId);
               future.completeExceptionally(new NotFoundException("Can't retrieve centralTenantId updating Instance"));
             }
             return Future.succeededFuture();
@@ -196,16 +199,16 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
         InstanceUtil.findInstanceById(instanceToUpdate.getId(), instanceCollection)
           .onSuccess(existingInstance -> {
-            LOGGER.info("handle:: Instance retrieved jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
+            LOGGER.info("handle:: Instance retrieved jobExecutionId: {} recordId: {}", jobExecutionId, recordId);
             processInstanceUpdate(dataImportEventPayload, instanceCollection, context, existingInstance, future, payloadContext, targetInstanceTenantId);
           })
           .onFailure(e -> {
-            LOGGER.warn("Error retrieving inventory Instance", e);
+            LOGGER.warn("Error retrieving inventory Instance jobExecutionId: '{}' recordId: '{}' chunkId: '{}'", jobExecutionId, recordId, chunkId, e);
             future.completeExceptionally(e);
           });
       }
     } catch (Exception e) {
-      LOGGER.error("Error updating inventory Instance", e);
+      LOGGER.error("Error updating inventory Instance jobExecutionId: '{}'", jobExecutionId, e);
       future.completeExceptionally(e);
     }
     return future;

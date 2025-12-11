@@ -93,7 +93,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
-        LOGGER.error(ACTION_HAS_NO_MAPPING_MSG);
+        LOGGER.error("handle:: {} jobExecutionId: {} recordId: {}", ACTION_HAS_NO_MAPPING_MSG, jobExecutionId, recordId);
         return CompletableFuture.failedFuture(new EventProcessingException(format(ACTION_HAS_NO_MAPPING_MSG, jobExecutionId, recordId)));
       }
 
@@ -103,7 +103,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       var sourceContent = targetRecord.getParsedRecord().getContent().toString();
 
       if (!Boolean.parseBoolean(payloadContext.get("acceptInstanceId")) && AdditionalFieldsUtil.getValue(targetRecord, TAG_999, SUBFIELD_I).isPresent()) {
-        LOGGER.error(INSTANCE_CREATION_999_ERROR_MESSAGE);
+        LOGGER.error("handle:: {} jobExecutionId: {} recordId: {} ", INSTANCE_CREATION_999_ERROR_MESSAGE, jobExecutionId, recordId);
         return CompletableFuture.failedFuture(new EventProcessingException(INSTANCE_CREATION_999_ERROR_MESSAGE));
       }
 

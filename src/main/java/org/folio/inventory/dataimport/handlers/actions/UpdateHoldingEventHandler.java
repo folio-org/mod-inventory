@@ -91,22 +91,23 @@ public class UpdateHoldingEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
+    String jobExecutionId = dataImportEventPayload.getJobExecutionId();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_UPDATED.value());
 
       if (dataImportEventPayload.getContext() == null
         || isEmpty(dataImportEventPayload.getContext().get(HOLDINGS.value()))
         || isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))) {
-        LOGGER.warn("handle:: Can`t update Holding entity context: {}", dataImportEventPayload.getContext());
+        LOGGER.warn("handle:: Can`t update Holding entity context: {} jobExecutionId: {}", dataImportEventPayload.getContext(), jobExecutionId);
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
       }
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
-        LOGGER.warn("handle:: " + ACTION_HAS_NO_MAPPING_MSG);
+        LOGGER.warn("handle:: " + ACTION_HAS_NO_MAPPING_MSG + " jobExecutionId: {}", jobExecutionId);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
       LOGGER.info("handle:: Processing UpdateHoldingEventHandler starting with jobExecutionId: {} and incomingRecordId: {}.",
-        dataImportEventPayload.getJobExecutionId(), dataImportEventPayload.getContext().get(INCOMING_RECORD_ID));
+        jobExecutionId, dataImportEventPayload.getContext().get(INCOMING_RECORD_ID));
       List<PartialError> errors = new ArrayList<>();
 
       validateRequiredHoldingsFields(dataImportEventPayload, errors);
@@ -117,7 +118,6 @@ public class UpdateHoldingEventHandler implements EventHandler {
       }
       Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
         dataImportEventPayload.getContext().get(PAYLOAD_USER_ID), dataImportEventPayload.getContext().get(OKAPI_REQUEST_ID));
-      String jobExecutionId = dataImportEventPayload.getJobExecutionId();
       String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
       LOGGER.info("handle:: Update holding with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
@@ -149,7 +149,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
                   updatedHoldingsRecord.add(holding);
                   constructDataImportEventPayload(updatePromise, dataImportEventPayload, list, context, errors);
                 } catch (Exception e) {
-                  LOGGER.warn("handle:: Error updating inventory Holdings by jobExecutionId: '{}'", jobExecutionId, e);
+                  LOGGER.warn("handle:: Error updating inventory Holdings jobExecutionId: '{}' recordId: '{}' chunkId: '{}'", jobExecutionId, recordId, chunkId, e);
                   future.completeExceptionally(e);
                 }
               },
@@ -165,14 +165,17 @@ public class UpdateHoldingEventHandler implements EventHandler {
           }
           CompositeFuture.all(updatedHoldingsRecordFutures)
             .onSuccess(ar -> processResults(dataImportEventPayload, updatedHoldingsRecord, expiredHoldings, future, holdingsRecordCollection, errors))
-            .onFailure(future::completeExceptionally);
+            .onFailure(e -> {
+              LOGGER.warn("handle:: Error in composite future for Holdings update jobExecutionId: '{}' recordId: '{}' chunkId: '{}'", jobExecutionId, recordId, chunkId, e);
+              future.completeExceptionally(e);
+            });
         })
         .onFailure(e -> {
-          LOGGER.warn("handle:: Error updating inventory Holdings by jobExecutionId: '{}'", jobExecutionId, e);
+          LOGGER.warn("handle:: Error updating inventory Holdings by jobExecutionId: '{}' recordId: '{}' chunkId: '{}'", jobExecutionId, recordId, chunkId, e);
           future.completeExceptionally(e);
         });
     } catch (Exception e) {
-      LOGGER.warn("handle:: Failed to update Holdings", e);
+      LOGGER.warn("handle:: Failed to update Holdings jobExecutionId: '{}'", jobExecutionId, e);
       future.completeExceptionally(e);
     }
     return future;
