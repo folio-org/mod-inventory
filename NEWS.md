@@ -14,6 +14,7 @@
 * Fix processing of NULL "tags" field [MODINV-1261](https://folio-org.atlassian.net/browse/MODINV-1261)
 * Fix relinking of MARC Authorities when promoting a local MARC bibliographic record to shared [MODINV-1293](https://folio-org.atlassian.net/browse/MODINV-1293)
 * Fix sending links.instance-authority-stats event to a tenant-specific instead of tenant-collection topic [MODINV-1311](https://folio-org.atlassian.net/browse/MODINV-1311)
+* Remove quick-marc events handling logic [MODINV-1312](https://folio-org.atlassian.net/browse/MODINV-1312)
 
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)
