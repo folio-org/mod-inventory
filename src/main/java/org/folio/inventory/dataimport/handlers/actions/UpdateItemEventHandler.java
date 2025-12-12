@@ -58,6 +58,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
 import static org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler.getItemFromJson;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
@@ -117,26 +118,26 @@ public class UpdateItemEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
+    String jobExecutionId = dataImportEventPayload.getJobExecutionId();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_UPDATED.value());
 
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (isNull(payloadContext) || isBlank(payloadContext.get(MARC_BIBLIOGRAPHIC.value()))
         || isBlank(payloadContext.get(ITEM.value())) || new JsonArray(payloadContext.get(ITEM.value())).isEmpty()) {
-        LOGGER.warn("handle:: " + PAYLOAD_HAS_NO_DATA_MSG);
+        LOGGER.warn("handle:: " + PAYLOAD_HAS_NO_DATA_MSG + " jobExecutionId: {}", jobExecutionId);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
-        LOGGER.warn("handle:: " + ACTION_HAS_NO_MAPPING_MSG);
+        LOGGER.warn("handle:: " + ACTION_HAS_NO_MAPPING_MSG + " jobExecutionId: {}", jobExecutionId);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
-      LOGGER.info("handle:: Processing UpdateItemEventHandler starting with jobExecutionId: {}, incomingRecordId: {}.",
-        dataImportEventPayload.getJobExecutionId(), dataImportEventPayload.getContext().get(INCOMING_RECORD_ID));
+      LOGGER.info("handle:: Processing UpdateItemEventHandler starting with jobExecutionId: {}, incomingRecordId: {}",
+        jobExecutionId, dataImportEventPayload.getContext().get(INCOMING_RECORD_ID));
       Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
-        payloadContext.get(PAYLOAD_USER_ID));
-      String jobExecutionId = dataImportEventPayload.getJobExecutionId();
-      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
-      String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
+        payloadContext.get(PAYLOAD_USER_ID), payloadContext.get(OKAPI_REQUEST_ID));
+      String recordId = payloadContext.get(RECORD_ID_HEADER);
+      String chunkId = payloadContext.get(CHUNK_ID_HEADER);
 
       mappingMetadataCache.get(jobExecutionId, context)
         .map(parametersOptional -> parametersOptional

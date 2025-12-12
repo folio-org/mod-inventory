@@ -60,6 +60,7 @@ import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.services.OrderHelperService;
 import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
 import org.folio.inventory.dataimport.services.SnapshotService;
+import org.folio.inventory.dataimport.util.LoggerUtil;
 import org.folio.inventory.services.AuthorityIdStorageService;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.services.HoldingsIdStorageService;
@@ -90,6 +91,7 @@ import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.folio.DataImportEventTypes.DI_ERROR;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
 import static org.folio.okapi.common.XOkapiHeaders.PERMISSIONS;
 
@@ -131,10 +133,11 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     try (var eventPublisher = new KafkaEventPublisher(kafkaConfig, vertx, 100)) {
       eventPublisher.publish(eventPayload);
       var eventType = eventPayload.getEventType();
-      LOGGER.warn("publish:: {} send error for event: '{}' by jobExecutionId: '{}' ",
+      LOGGER.warn("publish:: {} send error for event: '{}' by jobExecutionId: '{}' recordId: '{}' ",
         eventType + "_Producer",
         eventType,
-        eventPayload.getJobExecutionId());
+        eventPayload.getJobExecutionId(),
+        LoggerUtil.extractRecordId(eventPayload));
     } catch (Exception e) {
       LOGGER.error("Error closing kafka publisher: {}", e.getMessage());
     }
@@ -165,26 +168,29 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       String recordId = headersMap.get(RECORD_ID_HEADER);
       String chunkId = headersMap.get(CHUNK_ID_HEADER);
       String userId = extractUserId(eventPayload, headersMap);
+      String requestId = headersMap.get(OKAPI_REQUEST_ID);
 
       String jobExecutionId = eventPayload.getJobExecutionId();
       LOGGER.info("Data import event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", eventPayload.getEventType(), recordId, jobExecutionId, chunkId);
 
       if (cancelledJobsIdCache.contains(eventPayload.getJobExecutionId())) {
-        LOGGER.info("Skip processing of event, topic: '{}', tenantId: '{}', jobExecutionId: '{}' because the job has been cancelled",
-          kafkaRecord.topic(), eventPayload.getTenant(), eventPayload.getJobExecutionId());
+        LOGGER.info("Skip processing of event, topic: '{}', tenantId: '{}', jobExecutionId: '{}' recordId: '{}' because the job has been cancelled",
+          kafkaRecord.topic(), eventPayload.getTenant(), eventPayload.getJobExecutionId(), recordId);
         return Future.succeededFuture(kafkaRecord.key());
       }
 
       if (isNull(userId)) {
-        LOGGER.error("Data import event payload has been received with userId is null");
+        LOGGER.error("Data import event payload has been received with userId is null jobExecutionId: '{}' recordId: '{}'",
+          jobExecutionId, recordId);
       }
       eventPayload.getContext().put(RECORD_ID_HEADER, recordId);
       eventPayload.getContext().put(CHUNK_ID_HEADER, chunkId);
       eventPayload.getContext().put(USER_ID_HEADER, userId);
+      eventPayload.getContext().put(OKAPI_REQUEST_ID, requestId);
       populateWithPermissionsHeader(eventPayload, headersMap);
 
       Context context = EventHandlingUtil.constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl(),
-        eventPayload.getContext().get(USER_ID_HEADER));
+        userId, requestId);
       String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
       profileSnapshotCache.get(jobProfileSnapshotId, context)
         .onFailure(e -> sendPayloadWithDiError(eventPayload))
@@ -194,10 +200,11 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
           .orElse(CompletableFuture.failedFuture(new EventProcessingException(format("Job profile snapshot with id '%s' does not exist", jobProfileSnapshotId)))))
         .whenComplete((processedPayload, throwable) -> {
           if (throwable != null) {
-            LOGGER.error(throwable.getMessage());
+            LOGGER.error("jobExecutionId: {} recordId: {} {}", jobExecutionId, recordId, throwable.getMessage());
             promise.fail(throwable);
           } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
-            LOGGER.warn("Failed to process data import event payload: {}", processedPayload.getEventType());
+            LOGGER.warn("Failed to process data import event payload: {} jobExecutionId: {} recordId: {}",
+              processedPayload.getEventType(), jobExecutionId, recordId);
             promise.fail("Failed to process data import event payload");
           } else {
             promise.complete(kafkaRecord.key());

@@ -32,6 +32,7 @@ import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.getTenant;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
@@ -80,8 +81,10 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
       }
 
       record.setExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
-      Context localTenantContext = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), payloadContext.get(PAYLOAD_USER_ID));
-      Context targetInstanceContext = EventHandlingUtil.constructContext(getTenant(dataImportEventPayload), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(), payloadContext.get(PAYLOAD_USER_ID));
+      Context localTenantContext = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
+        payloadContext.get(PAYLOAD_USER_ID), payloadContext.get(OKAPI_REQUEST_ID));
+      Context targetInstanceContext = EventHandlingUtil.constructContext(getTenant(dataImportEventPayload), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
+        payloadContext.get(PAYLOAD_USER_ID), payloadContext.get(OKAPI_REQUEST_ID));
       Promise<Instance> instanceUpdatePromise = Promise.promise();
 
       mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), localTenantContext)

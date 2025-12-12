@@ -322,6 +322,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       tenant,
       kafkaHeaders.get(OKAPI_TOKEN_HEADER),
       kafkaHeaders.get(OKAPI_USER_ID),
+      kafkaHeaders.get(OKAPI_REQUEST_ID),
       vertx.createHttpClient());
   }
 

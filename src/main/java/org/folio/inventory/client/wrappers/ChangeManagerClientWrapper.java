@@ -25,22 +25,24 @@ public class ChangeManagerClientWrapper extends ChangeManagerClient {
   private final String token;
   private final String okapiUrl;
   private final String userId;
+  private final String requestId;
   private final WebClient webClient;
   public static final String CHANGE_MANAGER_JOB_EXECUTIONS = "/change-manager/jobExecutions/";
   public static final String CHANGE_MANAGER_PARSED_RECORDS = "/change-manager/parsedRecords/";
 
-  public ChangeManagerClientWrapper(String okapiUrl, String tenantId, String token, String userId, HttpClient httpClient) {
+  public ChangeManagerClientWrapper(String okapiUrl, String tenantId, String token, String userId, String requestId, HttpClient httpClient) {
     super(okapiUrl, tenantId, token, httpClient);
     this.okapiUrl = okapiUrl;
     this.tenantId = tenantId;
     this.token = token;
     this.userId = userId;
+    this.requestId = requestId;
     this.webClient = WebClient.wrap(httpClient);
   }
 
   @Override
   public Future<HttpResponse<Buffer>> postChangeManagerJobExecutions(InitJobExecutionsRqDto initJobExecutionsRqDto) {
-    return createRequest(HttpMethod.POST, okapiUrl + "/change-manager/jobExecutions", okapiUrl, tenantId, token, userId, webClient)
+    return createRequest(HttpMethod.POST, okapiUrl + "/change-manager/jobExecutions", okapiUrl, tenantId, token, userId, requestId, webClient)
       .sendBuffer(getBuffer(initJobExecutionsRqDto));
   }
 
@@ -51,34 +53,35 @@ public class ChangeManagerClientWrapper extends ChangeManagerClient {
     queryParams.append(acceptInstanceId);
 
     return createRequest(HttpMethod.POST, okapiUrl + CHANGE_MANAGER_JOB_EXECUTIONS + id + "/records" + queryParams,
-      okapiUrl, tenantId, token, userId, webClient)
+      okapiUrl, tenantId, token, userId, requestId, webClient)
       .sendBuffer(getBuffer(rawRecordsDto));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putChangeManagerJobExecutionsById(String id, JobExecution jobExecution) {
-    return createRequest(HttpMethod.PUT, okapiUrl + CHANGE_MANAGER_JOB_EXECUTIONS + id, okapiUrl, tenantId, token, userId, webClient)
+    return createRequest(HttpMethod.PUT, okapiUrl + CHANGE_MANAGER_JOB_EXECUTIONS + id,
+      okapiUrl, tenantId, token, userId, requestId, webClient)
       .sendBuffer(getBuffer(jobExecution));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putChangeManagerJobExecutionsJobProfileById(String id, JobProfileInfo jobProfileInfo) {
     return createRequest(HttpMethod.PUT, okapiUrl + CHANGE_MANAGER_JOB_EXECUTIONS + id + "/jobProfile",
-      okapiUrl, tenantId, token, userId, webClient)
+      okapiUrl, tenantId, token, userId, requestId, webClient)
       .sendBuffer(getBuffer(jobProfileInfo));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putChangeManagerJobExecutionsStatusById(String id, StatusDto statusDto) {
     return createRequest(HttpMethod.PUT, okapiUrl + CHANGE_MANAGER_JOB_EXECUTIONS + id + "/status",
-      okapiUrl, tenantId, token, userId, webClient)
+      okapiUrl, tenantId, token, userId, requestId, webClient)
       .sendBuffer(getBuffer(statusDto));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putChangeManagerParsedRecordsById(String id, ParsedRecordDto parsedRecordDto) {
     return createRequest(HttpMethod.PUT, okapiUrl + CHANGE_MANAGER_PARSED_RECORDS + id,
-      okapiUrl, tenantId, token, userId, webClient)
+      okapiUrl, tenantId, token, userId, requestId, webClient)
       .sendBuffer(getBuffer(parsedRecordDto));
   }
 }

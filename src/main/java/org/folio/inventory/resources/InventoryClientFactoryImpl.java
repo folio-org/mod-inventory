@@ -30,6 +30,6 @@ public class InventoryClientFactoryImpl implements InventoryClientFactory {
   @Override
   public SourceStorageRecordsClientWrapper createSourceStorageRecordsClient(Context context, HttpClient client) {
     return new SourceStorageRecordsClientWrapper(
-      context.getOkapiLocation(), context.getTenantId(), context.getToken(), context.getUserId(), client);
+      context.getOkapiLocation(), context.getTenantId(), context.getToken(), context.getUserId(), context.getRequestId(), client);
   }
 }

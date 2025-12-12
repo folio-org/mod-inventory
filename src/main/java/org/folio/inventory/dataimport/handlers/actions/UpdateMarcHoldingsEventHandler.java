@@ -9,6 +9,7 @@ import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_HOLDINGS;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDINGS_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
@@ -105,7 +106,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
       prepareEvent(payload);
 
       var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(),
-        payload.getContext().get(PAYLOAD_USER_ID));
+        payload.getContext().get(PAYLOAD_USER_ID), payload.getContext().get(OKAPI_REQUEST_ID));
       var jobExecutionId = payload.getJobExecutionId();
       LOGGER.info("Update marc holding with jobExecutionId: {}, incomingRecordId: {}",
         jobExecutionId, payload.getContext().get(INCOMING_RECORD_ID));

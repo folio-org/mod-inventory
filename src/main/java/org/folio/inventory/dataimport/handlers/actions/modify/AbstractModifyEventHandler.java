@@ -43,9 +43,10 @@ import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.Action.MODIFY;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.getTenant;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 
@@ -82,14 +83,16 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
       LOGGER.info("handle:: Processing {} modifying starting with jobExecutionId: {}.", modifiedEntityType(), payload.getJobExecutionId());
-      Context localTenantContext = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(), payloadContext.get(PAYLOAD_USER_ID));
+      Context localTenantContext = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(),
+        payloadContext.get(PAYLOAD_USER_ID), payloadContext.get(OKAPI_REQUEST_ID));
 
       mappingMetadataCache.get(payload.getJobExecutionId(), localTenantContext)
         .map(mapMappingMetaDataOrFail(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, payload.getJobExecutionId())))
         .compose(mappingMetadataDto -> modifyRecord(payload, getMappingParameters(mappingMetadataDto)).map(mappingMetadataDto))
         .compose(mappingMetadataDto -> {
           if (payloadContext.containsKey(relatedEntityType().value())) {
-            Context targetInstanceContext = constructContext(getTenant(payload), payload.getToken(), payload.getOkapiUrl(), payloadContext.get(PAYLOAD_USER_ID));
+            Context targetInstanceContext = constructContext(getTenant(payload), payload.getToken(), payload.getOkapiUrl(),
+              payloadContext.get(PAYLOAD_USER_ID), payloadContext.get(OKAPI_REQUEST_ID));
             return updateRelatedEntity(payload, mappingMetadataDto, targetInstanceContext)
               .compose(v -> updateRecord(getRecord(payload.getContext()), targetInstanceContext));
           }
@@ -268,7 +271,7 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
 
   public SourceStorageRecordsClient getSourceStorageRecordsClient(Context context) {
     return new SourceStorageRecordsClientWrapper(context.getOkapiLocation(), context.getTenantId(),
-      context.getToken(), context.getUserId(), client);
+      context.getToken(), context.getUserId(), context.getRequestId(), client);
   }
 
   private void preparePayload(DataImportEventPayload dataImportEventPayload) {

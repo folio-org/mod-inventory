@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
+import static org.folio.okapi.common.XOkapiHeaders.REQUEST_ID;
 import static org.folio.okapi.common.XOkapiHeaders.TENANT;
 import static org.folio.okapi.common.XOkapiHeaders.TOKEN;
 import static org.folio.okapi.common.XOkapiHeaders.URL;
@@ -296,6 +297,7 @@ public class RestDataImportHelper {
       kafkaHeaders.get(TENANT.toLowerCase()),
       kafkaHeaders.get(TOKEN.toLowerCase()),
       kafkaHeaders.get(USER_ID.toLowerCase()),
+      kafkaHeaders.get(REQUEST_ID.toLowerCase()),
       vertx.createHttpClient());
   }
 

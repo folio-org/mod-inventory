@@ -6,6 +6,7 @@ import io.vertx.ext.web.client.WebClient;
 import org.folio.rest.tools.ClientHelpers;
 import io.vertx.core.http.HttpMethod;
 
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_TENANT;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_TOKEN;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_URL;
@@ -36,9 +37,9 @@ public final class ClientWrapperUtil {
    * @return the created HTTP request with populated headers
    */
   public static HttpRequest<Buffer> createRequest(HttpMethod method, String url, String okapiUrl, String tenantId,
-                                                  String token, String userId, WebClient webClient) {
+                                                  String token, String userId, String requestId, WebClient webClient) {
     HttpRequest<Buffer> request = webClient.requestAbs(method, url);
-    populateOkapiHeaders(request, okapiUrl, tenantId, token, userId);
+    populateOkapiHeaders(request, okapiUrl, tenantId, token, userId, requestId);
     return request;
   }
 
@@ -59,13 +60,15 @@ public final class ClientWrapperUtil {
   /**
    * Populates the Okapi headers for the given HTTP request.
    *
-   * @param request  the HTTP request to populate headers for
-   * @param okapiUrl the Okapi URL
-   * @param tenantId the tenant ID
-   * @param token    the authentication token
-   * @param userId   the user ID
+   * @param request   the HTTP request to populate headers for
+   * @param okapiUrl  the Okapi URL
+   * @param tenantId  the tenant ID
+   * @param token     the authentication token
+   * @param userId    the user ID
+   * @param requestId
    */
-  private static void populateOkapiHeaders(HttpRequest<Buffer> request, String okapiUrl, String tenantId, String token, String userId) {
+  private static void populateOkapiHeaders(HttpRequest<Buffer> request, String okapiUrl,
+                                           String tenantId, String token, String userId, String requestId) {
     request.putHeader(CONTENT_TYPE, APPLICATION_JSON);
     request.putHeader(ACCEPT, APPLICATION_JSON_TEXT_PLAIN);
 
@@ -80,6 +83,10 @@ public final class ClientWrapperUtil {
 
     if (okapiUrl != null) {
       request.putHeader(OKAPI_URL, okapiUrl);
+    }
+
+    if (requestId != null) {
+      request.putHeader(OKAPI_REQUEST_ID, requestId);
     }
   }
 }

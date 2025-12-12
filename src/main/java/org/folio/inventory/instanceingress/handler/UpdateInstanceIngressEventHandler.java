@@ -128,7 +128,8 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
 
   private Future<Instance> putRecordInSrsAndHandleResponse(Record targetRecord, Instance instance) {
     Promise<Instance> promise = Promise.promise();
-    var sourceStorageRecordsClient = getSourceStorageRecordsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId(), context.getUserId());
+    var sourceStorageRecordsClient = getSourceStorageRecordsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId(),
+      context.getUserId(), context.getRequestId());
     postSnapshotInSrsAndHandleResponse(targetRecord.getSnapshotId(), context, snapshotService::postSnapshotInSrsAndHandleResponse)
       .onFailure(promise::fail)
       .compose(snapshot -> super.getRecordByInstanceId(sourceStorageRecordsClient, instance.getId()))
