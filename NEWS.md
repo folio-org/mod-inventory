@@ -1,3 +1,6 @@
+## 21.1.16 2025-12-15
+* Fix deserialization error for location entity [MODINV-1318](https://folio-org.atlassian.net/browse/MODINV-1318)
+
 ## 21.1.15 2025-11-24
 * Fix removal of the sourceUri field during DI update [MODINV-1307](https://folio-org.atlassian.net/browse/MODINV-1307)
 
