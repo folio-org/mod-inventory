@@ -2,7 +2,6 @@ package org.folio.inventory.dao;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.inventory.common.dao.EntityIdStorageDao;
@@ -57,74 +56,51 @@ public class EntityIdStorageDaoImplTest {
 
   @Test
   public void shouldReturnSavedRecordToInstance(TestContext context) {
-    Async async = context.async();
-
     RecordToEntity expectedRecordToInstance = RecordToEntity.builder().table(EntityTable.INSTANCE).recordId(RECORD_ID).entityId(INSTANCE_ID).build();
 
     Future<RecordToEntity> future = entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToInstance, TENANT_ID);
 
-    future.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      RecordToEntity actualRecordToEntity = ar.result();
+    future.onComplete(context.asyncAssertSuccess(actualRecordToEntity -> {
       context.assertEquals(expectedRecordToInstance.getRecordId(), actualRecordToEntity.getRecordId());
       context.assertEquals(expectedRecordToInstance.getEntityId(), actualRecordToEntity.getEntityId());
       context.assertEquals(expectedRecordToInstance.getTable(), actualRecordToEntity.getTable());
-      async.complete();
-    });
+    }));
   }
 
   @Test
   public void shouldReturnSavedRecordToItem(TestContext context) {
-    Async async = context.async();
-
     String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
     String itemId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
     RecordToEntity expectedRecordToItem = RecordToEntity.builder().table(EntityTable.ITEM).recordId(recordId).entityId(itemId).build();
 
     Future<RecordToEntity> optionalFuture = entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToItem, TENANT_ID);
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      RecordToEntity actualRecordToEntity = ar.result();
+    optionalFuture.onComplete(context.asyncAssertSuccess(actualRecordToEntity -> {
       context.assertEquals(expectedRecordToItem.getRecordId(), actualRecordToEntity.getRecordId());
       context.assertEquals(expectedRecordToItem.getEntityId(), actualRecordToEntity.getEntityId());
       context.assertEquals(expectedRecordToItem.getTable(), actualRecordToEntity.getTable());
-
-      async.complete();
-    });
+    }));
   }
 
   @Test
   public void shouldReturnFailedFuture(TestContext context) {
-    Async async = context.async();
-
     RecordToEntity expectedRecordToInstance = RecordToEntity.builder().table(EntityTable.INSTANCE).recordId(RECORD_ID).entityId(INSTANCE_ID).build();
 
     PostgresConnectionOptions.setSystemProperties(new HashMap<>());
-    Future<RecordToEntity> future = entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToInstance, TENANT_ID);
-
-    future.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      async.complete();
-    });
+    entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToInstance, TENANT_ID)
+    .onComplete(context.asyncAssertSuccess());
   }
 
   @Test
   public void shouldReturnSameInstanceIdWithDuplicateRecordId(TestContext context) {
-    Async async = context.async();
-
     RecordToEntity expectedRecordToInstance1 = RecordToEntity.builder().table(EntityTable.INSTANCE).recordId(RECORD_ID).entityId(INSTANCE_ID).build();
     RecordToEntity expectedRecordToInstance2 = RecordToEntity.builder().table(EntityTable.INSTANCE).recordId(RECORD_ID).entityId(DUPLICATE_INSTANCE_ID).build();
 
-    Future<RecordToEntity> future = entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToInstance1, TENANT_ID)
-      .compose(ar -> entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToInstance2, TENANT_ID));
-
-    future.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      RecordToEntity actualRecordToEntity = ar.result();
+    entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToInstance1, TENANT_ID)
+    .compose(ar -> entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToInstance2, TENANT_ID))
+    .onComplete(context.asyncAssertSuccess(actualRecordToEntity -> {
       context.assertEquals(expectedRecordToInstance1.getRecordId(), actualRecordToEntity.getRecordId());
       context.assertEquals(expectedRecordToInstance1.getEntityId(), actualRecordToEntity.getEntityId());
       context.assertEquals(expectedRecordToInstance1.getTable(), actualRecordToEntity.getTable());
-      async.complete();
-    });
+    }));
   }
 }

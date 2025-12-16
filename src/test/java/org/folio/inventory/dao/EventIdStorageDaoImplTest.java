@@ -1,8 +1,6 @@
 package org.folio.inventory.dao;
 
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.inventory.common.dao.EventIdStorageDao;
@@ -59,50 +57,33 @@ public class EventIdStorageDaoImplTest {
 
   @Test
   public void shouldReturnSavedEventId(TestContext context) {
-    Async async = context.async();
-
     EventToEntity eventToEntity = EventToEntity.builder().table(EventTable.SHARED_INSTANCE).eventId(EVENT_ID).build();
-    Future<String> future = eventIdStorageDao.storeEvent(eventToEntity, TENANT_ID);
-
-    future.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      String savedEventId = ar.result();
+    eventIdStorageDao.storeEvent(eventToEntity, TENANT_ID)
+    .onComplete(context.asyncAssertSuccess(savedEventId -> {
       context.assertEquals(eventToEntity.getEventId(), savedEventId);
-      async.complete();
-    });
+    }));
   }
 
   @Test
   public void shouldReturnFailedFuture(TestContext context) {
-    Async async = context.async();
-
     EventToEntity eventToEntity = EventToEntity.builder().table(EventTable.SHARED_INSTANCE).eventId(EVENT_ID).build();
 
     PostgresConnectionOptions.setSystemProperties(new HashMap<>());
-    Future<String> future = eventIdStorageDao.storeEvent(eventToEntity, TENANT_ID);
-
-    future.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      async.complete();
-    });
+    eventIdStorageDao.storeEvent(eventToEntity, TENANT_ID)
+    .onComplete(context.asyncAssertSuccess());
   }
 
   @Test
   public void shouldReturnSameInstanceIdWithDuplicateRecordId(TestContext context) {
-    Async async = context.async();
-
     String SECOND_EVENT_ID = UUID.randomUUID().toString();
 
     EventToEntity eventToEntity1 = EventToEntity.builder().table(EventTable.SHARED_INSTANCE).eventId(SECOND_EVENT_ID).build();
     EventToEntity eventToEntity2 = EventToEntity.builder().table(EventTable.SHARED_INSTANCE).eventId(SECOND_EVENT_ID).build();
 
-    Future<String> future = eventIdStorageDao.storeEvent(eventToEntity1, TENANT_ID)
-      .compose(ar -> eventIdStorageDao.storeEvent(eventToEntity2, TENANT_ID));
-
-    future.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      context.assertTrue(ar.cause().getMessage().contains(UNIQUE_VIOLATION_SQL_STATE));
-      async.complete();
-    });
+    eventIdStorageDao.storeEvent(eventToEntity1, TENANT_ID)
+    .compose(ar -> eventIdStorageDao.storeEvent(eventToEntity2, TENANT_ID))
+    .onComplete(context.asyncAssertFailure(e -> {
+      context.assertTrue(e.getMessage().contains(UNIQUE_VIOLATION_SQL_STATE));
+    }));
   }
 }
