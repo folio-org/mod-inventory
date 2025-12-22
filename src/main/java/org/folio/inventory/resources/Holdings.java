@@ -4,7 +4,6 @@ import static io.netty.util.internal.StringUtil.COMMA;
 import static java.lang.String.format;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 
-import static org.folio.inventory.dataimport.util.HoldingsRecordUtil.populateUpdatedByUserIdIfNeeded;
 import static org.folio.inventory.support.CompletableFutures.failedFuture;
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.http.server.ServerErrorResponse.internalError;
@@ -82,7 +81,8 @@ public class Holdings {
       var updatedHoldings = rContext.body().asPojo(HoldingsRecord.class);
       var holdingsRecordCollection = storage.getHoldingsRecordCollection(wContext);
       var holdingRecordSourceCollection = storage.getHoldingsRecordsSourceCollection(wContext);
-      populateUpdatedByUserIdIfNeeded(updatedHoldings, wContext);
+      // metadata is a readonly field; setting it to null helps prevent unexpected issues during request processing
+      updatedHoldings.setMetadata(null);
 
       completedFuture(updatedHoldings)
         .thenCompose(holdingsRecord -> holdingsRecordCollection.findById(rContext.request().getParam(ID_FIELD)))

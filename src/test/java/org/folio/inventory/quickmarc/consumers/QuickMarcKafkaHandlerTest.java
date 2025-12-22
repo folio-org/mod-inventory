@@ -100,7 +100,6 @@ public class QuickMarcKafkaHandlerTest extends KafkaTest {
 
   private JsonObject holdingsMappingRules;
   private Record holdingsRecord;
-  private HoldingsRecord existingHoldings;
 
   private JsonObject authorityMappingRules;
   private Record authorityRecord;
@@ -116,7 +115,7 @@ public class QuickMarcKafkaHandlerTest extends KafkaTest {
     authorityMappingRules = new JsonObject(TestUtil.readFileFromPath(AUTHORITY_MAPPING_RULES_PATH));
 
     existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
-    existingHoldings = new JsonObject(TestUtil.readFileFromPath(HOLDINGS_PATH)).mapTo(HoldingsRecord.class);
+    var existingHoldings = new JsonObject(TestUtil.readFileFromPath(HOLDINGS_PATH)).mapTo(HoldingsRecord.class);
     existingAuthority = new JsonObject(TestUtil.readFileFromPath(AUTHORITY_PATH)).mapTo(Authority.class);
 
     bibRecord = Json.decodeValue(TestUtil.readFileFromPath(BIB_RECORD_PATH), Record.class);
@@ -136,6 +135,9 @@ public class QuickMarcKafkaHandlerTest extends KafkaTest {
     when(mockedStorage.getAuthorityRecordCollection(any(Context.class))).thenReturn(mockedAuthorityRecordCollection);
     when(mockedStorage.getHoldingsRecordsSourceCollection(any(Context.class))).thenReturn(sourceCollection);
     when(holdingsCollectionService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
+    when(holdingsCollectionService.getById(anyString(), any())).thenReturn(Future.succeededFuture(existingHoldings));
+    when(holdingsCollectionService.update(any(HoldingsRecord.class), any())).thenReturn(Future.succeededFuture(
+      existingHoldings));
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -144,24 +146,11 @@ public class QuickMarcKafkaHandlerTest extends KafkaTest {
     }).when(mockedInstanceCollection).findById(anyString(), any(), any());
 
     doAnswer(invocationOnMock -> {
-      Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(existingHoldings));
-      return null;
-    }).when(mockedHoldingsRecordCollection).findById(anyString(), any(), any());
-
-    doAnswer(invocationOnMock -> {
       Instance instance = invocationOnMock.getArgument(0);
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(instance));
       return null;
     }).when(mockedInstanceCollection).update(any(Instance.class), any(), any());
-
-    doAnswer(invocationOnMock -> {
-      HoldingsRecord instance = invocationOnMock.getArgument(0);
-      Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(instance));
-      return null;
-    }).when(mockedHoldingsRecordCollection).update(any(HoldingsRecord.class), any(), any());
 
     doAnswer(invocationOnMock -> {
       Authority authority = invocationOnMock.getArgument(0);
