@@ -81,6 +81,7 @@ public class Holdings {
       var updatedHoldings = rContext.body().asPojo(HoldingsRecord.class);
       var holdingsRecordCollection = storage.getHoldingsRecordCollection(wContext);
       var holdingRecordSourceCollection = storage.getHoldingsRecordsSourceCollection(wContext);
+      // metadata is a readonly field; setting it to null helps prevent unexpected issues during request processing
       updatedHoldings.setMetadata(null);
 
       completedFuture(updatedHoldings)

@@ -29,6 +29,7 @@ public class HoldingsUpdateDelegate {
   private static final String MARC_FORMAT = "MARC_HOLDINGS";
   private static final String SOURCE_NAME = "MARC";
 
+  // This mapper is needed to keep null values in serialized JSON to correct merge JsonObject objects.
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   static {
