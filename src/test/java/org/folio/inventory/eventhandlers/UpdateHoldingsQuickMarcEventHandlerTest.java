@@ -7,21 +7,17 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-import api.ApiTestSuite;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
 import org.folio.HoldingsType;
-import org.folio.Metadata;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
@@ -69,7 +65,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
   private UpdateHoldingsQuickMarcEventHandler updateHoldingsQuickMarcEventHandler;
   private HoldingsUpdateDelegate holdingsUpdateDelegate;
   private JsonObject mappingRules;
-  private JsonObject record;
+  private JsonObject holdingsRecordJson;
   private HoldingsRecord existingHoldingsRecord;
   private HoldingsRecord existingHoldingsRecordWithCallNumber;
 
@@ -110,7 +106,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     when(context.getOkapiLocation()).thenReturn("http://localhost");
 
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
-    record = new JsonObject(TestUtil.readFileFromPath(RECORD_PATH));
+    holdingsRecordJson = new JsonObject(TestUtil.readFileFromPath(RECORD_PATH));
   }
 
   @Test
@@ -122,7 +118,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
 
     HashMap<String, String> eventPayload = new HashMap<>();
     eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
-    eventPayload.put("MARC_HOLDING", record.encode());
+    eventPayload.put("MARC_HOLDING", holdingsRecordJson.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", Json.encode(mappingParameters));
 
@@ -136,7 +132,8 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     Assert.assertNotNull(updatedHoldings.getHoldingsStatements());
     Assert.assertEquals(21, updatedHoldings.getHoldingsStatements().size());
     Assert.assertNotNull(updatedHoldings.getNotes());
-    Assert.assertEquals("testingnote$a ; testingnote$u ; testingnote$3 ; testingnote$5 ; testingnote$6 ; testingnote$8", updatedHoldings.getNotes().get(0).getNote());
+    Assert.assertEquals("testingnote$a ; testingnote$u ; testingnote$3 ; testingnote$5 ; testingnote$6 ; testingnote$8",
+      updatedHoldings.getNotes().getFirst().getNote());
 
     ArgumentCaptor<Context> argument = ArgumentCaptor.forClass(Context.class);
     verify(holdingsUpdateDelegate).handle(any(), any(), argument.capture());
@@ -147,8 +144,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
 
   @Test
   public void shouldProcessCallNumberRemoveEvent() throws IOException {
-    record = new JsonObject(TestUtil.readFileFromPath(
-      HOLDINGS_RECORD_WITHOUT_CELL_NUMBER_PATH));
+    holdingsRecordJson = new JsonObject(TestUtil.readFileFromPath(HOLDINGS_RECORD_WITHOUT_CELL_NUMBER_PATH));
     List<HoldingsType> holdings = new ArrayList<>();
     holdings.add(new HoldingsType().withName("testingnote$a").withId(HOLDINGS_TYPE_ID));
     MappingParameters mappingParameters = new MappingParameters();
@@ -156,7 +152,7 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
 
     HashMap<String, String> eventPayload = new HashMap<>();
     eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
-    eventPayload.put("MARC_HOLDING", record.encode());
+    eventPayload.put("MARC_HOLDING", holdingsRecordJson.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", Json.encode(mappingParameters));
 
@@ -179,64 +175,6 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
     Assert.assertEquals("token", argument.getValue().getToken());
     Assert.assertEquals("dummy", argument.getValue().getTenantId());
     Assert.assertEquals("http://localhost", argument.getValue().getOkapiLocation());
-  }
-
-  @Test
-  public void shouldPopulateUpdatedByUserIdFieldFromContextUserIdIfUpdatedByUserIdFieldIsAbsent() {
-    existingHoldingsRecord.setMetadata(new Metadata().withUpdatedByUserId(null));
-    String expectedUserId = UUID.randomUUID().toString();
-    when(context.getUserId()).thenReturn(expectedUserId);
-
-    HashMap<String, String> eventPayload = new HashMap<>();
-    eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
-    eventPayload.put("MARC_HOLDING", record.encode());
-    eventPayload.put("MAPPING_RULES", mappingRules.encode());
-    eventPayload.put("MAPPING_PARAMS", Json.encode(new MappingParameters()));
-
-    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
-    HoldingsRecord updatedHoldings = future.result();
-
-    Assert.assertNotNull(updatedHoldings);
-    Assert.assertEquals(HOLDINGS_ID, updatedHoldings.getId());
-    Assert.assertEquals(expectedUserId, updatedHoldings.getMetadata().getUpdatedByUserId());
-  }
-
-  @Test
-  public void shouldPopulateUpdatedByUserIdFieldFromContextTokenIfUpdatedByUserIdFieldAndUserIdAreAbsent() {
-    existingHoldingsRecord.setMetadata(new Metadata().withUpdatedByUserId(null));
-    String expectedUserId = UUID.randomUUID().toString();
-    when(context.getUserId()).thenReturn(null);
-    when(context.getToken()).thenReturn(getUnsecuredJwtWithUserId(expectedUserId));
-
-    HashMap<String, String> eventPayload = new HashMap<>();
-    eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
-    eventPayload.put("MARC_HOLDING", record.encode());
-    eventPayload.put("MAPPING_RULES", mappingRules.encode());
-    eventPayload.put("MAPPING_PARAMS", Json.encode(new MappingParameters()));
-
-    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
-    HoldingsRecord updatedHoldings = future.result();
-
-    Assert.assertNotNull(updatedHoldings);
-    Assert.assertEquals(HOLDINGS_ID, updatedHoldings.getId());
-    Assert.assertEquals(expectedUserId, updatedHoldings.getMetadata().getUpdatedByUserId());
-  }
-
-  @Test
-  public void shouldReturnFailedFutureIfUpdatedByUserIdFieldIsAbsentAndContextTokenIsInvalid() {
-    existingHoldingsRecord.setMetadata(new Metadata().withUpdatedByUserId(null));
-    when(context.getUserId()).thenReturn(null);
-    when(context.getToken()).thenReturn("invalid-token");
-
-    HashMap<String, String> eventPayload = new HashMap<>();
-    eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
-    eventPayload.put("MARC_HOLDING", record.encode());
-    eventPayload.put("MAPPING_RULES", mappingRules.encode());
-    eventPayload.put("MAPPING_PARAMS", Json.encode(new MappingParameters()));
-
-    Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
-
-    Assert.assertTrue(future.failed());
   }
 
   @Test
@@ -268,24 +206,12 @@ public class UpdateHoldingsQuickMarcEventHandlerTest {
 
     HashMap<String, String> eventPayload = new HashMap<>();
     eventPayload.put("RECORD_TYPE", "MARC_HOLDING");
-    eventPayload.put("MARC_HOLDING", record.encode());
+    eventPayload.put("MARC_HOLDING", holdingsRecordJson.encode());
     eventPayload.put("MAPPING_RULES", mappingRules.encode());
     eventPayload.put("MAPPING_PARAMS", Json.encode(mappingParameters));
 
     Future<HoldingsRecord> future = updateHoldingsQuickMarcEventHandler.handle(eventPayload);
 
     Assert.assertTrue(future.failed());
-  }
-
-  private String getUnsecuredJwtWithUserId(String userId) {
-    String header = new JsonObject().put("alg", "none").encode();
-    String payload = new JsonObject()
-      .put("user_id", userId)
-      .put("tenant", ApiTestSuite.TENANT_ID)
-      .encode();
-
-    String encodedHeader = Base64.getEncoder().encodeToString(header.getBytes(StandardCharsets.UTF_8));
-    String encodedPayload = Base64.getEncoder().encodeToString(payload.getBytes(StandardCharsets.UTF_8));
-    return String.format("%s.%s.", encodedHeader, encodedPayload);
   }
 }

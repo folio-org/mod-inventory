@@ -1,9 +1,10 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import static java.lang.String.format;
-import static org.folio.inventory.dataimport.util.HoldingsRecordUtil.populateUpdatedByUserIdIfNeeded;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 
 import io.vertx.core.Future;
@@ -18,6 +19,7 @@ import org.folio.Holdings;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.folio.inventory.dataimport.util.HoldingsRecordUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.services.HoldingsCollectionService;
@@ -39,6 +41,13 @@ public class HoldingsUpdateDelegate {
 
   private final Storage storage;
   private final HoldingsCollectionService holdingsCollectionService;
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+
+  static {
+    MAPPER.setSerializationInclusion(JsonInclude.Include.ALWAYS);
+    MAPPER.configOverride(HoldingsRecord.class).setInclude(JsonInclude.Value.construct(JsonInclude.Include.ALWAYS, JsonInclude.Include.ALWAYS));
+    MAPPER.configOverride(Holdings.class).setInclude(JsonInclude.Value.construct(JsonInclude.Include.ALWAYS, JsonInclude.Include.ALWAYS));
+  }
 
   public HoldingsUpdateDelegate(Storage storage, HoldingsCollectionService holdingsCollectionService) {
     this.storage = storage;
@@ -61,11 +70,7 @@ public class HoldingsUpdateDelegate {
 
       return getHoldingsRecordById(holdingsId, holdingsRecordCollection)
         .compose(existingHoldingsRecord -> findSourceId(context)
-          .compose(sourceId -> {
-            mappedHoldings.setSourceId(sourceId);
-            return mergeRecords(existingHoldingsRecord, mappedHoldings);
-          }))
-        .map(updatedHoldingsRecord -> populateUpdatedByUserIdIfNeeded(updatedHoldingsRecord, context))
+          .compose(sourceId -> mergeRecords(existingHoldingsRecord, mappedHoldings, sourceId)))
         .compose(updatedHoldingsRecord -> updateHoldingsRecord(updatedHoldingsRecord, holdingsRecordCollection));
     } catch (Exception e) {
       LOGGER.error("Error updating inventory holdings", e);
@@ -98,29 +103,20 @@ public class HoldingsUpdateDelegate {
     return promise.future();
   }
 
-  private Future<HoldingsRecord> mergeRecords(HoldingsRecord existingRecord, Holdings mappedRecord) {
+  private Future<HoldingsRecord> mergeRecords(HoldingsRecord existingRecord, Holdings mappedRecord, String sourceId) {
     try {
       mappedRecord.setId(existingRecord.getId());
       mappedRecord.setVersion(existingRecord.getVersion());
-      JsonObject existing = JsonObject.mapFrom(existingRecord);
-      JsonObject mapped = JsonObject.mapFrom(mappedRecord);
-      JsonObject merged = existing.mergeIn(mapped);
-      HoldingsRecord mergedHoldingsRecord = merged.mapTo(HoldingsRecord.class);
-      updateCallNumberFields(mergedHoldingsRecord, mappedRecord);
+      mappedRecord.setSourceId(sourceId);
+      var existing = new JsonObject(MAPPER.writeValueAsString(existingRecord));
+      var mapped = new JsonObject(MAPPER.writeValueAsString(mappedRecord));
+      var merged = HoldingsRecordUtil.mergeHoldingsRecords(existing, mapped);
+      var mergedHoldingsRecord = merged.mapTo(HoldingsRecord.class);
       return Future.succeededFuture(mergedHoldingsRecord);
     } catch (Exception e) {
       LOGGER.error("Error updating holdings", e);
       return Future.failedFuture(e);
     }
-  }
-
-  private void updateCallNumberFields(HoldingsRecord existingRecord, Holdings mappedHoldings) {
-    existingRecord.setShelvingTitle(mappedHoldings.getShelvingTitle());
-    existingRecord.setCopyNumber(mappedHoldings.getCopyNumber());
-    existingRecord.setCallNumberTypeId(mappedHoldings.getCallNumberTypeId());
-    existingRecord.setCallNumberPrefix(mappedHoldings.getCallNumberPrefix());
-    existingRecord.setCallNumber(mappedHoldings.getCallNumber());
-    existingRecord.setCallNumberSuffix(mappedHoldings.getCallNumberSuffix());
   }
 
   private Future<HoldingsRecord> updateHoldingsRecord(HoldingsRecord holdingsRecord,
