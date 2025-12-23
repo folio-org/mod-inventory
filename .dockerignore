@@ -1,0 +1,6 @@
+*
+!Dockerfile
+!docker*
+!libs/*.jar
+!mod-inventory/target/*.jar
+!target/mod-inventory.jar
