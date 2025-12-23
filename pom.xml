@@ -254,10 +254,17 @@
       </exclusions>
     </dependency>
 
+<!--    <dependency>-->
+<!--      <groupId>org.folio</groupId>-->
+<!--      <artifactId>data-import-processing-core</artifactId>-->
+<!--      <version>${data-import-processing-core.version}</version>-->
+<!--    </dependency>-->
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>data-import-processing-core</artifactId>
-      <version>${data-import-processing-core.version}</version>
+      <version>4.5.0-SNAPSHOT</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/libs/data-import-processing-core-fat.jar</systemPath>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -483,6 +490,7 @@
                   <manifestEntries>
                     <Main-Class>org.folio.inventory.Launcher</Main-Class>
                     <Multi-Release>true</Multi-Release>
+                    <Class-Path>libs/data-import-processing-core-fat.jar</Class-Path>
                   </manifestEntries>
                 </transformer>
               </transformers>

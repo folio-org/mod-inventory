@@ -12,6 +12,9 @@ ENV VERTICLE_HOME /usr/verticles
 
 # Copy your fat jar to the container
 COPY target/${VERTICLE_FILE} ${VERTICLE_HOME}/${VERTICLE_FILE}
+ENV LIB_DIR ${VERTICLE_HOME}/libs
+RUN mkdir -p ${LIB_DIR}
+COPY libs/data-import-processing-core-fat.jar ${LIB_DIR}/
 
 # Expose this port locally in the container.
 EXPOSE 9403
