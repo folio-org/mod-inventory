@@ -12,7 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.Holdings;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.util.HoldingsRecordUtil;
+import org.folio.inventory.support.HoldingsRecordUtil;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
