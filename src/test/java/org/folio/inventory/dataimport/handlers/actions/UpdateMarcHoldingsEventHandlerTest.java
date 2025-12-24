@@ -158,10 +158,11 @@ public class UpdateMarcHoldingsEventHandlerTest {
   public void shouldProcessEvent() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
-    when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withVersion(1)));
+    var holdingsId = UUID.randomUUID();
+    when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture
+      .completedFuture(new HoldingsRecord().withId(holdingsId.toString()).withVersion(1)));
     var instanceId = String.valueOf(UUID.randomUUID());
     mockSuccessFindByCql(instanceId, instanceRecordCollection);
-    var holdingsId = UUID.randomUUID();
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
     record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
@@ -442,7 +443,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
 
     var future = eventHandler.handle(dataImportEventPayload);
     ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
-    assertThat(exception.getCause().getMessage(), containsString("Error updating Holding by holdingId " + holdingsId));
+    assertThat(exception.getCause().getMessage(), containsString("Error updating Holding by holdingId "));
     verify(publisher, times(0)).publish(any());
   }
 

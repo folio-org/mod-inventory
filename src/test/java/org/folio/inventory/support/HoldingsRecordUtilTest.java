@@ -1,4 +1,4 @@
-package org.folio.inventory.dataimport.util;
+package org.folio.inventory.support;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -305,5 +305,186 @@ public class HoldingsRecordUtilTest {
     JsonObject note = notes.getJsonObject(0);
     Assert.assertEquals("type2", note.getString("noteType"));
     Assert.assertEquals("new note", note.getString("note"));
+  }
+
+  @Test
+  public void mergeHoldingsRecords_shouldPreserveTemporaryLocationIdFromExisting() {
+    // given
+    JsonObject existing = new JsonObject()
+      .put("id", "holding-1")
+      .put("permanentLocationId", "perm-loc-1")
+      .put("temporaryLocationId", "temp-loc-1")
+      .put("callNumber", "existing-call-number");
+
+    JsonObject mapped = new JsonObject()
+      .put("callNumber", "new-call-number")
+      .put("temporaryLocationId", "temp-loc-2")
+      .put("holdingsTypeId", "type-1");
+
+    // when
+    JsonObject result = HoldingsRecordUtil.mergeHoldingsRecords(existing, mapped);
+
+    // then
+    Assert.assertEquals("holding-1", result.getString("id"));
+    Assert.assertEquals("new-call-number", result.getString("callNumber"));
+    Assert.assertEquals("type-1", result.getString("holdingsTypeId"));
+    Assert.assertEquals("temp-loc-1", result.getString("temporaryLocationId"));
+    Assert.assertNotEquals("temp-loc-2", result.getString("temporaryLocationId"));
+  }
+
+  @Test
+  public void mergeHoldingsRecords_shouldPreserveAcquisitionFieldsFromExisting() {
+    // given
+    JsonObject existing = new JsonObject()
+      .put("id", "holding-1")
+      .put("acquisitionFormat", "format-1")
+      .put("acquisitionMethod", "method-1")
+      .put("receiptStatus", "status-1")
+      .put("callNumber", "existing-call-number");
+
+    JsonObject mapped = new JsonObject()
+      .put("callNumber", "new-call-number")
+      .put("acquisitionFormat", "format-2")
+      .put("acquisitionMethod", "method-2")
+      .put("receiptStatus", "status-2");
+
+    // when
+    JsonObject result = HoldingsRecordUtil.mergeHoldingsRecords(existing, mapped);
+
+    // then
+    Assert.assertEquals("new-call-number", result.getString("callNumber"));
+    Assert.assertEquals("format-1", result.getString("acquisitionFormat"));
+    Assert.assertEquals("method-1", result.getString("acquisitionMethod"));
+    Assert.assertEquals("status-1", result.getString("receiptStatus"));
+    Assert.assertNotEquals("format-2", result.getString("acquisitionFormat"));
+    Assert.assertNotEquals("method-2", result.getString("acquisitionMethod"));
+    Assert.assertNotEquals("status-2", result.getString("receiptStatus"));
+  }
+
+  @Test
+  public void mergeHoldingsRecords_shouldPreservePolicyFieldsFromExisting() {
+    // given
+    JsonObject existing = new JsonObject()
+      .put("id", "holding-1")
+      .put("illPolicyId", "ill-policy-1")
+      .put("retentionPolicy", "retention-1")
+      .put("digitizationPolicy", "digitization-1")
+      .put("callNumber", "existing-call-number");
+
+    JsonObject mapped = new JsonObject()
+      .put("callNumber", "new-call-number")
+      .put("illPolicyId", "ill-policy-2")
+      .put("retentionPolicy", "retention-2")
+      .put("digitizationPolicy", "digitization-2");
+
+    // when
+    JsonObject result = HoldingsRecordUtil.mergeHoldingsRecords(existing, mapped);
+
+    // then
+    Assert.assertEquals("new-call-number", result.getString("callNumber"));
+    Assert.assertEquals("ill-policy-1", result.getString("illPolicyId"));
+    Assert.assertEquals("retention-1", result.getString("retentionPolicy"));
+    Assert.assertEquals("digitization-1", result.getString("digitizationPolicy"));
+    Assert.assertNotEquals("ill-policy-2", result.getString("illPolicyId"));
+    Assert.assertNotEquals("retention-2", result.getString("retentionPolicy"));
+    Assert.assertNotEquals("digitization-2", result.getString("digitizationPolicy"));
+  }
+
+  @Test
+  public void mergeHoldingsRecords_shouldPreserveNumberOfItemsFromExisting() {
+    // given
+    JsonObject existing = new JsonObject()
+      .put("id", "holding-1")
+      .put("numberOfItems", "10")
+      .put("callNumber", "existing-call-number");
+
+    JsonObject mapped = new JsonObject()
+      .put("callNumber", "new-call-number")
+      .put("numberOfItems", "20");
+
+    // when
+    JsonObject result = HoldingsRecordUtil.mergeHoldingsRecords(existing, mapped);
+
+    // then
+    Assert.assertEquals("new-call-number", result.getString("callNumber"));
+    Assert.assertEquals("10", result.getString("numberOfItems"));
+    Assert.assertNotEquals("20", result.getString("numberOfItems"));
+  }
+
+  @Test
+  public void mergeHoldingsRecords_shouldPreserveAllNewFieldsFromExisting() {
+    // given
+    JsonObject existing = new JsonObject()
+      .put("id", "holding-1")
+      .put("temporaryLocationId", "temp-loc-1")
+      .put("acquisitionFormat", "format-1")
+      .put("acquisitionMethod", "method-1")
+      .put("receiptStatus", "status-1")
+      .put("illPolicyId", "ill-policy-1")
+      .put("retentionPolicy", "retention-1")
+      .put("digitizationPolicy", "digitization-1")
+      .put("numberOfItems", "10")
+      .put("permanentLocationId", "perm-loc-1");
+
+    JsonObject mapped = new JsonObject()
+      .put("temporaryLocationId", "temp-loc-2")
+      .put("acquisitionFormat", "format-2")
+      .put("acquisitionMethod", "method-2")
+      .put("receiptStatus", "status-2")
+      .put("illPolicyId", "ill-policy-2")
+      .put("retentionPolicy", "retention-2")
+      .put("digitizationPolicy", "digitization-2")
+      .put("numberOfItems", "20")
+      .put("permanentLocationId", "perm-loc-2")
+      .put("holdingsTypeId", "type-1");
+
+    // when
+    JsonObject result = HoldingsRecordUtil.mergeHoldingsRecords(existing, mapped);
+
+    // then
+    Assert.assertEquals("holding-1", result.getString("id"));
+    Assert.assertEquals("perm-loc-2", result.getString("permanentLocationId"));
+    Assert.assertEquals("type-1", result.getString("holdingsTypeId"));
+    Assert.assertEquals("temp-loc-1", result.getString("temporaryLocationId"));
+    Assert.assertEquals("format-1", result.getString("acquisitionFormat"));
+    Assert.assertEquals("method-1", result.getString("acquisitionMethod"));
+    Assert.assertEquals("status-1", result.getString("receiptStatus"));
+    Assert.assertEquals("ill-policy-1", result.getString("illPolicyId"));
+    Assert.assertEquals("retention-1", result.getString("retentionPolicy"));
+    Assert.assertEquals("digitization-1", result.getString("digitizationPolicy"));
+    Assert.assertEquals("10", result.getString("numberOfItems"));
+  }
+
+  @Test
+  public void mergeHoldingsRecords_shouldHandleNullNewFieldsInExisting() {
+    // given
+    JsonObject existing = new JsonObject()
+      .put("id", "holding-1")
+      .put("callNumber", "existing-call-number");
+
+    JsonObject mapped = new JsonObject()
+      .put("callNumber", "new-call-number")
+      .put("temporaryLocationId", "temp-loc-1")
+      .put("acquisitionFormat", "format-1")
+      .put("acquisitionMethod", "method-1")
+      .put("receiptStatus", "status-1")
+      .put("illPolicyId", "ill-policy-1")
+      .put("retentionPolicy", "retention-1")
+      .put("digitizationPolicy", "digitization-1")
+      .put("numberOfItems", "10");
+
+    // when
+    JsonObject result = HoldingsRecordUtil.mergeHoldingsRecords(existing, mapped);
+
+    // then
+    Assert.assertEquals("new-call-number", result.getString("callNumber"));
+    Assert.assertNull(result.getString("temporaryLocationId"));
+    Assert.assertNull(result.getString("acquisitionFormat"));
+    Assert.assertNull(result.getString("acquisitionMethod"));
+    Assert.assertNull(result.getString("receiptStatus"));
+    Assert.assertNull(result.getString("illPolicyId"));
+    Assert.assertNull(result.getString("retentionPolicy"));
+    Assert.assertNull(result.getString("digitizationPolicy"));
+    Assert.assertNull(result.getString("numberOfItems"));
   }
 }

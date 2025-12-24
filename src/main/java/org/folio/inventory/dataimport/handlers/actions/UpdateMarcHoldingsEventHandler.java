@@ -188,23 +188,19 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
 
   private Future<HoldingsRecord> processHolding(Holdings holdings, Context context, DataImportEventPayload payload) {
     var holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
-    HoldingsRecord mappedRecord = Json.decodeValue(Json.encode(JsonObject.mapFrom(holdings)), HoldingsRecord.class);
     Promise<HoldingsRecord> promise = Promise.promise();
-    holdingsRecordCollection.findById(mappedRecord.getId()).thenAccept(actualRecord -> {
+    holdingsRecordCollection.findById(holdings.getId()).thenAccept(actualRecord -> {
       if (actualRecord == null) {
-        promise.fail(new EventProcessingException(format(HOLDING_NOT_FOUND_ERROR_MESSAGE, mappedRecord.getId())));
+        promise.fail(new EventProcessingException(format(HOLDING_NOT_FOUND_ERROR_MESSAGE, holdings.getId())));
         return;
       }
-
-      mappedRecord.setVersion(actualRecord.getVersion());
-      holdingsRecordCollection.update(mappedRecord,
+      var holdingsRecord = HoldingsUpdateDelegate.mergeRecords(actualRecord, holdings, holdings.getSourceId());
+      holdingsRecordCollection.update(holdingsRecord,
         success -> {
-          holdings.setVersion(mappedRecord.getVersion());
-          holdings.setInstanceId(mappedRecord.getInstanceId());
-          payload.getContext().put(HOLDINGS.value(), Json.encode(holdings));
-          promise.complete(mappedRecord);
+          payload.getContext().put(HOLDINGS.value(), Json.encode(holdingsRecord));
+          promise.complete(holdingsRecord);
         },
-        failure -> failureUpdateHandler(payload, mappedRecord.getId(), holdingsRecordCollection, promise, failure));
+        failure -> failureUpdateHandler(payload, holdings.getId(), holdingsRecordCollection, promise, failure));
     });
     return promise.future();
   }
