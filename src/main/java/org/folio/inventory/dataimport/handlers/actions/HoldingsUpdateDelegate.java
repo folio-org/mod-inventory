@@ -77,7 +77,7 @@ public class HoldingsUpdateDelegate {
            : JsonObject.mapFrom(parsedRecord.getContent());
   }
 
-  private HoldingsRecord mergeRecords(HoldingsRecord existingRecord, Holdings mappedRecord, String sourceId) {
+  public static HoldingsRecord mergeRecords(HoldingsRecord existingRecord, Holdings mappedRecord, String sourceId) {
     try {
       mappedRecord.setId(existingRecord.getId());
       mappedRecord.setVersion(existingRecord.getVersion());
