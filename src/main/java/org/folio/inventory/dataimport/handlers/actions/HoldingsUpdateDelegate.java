@@ -82,6 +82,9 @@ public class HoldingsUpdateDelegate {
       mappedRecord.setId(existingRecord.getId());
       mappedRecord.setVersion(existingRecord.getVersion());
       mappedRecord.setSourceId(sourceId);
+      if (mappedRecord.getInstanceId() == null) {
+        mappedRecord.setInstanceId(existingRecord.getInstanceId());
+      }
       var existing = new JsonObject(MAPPER.writeValueAsString(existingRecord));
       var mapped = new JsonObject(MAPPER.writeValueAsString(mappedRecord));
       var merged = HoldingsRecordUtil.mergeHoldingsRecords(existing, mapped);
