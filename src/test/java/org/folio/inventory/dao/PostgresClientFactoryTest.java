@@ -5,7 +5,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.pgclient.PgConnectOptions;
-import io.vertx.pgclient.PgPool;
+import io.vertx.sqlclient.Pool;
 import io.vertx.pgclient.SslMode;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.common.dao.PostgresConnectionOptions;
@@ -60,7 +60,7 @@ public class PostgresClientFactoryTest {
   public void shouldCreateCachedPool() {
     PostgresClientFactory postgresClientFactory =
       new PostgresClientFactory(vertx);
-    PgPool cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
+    Pool cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
 
     assertNotNull(cachedPool);
   }
@@ -69,8 +69,8 @@ public class PostgresClientFactoryTest {
   public void shouldReturnPgPoolFromCache() {
     PostgresClientFactory postgresClientFactory =
       new PostgresClientFactory(vertx);
-    PgPool cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
-    PgPool poolFromCache = postgresClientFactory.getCachedPool(TENANT_ID);
+    Pool cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
+    Pool poolFromCache = postgresClientFactory.getCachedPool(TENANT_ID);
     assertNotNull(cachedPool);
     assertNotNull(poolFromCache);
     assertEquals(cachedPool, poolFromCache);
@@ -80,9 +80,9 @@ public class PostgresClientFactoryTest {
   public void shouldResetPgPoolCache() {
     PostgresClientFactory postgresClientFactory =
       new PostgresClientFactory(vertx);
-    PgPool cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
+    Pool cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
     postgresClientFactory.setShouldResetPool(true);
-    PgPool poolFromCache = postgresClientFactory.getCachedPool(TENANT_ID);
+    Pool poolFromCache = postgresClientFactory.getCachedPool(TENANT_ID);
     assertNotNull(cachedPool);
     assertNotNull(poolFromCache);
     assertNotEquals(cachedPool, poolFromCache);
