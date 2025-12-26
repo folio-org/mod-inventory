@@ -181,9 +181,9 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.github.tomakehurst</groupId>
-      <artifactId>wiremock-jre8</artifactId>
-      <version>3.0.1</version>
+      <groupId> org.wiremock</groupId>
+      <artifactId>wiremock</artifactId>
+      <version>3.13.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -299,12 +299,12 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <vertx.version>4.5.13</vertx.version>
+    <vertx.version>5.0.5</vertx.version>
     <jsonschema2pojo_output_dir>${project.build.directory}/generated-sources/jsonschema2pojo</jsonschema2pojo_output_dir>
     <httpcomponents.version>4.5.14</httpcomponents.version>
-    <lombok.version>1.18.30</lombok.version>
-    <postgres.version>42.7.2</postgres.version>
-    <liquibase.version>4.9.1</liquibase.version>
+    <lombok.version>1.18.42</lombok.version>
+    <postgres.version>42.7.8</postgres.version>
+    <liquibase.version>5.0.1</liquibase.version>
     <kafkaclients.version>3.9.1</kafkaclients.version>
     <junit.version>4.13.2</junit.version>
     <data-import-processing-core.version>4.5.0-SNAPSHOT</data-import-processing-core.version>
@@ -495,13 +495,16 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.22.2</version>
+        <version>3.5.4</version>
         <configuration>
           <!-- TODO: update to version 3.0.0 and remove useSystemClassLoader
                https://issues.folio.org/browse/FOLIO-1609
                https://issues.apache.org/jira/browse/SUREFIRE-1588
           -->
           <useSystemClassLoader>false</useSystemClassLoader>
+          <systemPropertyVariables>
+            <api.version>1.44</api.version>
+          </systemPropertyVariables>
           <excludes>
             <exclude>**/api/**Examples.class</exclude>
           </excludes>

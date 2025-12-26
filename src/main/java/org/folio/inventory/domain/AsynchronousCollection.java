@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+import io.vertx.core.Future;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
@@ -58,6 +59,8 @@ public interface AsynchronousCollection<T> {
   void update(T item,
               Consumer<Success<Void>> completionCallback,
               Consumer<Failure> failureCallback);
+
+  Future<T> updateAsync(final T item);
 
   default CompletableFuture<T> update(final T item) {
     final CompletableFuture<T> future = new CompletableFuture<>();

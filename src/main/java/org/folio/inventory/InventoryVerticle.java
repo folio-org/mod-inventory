@@ -2,6 +2,9 @@ package org.folio.inventory;
 
 import java.lang.invoke.MethodHandles;
 
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebRequestDiagnostics;
@@ -25,10 +28,6 @@ import org.folio.inventory.resources.TenantItems;
 import org.folio.inventory.resources.UpdateOwnershipApi;
 import org.folio.inventory.storage.Storage;
 
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
@@ -77,33 +76,31 @@ public class InventoryVerticle extends AbstractVerticle {
     new UpdateOwnershipApi(storage, client, consortiumService, snapshotService, new InventoryClientFactoryImpl()).register(router);
     new TenantItems(client).register(router);
 
-    Handler<AsyncResult<HttpServer>> onHttpServerStart = result -> {
-      if (result.succeeded()) {
-        log.info("Listening on {}", server.actualPort());
-        started.complete();
-      } else {
-        started.fail(result.cause());
-      }
-    };
-
     server.requestHandler(router)
-      .listen(config.getInteger("port"), onHttpServerStart);
+      .listen(config.getInteger("port"))
+      .onSuccess(httpServer -> {
+        log.info("Listening on {}", httpServer.actualPort());
+        started.complete();
+      })
+      .onFailure(started::fail);
   }
 
   @Override
   public void stop(Promise<Void> stopped) {
     final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
-
-    PostgresClientFactory.closeAll();
-
-    log.info("Stopping inventory module");
-    server.close(result -> {
-      if (result.succeeded()) {
-        log.info("Inventory module stopped");
-        stopped.complete();
-      } else {
-        stopped.fail(result.cause());
-      }
-    });
+    log.info("Stopping inventory module...");
+    Future<Void> dbCloseFuture = PostgresClientFactory.closeAll();
+    Future<Void> serverCloseFuture = server.close();
+    Future.all(dbCloseFuture, serverCloseFuture)
+      .mapEmpty()
+      .onComplete(ar -> {
+        if (ar.succeeded()) {
+          log.info("Inventory module and all resources stopped successfully.");
+          stopped.complete();
+        } else {
+          log.error("Failed to stop inventory module cleanly", ar.cause());
+          stopped.fail(ar.cause());
+        }
+      });
   }
 }

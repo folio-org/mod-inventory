@@ -3,7 +3,7 @@ package org.folio.inventory.common.dao;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.pgclient.PgConnectOptions;
-import io.vertx.pgclient.PgPool;
+import io.vertx.sqlclient.Pool;
 import io.vertx.sqlclient.PreparedQuery;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
@@ -14,14 +14,16 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.folio.inventory.common.dao.PostgresConnectionOptions.convertToPsqlStandard;
 
 public class PostgresClientFactory {
   private static final Logger LOGGER = LogManager.getLogger(PostgresClientFactory.class);
 
-  private static final Map<String, PgPool> POOL_CACHE = new HashMap<>();
+  private static final Map<String, Pool> POOL_CACHE = new HashMap<>();
 
   /**
    * Such field is temporary solution which is used to allow resetting the pool in tests.
@@ -35,12 +37,12 @@ public class PostgresClientFactory {
   }
 
   /**
-   * Get {@link PgPool}.
+   * Get {@link Pool}.
    *
    * @param tenantId tenant id.
    * @return pooled database client.
    */
-  public PgPool getCachedPool(String tenantId) {
+  public Pool getCachedPool(String tenantId) {
     return getCachedPool(this.vertx, tenantId);
   }
 
@@ -56,7 +58,7 @@ public class PostgresClientFactory {
     return future.compose(x -> preparedQuery(sql, tenantId).execute(tuple));
   }
 
-  private PgPool getCachedPool(Vertx vertx, String tenantId) {
+  private Pool getCachedPool(Vertx vertx, String tenantId) {
     // assumes a single thread Vert.x model so no synchronized needed
     if (POOL_CACHE.containsKey(tenantId) && !shouldResetPool) {
       LOGGER.debug("Using existing database connection pool for tenant {}.", tenantId);
@@ -70,7 +72,7 @@ public class PostgresClientFactory {
     PgConnectOptions connectOptions = PostgresConnectionOptions.getConnectionOptions(tenantId);
     PoolOptions poolOptions = new PoolOptions()
       .setMaxSize(PostgresConnectionOptions.getMaxPoolSize());
-    PgPool pgPool = PgPool.pool(vertx, connectOptions, poolOptions);
+    Pool pgPool = Pool.pool(vertx, connectOptions, poolOptions);
     POOL_CACHE.put(tenantId, pgPool);
 
     return pgPool;
@@ -83,11 +85,20 @@ public class PostgresClientFactory {
   }
 
   /**
-   * close all {@link PgPool} clients.
+   * close all {@link Pool} clients.
    */
-  public static void closeAll() {
-    POOL_CACHE.values().forEach(SqlClient::close);
-    POOL_CACHE.clear();
+  public static Future<Void> closeAll() {
+    List<Future<?>> closeFutures = POOL_CACHE.values()
+      .stream()
+      .map(SqlClient::close)
+      .collect(Collectors.toList());
+
+    return Future.all(closeFutures)
+      .onSuccess(v -> {
+        POOL_CACHE.clear();
+        LOGGER.info("All SQL pools closed and cache cleared.");
+      })
+      .mapEmpty();
   }
 
   /**
