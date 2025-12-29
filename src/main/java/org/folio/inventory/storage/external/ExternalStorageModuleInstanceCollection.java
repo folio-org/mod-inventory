@@ -5,18 +5,15 @@ import static org.apache.http.HttpStatus.SC_CREATED;
 import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.ext.web.client.HttpResponse;
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
@@ -87,37 +84,44 @@ class ExternalStorageModuleInstanceCollection
       .put("instances", new JsonArray(jsonList))
       .put("totalRecords", jsonList.size());
 
-    final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
-
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.postAbs(batchAddress));
+    request.sendJsonObject(batchRequest)
+      .onSuccess(httpResponse -> {
+        Response response = new Response(httpResponse.statusCode(), httpResponse.bodyAsString(),
+          httpResponse.getHeader("Content-Type"), httpResponse.getHeader("Location"));
 
-    request.sendJsonObject(batchRequest, futureResponse::complete);
-
-    futureResponse
-      .thenCompose(this::mapAsyncResultToCompletionStage)
-      .thenAccept(response -> {
         if (isBatchResponse(response)) {
           try {
             JsonObject batchResponse = response.getJson();
             JsonArray createdInstances = batchResponse.getJsonArray("instances");
+            JsonArray errorMessagesArray = batchResponse.getJsonArray("errorMessages");
 
             List<Instance> instancesList = new ArrayList<>();
             for (int i = 0; i < createdInstances.size(); i++) {
               instancesList.add(mapFromJson(createdInstances.getJsonObject(i)));
             }
+
+            List<String> errorMessages = errorMessagesArray.stream()
+              .filter(String.class::isInstance)
+              .map(String.class::cast)
+              .toList();
+
             BatchResult<Instance> batchResult = new BatchResult<>();
             batchResult.setBatchItems(instancesList);
-            batchResult.setErrorMessages(batchResponse.getJsonArray("errorMessages").getList());
+            batchResult.setErrorMessages(errorMessages);
 
             resultCallback.accept(new Success<>(batchResult));
           } catch (Exception e) {
-            LOGGER.error(e);
+            LOGGER.error("Failed to parse successful batch response", e);
             failureCallback.accept(new Failure(e.getMessage(), response.getStatusCode()));
           }
-
         } else {
           failureCallback.accept(new Failure(response.getBody(), response.getStatusCode()));
         }
+      })
+      .onFailure(error -> {
+        LOGGER.error("Request for batch add failed to send", error);
+        failureCallback.accept(new Failure(error.getMessage(), -1));
       });
   }
 
@@ -175,7 +179,7 @@ class ExternalStorageModuleInstanceCollection
 
   private SynchronousHttpClient getSynchronousHttpClient(Context context) throws MalformedURLException {
     if (httpClient == null) {
-      httpClient = new SynchronousHttpClient(new URL(context.getOkapiLocation()), tenant, token, context.getUserId(), null, null);
+      httpClient = new SynchronousHttpClient(URI.create(context.getOkapiLocation()).toURL(), tenant, token, context.getUserId(), null, null);
     }
 
     return httpClient;

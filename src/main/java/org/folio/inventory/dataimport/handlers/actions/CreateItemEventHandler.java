@@ -1,6 +1,5 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
@@ -127,7 +126,7 @@ public class CreateItemEventHandler implements EventHandler {
       }
 
       dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-      dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
+      dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
       dataImportEventPayload.getContext().put(ITEM.value(), new JsonArray().encode());
 
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
@@ -153,7 +152,7 @@ public class CreateItemEventHandler implements EventHandler {
             LOGGER.trace(format("handle:: Mapped items: %s", mappedItemList.encode()));
             Promise<List<Item>> createMultipleItemsPromise = Promise.promise();
             List<PartialError> multipleItemsCreateErrors = new ArrayList<>();
-            List<Future> createItemsFutures = new ArrayList<>();
+            List<Future<?>> createItemsFutures = new ArrayList<>();
             List<Item> createdItems = new ArrayList<>();
 
             mappedItemList.forEach(e -> {
@@ -180,7 +179,7 @@ public class CreateItemEventHandler implements EventHandler {
               createItemsFutures.add(createItemPromise.future());
             });
 
-            CompositeFuture.all(createItemsFutures).onComplete(ar -> {
+            Future.all(createItemsFutures).onComplete(ar -> {
               if (payloadContext.containsKey(ERRORS) || !multipleItemsCreateErrors.isEmpty()) {
                 payloadContext.put(ERRORS, Json.encode(multipleItemsCreateErrors));
               }

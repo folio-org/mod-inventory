@@ -15,8 +15,7 @@ public class WebRequestDiagnostics {
 
   public static void outputDiagnostics(RoutingContext routingContext) {
 
-    log.info(String.format("Handling %s %s", routingContext.request().method().name(),
-      routingContext.normalisedPath()));
+    log.info("Handling {} {}", routingContext.request().method().name(), routingContext.normalizedPath());
 
     outputHeaders(routingContext);
 

@@ -8,7 +8,6 @@ import io.vertx.sqlclient.PreparedQuery;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
-import io.vertx.sqlclient.PoolOptions;
 import io.vertx.sqlclient.SqlClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -70,9 +69,7 @@ public class PostgresClientFactory {
     }
     LOGGER.info("Creating new database connection pool for tenant {}.", tenantId);
     PgConnectOptions connectOptions = PostgresConnectionOptions.getConnectionOptions(tenantId);
-    PoolOptions poolOptions = new PoolOptions()
-      .setMaxSize(PostgresConnectionOptions.getMaxPoolSize());
-    Pool pgPool = Pool.pool(vertx, connectOptions, poolOptions);
+    Pool pgPool = Pool.pool(vertx, connectOptions, PostgresConnectionOptions.getPoolOptions());
     POOL_CACHE.put(tenantId, pgPool);
 
     return pgPool;

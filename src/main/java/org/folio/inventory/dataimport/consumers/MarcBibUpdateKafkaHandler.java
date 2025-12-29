@@ -105,33 +105,23 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
       headers.get(OKAPI_USER_ID), headers.get(OKAPI_REQUEST_ID));
     Record marcBibRecord = instanceEvent.getRecord();
     var jobId = instanceEvent.getJobId();
-    Promise<Instance> promise = Promise.promise();
-    io.vertx.core.Context vertxContext = Vertx.currentContext();
 
+    io.vertx.core.Context vertxContext = Vertx.currentContext();
     if(vertxContext == null) {
       return Future.failedFuture("handle:: operation must be executed by a Vertx thread");
     }
 
-    vertxContext.owner().executeBlocking(
-      () -> {
-        var mappingMetadataDto =
-          mappingMetadataCache.getByRecordTypeBlocking(jobId, context, MARC_BIB_RECORD_TYPE)
-            .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobId)));
-        ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto);
-        return instanceUpdateDelegate.handleBlocking(metaDataPayload, marcBibRecord, context);
-      },
-      r -> {
-        if (r.failed()) {
-          LOGGER.warn("handle:: Error during instance update", r.cause());
-          promise.fail(r.cause());
-        } else {
-          LOGGER.debug("handle:: Instance update was successful");
-          promise.complete(r.result());
+    return vertxContext.owner().executeBlocking(
+        () -> {
+          var mappingMetadataDto =
+            mappingMetadataCache.getByRecordTypeBlocking(jobId, context, MARC_BIB_RECORD_TYPE)
+              .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobId)));
+          ensureEventPayloadWithMappingMetadata(metaDataPayload, mappingMetadataDto);
+          return instanceUpdateDelegate.handleBlocking(metaDataPayload, marcBibRecord, context);
         }
-      }
-    );
-
-    return promise.future();
+      )
+      .onSuccess(result -> LOGGER.debug("handle:: Instance update was successful"))
+      .onFailure(error -> LOGGER.warn("handle:: Error during instance update", error));
   }
 
   private void processUpdateResult(AsyncResult<Instance> result,
@@ -190,8 +180,8 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
       var kafkaRecord = createKafkaProducerRecord(linkUpdateReport, kafkaHeaders);
       var producer = createProducer(LINKS_STATS.fullTopicName(linkUpdateReport.getTenant()), kafkaConfig);
       producer.send(kafkaRecord)
-        .eventually(() -> producer.flush())
-        .eventually(() -> producer.close())
+        .eventually(producer::flush)
+        .eventually(producer::close)
         .onSuccess(res -> LOGGER.info("Event with type {}, jobId {} was sent to kafka", LINKS_STATS.topicName(), linkUpdateReport.getJobId()))
         .onFailure(err -> {
           var cause = err.getCause();
