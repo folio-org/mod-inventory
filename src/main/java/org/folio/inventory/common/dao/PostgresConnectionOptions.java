@@ -1,10 +1,12 @@
 package org.folio.inventory.common.dao;
 
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.net.ClientSSLOptions;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.SslMode;
 import io.vertx.sqlclient.PoolOptions;
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 
 import static java.lang.String.format;
@@ -31,6 +33,13 @@ public class PostgresConnectionOptions {
   public static final String DB_SERVER_PEM = "DB_SERVER_PEM";
   public static final String DB_IDLETIMEOUT = "DB_IDLETIMEOUT";
 
+  /**
+   * -- SETTER --
+   *  For test usage only.
+   *
+   * @param newSystemProperties Map of system properties to set.
+   */
+  @Setter
   private static Map<String, String> systemProperties = System.getenv();
 
   private PostgresConnectionOptions() {
@@ -65,10 +74,12 @@ public class PostgresConnectionOptions {
 
     if (StringUtils.isNotBlank(getSystemProperty(DB_SERVER_PEM))) {
       pgConnectionOptions.setSslMode(SslMode.VERIFY_FULL);
-      pgConnectionOptions.getSslOptions()
+
+      ClientSSLOptions sslClientOptions = new ClientSSLOptions()
         .setHostnameVerificationAlgorithm("HTTPS")
         .setTrustOptions(new PemTrustOptions().addCertValue(Buffer.buffer(getSystemProperty(DB_SERVER_PEM))))
         .setEnabledSecureTransportProtocols(Set.of("TLSv1.3"));
+      pgConnectionOptions.setSslOptions(sslClientOptions);
       //pgConnectionOptions.setOpenSslEngineOptions(new OpenSSLEngineOptions());
     }
     if (StringUtils.isNotBlank(tenantId)) {
@@ -102,12 +113,4 @@ public class PostgresConnectionOptions {
     return format("%s_%s", tenantId.toLowerCase(), MODULE_NAME);
   }
 
-  /**
-   * For test usage only.
-   *
-   * @param newSystemProperties Map of system properties to set.
-   */
-  public static void setSystemProperties(Map<String, String> newSystemProperties) {
-    systemProperties = newSystemProperties;
-  }
 }
