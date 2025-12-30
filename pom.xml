@@ -502,9 +502,9 @@
                https://issues.apache.org/jira/browse/SUREFIRE-1588
           -->
           <useSystemClassLoader>false</useSystemClassLoader>
-          <systemPropertyVariables>
-            <api.version>1.44</api.version>
-          </systemPropertyVariables>
+<!--          <systemPropertyVariables>-->
+<!--            <api.version>1.44</api.version>-->
+<!--          </systemPropertyVariables>-->
           <excludes>
             <exclude>**/api/**Examples.class</exclude>
           </excludes>
