@@ -162,8 +162,8 @@ public class QuickMarcKafkaHandler implements AsyncRecordHandler<String, String>
     Promise<Boolean> promise = Promise.promise();
     producer.send(producerRecord)
       .<Void>mapEmpty()
-      .eventually(v -> producer.flush())
-      .eventually(v -> producer.close())
+      .eventually(producer::flush)
+      .eventually(producer::close)
       .onSuccess(res -> {
         LOGGER.info("Event with type: {} was sent to kafka", eventType);
         promise.complete(true);

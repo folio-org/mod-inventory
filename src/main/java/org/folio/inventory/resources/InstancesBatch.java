@@ -58,7 +58,7 @@ public class InstancesBatch extends AbstractInstances {
    */
   private void createBatch(RoutingContext routingContext) {
     WebContext webContext = new WebContext(routingContext);
-    JsonObject requestBody = routingContext.getBodyAsJson();
+    JsonObject requestBody = routingContext.body().asJsonObject();
     JsonArray instanceCollection = requestBody.getJsonArray(BATCH_RESPONSE_FIELD_INSTANCES, new JsonArray());
     log.info("Received batch of Instances, size:" + instanceCollection.size());
 
@@ -204,7 +204,7 @@ public class InstancesBatch extends AbstractInstances {
       Map<String, Instance> mapInstanceById = newInstances.stream()
         .collect(Collectors.toMap(instance -> instance.getString("id"), Instance::fromJson));
 
-      List<Future> updateRelationshipsFutures = new ArrayList<>();
+      List<Future<?>> updateRelationshipsFutures = new ArrayList<>();
       for (Instance createdInstance : createdInstances) {
         Instance newInstance = mapInstanceById.get(createdInstance.getId());
         if (newInstance != null) {
@@ -225,7 +225,7 @@ public class InstancesBatch extends AbstractInstances {
             });
         }
       }
-      return CompositeFuture.join(updateRelationshipsFutures);
+      return Future.join(updateRelationshipsFutures);
     } catch (IllegalStateException e) {
       log.error("Can not update instances relationships cause: " + e);
       return Future.failedFuture(e);

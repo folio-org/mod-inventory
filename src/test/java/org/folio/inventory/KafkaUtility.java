@@ -1,6 +1,6 @@
 package org.folio.inventory;
 
-import liquibase.repackaged.org.apache.commons.collections4.IteratorUtils;
+import org.apache.commons.collections4.IteratorUtils;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
