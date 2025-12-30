@@ -7,19 +7,18 @@ import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
+import lombok.Getter;
 import support.fakes.processors.StorageConstraintsProcessors;
 import support.fakes.processors.StorageRecordPreProcessors;
 
 public class FakeOkapi extends AbstractVerticle {
   private static final int PORT_TO_USE = 9493;
+
+  @Getter
   private static final String address =
     String.format("http://localhost:%s", PORT_TO_USE);
 
   private HttpServer server;
-
-  public static String getAddress() {
-    return address;
-  }
 
   @Override
   public void start(Promise<Void> startFuture) {
@@ -49,14 +48,12 @@ public class FakeOkapi extends AbstractVerticle {
     registerFakeHoldingSourcesModule(router);
 
     server.requestHandler(router)
-      .listen(PORT_TO_USE, result -> {
-        if (result.succeeded()) {
-          System.out.printf("Fake Okapi listening on %s%n", server.actualPort());
-          startFuture.complete();
-        } else {
-          startFuture.fail(result.cause());
-        }
-      });
+      .listen(PORT_TO_USE)
+      .onSuccess(httpServer -> {
+        System.out.printf("Fake Okapi listening on %s%n", server.actualPort());
+        startFuture.complete();
+      })
+      .onFailure(startFuture::fail);
   }
 
   @Override
@@ -64,14 +61,14 @@ public class FakeOkapi extends AbstractVerticle {
     System.out.println("Stopping fake modules");
 
     if (server != null) {
-      server.close(result -> {
-        if (result.succeeded()) {
+      server.close()
+        .onSuccess(v -> {
           System.out.printf("Stopped listening on %s%n", server.actualPort());
           stopFuture.complete();
-        } else {
-          stopFuture.fail(result.cause());
-        }
-      });
+        })
+        .onFailure(throwable -> {
+          stopFuture.fail(throwable);
+        });
     }
   }
 
