@@ -235,6 +235,10 @@
           <groupId>xerces</groupId>
           <artifactId>xmlParserAPIs</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>com.ongres.scram</groupId>
+          <artifactId>client</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -285,6 +289,11 @@
       <artifactId>vertx-pg-client</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.ongres.scram</groupId>
+      <artifactId>scram-client</artifactId>
+      <version>3.2</version>
+    </dependency>
+    <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <version>${postgres.version}</version>
@@ -299,7 +308,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <vertx.version>4.5.13</vertx.version>
+    <vertx.version>4.5.23</vertx.version>
     <jsonschema2pojo_output_dir>${project.build.directory}/generated-sources/jsonschema2pojo</jsonschema2pojo_output_dir>
     <httpcomponents.version>4.5.14</httpcomponents.version>
     <lombok.version>1.18.30</lombok.version>
