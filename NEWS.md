@@ -1,4 +1,4 @@
-## 21.1.17 2025-12-15
+## 21.1.17 2026-01-05
 * Cannot Create/Edit MARC holdings record on ECS Sunflower environments (Bugfest, Mobius DR) [MODINV-1327](https://folio-org.atlassian.net/browse/MODINV-1327)
 
 ## 21.1.16 2025-12-15
