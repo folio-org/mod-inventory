@@ -1,3 +1,6 @@
+## 21.1.17 2025-12-15
+* Cannot Create/Edit MARC holdings record on ECS Sunflower environments (Bugfest, Mobius DR) [MODINV-1327](https://folio-org.atlassian.net/browse/MODINV-1327)
+
 ## 21.1.16 2025-12-15
 * Fix deserialization error for location entity [MODINV-1318](https://folio-org.atlassian.net/browse/MODINV-1318)
 
