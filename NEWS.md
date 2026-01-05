@@ -16,6 +16,7 @@
 * Fix sending links.instance-authority-stats event to a tenant-specific instead of tenant-collection topic [MODINV-1311](https://folio-org.atlassian.net/browse/MODINV-1311)
 * Fix sending links.instance-authority-stats event to a tenant-specific instead of tenant-collection topic [MODINV-1311](https://folio-org.atlassian.net/browse/MODINV-1311)
 * Fix statisticalCodeIds and administrativeNotes fields are cleared after update [MODINV-1323](https://folio-org.atlassian.net/browse/MODINV-1323)
+* Cannot Create/Edit MARC holdings record on ECS Sunflower environments (Bugfest, Mobius DR) [MODINV-1327](https://folio-org.atlassian.net/browse/MODINV-1327)
 
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)
