@@ -497,7 +497,6 @@
             </goals>
             <configuration>
               <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                   <manifestEntries>
                     <Main-Class>org.folio.inventory.Launcher</Main-Class>
@@ -521,9 +520,9 @@
                https://issues.apache.org/jira/browse/SUREFIRE-1588
           -->
           <useSystemClassLoader>false</useSystemClassLoader>
-          <systemPropertyVariables>
-            <api.version>1.44</api.version>
-          </systemPropertyVariables>
+<!--          <systemPropertyVariables>-->
+<!--            <api.version>1.44</api.version>-->
+<!--          </systemPropertyVariables>-->
           <excludes>
             <exclude>**/api/**Examples.class</exclude>
           </excludes>
