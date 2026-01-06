@@ -37,7 +37,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
@@ -216,60 +215,47 @@ public class CreateHoldingEventHandler implements EventHandler {
     holdingAsJson.put(INSTANCE_ID_FIELD, instanceId);
   }
 
-  private Future<List<HoldingsRecord>> addHoldings(List<HoldingsRecord> holdingsList,
-                                                   HashMap<String, String> payloadContext,
-                                                   Context context) {
-    if (holdingsList.isEmpty()) {
-      return Future.succeededFuture(new ArrayList<>());
-    }
+  private Future<List<HoldingsRecord>> addHoldings(List<HoldingsRecord> holdingsList, HashMap<String, String> payloadContext, Context context) {
+    Promise<List<HoldingsRecord>> holdingsPromise = Promise.promise();
+    List<HoldingsRecord> createdHoldingsRecord = new ArrayList<>();
+    List<PartialError> errors = new ArrayList<>();
+    List<Future<?>> createHoldingsRecordFutures = new ArrayList<>();
 
     HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
-    List<Future<?>> createFutures = holdingsList.stream()
-      .map(holdings -> createHoldingRecord(holdings, holdingsRecordCollection))
-      .collect(Collectors.toList());
-
-    return Future.join(createFutures)
-      .compose(joinResult -> {
-        List<HoldingsRecord> createdHoldingsRecord = new ArrayList<>();
-        List<PartialError> errors = new ArrayList<>();
-
-        for (int i = 0; i < joinResult.size(); i++) {
-          if (joinResult.succeeded(i)) {
-            createdHoldingsRecord.add(joinResult.resultAt(i));
+    holdingsList.forEach(holdings -> {
+      LOGGER.debug(format("addHoldings:: Trying to add holdings with id: %s", holdings.getId()));
+      Promise<Void> createPromise = Promise.promise();
+      createHoldingsRecordFutures.add(createPromise.future());
+      holdingsRecordCollection.add(holdings,
+        success -> {
+          createdHoldingsRecord.add(success.getResult());
+          createPromise.complete();
+        },
+        failure -> {
+          errors.add(new PartialError(holdings.getId() != null ? holdings.getId() : BLANK, failure.getReason()));
+          if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
+            LOGGER.info("addHoldings:: Duplicated event received by Holding id: {}. Ignoring...", holdings.getId());
+            createPromise.fail(new DuplicateEventException(format("Duplicated event by Holding id: %s", holdings.getId())));
           } else {
-            Throwable cause = joinResult.cause(i);
-            if (cause instanceof HoldingsCreationException) {
-              errors.add(((HoldingsCreationException) cause).getError());
-            }
+            LOGGER.warn(format("addHoldings:: Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+            createPromise.complete();
           }
-        }
-
+        });
+    });
+    Future.all(createHoldingsRecordFutures).onComplete(ar -> {
+      if (ar.succeeded()) {
         String errorsAsStringJson = Json.encode(errors);
-        payloadContext.put(ERRORS, errorsAsStringJson);
         if (!createdHoldingsRecord.isEmpty()) {
-          return Future.succeededFuture(createdHoldingsRecord);
+          payloadContext.put(ERRORS, errorsAsStringJson);
+          holdingsPromise.complete(createdHoldingsRecord);
         } else {
-          return Future.failedFuture(errorsAsStringJson);
+          holdingsPromise.fail(errorsAsStringJson);
         }
-      });
-  }
-
-  private Future<HoldingsRecord> createHoldingRecord(HoldingsRecord holdings,
-                                                     HoldingsRecordCollection holdingsRecordCollection) {
-    Promise<HoldingsRecord> promise = Promise.promise();
-    holdingsRecordCollection.add(holdings,
-      success -> promise.complete(success.getResult()),
-      failure -> {
-        PartialError error = new PartialError(holdings.getId() != null ? holdings.getId() : BLANK, failure.getReason());
-        if (isNotBlank(failure.getReason()) && failure.getReason().contains(UNIQUE_ID_ERROR_MESSAGE)) {
-          LOGGER.info("addHoldings:: Duplicated event received by Holding id: {}. Ignoring...", holdings.getId());
-          promise.fail(new DuplicateEventException(format("Duplicated event by Holding id: %s", holdings.getId())));
-        } else {
-          LOGGER.warn("addHoldings:: Error posting Holdings cause {}, status code {}", failure.getReason(), failure.getStatusCode());
-          promise.fail(new HoldingsCreationException(error));
-        }
-      });
-    return promise.future();
+      } else {
+        holdingsPromise.fail(ar.cause());
+      }
+    });
+    return holdingsPromise.future();
   }
 
   @Getter

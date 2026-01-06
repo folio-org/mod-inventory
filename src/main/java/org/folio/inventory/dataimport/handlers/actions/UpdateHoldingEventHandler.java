@@ -123,100 +123,78 @@ public class UpdateHoldingEventHandler implements EventHandler {
 
       mappingMetadataCache.get(jobExecutionId, context)
         .map(parametersOptional -> parametersOptional
-          .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MESSAGE, jobExecutionId, recordId, chunkId))))
+          .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MESSAGE, jobExecutionId,
+            recordId, chunkId))))
         .onSuccess(mappingMetadataDto -> {
           prepareEvent(dataImportEventPayload);
           MappingParameters mappingParameters = Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
           MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
 
           List<HoldingsRecord> updatedHoldingsRecord = new ArrayList<>();
+          List<Future<?>> updatedHoldingsRecordFutures = new ArrayList<>();
           isPayloadConstructed = false;
           convertHoldings(dataImportEventPayload);
           List<HoldingsRecord> list = List.of(Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord[].class));
           LOGGER.trace(format("handle:: Mapped holding: %s", Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()))));
           HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
           List<HoldingsRecord> expiredHoldings = new ArrayList<>();
-
-          List<Future<?>> updateFutures = new ArrayList<>();
           for (HoldingsRecord holding : list) {
-            updateFutures.add(
-              holdingsRecordCollection.updateAsync(holding)
-                .onSuccess(updatedHoldingsRecord::add)
-                .onFailure(err -> {
-                  if (err instanceof io.vertx.core.eventbus.ReplyException re && re.failureCode() == HttpStatus.SC_CONFLICT) {
-                    expiredHoldings.add(holding);
-                  } else {
-                    errors.add(new PartialError(holding.getId() != null ? holding.getId() : BLANK, err.getMessage()));
-                    LOGGER.warn("handle:: " + format(CANNOT_UPDATE_HOLDING_ERROR_MESSAGE, holding.getId(), jobExecutionId, recordId, chunkId, err.getMessage(), (err instanceof io.vertx.core.eventbus.ReplyException re) ? re.failureCode() : -1));
-                  }
-                })
-                .recover(e -> Future.succeededFuture())
-            );
+            Promise<Void> updatePromise = Promise.promise();
+            updatedHoldingsRecordFutures.add(updatePromise.future());
+            holdingsRecordCollection.update(holding,
+              success -> {
+                try {
+                  LOGGER.info(format("handle:: Successfully updated holdings with id: %s", holding.getId()));
+                  updatedHoldingsRecord.add(holding);
+                  constructDataImportEventPayload(updatePromise, dataImportEventPayload, list, context, errors);
+                } catch (Exception e) {
+                  LOGGER.warn("handle:: Error updating inventory Holdings jobExecutionId: '{}' recordId: '{}' chunkId: '{}'", jobExecutionId, recordId, chunkId, e);
+                  future.completeExceptionally(e);
+                }
+              },
+              failure -> {
+                if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
+                  expiredHoldings.add(holding);
+                } else {
+                  errors.add(new PartialError(holding.getId() != null ? holding.getId() : BLANK, failure.getReason()));
+                  LOGGER.warn("handle:: " + format(CANNOT_UPDATE_HOLDING_ERROR_MESSAGE, holding.getId(), jobExecutionId, recordId, chunkId, failure.getReason(), failure.getStatusCode()));
+                }
+                updatePromise.complete();
+              });
           }
-
-          Future.all(updateFutures)
-            .compose(v -> constructDataImportEventPayloadAfterUpdatesAsync(dataImportEventPayload, list, context, errors))
-            .onSuccess(v -> processResults(dataImportEventPayload, updatedHoldingsRecord, expiredHoldings, future, holdingsRecordCollection, errors))
+          Future.all(updatedHoldingsRecordFutures)
+            .onSuccess(ar -> processResults(dataImportEventPayload, updatedHoldingsRecord, expiredHoldings, future, holdingsRecordCollection, errors))
             .onFailure(e -> {
-              LOGGER.warn("handle:: Error in the async processing chain for Holdings update jobExecutionId: '{}' recordId: '{}' chunkId: '{}'", jobExecutionId, recordId, chunkId, e);
+              LOGGER.warn("handle:: Error in composite future for Holdings update jobExecutionId: '{}' recordId: '{}' chunkId: '{}'", jobExecutionId, recordId, chunkId, e);
               future.completeExceptionally(e);
             });
         })
         .onFailure(e -> {
-          LOGGER.warn("handle:: Error getting mapping metadata for Holdings update by jobExecutionId: '{}' recordId: '{}' chunkId: '{}'", jobExecutionId, recordId, chunkId, e);
+          LOGGER.warn("handle:: Error updating inventory Holdings by jobExecutionId: '{}' recordId: '{}' chunkId: '{}'", jobExecutionId, recordId, chunkId, e);
           future.completeExceptionally(e);
         });
     } catch (Exception e) {
-      LOGGER.warn("handle:: A synchronous error occurred for Holdings update jobExecutionId: '{}'", jobExecutionId, e);
+      LOGGER.warn("handle:: Failed to update Holdings jobExecutionId: '{}'", jobExecutionId, e);
       future.completeExceptionally(e);
     }
     return future;
   }
 
-  private Future<Void> constructDataImportEventPayloadAfterUpdatesAsync(DataImportEventPayload dataImportEventPayload, List<HoldingsRecord> holdings, Context context, List<PartialError> errors) {
-    if (!dataImportEventPayload.getContext().containsKey(ITEM.value())) {
-      return Future.succeededFuture();
+  private void constructDataImportEventPayload(Promise<Void> promise, DataImportEventPayload dataImportEventPayload, List<HoldingsRecord> holdings, Context context, List<PartialError> errors) {
+    if (!isPayloadConstructed) {
+      isPayloadConstructed = true;
+      HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
+      payloadContext.put(HOLDINGS.value(), Json.encodePrettily(holdings));
+      if (payloadContext.containsKey(ITEM.value())) {
+        ItemCollection itemCollection = storage.getItemCollection(context);
+        updateDataImportEventPayloadItem(promise, dataImportEventPayload, itemCollection, errors);
+      } else {
+        promise.complete();
+      }
+    } else {
+      promise.complete();
     }
-
-    HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
-    payloadContext.put(HOLDINGS.value(), Json.encodePrettily(holdings));
-
-    ItemCollection itemCollection = storage.getItemCollection(context);
-    return updateDataImportEventPayloadItemAsync(dataImportEventPayload, itemCollection, errors);
   }
-
-  private Future<Void> updateDataImportEventPayloadItemAsync(DataImportEventPayload dataImportEventPayload, ItemCollection itemCollection, List<PartialError> errors) {
-    JsonArray oldItemsAsJson = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
-    JsonArray resultedItemsList = new JsonArray();
-    List<Future<Void>> updateItemsFutures = new ArrayList<>();
-
-    for (int i = 0; i < oldItemsAsJson.size(); i++) {
-      JsonObject singleItemAsJson = getItemFromJson(oldItemsAsJson.getJsonObject(i));
-      String itemId = singleItemAsJson.getString(ITEM_ID_HEADER);
-      Promise<Void> p = Promise.promise();
-      itemCollection.findById(itemId, findResult -> {
-        if (Objects.nonNull(findResult)) {
-          JsonObject itemAsJson = new JsonObject(ItemUtil.mapToMappingResultRepresentation(findResult.getResult()));
-          resultedItemsList.add(itemAsJson);
-        }
-        p.complete();
-      }, failure -> {
-        errors.add(new PartialError(itemId != null ? itemId : BLANK, failure.getReason()));
-        EventProcessingException processingException =
-          new EventProcessingException(format(CANNOT_GET_ACTUAL_ITEM_MESSAGE, itemId, failure.getReason(), failure.getStatusCode()));
-        LOGGER.warn("updateDataImportEventPayloadItem:: " + processingException);
-        p.complete();
-      });
-      updateItemsFutures.add(p.future());
-    }
-
-    return Future.all(updateItemsFutures)
-      .map(v -> {
-        dataImportEventPayload.getContext().put(ITEM.value(), resultedItemsList.encode());
-        return null;
-      });
-  }
-
 
   private void processResults(DataImportEventPayload dataImportEventPayload, List<HoldingsRecord> updatedHoldingsRecord, List<HoldingsRecord> expiredHoldings, CompletableFuture<DataImportEventPayload> future, HoldingsRecordCollection holdingsRecordCollection, List<PartialError> errors) {
     OlHoldingsAccumulativeResults olAccumulativeResults = buildOLAccumulativeResults(dataImportEventPayload);
