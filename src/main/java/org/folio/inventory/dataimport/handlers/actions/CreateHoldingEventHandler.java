@@ -5,7 +5,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -256,16 +255,5 @@ public class CreateHoldingEventHandler implements EventHandler {
       }
     });
     return holdingsPromise.future();
-  }
-
-  @Getter
-  private static class HoldingsCreationException extends RuntimeException {
-    private final PartialError error;
-
-    public HoldingsCreationException(PartialError error) {
-      super(error.getError());
-      this.error = error;
-    }
-
   }
 }

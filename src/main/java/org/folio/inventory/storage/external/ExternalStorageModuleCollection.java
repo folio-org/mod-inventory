@@ -138,8 +138,7 @@ abstract class ExternalStorageModuleCollection<T> {
     Consumer<Success<MultipleRecords<T>>> resultCallback,
     Consumer<Failure> failureCallback) {
 
-    String location = format(storageAddress
-        + "?limit=%s&offset=%s",
+    String location = format("%s?limit=%s&offset=%s", storageAddress,
       pagingParameters.limit, pagingParameters.offset);
 
     find(location, resultCallback, failureCallback);
@@ -164,11 +163,8 @@ abstract class ExternalStorageModuleCollection<T> {
 
     String encodedQuery = URLEncoder.encode(cqlQuery, StandardCharsets.UTF_8);
 
-    String location =
-      format("%s?query=%s", storageAddress, encodedQuery) +
-        format("&limit=%s&offset=%s", pagingParameters.limit,
-          pagingParameters.offset);
-
+    String location = format("%s?query=%s&limit=%s&offset=%s",
+      storageAddress, encodedQuery, pagingParameters.limit, pagingParameters.offset);
     find(location, resultCallback, failureCallback);
   }
 
@@ -248,14 +244,6 @@ abstract class ExternalStorageModuleCollection<T> {
       request.putHeader(USER_ID_HEADER, userId);
     }
     return request;
-  }
-
-  protected CompletionStage<Response> mapAsyncResultToCompletionStage(
-    AsyncResult<HttpResponse<Buffer>> asyncResult) {
-
-    return asyncResult.succeeded()
-      ? completedFuture(mapResponse(asyncResult))
-      : failedFuture(asyncResult.cause());
   }
 
   private Response mapResponse(AsyncResult<HttpResponse<Buffer>> asyncResult) {

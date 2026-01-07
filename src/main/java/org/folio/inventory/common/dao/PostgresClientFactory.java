@@ -15,7 +15,6 @@ import org.apache.logging.log4j.Logger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static org.folio.inventory.common.dao.PostgresConnectionOptions.convertToPsqlStandard;
 
@@ -85,10 +84,10 @@ public class PostgresClientFactory {
    * close all {@link Pool} clients.
    */
   public static Future<Void> closeAll() {
-    List<Future<?>> closeFutures = POOL_CACHE.values()
+    List<Future<Void>> closeFutures = POOL_CACHE.values()
       .stream()
       .map(SqlClient::close)
-      .collect(Collectors.toList());
+      .toList();
 
     return Future.all(closeFutures)
       .onSuccess(v -> {

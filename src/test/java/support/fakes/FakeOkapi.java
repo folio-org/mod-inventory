@@ -66,9 +66,7 @@ public class FakeOkapi extends AbstractVerticle {
           System.out.printf("Stopped listening on %s%n", server.actualPort());
           stopFuture.complete();
         })
-        .onFailure(throwable -> {
-          stopFuture.fail(throwable);
-        });
+        .onFailure(stopFuture::fail);
     }
   }
 

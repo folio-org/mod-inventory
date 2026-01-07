@@ -80,7 +80,6 @@ public class PostgresConnectionOptions {
         .setTrustOptions(new PemTrustOptions().addCertValue(Buffer.buffer(getSystemProperty(DB_SERVER_PEM))))
         .setEnabledSecureTransportProtocols(Set.of("TLSv1.3"));
       pgConnectionOptions.setSslOptions(sslClientOptions);
-      //pgConnectionOptions.setOpenSslEngineOptions(new OpenSSLEngineOptions());
     }
     if (StringUtils.isNotBlank(tenantId)) {
       pgConnectionOptions.addProperty(DEFAULT_SCHEMA_PROPERTY, convertToPsqlStandard(tenantId));
