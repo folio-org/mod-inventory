@@ -1,7 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
@@ -152,7 +151,7 @@ public class UpdateItemEventHandler implements EventHandler {
           MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
 
           ItemCollection itemCollection = storage.getItemCollection(context);
-          List<Future> updatedItemsRecordFutures = new ArrayList<>();
+          List<Future<?>> updatedItemsRecordFutures = new ArrayList<>();
           List<Item> updatedItemEntities = new ArrayList<>();
           List<PartialError> errors = new ArrayList<>();
 
@@ -200,7 +199,7 @@ public class UpdateItemEventHandler implements EventHandler {
                 });
             }
           }
-          CompositeFuture.all(updatedItemsRecordFutures).onComplete(ar -> {
+          Future.all(updatedItemsRecordFutures).onComplete(ar -> {
             processResults(dataImportEventPayload, updatedItemEntities, expiredItems, future, itemCollection, errors);
             dataImportEventPayload.getContext().remove(TEMPORARY_MULTIPLE_HOLDINGS_FIELD);
           });
@@ -333,7 +332,7 @@ public class UpdateItemEventHandler implements EventHandler {
     }
     dataImportEventPayload.getContext().put(ITEM.value(), itemsJsonArray.encode());
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
+    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
   }
 
   private List<String> validateItem(JsonObject itemAsJson, List<String> requiredFields) {

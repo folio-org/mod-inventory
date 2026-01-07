@@ -107,8 +107,9 @@ public class DataImportConsumerVerticleTest extends KafkaTest {
   public static void setUpClass(TestContext context) {
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertxAssistant.getVertx(), 1);
     CancelledJobsIdsCache cancelledJobsIdsCache = new CancelledJobsIdsCache();
-    vertxAssistant.getVertx().deployVerticle(() -> new DataImportConsumerVerticle(cancelledJobsIdsCache),
-      deploymentOptions, context.asyncAssertSuccess());
+    vertxAssistant.getVertx()
+      .deployVerticle(() -> new DataImportConsumerVerticle(cancelledJobsIdsCache), deploymentOptions)
+      .onComplete(context.asyncAssertSuccess());
   }
 
   @Before
@@ -117,7 +118,7 @@ public class DataImportConsumerVerticleTest extends KafkaTest {
     when(mockedEventHandler.isEligible(any(DataImportEventPayload.class))).thenReturn(true);
     doAnswer(invocationOnMock -> {
       DataImportEventPayload eventPayload = invocationOnMock.getArgument(0);
-      eventPayload.setCurrentNode(eventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
+      eventPayload.setCurrentNode(eventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
       return CompletableFuture.completedFuture(eventPayload);
     }).when(mockedEventHandler).handle(any(DataImportEventPayload.class));
 

@@ -28,6 +28,7 @@ import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDINGS_RECORD_MODIFIE
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDINGS_RECORD_NOT_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDING_RECORD_CREATED;
 
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
@@ -38,7 +39,6 @@ import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
 import org.folio.inventory.dataimport.consumers.DataImportKafkaHandler;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.support.KafkaConsumerVerticle;
-import org.folio.okapi.common.GenericCompositeFuture;
 import org.folio.processing.events.EventManager;
 
 public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
@@ -98,7 +98,7 @@ public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
       )
       .toList();
 
-    GenericCompositeFuture.all(futures)
+    Future.all(futures)
       .onFailure(startPromise::fail)
       .onSuccess(ar -> startPromise.complete());
   }

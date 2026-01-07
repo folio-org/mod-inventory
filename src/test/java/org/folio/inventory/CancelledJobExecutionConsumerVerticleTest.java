@@ -1,7 +1,6 @@
 package org.folio.inventory;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -102,10 +101,7 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
   }
 
   private Future<Void> undeployVerticle() {
-    Promise<Void> promise = Promise.promise();
-    vertxAssistant.getVertx().undeploy(verticleDeploymentId, promise);
-
-    return promise.future();
+    return vertxAssistant.getVertx().undeploy(verticleDeploymentId);
   }
 
   private List<String> generateJobIds(int idsNumber) {

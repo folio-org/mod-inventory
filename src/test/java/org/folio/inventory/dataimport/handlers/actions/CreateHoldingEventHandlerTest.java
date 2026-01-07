@@ -47,7 +47,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
@@ -80,10 +79,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class CreateHoldingEventHandlerTest {
 
@@ -182,7 +178,7 @@ public class CreateHoldingEventHandlerTest {
         .withMappingParams(Json.encode(new MappingParameters())))));
 
     when(orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(any(), any(), any())).thenReturn(Future.succeededFuture());
-    fakeReader = Mockito.mock(Reader.class);
+    fakeReader = mock(Reader.class);
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
@@ -448,7 +444,14 @@ public class CreateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
+
+    String mockHoldingsId = UUID.randomUUID().toString();
+    RecordToEntity mockRecordToEntity = mock(RecordToEntity.class);
+    when(mockRecordToEntity.getEntityId()).thenReturn(mockHoldingsId);
+
+    when(holdingsIdStorageService.store(anyString(), anyString(), anyString()))
+      .thenReturn(Future.succeededFuture(mockRecordToEntity));
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);

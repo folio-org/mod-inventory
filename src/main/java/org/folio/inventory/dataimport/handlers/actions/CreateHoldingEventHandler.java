@@ -1,6 +1,5 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
@@ -137,7 +136,7 @@ public class CreateHoldingEventHandler implements EventHandler {
               .compose(consortiumConfigurationOptional -> {
                 if (consortiumConfigurationOptional.isPresent()) {
                   return ConsortiumUtil.createShadowInstanceIfNeeded(consortiumService, storage.getInstanceCollection(context),
-                    context, getInstanceId(dataImportEventPayload), consortiumConfigurationOptional.get())
+                      context, getInstanceId(dataImportEventPayload), consortiumConfigurationOptional.get())
                     .map(holdingsToCreate);
                 }
                 return Future.succeededFuture(holdingsToCreate);
@@ -182,7 +181,7 @@ public class CreateHoldingEventHandler implements EventHandler {
   private void prepareEvent(DataImportEventPayload dataImportEventPayload) {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
     dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonArray().encode());
-    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
+    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
   }
 
   private void fillInstanceIdIfNeeded(String instanceId, JsonObject holdingAsJson) {
@@ -219,7 +218,7 @@ public class CreateHoldingEventHandler implements EventHandler {
     Promise<List<HoldingsRecord>> holdingsPromise = Promise.promise();
     List<HoldingsRecord> createdHoldingsRecord = new ArrayList<>();
     List<PartialError> errors = new ArrayList<>();
-    List<Future> createHoldingsRecordFutures = new ArrayList<>();
+    List<Future<?>> createHoldingsRecordFutures = new ArrayList<>();
 
     HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
     holdingsList.forEach(holdings -> {
@@ -242,7 +241,7 @@ public class CreateHoldingEventHandler implements EventHandler {
           }
         });
     });
-    CompositeFuture.all(createHoldingsRecordFutures).onComplete(ar -> {
+    Future.all(createHoldingsRecordFutures).onComplete(ar -> {
       if (ar.succeeded()) {
         String errorsAsStringJson = Json.encode(errors);
         if (!createdHoldingsRecord.isEmpty()) {

@@ -5,7 +5,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.buffer.impl.BufferImpl;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -24,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import static io.vertx.core.buffer.Buffer.buffer;
 import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
 import static org.folio.inventory.consortium.util.RestDataImportHelper.FIELD_JOB_EXECUTIONS;
 import static org.folio.inventory.consortium.util.RestDataImportHelper.STATUS_COMMITTED;
@@ -63,7 +63,7 @@ public class RestDataImportHelperTest {
       .put(FIELD_JOB_EXECUTIONS, new JsonArray().add(new JsonObject().put("id", expectedJobExecutionId)));
 
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(BufferImpl.buffer(responseBody.encode()), HttpStatus.HTTP_CREATED);
+      buildHttpResponseWithBuffer(buffer(responseBody.encode()), HttpStatus.HTTP_CREATED);
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     doAnswer(invocation -> {
@@ -115,7 +115,7 @@ public class RestDataImportHelperTest {
     JsonObject responseBody = new JsonObject().put("jobExecutions", new JsonArray().add(""));
 
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(BufferImpl.buffer(responseBody.encode()), HttpStatus.HTTP_CREATED);
+      buildHttpResponseWithBuffer(Buffer.buffer(responseBody.encode()), HttpStatus.HTTP_CREATED);
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     doAnswer(invocation -> {
@@ -140,7 +140,7 @@ public class RestDataImportHelperTest {
     String expectedJobExecutionId = UUID.randomUUID().toString();
     Map<String, String> kafkaHeaders = new HashMap<>();
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(BufferImpl.buffer("{\"jobExecutions\":[]}"), HttpStatus.HTTP_CREATED);
+      buildHttpResponseWithBuffer(Buffer.buffer("{\"jobExecutions\":[]}"), HttpStatus.HTTP_CREATED);
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     doAnswer(invocation -> {
@@ -252,7 +252,7 @@ public class RestDataImportHelperTest {
     String expectedJobExecutionId = UUID.randomUUID().toString();
 
     HttpResponseImpl<Buffer> jobExecutionResponse =
-      buildHttpResponseWithBuffer(BufferImpl.buffer("{\"status\":\"" + STATUS_COMMITTED + "\"}"), HttpStatus.HTTP_OK);
+      buildHttpResponseWithBuffer(Buffer.buffer("{\"status\":\"" + STATUS_COMMITTED + "\"}"), HttpStatus.HTTP_OK);
     Future<HttpResponse<Buffer>> futureResponse = Future.succeededFuture(jobExecutionResponse);
 
     doAnswer(invocation -> {
