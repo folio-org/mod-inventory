@@ -1,13 +1,8 @@
 package org.folio.inventory.storage.external;
 
 import static java.lang.String.format;
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.concurrent.CompletableFuture.failedFuture;
 import static org.apache.http.HttpHeaders.ACCEPT;
-import static org.apache.http.HttpHeaders.CONTENT_TYPE;
-import static org.apache.http.HttpHeaders.LOCATION;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.ReplyException;
@@ -26,12 +21,10 @@ import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.items.CQLQueryRequestDto;
 import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.Response;
 import org.folio.util.PercentCodec;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -244,13 +237,6 @@ abstract class ExternalStorageModuleCollection<T> {
       request.putHeader(USER_ID_HEADER, userId);
     }
     return request;
-  }
-
-  private Response mapResponse(AsyncResult<HttpResponse<Buffer>> asyncResult) {
-    final var response = asyncResult.result();
-
-    return new Response(response.statusCode(), response.bodyAsString(),
-      response.getHeader(CONTENT_TYPE), response.getHeader(LOCATION));
   }
 
   private void find(String location,
