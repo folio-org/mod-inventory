@@ -79,7 +79,7 @@ public class TenantApiTest extends ApiTests {
       DB_PORT, String.valueOf(pgConnectOptions.getPort()),
       DB_USERNAME, pgConnectOptions.getUser(),
       DB_PASSWORD, pgConnectOptions.getPassword());
-    PostgresConnectionOptions.setSystemProperties(Map.of(DB_HOST, "invalid"));
+    PostgresConnectionOptions.setSystemProperties(Map.of(DB_HOST, "invalid", DB_PORT, "999999"));
 
     final var deleteCompletedBefore = okapiClient
       .delete(ApiRoot.tenant());
