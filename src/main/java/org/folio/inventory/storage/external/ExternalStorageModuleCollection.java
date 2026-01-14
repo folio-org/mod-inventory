@@ -3,10 +3,7 @@ package org.folio.inventory.storage.external;
 import static java.lang.String.format;
 import static org.apache.http.HttpHeaders.ACCEPT;
 
-import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.eventbus.ReplyException;
-import io.vertx.core.eventbus.ReplyFailure;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
@@ -188,36 +185,7 @@ abstract class ExternalStorageModuleCollection<T> {
       });
   }
 
-  public Future<T> updateAsync(T item) {
-    String location = individualRecordLocation(getId(item));
-    final HttpRequest<Buffer> request = withStandardHeaders(webClient.putAbs(location));
-    Future<T> resultFuture = request
-      .sendJsonObject(mapToRequest(item))
-      .compose(response -> {
-        if (response.statusCode() == 204) {
-          return Future.succeededFuture();
-        } else {
-          String errorMessage = String.format(
-            "Failed to update record at %s. Expected 204, got %d: %s",
-            location, response.statusCode(), response.bodyAsString()
-          );
-          LOGGER.warn(errorMessage);
-          return Future.failedFuture(
-            new ReplyException(ReplyFailure.RECIPIENT_FAILURE, response.statusCode(), errorMessage)
-          );
-        }
-      });
-
-    resultFuture.onFailure(error -> {
-      if (!(error instanceof ReplyException)) {
-        LOGGER.error("Request to update record at {} failed to send", location, error);
-      }
-    });
-
-    return resultFuture;
-  }
-
-  public void delete(String id, Consumer<Success<Void>> completionCallback,
+    public void delete(String id, Consumer<Success<Void>> completionCallback,
                      Consumer<Failure> failureCallback) {
 
     deleteLocation(individualRecordLocation(id), completionCallback, failureCallback);
