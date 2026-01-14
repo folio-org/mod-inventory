@@ -35,12 +35,12 @@ public class MappingMetadataCache {
   private static final Logger LOGGER = LogManager.getLogger();
   private static MappingMetadataCache instance = null;
   private final AsyncCache<String, Optional<MappingMetadataDto>> cache;
-  private final HttpClient httpClient;
+  private final WebClient webClient;
   private static final String METADATA_EXPIRATION_TIME = "inventory.mapping-metadata-cache.expiration.time.seconds";
   private static final String MAPPING_PARAM_LOAD_ERROR_LOG_MSG_TEMPLATE = "Error loading MappingMetadata by jobExecutionId: '{}'";
 
   public MappingMetadataCache(Vertx vertx, HttpClient httpClient, long cacheExpirationTime) {
-    this.httpClient = httpClient;
+    webClient = WebClient.wrap(httpClient);
     cache = Caffeine.newBuilder()
       .expireAfterAccess(cacheExpirationTime, TimeUnit.SECONDS)
       .executor(task -> vertx.runOnContext(v -> task.run()))
@@ -84,7 +84,7 @@ public class MappingMetadataCache {
   private CompletableFuture<Optional<MappingMetadataDto>> loadJobProfileSnapshot(String jobExecutionId, Context context) {
     LOGGER.debug("Trying to load MappingMetadata by jobExecutionId  '{}' for cache, okapi url: {}, tenantId: {}", jobExecutionId, context.getOkapiLocation(), context.getTenantId());
 
-    OkapiHttpClient client = new OkapiHttpClient(WebClient.wrap(httpClient), new URL(context.getOkapiLocation()), context.getTenantId(), context.getToken(), null, null, null);
+    OkapiHttpClient client = new OkapiHttpClient(webClient, new URL(context.getOkapiLocation()), context.getTenantId(), context.getToken(), null, null, null);
 
     return client.get(context.getOkapiLocation() + "/mapping-metadata/" + jobExecutionId)
       .toCompletableFuture()
@@ -108,7 +108,7 @@ public class MappingMetadataCache {
   private CompletableFuture<Optional<MappingMetadataDto>> loadMappingMetadata(String recordType, Context context) {
     LOGGER.debug("Trying to load MappingMetadata by recordType  '{}' for cache, okapi url: {}, tenantId: {}", recordType, context.getOkapiLocation(), context.getTenantId());
 
-    OkapiHttpClient client = new OkapiHttpClient(WebClient.wrap(httpClient), new URL(context.getOkapiLocation()), context.getTenantId(), context.getToken(), null, null, null);
+    OkapiHttpClient client = new OkapiHttpClient(webClient, new URL(context.getOkapiLocation()), context.getTenantId(), context.getToken(), null, null, null);
 
     return client.get(context.getOkapiLocation() + "/mapping-metadata/type/" + recordType)
       .toCompletableFuture()
