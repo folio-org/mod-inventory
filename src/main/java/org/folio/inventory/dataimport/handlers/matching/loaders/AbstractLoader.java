@@ -63,7 +63,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
               loadResult.setEntityType(MULTI_MATCH_IDS);
               loadResult.setValue(mapEntityListToIdsJsonString(collection.records));
             } else {
-              String errorMessage = buildMultiMatchErrorMessage(cql, collection.records, collection.totalRecords);
+              String errorMessage = buildMultiMatchErrorMessage(collection.records, collection.totalRecords);
               LOG.error(errorMessage);
               future.completeExceptionally(new MatchingException(errorMessage));
               return;
@@ -124,7 +124,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     return format(" AND %s == (%s)", searchField, preparedIds);
   }
 
-  private String buildMultiMatchErrorMessage(String cql, List<T> records, int totalRecords) {
+  private String buildMultiMatchErrorMessage(List<T> records, int totalRecords) {
     StringBuilder message = new StringBuilder("Found multiple records matching specified conditions");
 
     if (totalRecords <= MAX_UUIDS_TO_DISPLAY) {
