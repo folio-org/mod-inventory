@@ -18,6 +18,7 @@
 * Fix statisticalCodeIds and administrativeNotes fields are cleared after update [MODINV-1323](https://folio-org.atlassian.net/browse/MODINV-1323)
 * Cannot Create/Edit MARC holdings record on ECS Sunflower environments (Bugfest, Mobius DR) [MODINV-1327](https://folio-org.atlassian.net/browse/MODINV-1327)
 * Vert.x 4.5.23 fixing CVE-2025-67735 Netty CRLF injection request smuggling [MODINV-1321](https://folio-org.atlassian.net/browse/MODINV-1321)
+* Fix MappingMetadataCacheTest: IllegalStateException: Client is closed [MODINV-1333](https://folio-org.atlassian.net/browse/MODINV-1333)
 
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)

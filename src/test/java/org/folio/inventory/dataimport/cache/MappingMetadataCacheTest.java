@@ -14,6 +14,7 @@ import org.folio.inventory.dataimport.exceptions.CacheLoadingException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.MappingMetadataDto;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -39,10 +40,7 @@ public class MappingMetadataCacheTest {
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
   private static final String MARC_BIB_RECORD_TYPE = "marc-bib";
 
-  private final Vertx vertx = Vertx.vertx();
-
-  private final MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx,
-    vertx.createHttpClient());
+  private static MappingMetadataCache mappingMetadataCache;
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -57,6 +55,12 @@ public class MappingMetadataCacheTest {
     .withMappingRules("rules");
 
   private Context context;
+
+  @BeforeClass
+  public static void beforeClass() {
+    var vertx = Vertx.vertx();
+    mappingMetadataCache = MappingMetadataCache.getInstance(vertx, vertx.createHttpClient());
+  }
 
   @Before
   public void setUp() {
