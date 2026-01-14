@@ -140,8 +140,6 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
       message.append(" (").append(totalRecords).append(" records)");
     }
 
-    message.append(". CQL query: [").append(cql).append("]");
-
     return message.toString();
   }
 

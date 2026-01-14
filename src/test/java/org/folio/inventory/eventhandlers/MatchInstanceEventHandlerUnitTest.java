@@ -532,7 +532,6 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertTrue(errorMessage.contains("UUIDs:"));
       testContext.assertTrue(errorMessage.contains(uuid1));
       testContext.assertTrue(errorMessage.contains(uuid2));
-      testContext.assertTrue(errorMessage.contains("CQL query:"));
       async.complete();
     });
   }
@@ -561,7 +560,6 @@ public class MatchInstanceEventHandlerUnitTest {
       testContext.assertNotNull(throwable);
       String errorMessage = throwable.getCause().getMessage();
       testContext.assertTrue(errorMessage.contains("(5 records)"));
-      testContext.assertTrue(errorMessage.contains("CQL query:"));
       async.complete();
     });
   }
