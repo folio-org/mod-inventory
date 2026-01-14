@@ -507,6 +507,64 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   @Test
+  public void shouldIncludeUuidsInErrorMessageWhenFourOrFewerMatchesFound(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
+
+    String uuid1 = UUID.randomUUID().toString();
+    String uuid2 = UUID.randomUUID().toString();
+    Instance instance1 = new Instance(uuid1, 1, "test123", "MARC", "Test Title", "12345");
+    Instance instance2 = new Instance(uuid2, 1, "test123", "MARC", "Test Title", "12345");
+
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Success<MultipleRecords<Instance>> result =
+        new Success<>(new MultipleRecords<>(asList(instance1, instance2), 2));
+      callback.accept(result);
+      return null;
+    }).when(instanceCollection)
+      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    DataImportEventPayload eventPayload = createEventPayload();
+
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
+      testContext.assertNotNull(throwable);
+      String errorMessage = throwable.getCause().getMessage();
+      testContext.assertTrue(errorMessage.contains("UUIDs:"));
+      testContext.assertTrue(errorMessage.contains(uuid1));
+      testContext.assertTrue(errorMessage.contains(uuid2));
+      async.complete();
+    });
+  }
+
+  @Test
+  public void shouldIncludeCountInErrorMessageWhenMoreThanFourMatchesFound(TestContext testContext) throws UnsupportedEncodingException {
+    Async async = testContext.async();
+
+    List<Instance> instances = new ArrayList<>();
+    for (int i = 0; i < 5; i++) {
+      instances.add(new Instance(UUID.randomUUID().toString(), 1, "test" + i, "MARC", "Test Title", "12345"));
+    }
+
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Success<MultipleRecords<Instance>> result =
+        new Success<>(new MultipleRecords<>(instances, 5));
+      callback.accept(result);
+      return null;
+    }).when(instanceCollection)
+      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    DataImportEventPayload eventPayload = createEventPayload();
+
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
+      testContext.assertNotNull(throwable);
+      String errorMessage = throwable.getCause().getMessage();
+      testContext.assertTrue(errorMessage.contains("(5 records)"));
+      async.complete();
+    });
+  }
+
+  @Test
   public void shouldFailOnHandleEventPayloadIfFailedCallToInventoryStorage(TestContext testContext) throws UnsupportedEncodingException {
     Async async = testContext.async();
 
