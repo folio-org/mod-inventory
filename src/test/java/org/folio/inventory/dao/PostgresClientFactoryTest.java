@@ -124,11 +124,11 @@ public class PostgresClientFactoryTest {
     assertEquals("test", pgConnectOpts.getUser());
     assertEquals("test", pgConnectOpts.getPassword());
     assertEquals("test", pgConnectOpts.getDatabase());
-    //assertEquals(60000, pgConnectOpts.getIdleTimeout());
     assertEquals(SslMode.VERIFY_FULL, pgConnectOpts.getSslMode());
     assertEquals("HTTPS", pgConnectOpts.getSslOptions().getHostnameVerificationAlgorithm());
     assertEquals(MAX_POOL_SIZE, PostgresConnectionOptions.getMaxPoolSize());
     assertNotNull(pgConnectOpts.getSslOptions().getTrustOptions());
+    assertEquals(60000, PostgresConnectionOptions.getPoolOptions().getIdleTimeout());
     assertEquals(expectedEnabledSecureTransportProtocols, pgConnectOpts.getSslOptions().getEnabledSecureTransportProtocols());
 
     PostgresConnectionOptions.setSystemProperties(new HashMap<>());
