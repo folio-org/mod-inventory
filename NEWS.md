@@ -1,3 +1,6 @@
+## 21.1.18 2026-01-13
+* Vert.x 4.5.23 fixing CVE-2025-67735 Netty CRLF injection request smuggling [MODINV-1331](https://folio-org.atlassian.net/browse/MODINV-1331), [MODINV-1321](https://folio-org.atlassian.net/browse/MODINV-1321)
+
 ## 21.1.17 2026-01-05
 * Cannot Create/Edit MARC holdings record on ECS Sunflower environments (Bugfest, Mobius DR) [MODINV-1327](https://folio-org.atlassian.net/browse/MODINV-1327)
 
