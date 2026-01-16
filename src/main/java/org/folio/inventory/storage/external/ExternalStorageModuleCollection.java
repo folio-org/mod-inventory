@@ -1,12 +1,8 @@
 package org.folio.inventory.storage.external;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.concurrent.CompletableFuture.failedFuture;
+import static java.lang.String.format;
 import static org.apache.http.HttpHeaders.ACCEPT;
-import static org.apache.http.HttpHeaders.CONTENT_TYPE;
-import static org.apache.http.HttpHeaders.LOCATION;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
@@ -22,13 +18,10 @@ import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.items.CQLQueryRequestDto;
 import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.client.Response;
 import org.folio.util.PercentCodec;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -73,69 +66,60 @@ abstract class ExternalStorageModuleCollection<T> {
 
   protected abstract String getId(T record);
 
-  public void add(T item,
-                  Consumer<Success<T>> resultCallback,
+  public void add(T item, Consumer<Success<T>> resultCallback,
                   Consumer<Failure> failureCallback) {
-
-    final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
-
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.postAbs(storageAddress));
-
-    request.sendJsonObject(mapToRequest(item), futureResponse::complete);
-
-    futureResponse
-      .thenCompose(this::mapAsyncResultToCompletionStage)
-      .thenAccept(response -> {
-        if (response.getStatusCode() == 201) {
+    request
+      .sendJsonObject(mapToRequest(item))
+      .onSuccess(response -> {
+        if (response.statusCode() == 201) {
           try {
-            T created = mapFromJson(response.getJson());
+            T created = mapFromJson(response.bodyAsJsonObject());
             resultCallback.accept(new Success<>(created));
           } catch (Exception e) {
             LOGGER.error(e);
-            failureCallback.accept(new Failure(e.getMessage(), response.getStatusCode()));
+            failureCallback.accept(new Failure(e.getMessage(), response.statusCode()));
           }
         } else {
-          failureCallback.accept(new Failure(response.getBody(), response.getStatusCode()));
+          failureCallback.accept(new Failure(response.bodyAsString(), response.statusCode()));
         }
-      });
-
+      })
+      .onFailure(error -> failureCallback.accept(new Failure(error.getMessage(), 500)));
   }
 
   public void findById(String id,
                        Consumer<Success<T>> resultCallback,
                        Consumer<Failure> failureCallback) {
 
-    final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
-
     final HttpRequest<Buffer> request = withStandardHeaders(
       webClient.getAbs(individualRecordLocation(id)));
 
-    request.send(futureResponse::complete);
-
-    futureResponse
-      .thenCompose(this::mapAsyncResultToCompletionStage)
-      .thenAccept(response -> {
-        switch (response.getStatusCode()) {
+    request.send()
+      .onSuccess(response -> {
+        switch (response.statusCode()) {
           case 200:
-            JsonObject instanceFromServer = response.getJson();
-
             try {
+              JsonObject instanceFromServer = response.bodyAsJsonObject();
               T found = mapFromJson(instanceFromServer);
               resultCallback.accept(new Success<>(found));
-              break;
             } catch (Exception e) {
               LOGGER.error(e);
               failureCallback.accept(new Failure(e.getMessage(), 500));
-              break;
             }
+            break;
 
           case 404:
             resultCallback.accept(new Success<>(null));
             break;
 
           default:
-            failureCallback.accept(new Failure(response.getBody(), response.getStatusCode()));
+            failureCallback.accept(new Failure(response.bodyAsString(), response.statusCode()));
+            break;
         }
+      })
+      .onFailure(error -> {
+        LOGGER.error("Request to find record by id '{}' failed to send", id, error);
+        failureCallback.accept(new Failure(error.getMessage(), -1));
       });
   }
 
@@ -144,8 +128,7 @@ abstract class ExternalStorageModuleCollection<T> {
     Consumer<Success<MultipleRecords<T>>> resultCallback,
     Consumer<Failure> failureCallback) {
 
-    String location = String.format(storageAddress
-        + "?limit=%s&offset=%s",
+    String location = format("%s?limit=%s&offset=%s", storageAddress,
       pagingParameters.limit, pagingParameters.offset);
 
     find(location, resultCallback, failureCallback);
@@ -170,27 +153,22 @@ abstract class ExternalStorageModuleCollection<T> {
 
     String encodedQuery = URLEncoder.encode(cqlQuery, StandardCharsets.UTF_8);
 
-    String location =
-      String.format("%s?query=%s", storageAddress, encodedQuery) +
-        String.format("&limit=%s&offset=%s", pagingParameters.limit,
-          pagingParameters.offset);
-
+    String location = format("%s?query=%s&limit=%s&offset=%s",
+      storageAddress, encodedQuery, pagingParameters.limit, pagingParameters.offset);
     find(location, resultCallback, failureCallback);
   }
 
   public void retrieveByCqlBody(CQLQueryRequestDto cqlQueryRequestDto,
                                 Consumer<Success<MultipleRecords<T>>> resultCallback,
                                 Consumer<Failure> failureCallback) {
-    final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
-
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.postAbs(storageAddress + "/retrieve"));
 
-    request.sendJsonObject(JsonObject.mapFrom(cqlQueryRequestDto), futureResponse::complete);
-
-    futureResponse
-            .thenCompose(this::mapAsyncResultToCompletionStage)
-            .thenAccept(response ->
-                    interpretMultipleRecordResponse(resultCallback, failureCallback, response));
+    request.sendJsonObject(JsonObject.mapFrom(cqlQueryRequestDto))
+      .onSuccess(response -> interpretMultipleRecordResponse(resultCallback, failureCallback, response))
+      .onFailure(error -> {
+        LOGGER.error("Request to {} failed to send", storageAddress, error);
+        failureCallback.accept(new Failure(error.getMessage(), -1));
+      });
   }
 
   public void update(T item,
@@ -198,37 +176,23 @@ abstract class ExternalStorageModuleCollection<T> {
                      Consumer<Failure> failureCallback) {
 
     String location = individualRecordLocation(getId(item));
-
-    final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
-
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.putAbs(location));
-
-    request.sendJsonObject(mapToRequest(item), futureResponse::complete);
-
-    futureResponse
-      .thenCompose(this::mapAsyncResultToCompletionStage)
-      .thenAccept(response ->
-        interpretNoContentResponse(response, completionCallback, failureCallback));
+    request.sendJsonObject(mapToRequest(item))
+      .onSuccess(response -> interpretNoContentResponse(response, completionCallback, failureCallback))
+      .onFailure(error -> {
+        LOGGER.error("Request to update record at {} failed to send", location, error);
+        failureCallback.accept(new Failure(error.getMessage(), -1));
+      });
   }
 
-  public void delete(String id, Consumer<Success<Void>> completionCallback,
+    public void delete(String id, Consumer<Success<Void>> completionCallback,
                      Consumer<Failure> failureCallback) {
 
     deleteLocation(individualRecordLocation(id), completionCallback, failureCallback);
   }
 
   protected String individualRecordLocation(String id) {
-    return String.format("%s/%s", storageAddress, id);
-  }
-
-  void includeIfPresent(
-    JsonObject instanceToSend,
-    String propertyName,
-    String propertyValue) {
-
-    if (propertyValue != null) {
-      instanceToSend.put(propertyName, propertyValue);
-    }
+    return format("%s/%s", storageAddress, id);
   }
 
   protected HttpRequest<Buffer> withStandardHeaders(HttpRequest<Buffer> request) {
@@ -243,85 +207,65 @@ abstract class ExternalStorageModuleCollection<T> {
     return request;
   }
 
-  protected CompletionStage<Response> mapAsyncResultToCompletionStage(
-    AsyncResult<HttpResponse<Buffer>> asyncResult) {
-
-    return asyncResult.succeeded()
-      ? completedFuture(mapResponse(asyncResult))
-      : failedFuture(asyncResult.cause());
-  }
-
-  private Response mapResponse(AsyncResult<HttpResponse<Buffer>> asyncResult) {
-    final var response = asyncResult.result();
-
-    return new Response(response.statusCode(), response.bodyAsString(),
-      response.getHeader(CONTENT_TYPE), response.getHeader(LOCATION));
-  }
-
   private void find(String location,
-                    Consumer<Success<MultipleRecords<T>>> resultCallback, Consumer<Failure> failureCallback) {
-
-    final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
+                    Consumer<Success<MultipleRecords<T>>> resultCallback,
+                    Consumer<Failure> failureCallback) {
 
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.getAbs(location));
-
-    request.send(futureResponse::complete);
-
-    futureResponse
-      .thenCompose(this::mapAsyncResultToCompletionStage)
-      .thenAccept(response ->
-        interpretMultipleRecordResponse(resultCallback, failureCallback, response));
+    request.send()
+      .onSuccess(response -> interpretMultipleRecordResponse(resultCallback, failureCallback, response))
+      .onFailure(error -> {
+        LOGGER.error("Request to find records at {} failed to send", location, error);
+        failureCallback.accept(new Failure(error.getMessage(), -1));
+      });
   }
 
   private void interpretMultipleRecordResponse(
-    Consumer<Success<MultipleRecords<T>>> resultCallback, Consumer<Failure> failureCallback,
-    Response response) {
+    Consumer<Success<MultipleRecords<T>>> resultCallback,
+    Consumer<Failure> failureCallback,
+    HttpResponse<Buffer> response) {
 
-    if (response.getStatusCode() == 200) {
+    if (response.statusCode() == 200) {
       try {
-        JsonObject wrappedRecords = response.getJson();
-
+        JsonObject wrappedRecords = response.bodyAsJsonObject();
         List<JsonObject> records = JsonArrayHelper.toList(
           wrappedRecords.getJsonArray(collectionWrapperPropertyName));
-
         List<T> foundRecords = records.stream()
           .map(this::mapFromJson)
           .collect(Collectors.toList());
-
         MultipleRecords<T> result = new MultipleRecords<>(
           foundRecords, wrappedRecords.getInteger("totalRecords"));
-
         resultCallback.accept(new Success<>(result));
       } catch (Exception e) {
         LOGGER.error(e);
-        failureCallback.accept(new Failure(e.getMessage(), response.getStatusCode()));
+        failureCallback.accept(new Failure(e.getMessage(), response.statusCode()));
       }
-
     } else {
-      failureCallback.accept(new Failure(response.getBody(), response.getStatusCode()));
+      failureCallback.accept(new Failure(response.bodyAsString(), response.statusCode()));
     }
   }
 
-  private void deleteLocation(String location, Consumer<Success<Void>> completionCallback,
+  private void deleteLocation(String location,
+                              Consumer<Success<Void>> completionCallback,
                               Consumer<Failure> failureCallback) {
 
-    final var futureResponse = new CompletableFuture<AsyncResult<HttpResponse<Buffer>>>();
-
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.deleteAbs(location));
-
-    request.send(futureResponse::complete);
-
-    futureResponse
-      .thenCompose(this::mapAsyncResultToCompletionStage)
-      .thenAccept(response ->
-        interpretNoContentResponse(response, completionCallback, failureCallback));
+    request.send()
+      .onSuccess(response -> interpretNoContentResponse(response, completionCallback, failureCallback))
+      .onFailure(error -> {
+        LOGGER.error("Request to delete record at {} failed to send", location, error);
+        failureCallback.accept(new Failure(error.getMessage(), -1));
+      });
   }
 
-  private void interpretNoContentResponse(Response response, Consumer<Success<Void>> completionCallback, Consumer<Failure> failureCallback) {
-    if (response.getStatusCode() == 204) {
+  private void interpretNoContentResponse(HttpResponse<Buffer> response,
+    Consumer<Success<Void>> completionCallback,
+    Consumer<Failure> failureCallback) {
+    if (response.statusCode() == 204) {
       completionCallback.accept(new Success<>(null));
     } else {
-      failureCallback.accept(new Failure(response.getBody(), response.getStatusCode()));
+      failureCallback.accept(new Failure(response.bodyAsString(), response.statusCode()));
     }
   }
+
 }

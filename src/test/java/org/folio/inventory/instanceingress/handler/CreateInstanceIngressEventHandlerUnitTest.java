@@ -2,7 +2,7 @@ package org.folio.inventory.instanceingress.handler;
 
 import static io.vertx.core.Future.failedFuture;
 import static io.vertx.core.Future.succeededFuture;
-import static io.vertx.core.buffer.impl.BufferImpl.buffer;
+import static io.vertx.core.buffer.Buffer.buffer;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;

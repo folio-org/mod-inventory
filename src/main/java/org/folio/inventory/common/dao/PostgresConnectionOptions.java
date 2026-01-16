@@ -1,16 +1,18 @@
 package org.folio.inventory.common.dao;
 
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.net.OpenSSLEngineOptions;
+import io.vertx.core.net.ClientSSLOptions;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.SslMode;
+import io.vertx.sqlclient.PoolOptions;
+import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 
 import static java.lang.String.format;
 
-import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -31,6 +33,13 @@ public class PostgresConnectionOptions {
   public static final String DB_SERVER_PEM = "DB_SERVER_PEM";
   public static final String DB_IDLETIMEOUT = "DB_IDLETIMEOUT";
 
+  /**
+   * -- SETTER --
+   *  For test usage only.
+   *
+   * @param newSystemProperties Map of system properties to set.
+   */
+  @Setter
   private static Map<String, String> systemProperties = System.getenv();
 
   private PostgresConnectionOptions() {
@@ -62,21 +71,27 @@ public class PostgresConnectionOptions {
     if (StringUtils.isNotBlank(getSystemProperty(DB_PASSWORD))) {
       pgConnectionOptions.setPassword(getSystemProperty(DB_PASSWORD));
     }
+
     if (StringUtils.isNotBlank(getSystemProperty(DB_SERVER_PEM))) {
       pgConnectionOptions.setSslMode(SslMode.VERIFY_FULL);
-      pgConnectionOptions.setHostnameVerificationAlgorithm("HTTPS");
-      pgConnectionOptions.setPemTrustOptions(
-        new PemTrustOptions().addCertValue(Buffer.buffer(getSystemProperty(DB_SERVER_PEM))));
-      pgConnectionOptions.setEnabledSecureTransportProtocols(Collections.singleton("TLSv1.3"));
-      pgConnectionOptions.setOpenSslEngineOptions(new OpenSSLEngineOptions());
+
+      ClientSSLOptions sslClientOptions = new ClientSSLOptions()
+        .setHostnameVerificationAlgorithm("HTTPS")
+        .setTrustOptions(new PemTrustOptions().addCertValue(Buffer.buffer(getSystemProperty(DB_SERVER_PEM))))
+        .setEnabledSecureTransportProtocols(Set.of("TLSv1.3"));
+      pgConnectionOptions.setSslOptions(sslClientOptions);
     }
-    pgConnectionOptions.setIdleTimeout(Integer.parseInt(
-      StringUtils.isNotBlank(getSystemProperty(DB_IDLETIMEOUT)) ? getSystemProperty(DB_IDLETIMEOUT) : DEFAULT_IDLE_TIMEOUT));
-    pgConnectionOptions.setIdleTimeoutUnit(TimeUnit.MILLISECONDS);
     if (StringUtils.isNotBlank(tenantId)) {
       pgConnectionOptions.addProperty(DEFAULT_SCHEMA_PROPERTY, convertToPsqlStandard(tenantId));
     }
     return pgConnectionOptions;
+  }
+
+  public static PoolOptions getPoolOptions() {
+    return new PoolOptions()
+      .setMaxSize(PostgresConnectionOptions.getMaxPoolSize())
+      .setIdleTimeout(Integer.parseInt(StringUtils.isNotBlank(getSystemProperty(DB_IDLETIMEOUT)) ? getSystemProperty(DB_IDLETIMEOUT) : DEFAULT_IDLE_TIMEOUT))
+      .setIdleTimeoutUnit(TimeUnit.MILLISECONDS);
   }
 
   public static Integer getMaxPoolSize() {
@@ -97,12 +112,4 @@ public class PostgresConnectionOptions {
     return format("%s_%s", tenantId.toLowerCase(), MODULE_NAME);
   }
 
-  /**
-   * For test usage only.
-   *
-   * @param newSystemProperties Map of system properties to set.
-   */
-  public static void setSystemProperties(Map<String, String> newSystemProperties) {
-    systemProperties = newSystemProperties;
-  }
 }

@@ -288,7 +288,7 @@ class FakeStorageModule extends AbstractVerticle {
 
   private void retrieveMany(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
-    var requestBody = routingContext.getBodyAsJson();
+    var requestBody = routingContext.body().asJsonObject();
 
     var limit = requestBody.getInteger("limit");
     var offset = requestBody.getInteger("offset");
@@ -373,14 +373,14 @@ class FakeStorageModule extends AbstractVerticle {
 
   private static JsonObject getJsonFromBody(RoutingContext routingContext) {
     if (hasBody(routingContext)) {
-      return routingContext.getBodyAsJson();
+      return routingContext.body().asJsonObject();
     } else {
       return new JsonObject();
     }
   }
 
   private static boolean hasBody(RoutingContext routingContext) {
-    return StringUtils.isNotBlank(routingContext.getBodyAsString());
+    return StringUtils.isNotBlank(routingContext.body().asString());
   }
 
   private void checkTokenHeader(RoutingContext routingContext) {
@@ -528,7 +528,7 @@ class FakeStorageModule extends AbstractVerticle {
   }
 
   private void emulateFailure(RoutingContext routingContext) {
-    endpointFailureDescriptor = routingContext.getBodyAsJson()
+    endpointFailureDescriptor = routingContext.body().asJsonObject()
       .mapTo(EndpointFailureDescriptor.class);
 
     routingContext.response().setStatusCode(201).end();

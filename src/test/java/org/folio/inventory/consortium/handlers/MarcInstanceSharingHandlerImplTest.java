@@ -1,5 +1,6 @@
 package org.folio.inventory.consortium.handlers;
 
+import static io.vertx.core.buffer.Buffer.buffer;
 import static org.folio.HttpStatus.HTTP_INTERNAL_SERVER_ERROR;
 import static org.folio.HttpStatus.HTTP_NO_CONTENT;
 import static org.folio.HttpStatus.HTTP_OK;
@@ -24,7 +25,6 @@ import static org.mockito.Mockito.when;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.buffer.impl.BufferImpl;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
@@ -153,7 +153,7 @@ public class MarcInstanceSharingHandlerImplTest {
     setField(marcHandler, "entitiesLinksService", entitiesLinksService);
     doReturn(sourceStorageClient).when(marcHandler).getSourceStorageRecordsClient(anyString(), eq(kafkaHeaders));
 
-    var recordWithLinkedAuthorities = buildHttpResponseWithBuffer(BufferImpl.buffer(RECORD_JSON_WITH_LINKED_AUTHORITIES), HttpStatus.HTTP_OK)
+    var recordWithLinkedAuthorities = buildHttpResponseWithBuffer(Buffer.buffer(RECORD_JSON_WITH_LINKED_AUTHORITIES), HttpStatus.HTTP_OK)
       .bodyAsJson(Record.class);
     bibRecord = sourceStorageRecordsResponseBuffer.bodyAsJson(Record.class);
     doReturn(Future.succeededFuture(recordWithLinkedAuthorities)).when(marcHandler).getSourceMARCByInstanceId(any(), any(), any());
@@ -161,7 +161,7 @@ public class MarcInstanceSharingHandlerImplTest {
   }
 
   private final HttpResponse<Buffer> sourceStorageRecordsResponseBuffer =
-    buildHttpResponseWithBuffer(BufferImpl.buffer(RECORD_JSON), HttpStatus.HTTP_OK);
+    buildHttpResponseWithBuffer(Buffer.buffer(RECORD_JSON), HttpStatus.HTTP_OK);
 
   @Test
   public void publishInstanceTest(TestContext testContext) {
@@ -251,7 +251,7 @@ public class MarcInstanceSharingHandlerImplTest {
     when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
     when(entitiesLinksService.putInstanceAuthorityLinks(any(), any(), any())).thenReturn(Future.succeededFuture());
 
-    var recordWithLinkedAuthorities = buildHttpResponseWithBuffer(BufferImpl.buffer(RECORD_JSON_WITH_LOCAL_LINKED_AUTHORITIES), HttpStatus.HTTP_OK)
+    var recordWithLinkedAuthorities = buildHttpResponseWithBuffer(buffer(RECORD_JSON_WITH_LOCAL_LINKED_AUTHORITIES), HttpStatus.HTTP_OK)
       .bodyAsJson(Record.class);
     doReturn(Future.succeededFuture(recordWithLinkedAuthorities)).when(marcHandler).getSourceMARCByInstanceId(any(), any(), any());
 

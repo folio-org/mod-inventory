@@ -35,23 +35,17 @@ public class VertxAssistant {
 
   public void stop() {
     CompletableFuture<Void> stopped = new CompletableFuture<>();
-
     stop(stopped);
-
     stopped.join();
   }
 
   public void stop(final CompletableFuture<Void> stopped) {
-
     if (vertx != null) {
-      vertx.close(res -> {
-          if (res.succeeded()) {
-            stopped.complete(null);
-          } else {
-            stopped.completeExceptionally(res.cause());
-          }
-        }
-      );
+      vertx.close()
+        .onSuccess(v -> stopped.complete(null))
+        .onFailure(stopped::completeExceptionally);
+    } else {
+      stopped.complete(null);
     }
   }
 
@@ -68,24 +62,17 @@ public class VertxAssistant {
     long startTime = System.currentTimeMillis();
 
     DeploymentOptions options = new DeploymentOptions();
-
     options.setConfig(new JsonObject(config));
-    options.setWorker(true);
+    options.setThreadingModel(ThreadingModel.WORKER);
     options.setInstances(verticleInstancesNumber);
 
-    vertx.deployVerticle(verticleClass, options, result -> {
-      if (result.succeeded()) {
+    vertx.deployVerticle(verticleClass, options)
+      .onSuccess(deploymentId -> {
         long elapsedTime = System.currentTimeMillis() - startTime;
-
-        log.info(String.format(
-          "%s deployed in %s milliseconds", verticleClass, elapsedTime));
-
-        deployed.complete(result.result());
-      } else {
-        deployed.completeExceptionally(result.cause());
-      }
-    });
-
+        log.info(String.format("%s deployed in %s milliseconds", verticleClass, elapsedTime));
+        deployed.complete(deploymentId);
+      })
+      .onFailure(deployed::completeExceptionally);
   }
 
   public void deployVerticle(Supplier<Verticle> verticleSupplier,
@@ -100,30 +87,20 @@ public class VertxAssistant {
       .setThreadingModel(ThreadingModel.WORKER)
       .setInstances(verticleInstancesNumber);
 
-    vertx.deployVerticle(verticleSupplier, options, result -> {
-      if (result.succeeded()) {
-        long elapsedTime = System.currentTimeMillis() - startTime;
-
-        log.info("{} deployed in {} milliseconds", verticleClass, elapsedTime);
-
-        deployed.complete(result.result());
-      } else {
-        deployed.completeExceptionally(result.cause());
-      }
-    });
-
+    vertx.deployVerticle(verticleSupplier, options)
+        .onSuccess(result -> {
+          long elapsedTime = System.currentTimeMillis() - startTime;
+          log.info("{} deployed in {} milliseconds", verticleClass, elapsedTime);
+          deployed.complete(result);
+        }).onFailure(deployed::completeExceptionally);
   }
 
   public void undeployVerticle(String deploymentId,
                                CompletableFuture<Void> undeployed) {
 
-    vertx.undeploy(deploymentId, result -> {
-      if (result.succeeded()) {
-        undeployed.complete(null);
-      } else {
-        undeployed.completeExceptionally(result.cause());
-      }
-    });
+    vertx.undeploy(deploymentId)
+      .onSuccess(result -> undeployed.complete(null))
+      .onFailure(undeployed::completeExceptionally);
   }
 
   public CompletableFuture<Void> undeployVerticle(String deploymentId) {

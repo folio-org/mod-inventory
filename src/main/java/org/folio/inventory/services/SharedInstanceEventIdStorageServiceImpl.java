@@ -14,7 +14,7 @@ public class SharedInstanceEventIdStorageServiceImpl implements EventIdStorageSe
 
   private static final Logger LOGGER = LogManager.getLogger(SharedInstanceEventIdStorageServiceImpl.class);
 
-  private static final String UNIQUE_VIOLATION_SQL_STATE = "23505";
+  private static final int UNIQUE_VIOLATION_SQL_STATE = 23505;
 
   private final EventIdStorageDao eventIdStorageDao;
 
@@ -31,7 +31,7 @@ public class SharedInstanceEventIdStorageServiceImpl implements EventIdStorageSe
       .onSuccess(promise::complete)
       .onFailure(error -> {
         if (error instanceof PgException pgException) {
-          if (pgException.getCode().equals(UNIQUE_VIOLATION_SQL_STATE)) {
+          if (pgException.getErrorCode() == UNIQUE_VIOLATION_SQL_STATE) {
             promise.fail(new DuplicateEventException("SQL Unique constraint violation prevented repeatedly saving the record"));
           } else {
             promise.fail(error);

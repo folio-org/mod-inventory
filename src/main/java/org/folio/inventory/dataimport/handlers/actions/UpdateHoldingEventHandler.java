@@ -1,6 +1,5 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
@@ -132,7 +131,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
           MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
 
           List<HoldingsRecord> updatedHoldingsRecord = new ArrayList<>();
-          List<Future> updatedHoldingsRecordFutures = new ArrayList<>();
+          List<Future<?>> updatedHoldingsRecordFutures = new ArrayList<>();
           isPayloadConstructed = false;
           convertHoldings(dataImportEventPayload);
           List<HoldingsRecord> list = List.of(Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord[].class));
@@ -163,7 +162,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
                 updatePromise.complete();
               });
           }
-          CompositeFuture.all(updatedHoldingsRecordFutures)
+          Future.all(updatedHoldingsRecordFutures)
             .onSuccess(ar -> processResults(dataImportEventPayload, updatedHoldingsRecord, expiredHoldings, future, holdingsRecordCollection, errors))
             .onFailure(e -> {
               LOGGER.warn("handle:: Error in composite future for Holdings update jobExecutionId: '{}' recordId: '{}' chunkId: '{}'", jobExecutionId, recordId, chunkId, e);
@@ -179,6 +178,22 @@ public class UpdateHoldingEventHandler implements EventHandler {
       future.completeExceptionally(e);
     }
     return future;
+  }
+
+  private void constructDataImportEventPayload(Promise<Void> promise, DataImportEventPayload dataImportEventPayload, List<HoldingsRecord> holdings, Context context, List<PartialError> errors) {
+    if (!isPayloadConstructed) {
+      isPayloadConstructed = true;
+      HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
+      payloadContext.put(HOLDINGS.value(), Json.encodePrettily(holdings));
+      if (payloadContext.containsKey(ITEM.value())) {
+        ItemCollection itemCollection = storage.getItemCollection(context);
+        updateDataImportEventPayloadItem(promise, dataImportEventPayload, itemCollection, errors);
+      } else {
+        promise.complete();
+      }
+    } else {
+      promise.complete();
+    }
   }
 
   private void processResults(DataImportEventPayload dataImportEventPayload, List<HoldingsRecord> updatedHoldingsRecord, List<HoldingsRecord> expiredHoldings, CompletableFuture<DataImportEventPayload> future, HoldingsRecordCollection holdingsRecordCollection, List<PartialError> errors) {
@@ -255,7 +270,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
       holdingsJsonArray.set(i, new JsonObject().put(HOLDINGS_PATH_FIELD, holdingAsJson));
     }
     dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingsJsonArray.encode());
-    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
+    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
   }
 
   private void processOLError(DataImportEventPayload dataImportEventPayload, CompletableFuture<DataImportEventPayload> future, HoldingsRecordCollection holdingsRecords, List<HoldingsRecord> expiredHoldings, List<PartialError> errors, OlHoldingsAccumulativeResults olAccumulativeResults) {
@@ -305,26 +320,13 @@ public class UpdateHoldingEventHandler implements EventHandler {
     });
   }
 
-  private void constructDataImportEventPayload(Promise<Void> promise, DataImportEventPayload dataImportEventPayload, List<HoldingsRecord> holdings, Context context, List<PartialError> errors) {
-    if (!isPayloadConstructed) {
-      isPayloadConstructed = true;
-      HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
-      payloadContext.put(HOLDINGS.value(), Json.encodePrettily(holdings));
-      if (payloadContext.containsKey(ITEM.value())) {
-        ItemCollection itemCollection = storage.getItemCollection(context);
-        updateDataImportEventPayloadItem(promise, dataImportEventPayload, itemCollection, errors);
-      } else {
-        promise.complete();
-      }
-    } else {
-      promise.complete();
-    }
-  }
-
-  private void updateDataImportEventPayloadItem(Promise<Void> promise, DataImportEventPayload dataImportEventPayload, ItemCollection itemCollection, List<PartialError> errors) {
+  private void updateDataImportEventPayloadItem(Promise<Void> promise,
+                                                DataImportEventPayload dataImportEventPayload,
+                                                ItemCollection itemCollection,
+                                                List<PartialError> errors) {
     JsonArray oldItemsAsJson = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
     JsonArray resultedItemsList = new JsonArray();
-    List<Future> updateItemsFutures = new ArrayList<>();
+    List<Future<Void>> updateItemsFutures = new ArrayList<>();
 
     for (int i = 0; i < oldItemsAsJson.size(); i++) {
       Promise<Void> updateItemPromise = Promise.promise();
@@ -346,7 +348,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
         updateItemPromise.complete();
       });
     }
-    CompositeFuture.all(updateItemsFutures)
+
+    Future.all(updateItemsFutures)
       .onComplete(ar -> {
         dataImportEventPayload.getContext().put(ITEM.value(), resultedItemsList.encode());
         promise.complete();
