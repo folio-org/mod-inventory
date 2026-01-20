@@ -24,6 +24,7 @@ import static java.lang.String.format;
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.buildMultiMatchErrorMessage;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
 
@@ -34,7 +35,6 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   public static final String MULTI_MATCH_IDS = "MULTI_MATCH_IDS";
   private static final String ERROR_LOAD_MSG = "Failed to load records cause: %s, status code: %s";
   private static final int MULTI_MATCH_LOAD_LIMIT = 90;
-  private static final int MAX_UUIDS_TO_DISPLAY = 4;
   private static final String ID_FIELD = "id";
 
   @Override
@@ -63,7 +63,8 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
               loadResult.setEntityType(MULTI_MATCH_IDS);
               loadResult.setValue(mapEntityListToIdsJsonString(collection.records));
             } else {
-              String errorMessage = buildMultiMatchErrorMessage(collection.records, collection.totalRecords);
+              String idsJson = mapEntityListToIdsJsonString(collection.records);
+              String errorMessage = buildMultiMatchErrorMessage(idsJson);
               LOG.error(errorMessage);
               future.completeExceptionally(new MatchingException(errorMessage));
               return;
@@ -122,25 +123,6 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
       .collect(Collectors.joining(" OR "));
 
     return format(" AND %s == (%s)", searchField, preparedIds);
-  }
-
-  private String buildMultiMatchErrorMessage(List<T> records, int totalRecords) {
-    StringBuilder message = new StringBuilder("Found multiple records matching specified conditions");
-
-    if (totalRecords <= MAX_UUIDS_TO_DISPLAY) {
-      String idsJson = mapEntityListToIdsJsonString(records);
-      JsonArray idsArray = new JsonArray(idsJson);
-
-      String uuidsList = idsArray.stream()
-        .map(Object::toString)
-        .collect(Collectors.joining(", "));
-
-      message.append(" (UUIDs: ").append(uuidsList).append(")");
-    } else {
-      message.append(" (").append(totalRecords).append(" records)");
-    }
-
-    return message.toString();
   }
 
   protected abstract EntityType getEntityType();

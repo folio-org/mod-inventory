@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.matching.util;
 
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.DataImportEventPayload;
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public final class EventHandlingUtil {
   public static final String PAYLOAD_USER_ID = "userId";
@@ -21,6 +23,7 @@ public final class EventHandlingUtil {
   public static final String OKAPI_USER_ID = "x-okapi-user-id";
   public static final String OKAPI_REQUEST_ID = "x-okapi-request-id";
   private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
+  private static final int MAX_UUIDS_TO_DISPLAY = 4;
 
   private EventHandlingUtil() {}
 
@@ -113,6 +116,31 @@ public final class EventHandlingUtil {
   public static boolean isSystemUserEnabled() {
     return !Boolean.parseBoolean(System.getenv().getOrDefault("SYSTEM_USER_ENABLED",
         System.getProperty("SYSTEM_USER_ENABLED", "true")));
+  }
+
+  /**
+   * Builds an error message for multiple match scenarios.
+   * If the number of records is less than or equal to MAX_UUIDS_TO_DISPLAY (4),
+   * it includes the UUIDs in the message. Otherwise, it includes the total count.
+   *
+   * @param idsJson JSON array string containing the matched record IDs
+   * @return formatted error message
+   */
+  public static String buildMultiMatchErrorMessage(String idsJson) {
+    JsonArray idsArray = new JsonArray(idsJson);
+    StringBuilder message = new StringBuilder("Found multiple records matching specified conditions");
+
+    if (idsArray.size() <= MAX_UUIDS_TO_DISPLAY) {
+      String uuidsList = idsArray.stream()
+        .map(Object::toString)
+        .collect(Collectors.joining(", "));
+
+      message.append(" (UUIDs: ").append(uuidsList).append(")");
+    } else {
+      message.append(" (").append(idsArray.size()).append(" records)");
+    }
+
+    return message.toString();
   }
 
 }

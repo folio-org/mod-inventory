@@ -50,6 +50,7 @@ import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.apache.http.HttpStatus.SC_OK;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.buildMultiMatchErrorMessage;
 import static org.folio.processing.value.Value.ValueType.MISSING;
 import static org.folio.rest.jaxrs.model.Filter.ComparisonPartType;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
@@ -62,7 +63,6 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   protected static final String CENTRAL_TENANT_ID_KEY = "CENTRAL_TENANT_ID";
   protected static final String RECORDS_IDENTIFIERS_FETCH_LIMIT_PARAM = "inventory.di.records.identifiers.fetch.limit";
   private static final String PAYLOAD_HAS_NO_DATA_MESSAGE = "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
-  private static final String FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE = "Found multiple records matching specified conditions";
   private static final String RECORDS_NOT_FOUND_MESSAGE = "Could not find records matching specified conditions";
   private static final String MATCH_DETAIL_IS_INVALID_MESSAGE = "Match detail is invalid";
   private static final String MATCH_RESULT_KEY_PREFIX = "MATCHED_%s";
@@ -475,7 +475,9 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
     LOG.warn("handlePayloadWithMultiMatchResult:: Matched multiple records, jobExecutionId: '{}', tenantId: '{}'",
       payload.getJobExecutionId(), payload.getTenant());
-    return Future.failedFuture(new MatchingException(FOUND_MULTIPLE_RECORDS_ERROR_MESSAGE));
+    String ids = payload.getContext().get(getMultiMatchResultKey());
+    String errorMessage = buildMultiMatchErrorMessage(ids);
+    return Future.failedFuture(new MatchingException(errorMessage));
   }
 
   private boolean canNextProfileProcessMultiMatchResult(DataImportEventPayload eventPayload) {
