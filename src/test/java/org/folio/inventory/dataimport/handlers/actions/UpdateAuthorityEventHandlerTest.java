@@ -294,9 +294,9 @@ public class UpdateAuthorityEventHandlerTest {
     when(authorityCollection.findById(anyString())).thenReturn(CompletableFuture.failedFuture(new InternalServerErrorException("Failure")));
 
     var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()));
+    Record authorityRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()));
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_AUTHORITY.value(), Json.encode(record));
+    context.put(MARC_AUTHORITY.value(), Json.encode(authorityRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_AUTHORITY_MATCHED.value())
