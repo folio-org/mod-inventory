@@ -21,6 +21,7 @@ import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.AuthorityRecordCollection;
+import org.folio.inventory.exceptions.InternalServerErrorException;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.publisher.KafkaEventPublisher;
 import org.folio.processing.mapping.MappingManager;
@@ -284,6 +285,29 @@ public class UpdateAuthorityEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
     ExecutionException exception = assertThrows(ExecutionException.class, future::get);
     assertThat(exception.getCause().getMessage(), containsString("Authority record was not found"));
+    verify(publisher, times(0)).publish(dataImportEventPayload);
+  }
+
+  @Test
+  public void shouldReturnFailedFutureIfFindAuthorityByIdCompletedExceptionally() throws IOException {
+    when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityCollection);
+    when(authorityCollection.findById(anyString())).thenReturn(CompletableFuture.failedFuture(new InternalServerErrorException("Failure")));
+
+    var parsedAuthorityRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_AUTHORITY_RECORD));
+    Record authorityRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedAuthorityRecord.encode()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MARC_AUTHORITY.value(), Json.encode(authorityRecord));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_AUTHORITY_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+
+    CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
+    ExecutionException exception = assertThrows(ExecutionException.class, future::get);
+    assertThat(exception.getCause().getMessage(), containsString("Cannot get Authority by id"));
     verify(publisher, times(0)).publish(dataImportEventPayload);
   }
 
