@@ -117,6 +117,12 @@ public class UpdateAuthorityEventHandler extends AbstractAuthorityEventHandler {
         mappedRecord.withVersion(actualRecord.getVersion()),
         success -> promise.complete(mappedRecord),
         failure -> failureUpdateHandler(payload, mappedRecord.getId(), collection, promise, failure));
+    }).exceptionally(e -> {
+      String msg = format("Cannot get Authority by id '%s' for jobExecutionId '%s'. Error: %s",
+        mappedRecord.getId(), payload.getJobExecutionId(), e.getCause());
+      LOGGER.error(msg, e);
+      promise.fail(new EventProcessingException(msg));
+      return null;
     });
     return promise.future();
   }
