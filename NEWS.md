@@ -1,3 +1,6 @@
+## 21.1.19 2026-01-22
+* Add exceptional handling for findById before Authority update [MODDATAIMP-1267](https://folio-org.atlassian.net/browse/MODINV-1342)
+
 ## 21.1.18 2026-01-13
 * Vert.x 4.5.23 fixing CVE-2025-67735 Netty CRLF injection request smuggling [MODINV-1331](https://folio-org.atlassian.net/browse/MODINV-1331), [MODINV-1321](https://folio-org.atlassian.net/browse/MODINV-1321)
 
