@@ -17,6 +17,7 @@ types:
   instance: !include instance.json
   instances: !include instances.json
   tenantItemPairCollection: !include tenantItemPairCollection.json
+  instancePatchRequest: !include instance_patch.json
 
 traits:
   language: !include raml-util/traits/language.raml
@@ -393,6 +394,35 @@ resourceTypes:
       get:
       put:
         is: [validate]
+      patch:
+        description: Partial update of instance with given ID
+        body:
+          application/json:
+            type: instancePatchRequest
+            example: !include examples/instance-patch.json
+        responses:
+          204:
+            description: "Instance successfully updated"
+          404:
+            description: "Instance with a given ID not found"
+            body:
+              text/plain:
+                example: Not found
+          400:
+            description: "Bad request, e.g. malformed request body or query parameter."
+            body:
+              text/plain:
+                example: "unable to update instance - malformed JSON"
+          409:
+            description: "Optimistic locking version conflict"
+            body:
+              text/plain:
+                example: "version conflict"
+          500:
+            description: "Internal server error, e.g. due to misconfiguration"
+            body:
+              text/plain:
+                example: "internal server error, contact administrator"
       /mark-deleted:
         delete:
           description: Toggle the suppression state of an instance record, affecting either instance and associated MARC record if present.

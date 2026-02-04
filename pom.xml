@@ -479,6 +479,7 @@
                 <path>${basedir}/ramls/tenantItemPair.json</path>
                 <path>${basedir}/ramls/tenantItemPairCollection.json</path>
                 <path>${basedir}/ramls/tenantItemResponse.json</path>
+                <path>${basedir}/ramls/instance_patch.json</path>
               </sourcePaths>
               <targetPackage>org.folio</targetPackage>
               <generateBuilders>true</generateBuilders>

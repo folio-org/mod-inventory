@@ -81,11 +81,13 @@ public class Instances extends AbstractInstances {
   public void register(Router router) {
     router.post(INSTANCES_PATH + "*").handler(BodyHandler.create());
     router.put(INSTANCES_PATH + "*").handler(BodyHandler.create());
+    router.patch(INSTANCES_PATH + "*").handler(BodyHandler.create());
     router.get(INSTANCES_PATH).handler(this::getAll);
     router.post(INSTANCES_PATH).handler(this::create);
     router.delete(INSTANCES_PATH).handler(this::deleteAll);
     router.get(INSTANCES_PATH + "/:id").handler(this::getById);
     router.put(INSTANCES_PATH + "/:id").handler(this::update);
+    router.patch(INSTANCES_PATH + "/:id").handler(this::patch);
     router.delete(INSTANCES_PATH + "/:id").handler(this::deleteById);
     router.delete(INSTANCES_PATH + "/:id" + "/mark-deleted").handler(this::softDelete);
   }
@@ -193,6 +195,38 @@ public class Instances extends AbstractInstances {
       .thenCompose(existingInstance -> refuseWhenHridChanged(existingInstance, updatedInstance))
       .thenAccept(existingInstance -> updateInstance(existingInstance, updatedInstance, rContext, wContext))
       .exceptionally(doExceptionally(rContext));
+  }
+
+  private void patch(RoutingContext rContext) {
+    WebContext wContext = new WebContext(rContext);
+    JsonObject patchJson = rContext.body().asJsonObject();
+    String id = rContext.request().getParam("id");
+    InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
+
+    completedFuture(patchJson)
+      .thenCompose(patch -> instanceCollection.findById(id))
+      .thenCompose(InstancesValidators::refuseWhenInstanceNotFound)
+      .thenCompose(existingInstance ->
+        fetchPrecedingSucceedingTitles(new Success<>(existingInstance), rContext, wContext))
+      .thenAccept(existingInstance ->
+        applyPatch(existingInstance, patchJson)
+          .thenAccept(patchedInstance ->
+            refuseWhenSuppressFlagsInvalid(patchedInstance)
+              .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
+              .thenCompose(i -> refuseWhenBlockedFieldsChanged(existingInstance, patchedInstance))
+              .thenCompose(i -> refuseWhenHridChanged(existingInstance, patchedInstance))
+              .thenAccept(i -> patchInstance(existingInstance, patchedInstance, patchJson, rContext, wContext))))
+      .exceptionally(doExceptionally(rContext));
+  }
+
+  private CompletableFuture<Instance> applyPatch(Instance existingInstance, JsonObject patchJson) {
+    try {
+      JsonObject mergedJson = JsonObject.mapFrom(existingInstance);
+      mergedJson.mergeIn(patchJson, false);
+      return completedFuture(Instance.fromJson(mergedJson));
+    } catch (Exception e) {
+      return failedFuture(e);
+    }
   }
 
   /**
@@ -307,6 +341,32 @@ public class Instances extends AbstractInstances {
           .thenAccept(ignored -> noContent(rContext.response()))
           .exceptionally(doExceptionally(rContext));
       },
+      FailureResponseConsumer.serverError(rContext.response()));
+  }
+
+  /**
+   * Patches given Instance
+   *
+   * @param existingInstance existing instance
+   * @param patchedInstance  instance for update
+   * @param patchJson        patch body
+   * @param rContext         routing context
+   * @param wContext         web context
+   */
+  private void patchInstance(Instance existingInstance,
+    Instance patchedInstance,
+    JsonObject patchJson,
+    RoutingContext rContext,
+    WebContext wContext) {
+    InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
+    instanceCollection.patch(
+      existingInstance.getId(),
+      patchJson,
+
+      v -> updateRelatedRecords(rContext, wContext, patchedInstance)
+        .thenCompose(ignored -> updateVisibilityFlagsInSrs(existingInstance, patchedInstance, wContext))
+        .thenAccept(ignored -> noContent(rContext.response()))
+        .exceptionally(doExceptionally(rContext)),
       FailureResponseConsumer.serverError(rContext.response()));
   }
 

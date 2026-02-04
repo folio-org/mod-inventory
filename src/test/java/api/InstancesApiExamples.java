@@ -1211,6 +1211,81 @@ public class InstancesApiExamples extends ApiTests {
     assertThat(updateResponse.getBody(), is(expectedErrorMessage));
   }
 
+  @Test
+  public void canPatchAnExistingInstance()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID id = UUID.randomUUID();
+    final var sourceId = "sourceId";
+    final var typeId = "typeId";
+
+    JsonObject smallAngryPlanet = smallAngryPlanet(id);
+    smallAngryPlanet.put("natureOfContentTermIds",
+      new JsonArray().add(ApiTestSuite.getBibliographyNatureOfContentTermId()));
+
+    smallAngryPlanet.put(DATES_KEY, datesToJson(new Dates(null, date1, date2)));
+
+    JsonObject newInstance = createInstance(smallAngryPlanet);
+
+    var instanceId = newInstance.getString("id");
+    JsonObject patchRequest = new JsonObject()
+      .put("id", newInstance.getString("id"))
+      .put("title", "New title")
+      .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add(tagNameTwo)))
+      .put("subjects", new JsonArray().add(
+        new Subject(null,  null, sourceId, typeId)))
+      .put(DATES_KEY, datesToJson(new Dates(dateTypeId, date1, date2)))
+      .put("natureOfContentTermIds",
+        new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()))
+      .put("staffSuppress", true)
+      .put("discoverySuppress", true)
+      .put("deleted", true);
+
+    URL instanceLocation = URI.create(String.format("%s/%s", ApiRoot.instances(),
+      instanceId)).toURL();
+
+    Response patchResponse = patchInstance(instanceId, patchRequest);
+
+    assertThat(patchResponse.getStatusCode(), is(204));
+
+    final var getCompleted = okapiClient.get(instanceLocation);
+
+    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+
+    JsonObject updatedInstance = getResponse.getJson();
+
+    assertThat(updatedInstance.getString("id"), is(newInstance.getString("id")));
+    assertThat(updatedInstance.getString("title"), is("New title"));
+    assertThat(updatedInstance.getJsonArray("identifiers").size(), is(1));
+    assertTrue(updatedInstance.getBoolean("deleted"));
+
+    assertTrue(updatedInstance.containsKey(TAGS_KEY));
+    final JsonObject tags = updatedInstance.getJsonObject(TAGS_KEY);
+    assertTrue(tags.containsKey(TAG_LIST_KEY));
+    final JsonArray tagList = tags.getJsonArray(TAG_LIST_KEY);
+    assertThat(tagList, hasItem(tagNameTwo));
+
+    JsonArray natureOfContentTermIds = updatedInstance.getJsonArray("natureOfContentTermIds");
+    assertThat(natureOfContentTermIds.size(), is(1));
+    assertThat(natureOfContentTermIds.getString(0), is(ApiTestSuite.getAudiobookNatureOfContentTermId()));
+
+    var dates = updatedInstance.getJsonObject(DATES_KEY);
+    assertThat(dates.getString(DATE_TYPE_ID_KEY), is(dateTypeId));
+    assertThat(dates.getString(DATE1_KEY), is(date1));
+    assertThat(dates.getString(DATE2_KEY), is(date2));
+
+    var subjects = updatedInstance.getJsonArray("subjects");
+    var subject = subjects.getJsonObject(0);
+    assertThat(subjects.size(), is(1));
+    assertThat(subject.getString(sourceId), is(sourceId));
+    assertThat(subject.getString(typeId), is(typeId));
+  }
+
   @SneakyThrows
   private JsonObject createInstance(JsonObject newInstanceRequest) {
     return InstanceApiClient.createInstance(okapiClient, newInstanceRequest);
@@ -1228,5 +1303,15 @@ public class InstancesApiExamples extends ApiTests {
     final var putFuture = okapiClient.put(instanceUpdateUri, instance);
 
     return putFuture.toCompletableFuture().get(5, SECONDS);
+  }
+
+  @SneakyThrows
+  private Response patchInstance(String id, JsonObject patchJson) {
+    String instancePatchUri = String
+      .format("%s/%s", ApiRoot.instances(), id);
+
+    final var patchFuture = okapiClient.patch(instancePatchUri, patchJson);
+
+    return patchFuture.toCompletableFuture().get(5, SECONDS);
   }
 }

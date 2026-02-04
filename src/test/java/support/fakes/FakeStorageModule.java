@@ -79,6 +79,7 @@ class FakeStorageModule extends AbstractVerticle {
 
     router.post(pathTree).handler(BodyHandler.create());
     router.put(pathTree).handler(BodyHandler.create());
+    router.patch(pathTree).handler(BodyHandler.create());
 
     router.route(pathTree).handler(this::emulateFailureIfNeeded);
     router.route(pathTree).handler(this::checkTokenHeader);
@@ -96,6 +97,8 @@ class FakeStorageModule extends AbstractVerticle {
 
     router.put(rootPath + "/:id").handler(this::checkRequiredProperties);
     router.put(rootPath + "/:id").handler(this::replace);
+
+    router.patch(rootPath + "/:id").handler(this::patch);
 
     router.get(rootPath + "/:id").handler(this::get);
     router.delete(rootPath + "/:id").handler(this::delete);
@@ -532,6 +535,53 @@ class FakeStorageModule extends AbstractVerticle {
       .mapTo(EndpointFailureDescriptor.class);
 
     routingContext.response().setStatusCode(201).end();
+  }
+
+  private void patch(RoutingContext routingContext) {
+    WebContext context = new WebContext(routingContext);
+    String id = routingContext.request().getParam("id");
+
+    Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
+    if (resourcesForTenant == null || !resourcesForTenant.containsKey(id)) {
+      ClientErrorResponse.notFound(routingContext.response());
+      return;
+    }
+
+    JsonObject patchBody = getJsonFromBody(routingContext);
+    JsonObject existing = resourcesForTenant.get(id);
+
+    JsonObject merged = existing.copy();
+    deepMergeInto(merged, patchBody);
+
+    preProcessRecords(context.getTenantId(), existing, merged).thenAccept(processed -> {
+      setDefaultProperties(processed);
+      resourcesForTenant.replace(id, processed);
+      SuccessResponse.noContent(routingContext.response());
+    }).exceptionally(error -> {
+      EndpointFailureHandler.handleFailure(EndpointFailureHandler.getKnownException(error),
+        routingContext);
+      return null;
+    });
+  }
+
+  private static void deepMergeInto(JsonObject target, JsonObject patch) {
+    if (patch == null) return;
+
+    for (String key : patch.fieldNames()) {
+      Object patchVal = patch.getValue(key);
+
+      if (patchVal instanceof JsonObject patchObj) {
+        Object existingVal = target.getValue(key);
+        if (existingVal instanceof JsonObject existingObj) {
+          deepMergeInto(existingObj, patchObj);
+          target.put(key, existingObj);
+        } else {
+          target.put(key, patchObj.copy());
+        }
+      } else {
+        target.put(key, patchVal);
+      }
+    }
   }
 }
 
