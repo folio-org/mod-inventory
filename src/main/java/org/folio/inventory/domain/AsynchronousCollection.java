@@ -1,5 +1,6 @@
 package org.folio.inventory.domain;
 
+import io.vertx.core.json.JsonObject;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -73,4 +74,9 @@ public interface AsynchronousCollection<T> {
                         Consumer<Failure> failureCallback) {
     throw new UnsupportedOperationException();
   }
+
+  void patch(String id,
+    JsonObject patchJson,
+    Consumer<Success<Void>> completionCallback,
+    Consumer<Failure> failureCallback);
 }

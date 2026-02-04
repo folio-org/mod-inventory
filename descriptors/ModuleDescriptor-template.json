@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "14.3",
+      "version": "14.4",
       "handlers": [
         {
           "methods": ["GET"],
@@ -471,6 +471,29 @@
           ]
         },
         {
+          "methods": ["PATCH"],
+          "pathPattern": "/inventory/instances/{id}",
+          "permissionsRequired": ["inventory.instances.item.patch"],
+          "modulePermissions": [
+            "inventory-storage.instances.item.patch",
+            "inventory-storage.instances.item.get",
+            "inventory-storage.instances.item.post",
+            "inventory-storage.instances.item.delete",
+            "source-storage.records.delete",
+            "source-storage.records.undelete.item.post",
+            "source-storage.records.update",
+            "inventory-storage.preceding-succeeding-titles.collection.get",
+            "inventory-storage.preceding-succeeding-titles.item.post",
+            "inventory-storage.preceding-succeeding-titles.item.put",
+            "inventory-storage.preceding-succeeding-titles.item.delete",
+            "inventory-storage.instance-relationships.collection.get",
+            "inventory-storage.instance-relationships.item.post",
+            "inventory-storage.instance-relationships.item.put",
+            "inventory-storage.instance-relationships.item.delete",
+            "user-tenants.collection.get"
+          ]
+        },
+        {
           "methods": ["DELETE"],
           "pathPattern": "/inventory/instances/{id}",
           "permissionsRequired": ["inventory.instances.item.delete"],
@@ -660,7 +683,7 @@
     },
     {
       "id": "instance-storage",
-      "version": "11.2"
+      "version": "11.3"
     },
     {
       "id": "instance-storage-batch-sync",
@@ -900,6 +923,11 @@
       "description": "Modify instance"
     },
     {
+      "permissionName": "inventory.instances.item.patch",
+      "displayName": "Inventory - partially modify instance",
+      "description": "Partially modify instance"
+    },
+    {
       "permissionName": "inventory.instances.item.delete",
       "displayName": "Inventory - delete individual instance",
       "description": "Delete individual instance"
@@ -933,6 +961,7 @@
         "inventory.instances.item.post",
         "inventory.instances.batch.post",
         "inventory.instances.item.put",
+        "inventory.instances.item.patch",
         "inventory.instances.item.delete",
         "inventory.instances.collection.delete",
         "inventory.config.instances.blocked-fields.get",

@@ -185,6 +185,20 @@ abstract class ExternalStorageModuleCollection<T> {
       });
   }
 
+  public void patch(String id, JsonObject patchJson,
+    Consumer<Success<Void>> completionCallback,
+    Consumer<Failure> failureCallback) {
+
+    String location = individualRecordLocation(id);
+    final HttpRequest<Buffer> request = withStandardHeaders(webClient.patchAbs(location));
+    request.sendJsonObject(patchJson)
+      .onSuccess(response -> interpretNoContentResponse(response, completionCallback, failureCallback))
+      .onFailure(error -> {
+        LOGGER.error("Request to patch record at {} failed to send", location, error);
+        failureCallback.accept(new Failure(error.getMessage(), -1));
+      });
+  }
+
     public void delete(String id, Consumer<Success<Void>> completionCallback,
                      Consumer<Failure> failureCallback) {
 
