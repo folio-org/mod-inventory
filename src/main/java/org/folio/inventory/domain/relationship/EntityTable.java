@@ -1,7 +1,6 @@
 package org.folio.inventory.domain.relationship;
 
 public enum EntityTable {
-  AUTHORITY("records_authorities","authority_id"),
   INSTANCE("records_instances", "instance_id"),
   HOLDINGS("records_holdings", "holdings_id"),
   ITEM("records_items", "item_id");
