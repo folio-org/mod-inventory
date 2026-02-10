@@ -710,10 +710,6 @@
       "version": "1.0 2.0"
     },
     {
-      "id": "instance-authority-links",
-      "version": "2.1"
-    },
-    {
       "id": "identifier-types",
       "version": "1.0"
     },
@@ -730,19 +726,11 @@
       "version": "0.1"
     },
     {
-      "id": "request-storage",
-      "version": "6.0"
-    },
-    {
       "id": "source-storage-records",
       "version": "3.4"
     },
     {
       "id": "bound-with-parts-storage",
-      "version": "2.0"
-    },
-    {
-      "id": "authority-storage",
       "version": "2.0"
     }
   ],
@@ -774,6 +762,18 @@
     {
       "id": "staging-users",
       "version": "1.1"
+    },
+    {
+      "id": "instance-authority-links",
+      "version": "2.1"
+    },
+    {
+      "id": "authority-storage",
+      "version": "2.0"
+    },
+    {
+      "id": "request-storage",
+      "version": "6.0"
     }
   ],
   "permissionSets": [
