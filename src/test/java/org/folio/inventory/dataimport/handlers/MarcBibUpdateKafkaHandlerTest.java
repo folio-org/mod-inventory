@@ -236,8 +236,8 @@ public class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
 
     // then
     future.onComplete(ar -> {
-      Assert.assertTrue(ar.succeeded());
-      Assert.assertEquals(expectedKafkaRecordKey, ar.result());
+      context.assertTrue(ar.succeeded());
+      context.assertEquals(expectedKafkaRecordKey, ar.result());
     });
 
     vertxAssistant.getVertx().runOnContext(v -> {
