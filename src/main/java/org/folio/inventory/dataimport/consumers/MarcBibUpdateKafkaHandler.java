@@ -137,16 +137,14 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
 
     LinkUpdateReport linkUpdateReport;
     if (result.succeeded()) {
-      linkUpdateReport = mapToLinkReport(instanceEvent, null);
       promise.complete(consumerRecord.key());
     } else {
       var errorCause = result.cause();
       LOGGER.error("Failed to update instance by jobId {}:{}", instanceEvent.getJobId(), errorCause);
       linkUpdateReport = mapToLinkReport(instanceEvent, errorCause.getMessage());
       promise.fail(errorCause);
+      sendEventToKafka(linkUpdateReport, consumerRecord.headers());
     }
-
-    sendEventToKafka(linkUpdateReport, consumerRecord.headers());
   }
 
   private void processOLError(KafkaConsumerRecord<String, String> consumerRecord,
