@@ -476,7 +476,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     LOG.warn("handlePayloadWithMultiMatchResult:: Matched multiple records, jobExecutionId: '{}', tenantId: '{}'",
       payload.getJobExecutionId(), payload.getTenant());
     String ids = payload.getContext().get(getMultiMatchResultKey());
-    String errorMessage = buildMultiMatchErrorMessage(ids);
+    String errorMessage = buildMultiMatchErrorMessage(ids, null);
     return Future.failedFuture(new MatchingException(errorMessage));
   }
 
