@@ -208,9 +208,11 @@ public class Instances extends AbstractInstances {
       .thenCompose(InstancesValidators::refuseWhenInstanceNotFound)
       .thenCompose(existingInstance ->
         fetchPrecedingSucceedingTitles(new Success<>(existingInstance), rContext, wContext))
-      .thenAccept(existingInstance ->
+      .thenCompose(existingInstance ->
+        fetchInstanceRelationships(new Success<>(existingInstance), rContext, wContext))
+      .thenCompose(existingInstance ->
         applyPatch(existingInstance, patchJson)
-          .thenAccept(patchedInstance ->
+          .thenCompose(patchedInstance ->
             refuseWhenSuppressFlagsInvalid(patchedInstance)
               .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
               .thenCompose(i -> refuseWhenBlockedFieldsChanged(existingInstance, patchedInstance))
