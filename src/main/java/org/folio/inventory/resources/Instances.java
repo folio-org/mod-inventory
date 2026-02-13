@@ -208,9 +208,11 @@ public class Instances extends AbstractInstances {
       .thenCompose(InstancesValidators::refuseWhenInstanceNotFound)
       .thenCompose(existingInstance ->
         fetchPrecedingSucceedingTitles(new Success<>(existingInstance), rContext, wContext))
-      .thenAccept(existingInstance ->
+      .thenCompose(existingInstance ->
+        fetchInstanceRelationships(new Success<>(existingInstance), rContext, wContext))
+      .thenCompose(existingInstance ->
         applyPatch(existingInstance, patchJson)
-          .thenAccept(patchedInstance ->
+          .thenCompose(patchedInstance ->
             refuseWhenSuppressFlagsInvalid(patchedInstance)
               .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
               .thenCompose(i -> refuseWhenBlockedFieldsChanged(existingInstance, patchedInstance))
@@ -223,6 +225,10 @@ public class Instances extends AbstractInstances {
     try {
       JsonObject mergedJson = JsonObject.mapFrom(existingInstance);
       mergedJson.mergeIn(patchJson, false);
+      if (isInstanceControlledByRecord(existingInstance)) {
+        mergedJson.remove(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY);
+        mergedJson.remove(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
+      }
       return completedFuture(Instance.fromJson(mergedJson));
     } catch (Exception e) {
       return failedFuture(e);
