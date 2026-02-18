@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.MAX_UUIDS_TO_DISPLAY;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.buildMultiMatchErrorMessage;
@@ -64,7 +65,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
               loadResult.setValue(mapEntityListToIdsJsonString(collection.records));
             } else {
               String idsJson = mapEntityListToIdsJsonString(collection.records);
-              String errorMessage = buildMultiMatchErrorMessage(idsJson);
+              String errorMessage = buildMultiMatchErrorMessage(idsJson, collection.totalRecords);
               LOG.error(errorMessage);
               future.completeExceptionally(new MatchingException(errorMessage));
               return;
@@ -96,7 +97,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   private PagingParameters buildPagingParameters(boolean multiMatchLoadingParams) {
     // currently, limit = 90 is used because of constraint for URL size that is used for processing multi-match result
     // in scope of https://issues.folio.org/browse/MODDICORE-251 a new approach will be introduced for multi-matching result processing
-    return multiMatchLoadingParams ? new PagingParameters(MULTI_MATCH_LOAD_LIMIT, 0) : new PagingParameters(2, 0);
+    return multiMatchLoadingParams ? new PagingParameters(MULTI_MATCH_LOAD_LIMIT, 0) : new PagingParameters(MAX_UUIDS_TO_DISPLAY, 0);
   }
 
   private boolean canProcessMultiMatchResult(DataImportEventPayload eventPayload) {

@@ -23,7 +23,7 @@ public final class EventHandlingUtil {
   public static final String OKAPI_USER_ID = "x-okapi-user-id";
   public static final String OKAPI_REQUEST_ID = "x-okapi-request-id";
   private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
-  private static final int MAX_UUIDS_TO_DISPLAY = 4;
+  public static final int MAX_UUIDS_TO_DISPLAY = 4;
 
   private EventHandlingUtil() {}
 
@@ -119,25 +119,27 @@ public final class EventHandlingUtil {
   }
 
   /**
-   * Builds an error message for multiple match scenarios.
-   * If the number of records is less than or equal to MAX_UUIDS_TO_DISPLAY (4),
-   * it includes the UUIDs in the message. Otherwise, it includes the total count.
+   * Builds an error message for multiple match scenarios. If the number of
+   * records is less than or equal to MAX_UUIDS_TO_DISPLAY (4), it includes the
+   * UUIDs in the message. Otherwise, it includes the total count.
    *
    * @param idsJson JSON array string containing the matched record IDs
+   * @param totalRecords total number of matched records, can be null. If null, the size of idsJson array will be used.
    * @return formatted error message
    */
-  public static String buildMultiMatchErrorMessage(String idsJson) {
+  public static String buildMultiMatchErrorMessage(String idsJson, Integer totalRecords) {
     JsonArray idsArray = new JsonArray(idsJson);
+    Integer total = totalRecords != null ? totalRecords : idsArray.size();
     StringBuilder message = new StringBuilder("Found multiple records matching specified conditions");
 
-    if (idsArray.size() <= MAX_UUIDS_TO_DISPLAY) {
+    if (total <= MAX_UUIDS_TO_DISPLAY) {
       String uuidsList = idsArray.stream()
         .map(Object::toString)
         .collect(Collectors.joining(", "));
 
       message.append(" (UUIDs: ").append(uuidsList).append(")");
     } else {
-      message.append(" (").append(idsArray.size()).append(" records)");
+      message.append(" (").append(total).append(" records)");
     }
 
     return message.toString();
