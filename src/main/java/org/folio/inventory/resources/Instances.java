@@ -226,8 +226,8 @@ public class Instances extends AbstractInstances {
       JsonObject mergedJson = JsonObject.mapFrom(existingInstance);
       mergedJson.mergeIn(patchJson, false);
       if (isInstanceControlledByRecord(existingInstance)) {
-        mergedJson.remove(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY);
-        mergedJson.remove(PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
+        zeroingField(mergedJson.getJsonArray(Instance.PRECEDING_TITLES_KEY), PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
+        zeroingField(mergedJson.getJsonArray(Instance.SUCCEEDING_TITLES_KEY), PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY);
       }
       return completedFuture(Instance.fromJson(mergedJson));
     } catch (Exception e) {
