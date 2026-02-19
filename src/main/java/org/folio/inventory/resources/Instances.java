@@ -226,6 +226,7 @@ public class Instances extends AbstractInstances {
       log.info("Patch:\n{}", patchJson.encodePrettily());
       JsonObject mergedJson = JsonObject.mapFrom(existingInstance);
       mergedJson.mergeIn(patchJson, false);
+      log.info("Merged json:\n{}", mergedJson.encodePrettily());
       if (isInstanceControlledByRecord(existingInstance)) {
         zeroingField(mergedJson.getJsonArray(Instance.PRECEDING_TITLES_KEY), PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
         zeroingField(mergedJson.getJsonArray(Instance.SUCCEEDING_TITLES_KEY), PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY);
