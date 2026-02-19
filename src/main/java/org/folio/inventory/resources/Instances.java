@@ -223,6 +223,7 @@ public class Instances extends AbstractInstances {
 
   private CompletableFuture<Instance> applyPatch(Instance existingInstance, JsonObject patchJson) {
     try {
+      log.info("Patch:\n{}", patchJson.encodePrettily());
       JsonObject mergedJson = JsonObject.mapFrom(existingInstance);
       mergedJson.mergeIn(patchJson, false);
       if (isInstanceControlledByRecord(existingInstance)) {
