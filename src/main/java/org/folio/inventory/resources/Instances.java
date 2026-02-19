@@ -416,6 +416,8 @@ public class Instances extends AbstractInstances {
     zeroingField(existingInstanceJson.getJsonArray(Instance.PRECEDING_TITLES_KEY), PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
     zeroingField(existingInstanceJson.getJsonArray(Instance.SUCCEEDING_TITLES_KEY), PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY);
 
+    log.info("Existing:\n{}\nUpdated:\n{}", existingInstanceJson.encodePrettily(), updatedInstanceJson.encodePrettily());
+
     Map<String, Object> existingBlockedFields = new HashMap<>();
     Map<String, Object> updatedBlockedFields = new HashMap<>();
     for (String blockedFieldCode : config.getInstanceBlockedFields()) {
