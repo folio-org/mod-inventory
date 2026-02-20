@@ -1105,8 +1105,11 @@ public class InstancesApiExamples extends ApiTests {
 
     Response instanceUpdateResponse = updateInstance(instanceToUpdate);
 
+    String expectedMessage = String.format("HRID change detected: existing=%s, updated=%s",
+      createdInstance.getString("hrid"), instanceToUpdate.getString("hrid"));
+
     assertThat(instanceUpdateResponse,
-      hasValidationError("HRID can not be updated", "hrid", "updatedHrid"));
+      hasValidationError(expectedMessage, "hrid", "updatedHrid"));
 
     JsonObject existingInstance = instancesClient.getById(instanceId).getJson();
     assertThat(existingInstance, is(createdInstance));
@@ -1126,8 +1129,11 @@ public class InstancesApiExamples extends ApiTests {
 
     Response instanceUpdateResponse = updateInstance(instanceToUpdate);
 
+    String expectedMessage = String.format("HRID change detected: existing=%s, updated=%s",
+      createdInstance.getString("hrid"), instanceToUpdate.getString("hrid"));
+
     assertThat(instanceUpdateResponse,
-      hasValidationError("HRID can not be updated", "hrid", null));
+      hasValidationError(expectedMessage, "hrid", null));
 
     JsonObject existingInstance = instancesClient.getById(instanceId).getJson();
     assertThat(existingInstance, is(createdInstance));
