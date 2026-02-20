@@ -223,10 +223,8 @@ public class Instances extends AbstractInstances {
 
   private CompletableFuture<Instance> applyPatch(Instance existingInstance, JsonObject patchJson) {
     try {
-      log.info("Patch:\n{}", patchJson.encodePrettily());
       JsonObject mergedJson = JsonObject.mapFrom(existingInstance);
       mergedJson.mergeIn(patchJson, false);
-      log.info("Merged json:\n{}", mergedJson.encodePrettily());
       if (isInstanceControlledByRecord(existingInstance)) {
         zeroingField(mergedJson.getJsonArray(Instance.PRECEDING_TITLES_KEY), PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
         zeroingField(mergedJson.getJsonArray(Instance.SUCCEEDING_TITLES_KEY), PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY);
@@ -417,8 +415,6 @@ public class Instances extends AbstractInstances {
     // Anyway they are filled after this comparing while fetching from DB in "updatePrecedingSucceedingTitles"-method.
     zeroingField(existingInstanceJson.getJsonArray(Instance.PRECEDING_TITLES_KEY), PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
     zeroingField(existingInstanceJson.getJsonArray(Instance.SUCCEEDING_TITLES_KEY), PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY);
-
-    log.info("Existing:\n{}\nUpdated:\n{}", existingInstanceJson.encodePrettily(), updatedInstanceJson.encodePrettily());
 
     Map<String, Object> existingBlockedFields = new HashMap<>();
     Map<String, Object> updatedBlockedFields = new HashMap<>();
