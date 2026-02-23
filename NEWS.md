@@ -21,6 +21,7 @@
 * Remove Deprecated Authority Data-import Logic [MODINV-1299](https://folio-org.atlassian.net/browse/MODINV-1299)
 * Make authority-storage, request-storage,instance-authority-links dependencies optional [MODINV-1346](https://folio-org.atlassian.net/browse/MODINV-1346)
 * Remove LinkUpdateReport sending on successful processing [MODINV-1348](https://folio-org.atlassian.net/browse/MODINV-1348)
+* Move consumption of authority DI events from mod-inventory to mod-entities-links [APPAUTHREC-3](https://folio-org.atlassian.net/browse/APPAUTHREC-3)
 
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)
