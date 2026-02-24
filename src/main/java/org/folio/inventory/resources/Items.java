@@ -1,13 +1,17 @@
 package org.folio.inventory.resources;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.HttpStatus.HTTP_OK;
 import static org.folio.inventory.common.FutureAssistance.allOf;
+import static org.folio.inventory.support.CompletableFutures.failedFuture;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.ItemUtil.HOLDINGS_RECORD_ID;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
+import static org.folio.inventory.validation.ItemStatusValidator.checkStatusIfPresent;
 import static org.folio.inventory.validation.ItemStatusValidator.itemHasCorrectStatus;
+import static org.folio.inventory.validation.ItemsValidator.barcodeChanged;
 import static org.folio.inventory.validation.ItemsValidator.claimedReturnedMarkedAsMissing;
 import static org.folio.inventory.validation.ItemsValidator.hridChanged;
 
@@ -99,6 +103,7 @@ public class Items extends AbstractInventoryResource {
   public void register(Router router) {
     router.post(RELATIVE_ITEMS_PATH + "*").handler(BodyHandler.create());
     router.put(RELATIVE_ITEMS_PATH + "*").handler(BodyHandler.create());
+    router.patch(RELATIVE_ITEMS_PATH + "*").handler(BodyHandler.create());
 
     router.get(RELATIVE_ITEMS_PATH).handler(this::getAll);
     router.post(RELATIVE_ITEMS_PATH + "/retrieve").handler(this::retrieveAllByCQLBody);
@@ -107,6 +112,7 @@ public class Items extends AbstractInventoryResource {
 
     router.get(RELATIVE_ITEMS_PATH_ID).handler(this::getById);
     router.put(RELATIVE_ITEMS_PATH_ID).handler(this::update);
+    router.patch(RELATIVE_ITEMS_PATH_ID).handler(this::patch);
     router.delete(RELATIVE_ITEMS_PATH_ID).handler(this::deleteById);
 
     Arrays.stream(ItemStatusName.values())
@@ -291,6 +297,53 @@ public class Items extends AbstractInventoryResource {
           }
         }
       }).exceptionally(doExceptionally(routingContext));
+  }
+
+  private void patch(RoutingContext routingContext) {
+    WebContext context = new WebContext(routingContext);
+
+    var patchRequest = routingContext.body().asJsonObject();
+
+    Optional<ValidationError> validationError = checkStatusIfPresent(patchRequest);
+    if (validationError.isPresent()) {
+      unprocessableEntity(routingContext.response(), validationError.get());
+      return;
+    }
+
+    ItemCollection itemCollection = storage.getItemCollection(context);
+    UserCollection userCollection = storage.getUserCollection(context);
+
+    final String itemId = routingContext.request().getParam("id");
+    final CompletableFuture<Success<Item>> getItemFuture = new CompletableFuture<>();
+
+    itemCollection.findById(itemId, getItemFuture::complete,
+      FailureResponseConsumer.serverError(routingContext.response()));
+
+    getItemFuture
+      .thenApply(Success::getResult)
+      .thenCompose(ItemsValidator::refuseWhenItemNotFound)
+      .thenCompose(oldItem ->
+        applyPatch(oldItem, patchRequest)
+          .thenCompose(patchedItem -> hridChanged(oldItem, patchedItem))
+          .thenCompose(patchedItem -> barcodeChanged(oldItem, patchedItem))
+          .thenCompose(patchedItem -> claimedReturnedMarkedAsMissing(oldItem, patchedItem))
+          .thenCompose(patchedItem -> {
+            findUserAndPatchItem(routingContext, patchRequest, oldItem, userCollection, itemCollection);
+            return completedFuture(null);
+            }
+          )
+      )
+      .exceptionally(doExceptionally(routingContext));
+  }
+
+  private CompletableFuture<Item> applyPatch(Item existingItem, JsonObject patchJson) {
+    try {
+      JsonObject mergedJson = JsonObject.mapFrom(existingItem);
+      mergedJson.mergeIn(patchJson, false);
+      return completedFuture(ItemUtil.jsonToItem(mergedJson));
+    } catch (Exception e) {
+      return failedFuture(e);
+    }
   }
 
   private void deleteById(RoutingContext routingContext) {
@@ -842,6 +895,19 @@ public class Items extends AbstractInventoryResource {
       failure -> updateItem(routingContext, newItem, oldItem, null, itemCollection));
   }
 
+  private void findUserAndPatchItem(
+    RoutingContext routingContext,
+    JsonObject patchJson,
+    Item oldItem,
+    UserCollection userCollection,
+    ItemCollection itemCollection) {
+
+    String userId = routingContext.request().getHeader("X-Okapi-User-Id");
+    userCollection.findById(userId,
+      success -> patchItem(routingContext, patchJson, oldItem, success.getResult(), itemCollection),
+      failure -> patchItem(routingContext, patchJson, oldItem, null, itemCollection));
+  }
+
   private void updateItem(
     RoutingContext routingContext,
     Item newItem,
@@ -849,18 +915,47 @@ public class Items extends AbstractInventoryResource {
     User user,
     ItemCollection itemCollection) {
 
-    Map<String, CirculationNote> oldNotes = oldItem.getCirculationNotes()
-      .stream()
-      .collect(Collectors.toMap(CirculationNote::getId, Function.identity()));
-
-    List<CirculationNote> updatedNotes = newItem.getCirculationNotes()
-      .stream()
-      .map(note -> updateCirculationNoteIfChanged(note, user, oldNotes))
-      .collect(Collectors.toList());
+    List<CirculationNote> updatedNotes = updateCirculationNotes(oldItem.getCirculationNotes(),
+      newItem.getCirculationNotes(), user);
 
     itemCollection.update(newItem.withCirculationNotes(updatedNotes),
       v -> SuccessResponse.noContent(routingContext.response()),
       failure -> ForwardResponse.forward(routingContext.response(), failure));
+  }
+
+  private void patchItem(
+    RoutingContext routingContext,
+    JsonObject patchJson,
+    Item oldItem,
+    User user,
+    ItemCollection itemCollection) {
+
+    if (patchJson.containsKey("circulationNotes")) {
+      var newItem = ItemUtil.jsonToItem(patchJson.mergeIn(JsonObject.mapFrom(oldItem), false));
+      List<CirculationNote> updatedNotes = updateCirculationNotes(oldItem.getCirculationNotes(),
+        newItem.getCirculationNotes(), user);
+      var notesJson = new JsonArray(
+        updatedNotes.stream()
+          .map(JsonObject::mapFrom)
+          .toList());
+      patchJson.put("circulationNotes", notesJson);
+    }
+
+    itemCollection.patch(patchJson.getString("id"), patchJson,
+      v -> SuccessResponse.noContent(routingContext.response()),
+      failure -> ForwardResponse.forward(routingContext.response(), failure));
+  }
+
+  List<CirculationNote> updateCirculationNotes(List<CirculationNote> oldNotes,
+    List<CirculationNote> newNotes, User user) {
+    Map<String, CirculationNote> oldNoteList = oldNotes
+      .stream()
+      .collect(Collectors.toMap(CirculationNote::getId, Function.identity()));
+
+    return newNotes
+      .stream()
+      .map(note -> updateCirculationNoteIfChanged(note, user, oldNoteList))
+      .collect(Collectors.toList());
   }
 
   private void checkForNonUniqueBarcode(

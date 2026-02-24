@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "14.4",
+      "version": "14.5",
       "handlers": [
         {
           "methods": ["GET"],
@@ -352,6 +352,17 @@
           ]
         },
         {
+          "methods": ["PATCH"],
+          "pathPattern": "/inventory/items/{id}",
+          "permissionsRequired": ["inventory.items.item.patch"],
+          "modulePermissions": [
+            "inventory-storage.items.item.get",
+            "inventory-storage.items.collection.get",
+            "inventory-storage.items.item.put",
+            "users.item.get"
+          ]
+        },
+        {
           "methods": ["DELETE"],
           "pathPattern": "/inventory/items/{id}",
           "permissionsRequired": ["inventory.items.item.delete"],
@@ -679,7 +690,7 @@
     },
     {
       "id": "item-storage",
-      "version": "11.0"
+      "version": "11.2"
     },
     {
       "id": "instance-storage",
@@ -878,6 +889,11 @@
       "description": "Modify item"
     },
     {
+      "permissionName": "inventory.items.item.patch",
+      "displayName": "Inventory - modify item partially",
+      "description": "Modify item partially"
+    },
+    {
       "permissionName": "inventory.items.item.delete",
       "displayName": "Inventory - delete individual item",
       "description": "Delete individual item"
@@ -953,6 +969,7 @@
         "inventory.items.item.get",
         "inventory.items.item.post",
         "inventory.items.item.put",
+        "inventory.items.item.patch",
         "inventory.items.item.delete",
         "inventory.items.collection.delete",
         "inventory.instances.collection.get",

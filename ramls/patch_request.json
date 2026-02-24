@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "description": "An instance record patch request",
-  "javaType": "org.folio.rest.jaxrs.model.InstancePatchRequest",
+  "javaType": "org.folio.rest.jaxrs.model.PatchRequest",
   "type": "object",
   "properties": {
     "id": {

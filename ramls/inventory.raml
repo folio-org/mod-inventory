@@ -17,7 +17,7 @@ types:
   instance: !include instance.json
   instances: !include instances.json
   tenantItemPairCollection: !include tenantItemPairCollection.json
-  instancePatchRequest: !include instance_patch.json
+  patchRequest: !include patch_request.json
 
 traits:
   language: !include raml-util/traits/language.raml
@@ -76,6 +76,35 @@ resourceTypes:
           exampleItem: !include examples/item_get.json
           schema: item
       get:
+      patch:
+              description: Partial update of item with given ID
+              body:
+                application/json:
+                  type: patchRequest
+                  example: !include examples/patch-request.json
+              responses:
+                204:
+                  description: "Item successfully updated"
+                404:
+                  description: "Item with a given ID not found"
+                  body:
+                    text/plain:
+                      example: Not found
+                400:
+                  description: "Bad request, e.g. malformed request body or query parameter."
+                  body:
+                    text/plain:
+                      example: "unable to update instance - malformed JSON"
+                409:
+                  description: "Optimistic locking version conflict"
+                  body:
+                    text/plain:
+                      example: "version conflict"
+                500:
+                  description: "Internal server error, e.g. due to misconfiguration"
+                  body:
+                    text/plain:
+                      example: "internal server error, contact administrator"
       /mark-withdrawn:
         post:
           responses:
@@ -398,8 +427,8 @@ resourceTypes:
         description: Partial update of instance with given ID
         body:
           application/json:
-            type: instancePatchRequest
-            example: !include examples/instance-patch.json
+            type: patchRequest
+            example: !include examples/patch-request.json
         responses:
           204:
             description: "Instance successfully updated"
