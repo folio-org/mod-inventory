@@ -324,8 +324,8 @@ public class Items extends AbstractInventoryResource {
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
       .thenCompose(oldItem ->
         applyPatch(oldItem, patchRequest)
-          .thenCompose(patchedItem -> hridChanged(oldItem, patchedItem))
-          .thenCompose(patchedItem -> barcodeChanged(oldItem, patchedItem))
+          .thenCompose(patchedItem -> hridChanged(oldItem, patchedItem).thenApply(x -> patchedItem))
+          .thenCompose(patchedItem -> barcodeChanged(oldItem, patchedItem).thenApply(x -> patchedItem))
           .thenCompose(patchedItem -> claimedReturnedMarkedAsMissing(oldItem, patchedItem))
           .thenCompose(patchedItem -> {
             findUserAndPatchItem(routingContext, patchRequest, oldItem, userCollection, itemCollection);
