@@ -235,6 +235,29 @@ public class ResourceClient {
     return putCompleted.toCompletableFuture().get(5, SECONDS);
   }
 
+  public void patch(UUID id, JsonObject request)
+    throws MalformedURLException,
+    InterruptedException,
+    ExecutionException,
+    TimeoutException {
+
+    Response patchResponse = attemptToPatch(id, request);
+
+    assertThat(
+      String.format("Failed to update %s %s: %s", resourceName, id, patchResponse.getBody()),
+      patchResponse.getStatusCode(), is(HttpURLConnection.HTTP_NO_CONTENT));
+  }
+
+  public Response attemptToPatch(UUID id, JsonObject request)
+    throws MalformedURLException, InterruptedException, ExecutionException,
+    TimeoutException {
+
+    final var patchCompleted = client.patch(
+      urlMaker.combine(String.format("/%s", id)).toString(), request);
+
+    return patchCompleted.toCompletableFuture().get(5, SECONDS);
+  }
+
   @SneakyThrows
   public Response getById(UUID id) {
     final var getCompleted = client.get(urlMaker.combine(String.format("/%s", id)));

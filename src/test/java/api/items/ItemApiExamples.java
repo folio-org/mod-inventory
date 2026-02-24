@@ -1815,6 +1815,222 @@ public class ItemApiExamples extends ApiTests {
     assertThat(response.getStatusCode(), is(204));
   }
 
+  @Test
+  public void canPatchExistingItem()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE = UUID.randomUUID();
+    UUID TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE = UUID.randomUUID();
+    UUID holdingId = createInstanceAndHolding();
+    UUID itemId = UUID.randomUUID();
+
+    JsonObject lastCheckIn = new JsonObject()
+      .put("servicePointId", "7c5abc9f-f3d7-4856-b8d7-6712462ca007")
+      .put("staffMemberId", "12115707-d7c8-54e7-8287-22e97f7250a4")
+      .put("dateTime", "2020-01-02T13:02:46.000Z");
+
+    JsonObject newItemRequest = new ItemRequestBuilder()
+      .withId(itemId)
+      .forHolding(holdingId)
+      .withInTransitDestinationServicePointId(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE)
+      .withBarcode("645398607547")
+      .canCirculate()
+      .temporarilyInReadingRoom()
+      .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
+      .withLastCheckIn(lastCheckIn)
+      .withCopyNumber("cp")
+      .create();
+
+    newItemRequest = itemsClient.create(newItemRequest).getJson();
+
+    assertThat(newItemRequest.getString("copyNumber"), is("cp"));
+    assertThat(newItemRequest.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
+      is(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE.toString()));
+
+    var patchRequest = new JsonObject()
+      .put("id", itemId)
+      .put("barcode", newItemRequest.getString("barcode"))
+      .put("status", new JsonObject().put("name", "Checked out"))
+      .put("copyNumber", "updatedCp")
+      .put(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY,
+        TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE)
+      .put("tags", new JsonObject().put("tagList", new JsonArray().add("")));
+
+    itemsClient.patch(itemId, patchRequest);
+
+    Response getResponse = itemsClient.getById(itemId);
+
+    assertThat(getResponse.getStatusCode(), is(200));
+    JsonObject updatedItem = getResponse.getJson();
+
+    assertThat(getTags(updatedItem), hasItem(""));
+    assertThat(updatedItem.containsKey("id"), is(true));
+    assertThat(updatedItem.getString("title"), is("Long Way to a Small Angry Planet"));
+    assertThat(updatedItem.getString("barcode"), is("645398607547"));
+    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked out"));
+    assertThat(updatedItem.getJsonObject(Item.LAST_CHECK_IN).getString("servicePointId"),
+      is("7c5abc9f-f3d7-4856-b8d7-6712462ca007"));
+    assertThat(updatedItem.getJsonObject(Item.LAST_CHECK_IN).getString("staffMemberId"),
+      is("12115707-d7c8-54e7-8287-22e97f7250a4"));
+    assertThat(updatedItem.getJsonObject(Item.LAST_CHECK_IN).getString("dateTime"),
+      is("2020-01-02T13:02:46.000Z"));
+    assertThat(updatedItem.getJsonObject("status").getString("name"), is("Checked out"));
+
+    JsonObject materialType = updatedItem.getJsonObject("materialType");
+
+    assertThat(materialType.getString("id"), is(ApiTestSuite.getBookMaterialType()));
+    assertThat(materialType.getString("name"), is("Book"));
+
+    JsonObject permanentLoanType = updatedItem.getJsonObject("permanentLoanType");
+
+    assertThat(permanentLoanType.getString("id"), is(ApiTestSuite.getCanCirculateLoanType()));
+    assertThat(permanentLoanType.getString("name"), is("Can Circulate"));
+
+    assertThat("Item should not have permanent location",
+      updatedItem.containsKey("permanentLocation"), is(false));
+
+    assertThat(updatedItem.getJsonObject("temporaryLocation").getString("name"), is("Reading Room"));
+
+    assertThat(updatedItem.getString("copyNumber"), is("updatedCp"));
+    assertThat(updatedItem.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
+      is(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE.toString()));
+  }
+
+  @Test
+  public void cannotPatchItemThatDoesNotExist()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID holdingId = createInstanceAndHolding();
+    UUID itemId = UUID.randomUUID();
+
+    JsonObject patchItemRequest = new ItemRequestBuilder()
+      .withId(itemId)
+      .forHolding(holdingId)
+      .canCirculate()
+      .temporarilyInReadingRoom()
+      .create();
+
+    final var patchCompleted = okapiClient.patch(
+      String.format("%s/%s", ApiRoot.items(), patchItemRequest.getString("id")),
+      patchItemRequest);
+
+    Response patchResponse = patchCompleted.toCompletableFuture().get(5, SECONDS);
+
+    assertThat(patchResponse.getStatusCode(), is(404));
+  }
+
+  @Test
+  public void cannotPatchItemIfBarcodeWasChanged()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE = UUID.randomUUID();
+    UUID TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE = UUID.randomUUID();
+    UUID holdingId = createInstanceAndHolding();
+    UUID itemId = UUID.randomUUID();
+
+    JsonObject lastCheckIn = new JsonObject()
+      .put("servicePointId", "7c5abc9f-f3d7-4856-b8d7-6712462ca007")
+      .put("staffMemberId", "12115707-d7c8-54e7-8287-22e97f7250a4")
+      .put("dateTime", "2020-01-02T13:02:46.000Z");
+
+    JsonObject newItemRequest = new ItemRequestBuilder()
+      .withId(itemId)
+      .forHolding(holdingId)
+      .withInTransitDestinationServicePointId(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE)
+      .withBarcode("645398607547")
+      .canCirculate()
+      .temporarilyInReadingRoom()
+      .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
+      .withLastCheckIn(lastCheckIn)
+      .withCopyNumber("cp")
+      .create();
+
+    newItemRequest = itemsClient.create(newItemRequest).getJson();
+
+    assertThat(newItemRequest.getString("copyNumber"), is("cp"));
+    assertThat(newItemRequest.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
+      is(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE.toString()));
+
+    var patchRequest = new JsonObject()
+      .put("id", itemId)
+      .put("barcode", "new_barcode")
+      .put("status", new JsonObject().put("name", "Checked out"))
+      .put("copyNumber", "updatedCp")
+      .put(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY,
+        TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE)
+      .put("tags", new JsonObject().put("tagList", new JsonArray().add("")));
+
+    final var patchCompleted = okapiClient.patch(
+      String.format("%s/%s", ApiRoot.items(), patchRequest.getString("id")),
+      patchRequest);
+
+    Response patchResponse = patchCompleted.toCompletableFuture().get(5, SECONDS);
+
+    assertThat(patchResponse.getStatusCode(), is(422));
+  }
+
+  @Test
+  public void cannotPatchItemWithIncorrectStatus()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE = UUID.randomUUID();
+    UUID TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE = UUID.randomUUID();
+    UUID holdingId = createInstanceAndHolding();
+    UUID itemId = UUID.randomUUID();
+
+    JsonObject lastCheckIn = new JsonObject()
+      .put("servicePointId", "7c5abc9f-f3d7-4856-b8d7-6712462ca007")
+      .put("staffMemberId", "12115707-d7c8-54e7-8287-22e97f7250a4")
+      .put("dateTime", "2020-01-02T13:02:46.000Z");
+
+    JsonObject newItemRequest = new ItemRequestBuilder()
+      .withId(itemId)
+      .forHolding(holdingId)
+      .withInTransitDestinationServicePointId(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE)
+      .withBarcode("645398607547")
+      .canCirculate()
+      .temporarilyInReadingRoom()
+      .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
+      .withLastCheckIn(lastCheckIn)
+      .withCopyNumber("cp")
+      .create();
+
+    newItemRequest = itemsClient.create(newItemRequest).getJson();
+
+    assertThat(newItemRequest.getString("copyNumber"), is("cp"));
+    assertThat(newItemRequest.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
+      is(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE.toString()));
+
+    var patchRequest = new JsonObject()
+      .put("id", itemId)
+      .put("barcode", "new_barcode")
+      .put("status", new JsonObject().put("name", "Invalid status"))
+      .put("copyNumber", "updatedCp")
+      .put(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY,
+        TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE)
+      .put("tags", new JsonObject().put("tagList", new JsonArray().add("")));
+
+    final var patchCompleted = okapiClient.patch(
+      String.format("%s/%s", ApiRoot.items(), patchRequest.getString("id")),
+      patchRequest);
+
+    Response patchResponse = patchCompleted.toCompletableFuture().get(5, SECONDS);
+
+    assertThat(patchResponse.getStatusCode(), is(422));
+  }
+
   private Response updateItem(JsonObject item) throws MalformedURLException,
     InterruptedException, ExecutionException, TimeoutException {
 
