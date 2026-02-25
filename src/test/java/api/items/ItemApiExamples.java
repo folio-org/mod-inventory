@@ -1966,6 +1966,7 @@ public class ItemApiExamples extends ApiTests {
     var patchRequest = new JsonObject()
       .put("id", itemId)
       .put(HRID_KEY, "new_hrid")
+      .put(BARCODE_KEY, "645398607547")
       .put(STATUS_KEY, new JsonObject().put("name", "Checked out"))
       .put("copyNumber", "updatedCp")
       .put(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY,
@@ -2019,6 +2020,7 @@ public class ItemApiExamples extends ApiTests {
     var patchRequest = new JsonObject()
       .put("id", itemId)
       .put(BARCODE_KEY, "new_barcode")
+      .put(HRID_KEY, newItemRequest.getString(HRID_KEY))
       .put(STATUS_KEY, new JsonObject().put("name", "Checked out"))
       .put("copyNumber", "updatedCp")
       .put(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY,
