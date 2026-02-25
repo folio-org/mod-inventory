@@ -2073,7 +2073,6 @@ public class ItemApiExamples extends ApiTests {
 
     var patchRequest = new JsonObject()
       .put("id", itemId)
-      .put("barcode", "new_barcode")
       .put("status", new JsonObject().put("name", "Invalid status"))
       .put("copyNumber", "updatedCp")
       .put(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY,
