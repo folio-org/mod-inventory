@@ -2,6 +2,9 @@ package org.folio.inventory.validation;
 
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.inventory.domain.items.Item.BARCODE_KEY;
+import static org.folio.inventory.domain.items.Item.HRID_KEY;
+import static org.folio.inventory.domain.items.Item.STATUS_KEY;
 import static org.folio.inventory.support.CompletableFutures.failedFuture;
 
 import io.vertx.core.json.JsonObject;
@@ -36,8 +39,8 @@ public final class ItemsValidator {
   }
 
   public static CompletableFuture<Item> claimedReturnedMarkedAsMissing(Item oldItem, JsonObject patchRequest) {
-    if (patchRequest.containsKey("status")) {
-      var newStatusName = patchRequest.getJsonObject("status").getString("name");
+    if (patchRequest.containsKey(STATUS_KEY)) {
+      var newStatusName = patchRequest.getJsonObject(STATUS_KEY).getString("name");
       if (isClaimedReturnedItemMarkedMissing(oldItem.getStatus().getName(),
         ItemStatusName.forName(newStatusName))) {
         final ValidationError validationError = new ValidationError(
@@ -53,7 +56,7 @@ public final class ItemsValidator {
   public static CompletableFuture<Item> hridChanged(Item oldItem, Item newItem) {
     if (!Objects.equals(newItem.getHrid(), oldItem.getHrid())) {
       final ValidationError validationError = new ValidationError(
-        "HRID can not be updated", "hrid", newItem.getHrid());
+        "HRID can not be updated", HRID_KEY, newItem.getHrid());
 
       return failedFuture(new UnprocessableEntityException(validationError));
     }
@@ -62,10 +65,10 @@ public final class ItemsValidator {
   }
 
   public static CompletableFuture<Item> hridChanged(Item oldItem, JsonObject patchRequest) {
-    if (patchRequest.containsKey("hrid")
-      && !Objects.equals(patchRequest.getString("hrid"), oldItem.getHrid())) {
+    if (patchRequest.containsKey(HRID_KEY)
+      && !Objects.equals(patchRequest.getString(HRID_KEY), oldItem.getHrid())) {
       final ValidationError validationError = new ValidationError(
-        "HRID can not be updated", "hrid", patchRequest.getString("hrid"));
+        "HRID can not be updated", HRID_KEY, patchRequest.getString(HRID_KEY));
 
       return failedFuture(new UnprocessableEntityException(validationError));
     }
@@ -85,10 +88,10 @@ public final class ItemsValidator {
   }
 
   public static CompletableFuture<Item> barcodeChanged(Item oldItem, JsonObject patchRequest) {
-    if (patchRequest.containsKey("barcode")
-      && !Objects.equals(patchRequest.getString("barcode"), oldItem.getBarcode())) {
+    if (patchRequest.containsKey(BARCODE_KEY)
+      && !Objects.equals(patchRequest.getString(BARCODE_KEY), oldItem.getBarcode())) {
       final ValidationError validationError = new ValidationError(
-        "Barcode can not be patched", "barcode", patchRequest.getString("barcode"));
+        "Barcode can not be patched", BARCODE_KEY, patchRequest.getString(BARCODE_KEY));
 
       return failedFuture(new UnprocessableEntityException(validationError));
     }

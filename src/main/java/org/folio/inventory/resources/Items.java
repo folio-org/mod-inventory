@@ -329,16 +329,6 @@ public class Items extends AbstractInventoryResource {
       .exceptionally(doExceptionally(routingContext));
   }
 
-  private CompletableFuture<Item> applyPatch(Item existingItem, JsonObject patchJson) {
-    try {
-      JsonObject mergedJson = JsonObject.mapFrom(existingItem);
-      mergedJson.mergeIn(patchJson, false);
-      return completedFuture(ItemUtil.jsonToItem(mergedJson));
-    } catch (Exception e) {
-      return failedFuture(e);
-    }
-  }
-
   private void deleteById(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
     CollectionResourceClient itemsStorageClient;
