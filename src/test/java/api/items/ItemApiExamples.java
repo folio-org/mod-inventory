@@ -16,8 +16,11 @@ import static org.folio.inventory.domain.items.CirculationNote.NOTE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.SOURCE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
+import static org.folio.inventory.domain.items.Item.BARCODE_KEY;
 import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
+import static org.folio.inventory.domain.items.Item.HRID_KEY;
 import static org.folio.inventory.domain.items.Item.ORDER_KEY;
+import static org.folio.inventory.domain.items.Item.STATUS_KEY;
 import static org.folio.inventory.domain.user.Personal.FIRST_NAME_KEY;
 import static org.folio.inventory.domain.user.Personal.LAST_NAME_KEY;
 import static org.folio.inventory.domain.user.User.ID_KEY;
@@ -1926,6 +1929,60 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
+  public void cannotPatchItemIfHridWasChanged()
+    throws InterruptedException,
+    MalformedURLException,
+    TimeoutException,
+    ExecutionException {
+
+    UUID TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE = UUID.randomUUID();
+    UUID TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE = UUID.randomUUID();
+    UUID holdingId = createInstanceAndHolding();
+    UUID itemId = UUID.randomUUID();
+
+    JsonObject lastCheckIn = new JsonObject()
+      .put("servicePointId", "7c5abc9f-f3d7-4856-b8d7-6712462ca007")
+      .put("staffMemberId", "12115707-d7c8-54e7-8287-22e97f7250a4")
+      .put("dateTime", "2020-01-02T13:02:46.000Z");
+
+    JsonObject newItemRequest = new ItemRequestBuilder()
+      .withId(itemId)
+      .forHolding(holdingId)
+      .withInTransitDestinationServicePointId(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE)
+      .withBarcode("645398607547")
+      .canCirculate()
+      .temporarilyInReadingRoom()
+      .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
+      .withLastCheckIn(lastCheckIn)
+      .withCopyNumber("cp")
+      .create();
+
+    newItemRequest = itemsClient.create(newItemRequest).getJson();
+
+    assertThat(newItemRequest.getString("copyNumber"), is("cp"));
+    assertThat(newItemRequest.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
+      is(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE.toString()));
+
+    var patchRequest = new JsonObject()
+      .put("id", itemId)
+      .put(HRID_KEY, "new_hrid")
+      .put(BARCODE_KEY, "645398607547")
+      .put(STATUS_KEY, new JsonObject().put("name", "Checked out"))
+      .put("copyNumber", "updatedCp")
+      .put(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY,
+        TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE)
+      .put("tags", new JsonObject().put("tagList", new JsonArray().add("")));
+
+    final var patchCompleted = okapiClient.patch(
+      String.format("%s/%s", ApiRoot.items(), patchRequest.getString("id")),
+      patchRequest);
+
+    Response patchResponse = patchCompleted.toCompletableFuture().get(5, SECONDS);
+
+    assertThat(patchResponse.getStatusCode(), is(422));
+  }
+
+  @Test
   public void cannotPatchItemIfBarcodeWasChanged()
     throws InterruptedException,
     MalformedURLException,
@@ -1962,8 +2019,9 @@ public class ItemApiExamples extends ApiTests {
 
     var patchRequest = new JsonObject()
       .put("id", itemId)
-      .put("barcode", "new_barcode")
-      .put("status", new JsonObject().put("name", "Checked out"))
+      .put(BARCODE_KEY, "new_barcode")
+      .put(HRID_KEY, newItemRequest.getString(HRID_KEY))
+      .put(STATUS_KEY, new JsonObject().put("name", "Checked out"))
       .put("copyNumber", "updatedCp")
       .put(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY,
         TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE)
@@ -2015,7 +2073,6 @@ public class ItemApiExamples extends ApiTests {
 
     var patchRequest = new JsonObject()
       .put("id", itemId)
-      .put("barcode", "new_barcode")
       .put("status", new JsonObject().put("name", "Invalid status"))
       .put("copyNumber", "updatedCp")
       .put(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY,

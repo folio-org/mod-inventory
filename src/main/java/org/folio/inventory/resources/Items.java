@@ -322,28 +322,11 @@ public class Items extends AbstractInventoryResource {
     getItemFuture
       .thenApply(Success::getResult)
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
-      .thenCompose(oldItem ->
-        applyPatch(oldItem, patchRequest)
-          .thenCompose(patchedItem -> hridChanged(oldItem, patchedItem).thenApply(x -> patchedItem))
-          .thenCompose(patchedItem -> barcodeChanged(oldItem, patchedItem).thenApply(x -> patchedItem))
-          .thenCompose(patchedItem -> claimedReturnedMarkedAsMissing(oldItem, patchedItem))
-          .thenCompose(patchedItem -> {
-            findUserAndPatchItem(routingContext, patchRequest, oldItem, userCollection, itemCollection);
-            return completedFuture(null);
-            }
-          )
-      )
+      .thenCompose(oldItem -> hridChanged(oldItem, patchRequest))
+      .thenCompose(oldItem -> barcodeChanged(oldItem, patchRequest))
+      .thenCompose(oldItem -> claimedReturnedMarkedAsMissing(oldItem, patchRequest))
+      .thenAccept(oldItem -> findUserAndPatchItem(routingContext, patchRequest, oldItem, userCollection, itemCollection))
       .exceptionally(doExceptionally(routingContext));
-  }
-
-  private CompletableFuture<Item> applyPatch(Item existingItem, JsonObject patchJson) {
-    try {
-      JsonObject mergedJson = JsonObject.mapFrom(existingItem);
-      mergedJson.mergeIn(patchJson, false);
-      return completedFuture(ItemUtil.jsonToItem(mergedJson));
-    } catch (Exception e) {
-      return failedFuture(e);
-    }
   }
 
   private void deleteById(RoutingContext routingContext) {
@@ -930,15 +913,17 @@ public class Items extends AbstractInventoryResource {
     User user,
     ItemCollection itemCollection) {
 
-    if (patchJson.containsKey("circulationNotes")) {
-      var newItem = ItemUtil.jsonToItem(patchJson.mergeIn(JsonObject.mapFrom(oldItem), false));
+    if (patchJson.containsKey(Item.CIRCULATION_NOTES_KEY)) {
+      var newCirculationNotes = JsonArrayHelper.toList(patchJson.getJsonArray(Item.CIRCULATION_NOTES_KEY)).stream()
+        .map(CirculationNote::new)
+        .toList();
       List<CirculationNote> updatedNotes = updateCirculationNotes(oldItem.getCirculationNotes(),
-        newItem.getCirculationNotes(), user);
+        newCirculationNotes, user);
       var notesJson = new JsonArray(
         updatedNotes.stream()
           .map(JsonObject::mapFrom)
           .toList());
-      patchJson.put("circulationNotes", notesJson);
+      patchJson.put(Item.CIRCULATION_NOTES_KEY, notesJson);
     }
 
     itemCollection.patch(patchJson.getString("id"), patchJson,

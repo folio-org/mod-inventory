@@ -12,6 +12,7 @@ public class Item {
 
   public static final String VERSION_KEY = "_version";
   public static final String HRID_KEY = "hrid";
+  public static final String BARCODE_KEY = "barcode";
   public static final String TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY
     = "inTransitDestinationServicePointId";
   public static final String FORMER_IDS_KEY = "formerIds";
