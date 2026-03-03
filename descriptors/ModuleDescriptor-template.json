@@ -763,10 +763,6 @@
       "version": "2.1"
     },
     {
-      "id": "source-manager-parsed-records",
-      "version": "4.0"
-    },
-    {
       "id": "data-import-converter-storage",
       "version": "1.2"
     },
