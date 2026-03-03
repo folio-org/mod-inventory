@@ -187,7 +187,7 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(UUID.randomUUID().toString())
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
-      .withTenant("diku")
+      .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken("test-token")
       .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", profileSnapshotWrapper.getId())));

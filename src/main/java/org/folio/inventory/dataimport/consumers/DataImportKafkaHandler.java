@@ -81,6 +81,7 @@ import org.folio.rest.jaxrs.model.Event;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static java.lang.String.format;
@@ -99,7 +100,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String USER_ID_HEADER = "userId";
-  private static final List<String> CANCELLED_JOB_ALLOWED_EVENTS = List.of(
+  private static final Set<String> CANCELLED_JOB_ALLOWED_EVENTS = Set.of(
     DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value()
   );
 
@@ -225,6 +226,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     HoldingsPreloader holdingsPreloader = new HoldingsPreloader(ordersPreloaderHelper);
     ItemPreloader itemPreloader = new ItemPreloader(ordersPreloaderHelper);
     SnapshotService snapshotService = new SnapshotService(client);
+    PostgresClientFactory postgresClientFactory = new PostgresClientFactory(vertx);
 
     MatchValueLoaderFactory.register(new InstanceLoader(storage, instancePreloader));
     MatchValueLoaderFactory.register(new ItemLoader(storage, itemPreloader));
@@ -252,10 +254,10 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     )));
 
     EventManager.registerEventHandler(new MatchAuthorityEventHandler(mappingMetadataCache, consortiumService));
-    EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache, new ItemIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService));
-    EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService, consortiumService));
-    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService, snapshotService, client));
-    EventManager.registerEventHandler(new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), new HoldingsCollectionService(), consortiumService));
+    EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache, new ItemIdStorageService(new EntityIdStorageDaoImpl(postgresClientFactory)), orderHelperService));
+    EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(postgresClientFactory)), orderHelperService, consortiumService));
+    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(postgresClientFactory)), orderHelperService, snapshotService, client));
+    EventManager.registerEventHandler(new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(postgresClientFactory)), new HoldingsCollectionService(), consortiumService));
     EventManager.registerEventHandler(new UpdateMarcHoldingsEventHandler(storage, mappingMetadataCache, new KafkaEventPublisher(kafkaConfig, vertx, 100)));
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage, mappingMetadataCache));
