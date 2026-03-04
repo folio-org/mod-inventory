@@ -3,6 +3,7 @@ package org.folio.inventory.resources;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.HttpStatus.HTTP_OK;
 import static org.folio.inventory.common.FutureAssistance.allOf;
+import static org.folio.inventory.common.FutureAssistance.fail;
 import static org.folio.inventory.support.CompletableFutures.failedFuture;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
@@ -325,8 +326,20 @@ public class Items extends AbstractInventoryResource {
       .thenCompose(oldItem -> hridChanged(oldItem, patchRequest))
       .thenCompose(oldItem -> barcodeChanged(oldItem, patchRequest))
       .thenCompose(oldItem -> claimedReturnedMarkedAsMissing(oldItem, patchRequest))
-      .thenAccept(oldItem -> findUserAndPatchItem(routingContext, patchRequest, oldItem, userCollection, itemCollection))
+      .thenCompose(oldItem ->
+        applyPatch(oldItem, patchRequest)
+          .thenAccept(patchedItem -> findUserAndUpdateItem(routingContext, patchedItem, oldItem, userCollection, itemCollection)))
       .exceptionally(doExceptionally(routingContext));
+  }
+
+  private CompletableFuture<Item> applyPatch(Item oldItem, JsonObject patchRequest) {
+    try {
+      JsonObject merged = ItemUtil.mapToJson(oldItem).mergeIn(patchRequest, true);
+      var item = ItemUtil.fromStoredItemRepresentation(merged);
+      return completedFuture(item);
+    } catch (Exception e) {
+      return failedFuture(e);
+    }
   }
 
   private void deleteById(RoutingContext routingContext) {
