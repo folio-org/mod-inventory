@@ -79,4 +79,9 @@ public interface AsynchronousCollection<T> {
     JsonObject patchJson,
     Consumer<Success<Void>> completionCallback,
     Consumer<Failure> failureCallback);
+
+  void putJson(String id,
+    JsonObject bodyJson,
+    Consumer<Success<Void>> completionCallback,
+    Consumer<Failure> failureCallback);
 }

@@ -1845,6 +1845,7 @@ public class ItemApiExamples extends ApiTests {
       .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
       .withLastCheckIn(lastCheckIn)
       .withCopyNumber("cp")
+      .withCheckInNote()
       .create();
 
     newItemRequest = itemsClient.create(newItemRequest).getJson();
@@ -1900,6 +1901,7 @@ public class ItemApiExamples extends ApiTests {
     assertThat(updatedItem.getString("copyNumber"), is("updatedCp"));
     assertThat(updatedItem.getString(Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY),
       is(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_UPDATE.toString()));
+    assertThat(updatedItem.getJsonArray("circulationNotes").size(), is(1));
   }
 
   @Test

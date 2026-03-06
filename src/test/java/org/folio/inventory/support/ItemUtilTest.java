@@ -40,4 +40,53 @@ public class ItemUtilTest {
     Assert.assertEquals(item.getPermanentLocationId(), getNestedProperty(actualItemJson, "permanentLocation", "id"));
     Assert.assertEquals(item.getTemporaryLocationId(), getNestedProperty(actualItemJson, "temporaryLocation", "id"));
   }
+
+  @Test
+  public void shouldMapNestedFieldsAndParseVersionAndPassThroughOtherFields() {
+    // given
+    JsonObject patchJson = new JsonObject()
+      .put("_version", "7")
+      .put("materialType", new JsonObject().put("id", "mt-id"))
+      .put("permanentLoanType", new JsonObject().put("id", "plt-id"))
+      .put("temporaryLoanType", new JsonObject().put("id", "tlt-id"))
+      .put("permanentLocation", new JsonObject().put("id", "pl-id"))
+      .put("temporaryLocation", new JsonObject().put("id", "tl-id"))
+      .put("barcode", "123456")
+      .put("notes", "keep-as-is");
+
+    // when
+    JsonObject result = ItemUtil.patchToStorageJson(patchJson);
+
+    // then
+    Assert.assertEquals(Integer.valueOf(7), result.getInteger("_version"));
+
+    Assert.assertEquals("mt-id", result.getString("materialTypeId"));
+    Assert.assertEquals("plt-id", result.getString("permanentLoanTypeId"));
+    Assert.assertEquals("tlt-id", result.getString("temporaryLoanTypeId"));
+    Assert.assertEquals("pl-id", result.getString("permanentLocationId"));
+    Assert.assertEquals("tl-id", result.getString("temporaryLocationId"));
+
+    Assert.assertEquals("123456", result.getString("barcode"));
+    Assert.assertEquals("keep-as-is", result.getString("notes"));
+
+    Assert.assertNull(result.getValue("materialType"));
+    Assert.assertNull(result.getValue("permanentLoanType"));
+    Assert.assertNull(result.getValue("temporaryLoanType"));
+    Assert.assertNull(result.getValue("permanentLocation"));
+    Assert.assertNull(result.getValue("temporaryLocation"));
+  }
+
+  @Test
+  public void shouldSetVersionNullWhenPatchVersionIsNull() {
+    // given
+    JsonObject patchJson = new JsonObject()
+      .put("_version", (Object) null);
+
+    // when
+    JsonObject result = ItemUtil.patchToStorageJson(patchJson);
+
+    // then
+    Assert.assertTrue(result.containsKey("_version"));
+    Assert.assertNull(result.getValue("_version"));
+  }
 }
