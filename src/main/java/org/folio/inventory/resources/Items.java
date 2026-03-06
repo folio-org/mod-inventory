@@ -939,7 +939,7 @@ public class Items extends AbstractInventoryResource {
       patchJson.put(Item.CIRCULATION_NOTES_KEY, notesJson);
     }
 
-    itemCollection.patch(patchJson.getString("id"), patchJson,
+    itemCollection.putJson(patchJson.getString("id"), patchJson,
       v -> SuccessResponse.noContent(routingContext.response()),
       failure -> ForwardResponse.forward(routingContext.response(), failure));
   }
