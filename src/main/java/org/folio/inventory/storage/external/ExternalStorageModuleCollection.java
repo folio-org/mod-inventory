@@ -190,7 +190,7 @@ abstract class ExternalStorageModuleCollection<T> {
     Consumer<Failure> failureCallback) {
 
     String location = individualRecordLocation(id);
-    final HttpRequest<Buffer> request = withStandardHeaders(webClient.patchAbs(location));
+    final HttpRequest<Buffer> request = withStandardHeaders(webClient.putAbs(location));
     request.sendJsonObject(patchJson)
       .onSuccess(response -> interpretNoContentResponse(response, completionCallback, failureCallback))
       .onFailure(error -> {

@@ -327,17 +327,15 @@ public class Items extends AbstractInventoryResource {
       .thenCompose(oldItem -> claimedReturnedMarkedAsMissing(oldItem, patchRequest))
       .thenCompose(oldItem ->
         applyPatch(oldItem, patchRequest)
-          .thenAccept(patchedItem -> findUserAndUpdateItem(routingContext, patchedItem, oldItem, userCollection, itemCollection)))
+          .thenAccept(patchedItem -> findUserAndPatchItem(routingContext, patchedItem, oldItem, userCollection, itemCollection)))
       .exceptionally(doExceptionally(routingContext));
   }
 
-  private CompletableFuture<Item> applyPatch(Item oldItem, JsonObject patchRequest) {
+  private CompletableFuture<JsonObject> applyPatch(Item oldItem, JsonObject patchRequest) {
     try {
       var patchForStorage = ItemUtil.patchToStorageJson(patchRequest);
-      var itemFromStorage = ItemUtil.toStoredItemRepresentation(oldItem);
-      JsonObject patched = itemFromStorage.mergeIn(patchForStorage, false);
-      var item = ItemUtil.fromStoredItemRepresentation(patched);
-      return completedFuture(item);
+      JsonObject patched = ItemUtil.toStoredItemRepresentation(oldItem).mergeIn(patchForStorage, false);
+      return completedFuture(patched);
     } catch (Exception e) {
       return failedFuture(e);
     }
