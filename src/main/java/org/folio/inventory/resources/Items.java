@@ -334,7 +334,8 @@ public class Items extends AbstractInventoryResource {
   private CompletableFuture<Item> applyPatch(Item oldItem, JsonObject patchRequest) {
     try {
       var patchForStorage = ItemUtil.patchToStorageJson(patchRequest);
-      JsonObject patched = ItemUtil.toStoredItemRepresentation(oldItem).mergeIn(patchForStorage, false);
+      var itemFromStorage = ItemUtil.toStoredItemRepresentation(oldItem);
+      JsonObject patched = itemFromStorage.mergeIn(patchForStorage, false);
       var item = ItemUtil.fromStoredItemRepresentation(patched);
       return completedFuture(item);
     } catch (Exception e) {
