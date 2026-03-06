@@ -926,7 +926,8 @@ public class Items extends AbstractInventoryResource {
     ItemCollection itemCollection) {
 
     if (patchJson.containsKey(Item.CIRCULATION_NOTES_KEY)) {
-      var newCirculationNotes = JsonArrayHelper.toList(patchJson.getJsonArray(Item.CIRCULATION_NOTES_KEY)).stream()
+      var newCirculationNotes = patchJson.getJsonArray(Item.CIRCULATION_NOTES_KEY).stream()
+        .map(JsonObject::mapFrom)
         .map(CirculationNote::new)
         .toList();
       List<CirculationNote> updatedNotes = updateCirculationNotes(oldItem.getCirculationNotes(),
