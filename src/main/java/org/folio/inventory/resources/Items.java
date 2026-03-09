@@ -9,6 +9,7 @@ import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.ItemUtil.HOLDINGS_RECORD_ID;
 import static org.folio.inventory.support.ItemUtil.ID;
+import static org.folio.inventory.support.ItemUtil.removeReadOnlyFields;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 import static org.folio.inventory.validation.ItemStatusValidator.checkStatusIfPresent;
 import static org.folio.inventory.validation.ItemStatusValidator.itemHasCorrectStatus;
@@ -303,6 +304,8 @@ public class Items extends AbstractInventoryResource {
     WebContext context = new WebContext(routingContext);
 
     var patchRequest = routingContext.body().asJsonObject();
+
+    removeReadOnlyFields(patchRequest);
 
     Optional<ValidationError> validationError = checkStatusIfPresent(patchRequest);
     if (validationError.isPresent()) {

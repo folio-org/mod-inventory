@@ -76,17 +76,6 @@ public final class ItemsValidator {
     return completedFuture(oldItem);
   }
 
-  public static CompletableFuture<Item> barcodeChanged(Item oldItem, Item newItem) {
-    if (!Objects.equals(newItem.getBarcode(), oldItem.getBarcode())) {
-      final ValidationError validationError = new ValidationError(
-        "Barcode can not be patched", "barcode", newItem.getBarcode());
-
-      return failedFuture(new UnprocessableEntityException(validationError));
-    }
-
-    return completedFuture(oldItem);
-  }
-
   private static boolean isClaimedReturnedItemMarkedMissing(ItemStatusName oldStatus, ItemStatusName newStatus) {
     return ItemStatusName.CLAIMED_RETURNED == oldStatus
       && ItemStatusName.MISSING == newStatus;

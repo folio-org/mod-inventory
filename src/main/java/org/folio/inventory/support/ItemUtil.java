@@ -2,6 +2,16 @@ package org.folio.inventory.support;
 
 import static java.util.Objects.isNull;
 import static org.folio.inventory.domain.converters.EntityConverters.converterForClass;
+import static org.folio.inventory.domain.items.Item.BOUND_WTH_TITLES_KEY;
+import static org.folio.inventory.domain.items.Item.CALL_NUMBER_KEY;
+import static org.folio.inventory.domain.items.Item.CONTRIBUTOR_NAMES_KEY;
+import static org.folio.inventory.domain.items.Item.EFFECTIVE_CALL_NUMBER_COMPONENTS_KEY;
+import static org.folio.inventory.domain.items.Item.EFFECTIVE_LOCATION_KEY;
+import static org.folio.inventory.domain.items.Item.EFFECTIVE_SHELVING_ORDER_KEY;
+import static org.folio.inventory.domain.items.Item.IS_BOUND_WTH_KEY;
+import static org.folio.inventory.domain.items.Item.METADATA_KEY;
+import static org.folio.inventory.domain.items.Item.ORDER_KEY;
+import static org.folio.inventory.domain.items.Item.TITLE_KEY;
 import static org.folio.inventory.domain.items.Item.VERSION_KEY;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
@@ -9,7 +19,9 @@ import static org.folio.inventory.support.JsonHelper.getNestedProperty;
 import static org.folio.inventory.support.JsonHelper.includeIfPresent;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -47,6 +59,20 @@ public final class ItemUtil {
   public static final String TEMPORARY_LOCATION = "temporaryLocation";
   public static final String PERMANENT_LOAN_TYPE = "permanentLoanType";
   public static final String TEMPORARY_LOAN_TYPE = "temporaryLoanType";
+
+  private static final Set<String> readOnlyFieldNames = new HashSet<>();
+
+  static {
+    readOnlyFieldNames.add(TITLE_KEY);
+    readOnlyFieldNames.add(CALL_NUMBER_KEY);
+    readOnlyFieldNames.add(CONTRIBUTOR_NAMES_KEY);
+    readOnlyFieldNames.add(EFFECTIVE_SHELVING_ORDER_KEY);
+    readOnlyFieldNames.add(EFFECTIVE_CALL_NUMBER_COMPONENTS_KEY);
+    readOnlyFieldNames.add(IS_BOUND_WTH_KEY);
+    readOnlyFieldNames.add(BOUND_WTH_TITLES_KEY);
+    readOnlyFieldNames.add(EFFECTIVE_LOCATION_KEY);
+    readOnlyFieldNames.add(METADATA_KEY);
+  }
 
   private ItemUtil() {
   }
@@ -103,7 +129,8 @@ public final class ItemUtil {
       itemFromServer.getString(PERMANENT_LOAN_TYPE_ID_KEY),
       itemFromServer.getJsonObject("metadata"))
       .withHrid(itemFromServer.getString(Item.HRID_KEY))
-      .withEffectiveShelvingOrder(itemFromServer.getString(Item.EFFECTIVE_SHELVING_ORDER_KEY))
+      .withEffectiveShelvingOrder(itemFromServer.getString(
+        EFFECTIVE_SHELVING_ORDER_KEY))
       .withFormerIds(formerIds)
       .withDiscoverySuppress(itemFromServer.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
       .withBarcode(itemFromServer.getString(BARCODE))
@@ -251,15 +278,7 @@ public final class ItemUtil {
     String permanentLoanTypeId = getNestedProperty(itemRequest, PERMANENT_LOAN_TYPE, ID);
     String temporaryLoanTypeId = getNestedProperty(itemRequest, TEMPORARY_LOAN_TYPE, ID);
 
-    Integer order;
-    try {
-      order = itemRequest.getInteger(Item.ORDER_KEY);
-    } catch (Exception e) {
-      final ValidationError validationError = new ValidationError(
-        "Order should be a number", "order", String.valueOf(itemRequest.getValue(Item.ORDER_KEY)));
-
-      throw new UnprocessableEntityException(validationError);
-    }
+    var order = getOrder(itemRequest);
 
     return new Item(
       itemRequest.getString(ID),
@@ -275,7 +294,8 @@ public final class ItemUtil {
       .withDiscoverySuppress(itemRequest.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
       .withBarcode(itemRequest.getString(BARCODE))
       .withItemLevelCallNumber(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_KEY))
-      .withEffectiveShelvingOrder(itemRequest.getString(Item.EFFECTIVE_SHELVING_ORDER_KEY))
+      .withEffectiveShelvingOrder(itemRequest.getString(
+        EFFECTIVE_SHELVING_ORDER_KEY))
       .withItemLevelCallNumberPrefix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY))
       .withItemLevelCallNumberSuffix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
       .withItemLevelCallNumberTypeId(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
@@ -401,6 +421,7 @@ public final class ItemUtil {
     for (String fieldName : fieldNames) {
       switch (fieldName) {
         case VERSION_KEY -> result.put(VERSION_KEY, isNull(patchJson.getValue(fieldName)) ? null : Integer.parseInt(patchJson.getString(fieldName)));
+        case ORDER_KEY -> result.put(ORDER_KEY, getOrder(patchJson));
         case MATERIAL_TYPE -> result.put(MATERIAL_TYPE_ID_KEY, getNestedProperty(patchJson, MATERIAL_TYPE, ID));
         case PERMANENT_LOAN_TYPE -> result.put(PERMANENT_LOAN_TYPE_ID_KEY, getNestedProperty(patchJson, PERMANENT_LOAN_TYPE, ID));
         case TEMPORARY_LOAN_TYPE -> result.put(TEMPORARY_LOAN_TYPE_ID_KEY, getNestedProperty(patchJson, TEMPORARY_LOAN_TYPE, ID));
@@ -410,5 +431,20 @@ public final class ItemUtil {
       }
     }
     return result;
+  }
+
+  public static void removeReadOnlyFields(JsonObject itemJson) {
+    readOnlyFieldNames.forEach(itemJson::remove);
+  }
+
+  public static Integer getOrder(JsonObject itemJson) {
+    try {
+      return itemJson.getInteger(Item.ORDER_KEY);
+    } catch (Exception e) {
+      final ValidationError validationError = new ValidationError(
+        "Order should be a number", "order", String.valueOf(itemJson.getValue(Item.ORDER_KEY)));
+
+      throw new UnprocessableEntityException(validationError);
+    }
   }
 }
