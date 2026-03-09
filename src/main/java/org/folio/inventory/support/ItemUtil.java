@@ -10,6 +10,7 @@ import static org.folio.inventory.domain.items.Item.EFFECTIVE_LOCATION_KEY;
 import static org.folio.inventory.domain.items.Item.EFFECTIVE_SHELVING_ORDER_KEY;
 import static org.folio.inventory.domain.items.Item.IS_BOUND_WTH_KEY;
 import static org.folio.inventory.domain.items.Item.METADATA_KEY;
+import static org.folio.inventory.domain.items.Item.ORDER_KEY;
 import static org.folio.inventory.domain.items.Item.TITLE_KEY;
 import static org.folio.inventory.domain.items.Item.VERSION_KEY;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
@@ -277,15 +278,7 @@ public final class ItemUtil {
     String permanentLoanTypeId = getNestedProperty(itemRequest, PERMANENT_LOAN_TYPE, ID);
     String temporaryLoanTypeId = getNestedProperty(itemRequest, TEMPORARY_LOAN_TYPE, ID);
 
-    Integer order;
-    try {
-      order = itemRequest.getInteger(Item.ORDER_KEY);
-    } catch (Exception e) {
-      final ValidationError validationError = new ValidationError(
-        "Order should be a number", "order", String.valueOf(itemRequest.getValue(Item.ORDER_KEY)));
-
-      throw new UnprocessableEntityException(validationError);
-    }
+    var order = getOrder(itemRequest);
 
     return new Item(
       itemRequest.getString(ID),
@@ -428,6 +421,7 @@ public final class ItemUtil {
     for (String fieldName : fieldNames) {
       switch (fieldName) {
         case VERSION_KEY -> result.put(VERSION_KEY, isNull(patchJson.getValue(fieldName)) ? null : Integer.parseInt(patchJson.getString(fieldName)));
+        case ORDER_KEY -> result.put(ORDER_KEY, getOrder(patchJson));
         case MATERIAL_TYPE -> result.put(MATERIAL_TYPE_ID_KEY, getNestedProperty(patchJson, MATERIAL_TYPE, ID));
         case PERMANENT_LOAN_TYPE -> result.put(PERMANENT_LOAN_TYPE_ID_KEY, getNestedProperty(patchJson, PERMANENT_LOAN_TYPE, ID));
         case TEMPORARY_LOAN_TYPE -> result.put(TEMPORARY_LOAN_TYPE_ID_KEY, getNestedProperty(patchJson, TEMPORARY_LOAN_TYPE, ID));
@@ -441,5 +435,16 @@ public final class ItemUtil {
 
   public static void removeReadOnlyFields(JsonObject itemJson) {
     readOnlyFieldNames.forEach(itemJson::remove);
+  }
+
+  public static Integer getOrder(JsonObject itemJson) {
+    try {
+      return itemJson.getInteger(Item.ORDER_KEY);
+    } catch (Exception e) {
+      final ValidationError validationError = new ValidationError(
+        "Order should be a number", "order", String.valueOf(itemJson.getValue(Item.ORDER_KEY)));
+
+      throw new UnprocessableEntityException(validationError);
+    }
   }
 }
