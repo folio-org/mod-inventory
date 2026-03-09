@@ -2,6 +2,15 @@ package org.folio.inventory.support;
 
 import static java.util.Objects.isNull;
 import static org.folio.inventory.domain.converters.EntityConverters.converterForClass;
+import static org.folio.inventory.domain.items.Item.BOUND_WTH_TITLES_KEY;
+import static org.folio.inventory.domain.items.Item.CALL_NUMBER_KEY;
+import static org.folio.inventory.domain.items.Item.CONTRIBUTOR_NAMES_KEY;
+import static org.folio.inventory.domain.items.Item.EFFECTIVE_CALL_NUMBER_COMPONENTS_KEY;
+import static org.folio.inventory.domain.items.Item.EFFECTIVE_LOCATION_KEY;
+import static org.folio.inventory.domain.items.Item.EFFECTIVE_SHELVING_ORDER_KEY;
+import static org.folio.inventory.domain.items.Item.IS_BOUND_WTH_KEY;
+import static org.folio.inventory.domain.items.Item.METADATA_KEY;
+import static org.folio.inventory.domain.items.Item.TITLE_KEY;
 import static org.folio.inventory.domain.items.Item.VERSION_KEY;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
@@ -53,15 +62,15 @@ public final class ItemUtil {
   private static final Set<String> readOnlyFieldNames = new HashSet<>();
 
   static {
-    readOnlyFieldNames.add("title");
-    readOnlyFieldNames.add("callNumber");
-    readOnlyFieldNames.add("contributorNames");
-    readOnlyFieldNames.add("effectiveShelvingOrder");
-    readOnlyFieldNames.add("effectiveCallNumberComponents");
-    readOnlyFieldNames.add("isBoundWith");
-    readOnlyFieldNames.add("boundWithTitles");
-    readOnlyFieldNames.add("effectiveLocation");
-    readOnlyFieldNames.add("metadata");
+    readOnlyFieldNames.add(TITLE_KEY);
+    readOnlyFieldNames.add(CALL_NUMBER_KEY);
+    readOnlyFieldNames.add(CONTRIBUTOR_NAMES_KEY);
+    readOnlyFieldNames.add(EFFECTIVE_SHELVING_ORDER_KEY);
+    readOnlyFieldNames.add(EFFECTIVE_CALL_NUMBER_COMPONENTS_KEY);
+    readOnlyFieldNames.add(IS_BOUND_WTH_KEY);
+    readOnlyFieldNames.add(BOUND_WTH_TITLES_KEY);
+    readOnlyFieldNames.add(EFFECTIVE_LOCATION_KEY);
+    readOnlyFieldNames.add(METADATA_KEY);
   }
 
   private ItemUtil() {
@@ -119,7 +128,8 @@ public final class ItemUtil {
       itemFromServer.getString(PERMANENT_LOAN_TYPE_ID_KEY),
       itemFromServer.getJsonObject("metadata"))
       .withHrid(itemFromServer.getString(Item.HRID_KEY))
-      .withEffectiveShelvingOrder(itemFromServer.getString(Item.EFFECTIVE_SHELVING_ORDER_KEY))
+      .withEffectiveShelvingOrder(itemFromServer.getString(
+        EFFECTIVE_SHELVING_ORDER_KEY))
       .withFormerIds(formerIds)
       .withDiscoverySuppress(itemFromServer.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
       .withBarcode(itemFromServer.getString(BARCODE))
@@ -291,7 +301,8 @@ public final class ItemUtil {
       .withDiscoverySuppress(itemRequest.getBoolean(Item.DISCOVERY_SUPPRESS_KEY))
       .withBarcode(itemRequest.getString(BARCODE))
       .withItemLevelCallNumber(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_KEY))
-      .withEffectiveShelvingOrder(itemRequest.getString(Item.EFFECTIVE_SHELVING_ORDER_KEY))
+      .withEffectiveShelvingOrder(itemRequest.getString(
+        EFFECTIVE_SHELVING_ORDER_KEY))
       .withItemLevelCallNumberPrefix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY))
       .withItemLevelCallNumberSuffix(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY))
       .withItemLevelCallNumberTypeId(itemRequest.getString(Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY))
