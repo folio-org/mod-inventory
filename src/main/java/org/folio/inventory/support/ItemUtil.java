@@ -9,7 +9,9 @@ import static org.folio.inventory.support.JsonHelper.getNestedProperty;
 import static org.folio.inventory.support.JsonHelper.includeIfPresent;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -47,6 +49,20 @@ public final class ItemUtil {
   public static final String TEMPORARY_LOCATION = "temporaryLocation";
   public static final String PERMANENT_LOAN_TYPE = "permanentLoanType";
   public static final String TEMPORARY_LOAN_TYPE = "temporaryLoanType";
+
+  private static final Set<String> readOnlyFieldNames = new HashSet<>();
+
+  static {
+    readOnlyFieldNames.add("title");
+    readOnlyFieldNames.add("callNumber");
+    readOnlyFieldNames.add("contributorNames");
+    readOnlyFieldNames.add("effectiveShelvingOrder");
+    readOnlyFieldNames.add("effectiveCallNumberComponents");
+    readOnlyFieldNames.add("isBoundWith");
+    readOnlyFieldNames.add("boundWithTitles");
+    readOnlyFieldNames.add("effectiveLocation");
+    readOnlyFieldNames.add("metadata");
+  }
 
   private ItemUtil() {
   }
@@ -410,5 +426,9 @@ public final class ItemUtil {
       }
     }
     return result;
+  }
+
+  public static void removeReadOnlyFields(JsonObject itemJson) {
+    readOnlyFieldNames.forEach(itemJson::remove);
   }
 }
