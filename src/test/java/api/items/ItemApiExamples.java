@@ -1985,7 +1985,7 @@ public class ItemApiExamples extends ApiTests {
   }
 
   @Test
-  public void cannotPatchItemIfBarcodeWasChanged()
+  public void cannotPatchItemIfBarcodeExists()
     throws InterruptedException,
     MalformedURLException,
     TimeoutException,
@@ -2002,6 +2002,20 @@ public class ItemApiExamples extends ApiTests {
       .put("dateTime", "2020-01-02T13:02:46.000Z");
 
     JsonObject newItemRequest = new ItemRequestBuilder()
+      .withId(UUID.randomUUID())
+      .forHolding(holdingId)
+      .withInTransitDestinationServicePointId(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE)
+      .withBarcode("existing_barcode")
+      .canCirculate()
+      .temporarilyInReadingRoom()
+      .withTagList(new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray().add("test-tag")))
+      .withLastCheckIn(lastCheckIn)
+      .withCopyNumber("cp")
+      .create();
+
+    itemsClient.create(newItemRequest).getJson();
+
+    newItemRequest = new ItemRequestBuilder()
       .withId(itemId)
       .forHolding(holdingId)
       .withInTransitDestinationServicePointId(TRANSIT_DESTINATION_SERVICE_POINT_ID_FOR_CREATE)
@@ -2021,7 +2035,7 @@ public class ItemApiExamples extends ApiTests {
 
     var patchRequest = new JsonObject()
       .put("id", itemId)
-      .put(BARCODE_KEY, "new_barcode")
+      .put(BARCODE_KEY, "existing_barcode")
       .put(HRID_KEY, newItemRequest.getString(HRID_KEY))
       .put(STATUS_KEY, new JsonObject().put("name", "Checked out"))
       .put("copyNumber", "updatedCp")
@@ -2035,7 +2049,7 @@ public class ItemApiExamples extends ApiTests {
 
     Response patchResponse = patchCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(patchResponse.getStatusCode(), is(422));
+    assertThat(patchResponse.getStatusCode(), is(400));
   }
 
   @Test

@@ -8,10 +8,10 @@ import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.ItemUtil.HOLDINGS_RECORD_ID;
+import static org.folio.inventory.support.ItemUtil.ID;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 import static org.folio.inventory.validation.ItemStatusValidator.checkStatusIfPresent;
 import static org.folio.inventory.validation.ItemStatusValidator.itemHasCorrectStatus;
-import static org.folio.inventory.validation.ItemsValidator.barcodeChanged;
 import static org.folio.inventory.validation.ItemsValidator.claimedReturnedMarkedAsMissing;
 import static org.folio.inventory.validation.ItemsValidator.hridChanged;
 
@@ -323,11 +323,20 @@ public class Items extends AbstractInventoryResource {
       .thenApply(Success::getResult)
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
       .thenCompose(oldItem -> hridChanged(oldItem, patchRequest))
-      .thenCompose(oldItem -> barcodeChanged(oldItem, patchRequest))
       .thenCompose(oldItem -> claimedReturnedMarkedAsMissing(oldItem, patchRequest))
       .thenCompose(oldItem ->
         applyPatch(oldItem, patchRequest)
-          .thenAccept(patchedItem -> findUserAndPatchItem(routingContext, patchedItem, oldItem, userCollection, itemCollection)))
+          .thenAccept(patchedItem -> {
+            if (hasSameBarcode(patchedItem, oldItem)) {
+              findUserAndUpdateItem(routingContext, patchedItem, oldItem, userCollection, itemCollection);
+            } else {
+              try {
+                checkForNonUniqueBarcode(routingContext, patchedItem, oldItem, itemCollection, userCollection);
+              } catch (UnsupportedEncodingException e) {
+                ServerErrorResponse.internalError(routingContext.response(), e.toString());
+              }
+            }
+          }))
       .exceptionally(doExceptionally(routingContext));
   }
 
@@ -877,6 +886,11 @@ public class Items extends AbstractInventoryResource {
       || Objects.equals(foundItem.getBarcode(), updatedItem.getBarcode());
   }
 
+  private boolean hasSameBarcode(JsonObject patchedItem, Item foundItem) {
+    return patchedItem.getString(Item.BARCODE_KEY) == null
+      || Objects.equals(foundItem.getBarcode(), patchedItem.getString(Item.BARCODE_KEY));
+  }
+
   private void findUserAndUpdateItem(
     RoutingContext routingContext,
     Item newItem,
@@ -890,7 +904,7 @@ public class Items extends AbstractInventoryResource {
       failure -> updateItem(routingContext, newItem, oldItem, null, itemCollection));
   }
 
-  private void findUserAndPatchItem(
+  private void findUserAndUpdateItem(
     RoutingContext routingContext,
     JsonObject patchJson,
     Item oldItem,
@@ -899,8 +913,8 @@ public class Items extends AbstractInventoryResource {
 
     String userId = routingContext.request().getHeader("X-Okapi-User-Id");
     userCollection.findById(userId,
-      success -> patchItem(routingContext, patchJson, oldItem, success.getResult(), itemCollection),
-      failure -> patchItem(routingContext, patchJson, oldItem, null, itemCollection));
+      success -> updateItem(routingContext, patchJson, oldItem, success.getResult(), itemCollection),
+      failure -> updateItem(routingContext, patchJson, oldItem, null, itemCollection));
   }
 
   private void updateItem(
@@ -918,7 +932,7 @@ public class Items extends AbstractInventoryResource {
       failure -> ForwardResponse.forward(routingContext.response(), failure));
   }
 
-  private void patchItem(
+  private void updateItem(
     RoutingContext routingContext,
     JsonObject patchJson,
     Item oldItem,
@@ -977,6 +991,33 @@ public class Items extends AbstractInventoryResource {
           ClientErrorResponse.badRequest(routingContext.response(),
             String.format("Barcode must be unique, %s is already assigned to another item",
               newItem.getBarcode()));
+        }
+      }, FailureResponseConsumer.serverError(routingContext.response()));
+  }
+
+  private void checkForNonUniqueBarcode(
+    RoutingContext routingContext,
+    JsonObject patchedItem,
+    Item oldItem,
+    ItemCollection itemCollection,
+    UserCollection userCollection)
+    throws UnsupportedEncodingException {
+
+    var itemId = patchedItem.getString(ID);
+    var newBarcode = patchedItem.getString(Item.BARCODE_KEY);
+    itemCollection.findByCql(
+      CqlHelper.barcodeIs(newBarcode) + " and id<>" + itemId,
+      PagingParameters.defaults(), it -> {
+
+        List<Item> items = it.getResult().records;
+
+        if(items.isEmpty()) {
+          findUserAndUpdateItem(routingContext, patchedItem, oldItem, userCollection, itemCollection);
+        }
+        else {
+          ClientErrorResponse.badRequest(routingContext.response(),
+            String.format("Barcode must be unique, %s is already assigned to another item",
+              newBarcode));
         }
       }, FailureResponseConsumer.serverError(routingContext.response()));
   }
