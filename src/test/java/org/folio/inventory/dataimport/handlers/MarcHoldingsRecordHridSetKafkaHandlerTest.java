@@ -31,7 +31,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 
-import org.folio.HoldingsType;
+import org.folio.rest.jaxrs.model.HoldingsType;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
@@ -47,7 +47,7 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;

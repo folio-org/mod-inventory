@@ -4,7 +4,7 @@ import java.util.Map;
 
 import io.vertx.core.Promise;
 
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
 import org.folio.rest.jaxrs.model.Record;

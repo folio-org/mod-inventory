@@ -47,7 +47,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.JobProfile;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
@@ -213,7 +213,7 @@ public class CreateMarcHoldingsEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
@@ -263,7 +263,7 @@ public class CreateMarcHoldingsEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     var future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
     var actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
@@ -288,7 +288,7 @@ public class CreateMarcHoldingsEventHandlerTest {
       .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
       .withContext(null)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -300,7 +300,7 @@ public class CreateMarcHoldingsEventHandlerTest {
       .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -353,7 +353,7 @@ public class CreateMarcHoldingsEventHandlerTest {
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
 
@@ -388,7 +388,7 @@ public class CreateMarcHoldingsEventHandlerTest {
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
 
@@ -441,7 +441,7 @@ public class CreateMarcHoldingsEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -470,7 +470,7 @@ public class CreateMarcHoldingsEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.SECONDS);
@@ -528,7 +528,7 @@ public class CreateMarcHoldingsEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.SECONDS);
@@ -544,7 +544,7 @@ public class CreateMarcHoldingsEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
     assertTrue(createMarcHoldingsEventHandler.isEligible(dataImportEventPayload));
   }
 

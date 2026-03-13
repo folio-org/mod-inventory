@@ -41,8 +41,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import org.folio.Authority;
-import org.folio.HoldingsRecord;
-import org.folio.HoldingsType;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsType;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;

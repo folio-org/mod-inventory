@@ -8,7 +8,7 @@ import io.vertx.core.json.JsonObject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
@@ -205,7 +205,7 @@ public class CreateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -247,7 +247,7 @@ public class CreateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
       .when(consortiumServiceImpl).getConsortiumConfiguration(any());
@@ -311,7 +311,7 @@ public class CreateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
       .when(consortiumServiceImpl).getConsortiumConfiguration(any());
@@ -350,7 +350,7 @@ public class CreateHoldingEventHandlerTest {
     }).when(holdingsRecordsCollection).add(argThat(holdingsRecord -> holdingsRecord.getPermanentLocationId().equals(permanentLocationId)), any(), any());
 
     List<String> locations = List.of(permanentLocationId, UUID.randomUUID().toString());
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()), StringValue.of(locations.get(1)));
 
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
@@ -365,7 +365,7 @@ public class CreateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -384,7 +384,7 @@ public class CreateHoldingEventHandlerTest {
   @Test
   public void shouldProcessEventAndCreateMultipleHoldings() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     List<String> locations = List.of(permanentLocationId, UUID.randomUUID().toString());
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()), StringValue.of(locations.get(1)));
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
@@ -398,7 +398,7 @@ public class CreateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -491,7 +491,7 @@ public class CreateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -517,7 +517,7 @@ public class CreateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -547,7 +547,7 @@ public class CreateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -568,7 +568,7 @@ public class CreateHoldingEventHandlerTest {
     }).when(holdingsRecordsCollection).add(any(), any(), any());
 
     List<String> locations = List.of(permanentLocationId, UUID.randomUUID().toString());
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()), StringValue.of(locations.get(1)));
 
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
@@ -583,7 +583,7 @@ public class CreateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -610,7 +610,7 @@ public class CreateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.SECONDS);
@@ -629,7 +629,7 @@ public class CreateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -649,7 +649,7 @@ public class CreateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -667,7 +667,7 @@ public class CreateHoldingEventHandlerTest {
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -679,7 +679,7 @@ public class CreateHoldingEventHandlerTest {
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(null)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -691,7 +691,7 @@ public class CreateHoldingEventHandlerTest {
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -740,7 +740,7 @@ public class CreateHoldingEventHandlerTest {
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withJobExecutionId(UUID.randomUUID().toString())
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -760,7 +760,7 @@ public class CreateHoldingEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.SECONDS);
@@ -794,7 +794,7 @@ public class CreateHoldingEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
     assertTrue(createHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 

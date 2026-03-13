@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import org.folio.DataImportEventPayload;
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.AbstractPreloader;
 import org.folio.inventory.domain.SearchableCollection;

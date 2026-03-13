@@ -7,7 +7,7 @@ import static org.junit.Assert.assertNotNull;
 
 import io.vertx.core.json.JsonObject;
 import java.util.UUID;
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.junit.Test;
 
 public class ExternalStorageModuleHoldingsRecordCollectionExamples extends ExternalStorageTests {
