@@ -10,7 +10,6 @@ import org.folio.rest.client.ChangeManagerClient;
 import org.folio.rest.jaxrs.model.InitJobExecutionsRqDto;
 import org.folio.rest.jaxrs.model.JobExecution;
 import org.folio.rest.jaxrs.model.JobProfileInfo;
-import org.folio.rest.jaxrs.model.ParsedRecordDto;
 import org.folio.rest.jaxrs.model.RawRecordsDto;
 import org.folio.rest.jaxrs.model.StatusDto;
 
@@ -28,7 +27,6 @@ public class ChangeManagerClientWrapper extends ChangeManagerClient {
   private final String requestId;
   private final WebClient webClient;
   public static final String CHANGE_MANAGER_JOB_EXECUTIONS = "/change-manager/jobExecutions/";
-  public static final String CHANGE_MANAGER_PARSED_RECORDS = "/change-manager/parsedRecords/";
 
   public ChangeManagerClientWrapper(String okapiUrl, String tenantId, String token, String userId, String requestId, HttpClient httpClient) {
     super(okapiUrl, tenantId, token, httpClient);
@@ -78,10 +76,4 @@ public class ChangeManagerClientWrapper extends ChangeManagerClient {
       .sendBuffer(getBuffer(statusDto));
   }
 
-  @Override
-  public Future<HttpResponse<Buffer>> putChangeManagerParsedRecordsById(String id, ParsedRecordDto parsedRecordDto) {
-    return createRequest(HttpMethod.PUT, okapiUrl + CHANGE_MANAGER_PARSED_RECORDS + id,
-      okapiUrl, tenantId, token, userId, requestId, webClient)
-      .sendBuffer(getBuffer(parsedRecordDto));
-  }
 }

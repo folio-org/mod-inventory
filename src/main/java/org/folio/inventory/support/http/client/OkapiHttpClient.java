@@ -116,6 +116,13 @@ public class OkapiHttpClient extends AbstractOkapiHttpClient {
       .toCompletionStage();
   }
 
+  public CompletionStage<Response> patch(String url, JsonObject body) {
+    final HttpRequest<Buffer> request = withStandardHeaders(webClient.patchAbs(url));
+    return request.sendJsonObject(body)
+      .map(OkapiHttpClient::mapResponse)
+      .toCompletionStage();
+  }
+
   public CompletionStage<Response> get(URL url) {
     return get(url.toString());
   }

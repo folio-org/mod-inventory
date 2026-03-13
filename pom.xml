@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>mod-inventory</artifactId>
   <groupId>org.folio</groupId>
-  <version>21.2.0-SNAPSHOT</version>
+  <version>22.0.0-SNAPSHOT</version>
   <licenses>
     <license>
       <name>Apache License 2.0</name>
@@ -484,6 +484,7 @@
                 <path>${basedir}/ramls/tenantItemPair.json</path>
                 <path>${basedir}/ramls/tenantItemPairCollection.json</path>
                 <path>${basedir}/ramls/tenantItemResponse.json</path>
+                <path>${basedir}/ramls/patch_request.json</path>
               </sourcePaths>
               <targetPackage>org.folio</targetPackage>
               <generateBuilders>true</generateBuilders>

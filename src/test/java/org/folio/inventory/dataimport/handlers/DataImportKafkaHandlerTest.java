@@ -48,6 +48,8 @@ import java.util.concurrent.CompletableFuture;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
 import static org.folio.inventory.dataimport.consumers.DataImportKafkaHandler.PROFILE_SNAPSHOT_ID_KEY;
 import static org.folio.okapi.common.XOkapiHeaders.PERMISSIONS;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
@@ -185,7 +187,7 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(UUID.randomUUID().toString())
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
-      .withTenant("diku")
+      .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withToken("test-token")
       .withContext(new HashMap<>(Map.of("JOB_PROFILE_SNAPSHOT_ID", profileSnapshotWrapper.getId())));
@@ -216,6 +218,7 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(cancelledJobId)
+      .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(new HashMap<>(Map.of(PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId())));
@@ -243,6 +246,49 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
       context.assertEquals(expectedKafkaRecordKey, actualKafkaRecordKey);
       verify(mockedEventHandler, never()).isEligible(any(DataImportEventPayload.class));
       verify(mockedEventHandler, never()).handle(any(DataImportEventPayload.class));
+    }));
+  }
+
+  @Test
+  public void shouldProcessEventIfEventPayloadContainsCancelledJobExecutionIdButEventTypeIsDiSrsMarcBibRecordModifiedReadyForPostProcessing(TestContext context) {
+    // given
+    String expectedKafkaRecordKey = "test_key";
+    String cancelledJobId = UUID.randomUUID().toString();
+    cancelledJobsIdCache.put(cancelledJobId);
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
+      .withJobExecutionId(cancelledJobId)
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(new HashMap<>(Map.of(PROFILE_SNAPSHOT_ID_KEY, profileSnapshotWrapper.getId())))
+      .withEventsChain(List.of(DI_SRS_MARC_BIB_RECORD_MATCHED.value()));
+    context.assertEquals(
+      DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value(), dataImportEventPayload.getEventType());
+
+    Event event = new Event().withId("01").withEventPayload(Json.encode(dataImportEventPayload));
+    List<KafkaHeader> headers = List.of(
+      KafkaHeader.header(RECORD_ID_HEADER, UUID.randomUUID().toString()),
+      KafkaHeader.header(CHUNK_ID_HEADER, UUID.randomUUID().toString())
+    );
+    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
+    when(kafkaRecord.value()).thenReturn(Json.encode(event));
+    when(kafkaRecord.headers()).thenReturn(headers);
+
+    EventHandler mockedEventHandler = mock(EventHandler.class);
+    when(mockedEventHandler.isEligible(any(DataImportEventPayload.class))).thenReturn(true);
+    when(mockedEventHandler.handle(any(DataImportEventPayload.class)))
+      .thenReturn(CompletableFuture.completedFuture(dataImportEventPayload));
+    EventManager.registerEventHandler(mockedEventHandler);
+
+    // when
+    Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
+
+    // then
+    future.onComplete(context.asyncAssertSuccess(actualKafkaRecordKey -> {
+      context.assertEquals(expectedKafkaRecordKey, actualKafkaRecordKey);
+      verify(mockedEventHandler).isEligible(any(DataImportEventPayload.class));
+      verify(mockedEventHandler).handle(any(DataImportEventPayload.class));
     }));
   }
 

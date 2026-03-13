@@ -27,17 +27,14 @@ import org.folio.inventory.dataimport.ItemsMapperFactory;
 import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
-import org.folio.inventory.dataimport.handlers.actions.CreateAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.CreateMarcHoldingsEventHandler;
-import org.folio.inventory.dataimport.handlers.actions.DeleteAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.MarcBibModifiedPostProcessingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler;
-import org.folio.inventory.dataimport.handlers.actions.UpdateAuthorityEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler;
 import org.folio.inventory.dataimport.handlers.actions.UpdateMarcHoldingsEventHandler;
@@ -61,7 +58,6 @@ import org.folio.inventory.dataimport.services.OrderHelperService;
 import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
 import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.dataimport.util.LoggerUtil;
-import org.folio.inventory.services.AuthorityIdStorageService;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.services.HoldingsIdStorageService;
 import org.folio.inventory.services.InstanceIdStorageService;
@@ -85,12 +81,14 @@ import org.folio.rest.jaxrs.model.Event;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.folio.DataImportEventTypes.DI_ERROR;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
 import static org.folio.okapi.common.XOkapiHeaders.PERMISSIONS;
@@ -102,6 +100,9 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String USER_ID_HEADER = "userId";
+  private static final Set<String> CANCELLED_JOB_ALLOWED_EVENTS = Set.of(
+    DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value()
+  );
 
   private final Vertx vertx;
   private final ProfileSnapshotCache profileSnapshotCache;
@@ -173,7 +174,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       String jobExecutionId = eventPayload.getJobExecutionId();
       LOGGER.info("Data import event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", eventPayload.getEventType(), recordId, jobExecutionId, chunkId);
 
-      if (cancelledJobsIdCache.contains(eventPayload.getJobExecutionId())) {
+      if (shouldSkipEventProcessing(eventPayload)) {
         LOGGER.info("Skip processing of event, topic: '{}', tenantId: '{}', jobExecutionId: '{}' recordId: '{}' because the job has been cancelled",
           kafkaRecord.topic(), eventPayload.getTenant(), eventPayload.getJobExecutionId(), recordId);
         return Future.succeededFuture(kafkaRecord.key());
@@ -225,6 +226,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     HoldingsPreloader holdingsPreloader = new HoldingsPreloader(ordersPreloaderHelper);
     ItemPreloader itemPreloader = new ItemPreloader(ordersPreloaderHelper);
     SnapshotService snapshotService = new SnapshotService(client);
+    PostgresClientFactory postgresClientFactory = new PostgresClientFactory(vertx);
 
     MatchValueLoaderFactory.register(new InstanceLoader(storage, instancePreloader));
     MatchValueLoaderFactory.register(new ItemLoader(storage, itemPreloader));
@@ -252,19 +254,21 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     )));
 
     EventManager.registerEventHandler(new MatchAuthorityEventHandler(mappingMetadataCache, consortiumService));
-    EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache, new ItemIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService));
-    EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService, consortiumService));
-    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), orderHelperService, snapshotService, client));
-    EventManager.registerEventHandler(new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx))), new HoldingsCollectionService(), consortiumService));
+    EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache, new ItemIdStorageService(new EntityIdStorageDaoImpl(postgresClientFactory)), orderHelperService));
+    EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(postgresClientFactory)), orderHelperService, consortiumService));
+    EventManager.registerEventHandler(new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, new InstanceIdStorageService(new EntityIdStorageDaoImpl(postgresClientFactory)), orderHelperService, snapshotService, client));
+    EventManager.registerEventHandler(new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, new HoldingsIdStorageService(new EntityIdStorageDaoImpl(postgresClientFactory)), new HoldingsCollectionService(), consortiumService));
     EventManager.registerEventHandler(new UpdateMarcHoldingsEventHandler(storage, mappingMetadataCache, new KafkaEventPublisher(kafkaConfig, vertx, 100)));
-    EventManager.registerEventHandler(new CreateAuthorityEventHandler(storage, mappingMetadataCache, new AuthorityIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)))));
-    EventManager.registerEventHandler(new UpdateAuthorityEventHandler(storage, mappingMetadataCache, new KafkaEventPublisher(kafkaConfig, vertx, 100)));
-    EventManager.registerEventHandler(new DeleteAuthorityEventHandler(storage));
     EventManager.registerEventHandler(new UpdateItemEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, consortiumService, instanceLinkClient, snapshotService));
     EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, mappingMetadataCache));
     EventManager.registerEventHandler(new MarcBibModifyEventHandler(mappingMetadataCache, new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, client));
+  }
+
+  private boolean shouldSkipEventProcessing(DataImportEventPayload eventPayload) {
+    return cancelledJobsIdCache.contains(eventPayload.getJobExecutionId())
+      && !CANCELLED_JOB_ALLOWED_EVENTS.contains(eventPayload.getEventType());
   }
 
   private void populateWithPermissionsHeader(DataImportEventPayload eventPayload, Map<String, String> headersMap) {

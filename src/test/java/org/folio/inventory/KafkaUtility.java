@@ -25,6 +25,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
 import static java.time.Duration.ofMinutes;
+import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
 
@@ -81,8 +82,11 @@ public final class KafkaUtility {
     ConsumerRecords<String, String> records;
     try (KafkaConsumer<String, String> kafkaConsumer = new KafkaConsumer<>(consumerProperties)) {
       kafkaConsumer.seekToBeginning(kafkaConsumer.assignment());
-
-      kafkaConsumer.subscribe(Collections.singletonList(formatToKafkaTopicName(tenant, eventType)));
+      if (LINKS_STATS.topicName().equals(eventType)) {
+        kafkaConsumer.subscribe(Collections.singletonList(String.format("folio.%s.%s.%s", tenant, LINKS_STATS.moduleName(), LINKS_STATS.topicName())));
+      } else {
+        kafkaConsumer.subscribe(Collections.singletonList(formatToKafkaTopicName(tenant, eventType)));
+      }
       records = kafkaConsumer.poll(Duration.ofMillis(timeout));
     }
     return IteratorUtils.toList(records.iterator()).stream().toList();

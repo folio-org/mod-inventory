@@ -4,7 +4,7 @@
   "provides": [
     {
       "id": "inventory",
-      "version": "14.3",
+      "version": "14.4",
       "handlers": [
         {
           "methods": ["GET"],
@@ -352,6 +352,17 @@
           ]
         },
         {
+          "methods": ["PATCH"],
+          "pathPattern": "/inventory/items/{id}",
+          "permissionsRequired": ["inventory.items.item.patch.execute"],
+          "modulePermissions": [
+            "inventory-storage.items.item.get",
+            "inventory-storage.items.collection.get",
+            "inventory-storage.items.item.patch.execute",
+            "users.item.get"
+          ]
+        },
+        {
           "methods": ["DELETE"],
           "pathPattern": "/inventory/items/{id}",
           "permissionsRequired": ["inventory.items.item.delete"],
@@ -453,6 +464,29 @@
           "permissionsRequired": ["inventory.instances.item.put"],
           "modulePermissions": [
             "inventory-storage.instances.item.put",
+            "inventory-storage.instances.item.get",
+            "inventory-storage.instances.item.post",
+            "inventory-storage.instances.item.delete",
+            "source-storage.records.delete",
+            "source-storage.records.undelete.item.post",
+            "source-storage.records.update",
+            "inventory-storage.preceding-succeeding-titles.collection.get",
+            "inventory-storage.preceding-succeeding-titles.item.post",
+            "inventory-storage.preceding-succeeding-titles.item.put",
+            "inventory-storage.preceding-succeeding-titles.item.delete",
+            "inventory-storage.instance-relationships.collection.get",
+            "inventory-storage.instance-relationships.item.post",
+            "inventory-storage.instance-relationships.item.put",
+            "inventory-storage.instance-relationships.item.delete",
+            "user-tenants.collection.get"
+          ]
+        },
+        {
+          "methods": ["PATCH"],
+          "pathPattern": "/inventory/instances/{id}",
+          "permissionsRequired": ["inventory.instances.item.patch.execute"],
+          "modulePermissions": [
+            "inventory-storage.instances.item.patch.execute",
             "inventory-storage.instances.item.get",
             "inventory-storage.instances.item.post",
             "inventory-storage.instances.item.delete",
@@ -656,11 +690,11 @@
     },
     {
       "id": "item-storage",
-      "version": "11.0"
+      "version": "11.2"
     },
     {
       "id": "instance-storage",
-      "version": "11.2"
+      "version": "11.3"
     },
     {
       "id": "instance-storage-batch-sync",
@@ -687,10 +721,6 @@
       "version": "1.0 2.0"
     },
     {
-      "id": "instance-authority-links",
-      "version": "2.1"
-    },
-    {
       "id": "identifier-types",
       "version": "1.0"
     },
@@ -707,19 +737,15 @@
       "version": "0.1"
     },
     {
-      "id": "request-storage",
-      "version": "6.0"
-    },
-    {
       "id": "source-storage-records",
       "version": "3.4"
     },
     {
-      "id": "bound-with-parts-storage",
-      "version": "2.0"
+      "id": "source-storage-snapshots",
+      "version": "2.1"
     },
     {
-      "id": "authority-storage",
+      "id": "bound-with-parts-storage",
       "version": "2.0"
     }
   ],
@@ -727,6 +753,14 @@
     {
       "id": "mapping-metadata-provider",
       "version": "1.1"
+    },
+    {
+      "id": "source-manager-job-executions",
+      "version": "3.4"
+    },
+    {
+      "id": "source-manager-records",
+      "version": "2.1"
     },
     {
       "id": "data-import-converter-storage",
@@ -751,6 +785,18 @@
     {
       "id": "staging-users",
       "version": "1.1"
+    },
+    {
+      "id": "instance-authority-links",
+      "version": "2.1"
+    },
+    {
+      "id": "authority-storage",
+      "version": "2.0"
+    },
+    {
+      "id": "request-storage",
+      "version": "6.0"
     }
   ],
   "permissionSets": [
@@ -855,6 +901,11 @@
       "description": "Modify item"
     },
     {
+      "permissionName": "inventory.items.item.patch.execute",
+      "displayName": "Inventory - modify item partially",
+      "description": "Modify item partially"
+    },
+    {
       "permissionName": "inventory.items.item.delete",
       "displayName": "Inventory - delete individual item",
       "description": "Delete individual item"
@@ -900,6 +951,11 @@
       "description": "Modify instance"
     },
     {
+      "permissionName": "inventory.instances.item.patch.execute",
+      "displayName": "Inventory - partially modify instance",
+      "description": "Partially modify instance"
+    },
+    {
       "permissionName": "inventory.instances.item.delete",
       "displayName": "Inventory - delete individual instance",
       "description": "Delete individual instance"
@@ -925,6 +981,7 @@
         "inventory.items.item.get",
         "inventory.items.item.post",
         "inventory.items.item.put",
+        "inventory.items.item.patch.execute",
         "inventory.items.item.delete",
         "inventory.items.collection.delete",
         "inventory.instances.collection.get",
@@ -933,6 +990,7 @@
         "inventory.instances.item.post",
         "inventory.instances.batch.post",
         "inventory.instances.item.put",
+        "inventory.instances.item.patch.execute",
         "inventory.instances.item.delete",
         "inventory.instances.collection.delete",
         "inventory.config.instances.blocked-fields.get",
