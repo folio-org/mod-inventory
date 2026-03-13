@@ -9,7 +9,7 @@ import junitparams.Parameters;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.DataImportEventTypes;
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.JobProfile;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
@@ -199,7 +199,7 @@ public class UpdateItemEventHandlerTest {
         .withHrid(hrid)
         .withInstanceId(instanceId)
         .withPermanentLocationId(permanentLocationId)
-        .withVersion(1);
+        .withVersion(1L);
       Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(returnedHoldings));
       return null;

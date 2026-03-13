@@ -53,7 +53,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import org.folio.DataImportEventPayload;
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.Instance;
 import org.folio.MappingMetadataDto;
 import org.folio.MatchDetail;

@@ -28,8 +28,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
-import org.folio.Holdings;
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.MappingMetadataDto;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
@@ -186,7 +185,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
       var parsedRecord = new JsonObject((String) new JsonObject(context.get(MARC_HOLDINGS.value()))
         .mapTo(Record.class).getParsedRecord().getContent());
       var mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
-      RecordMapper<Holdings> recordMapper = RecordMapperBuilder.buildMapper(MARC_FORMAT);
+      RecordMapper<HoldingsRecord> recordMapper = RecordMapperBuilder.buildMapper(MARC_FORMAT);
       var holdings = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       dataImportEventPayload.getContext().put(HOLDINGS.value(), Json.encode(new JsonObject().put(HOLDINGS_PATH, JsonObject.mapFrom(holdings))));
     } catch (Exception e) {
@@ -281,7 +280,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
 
   private void prepareEvent(DataImportEventPayload dataImportEventPayload) {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
+    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
     dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonObject().encode());
   }
 

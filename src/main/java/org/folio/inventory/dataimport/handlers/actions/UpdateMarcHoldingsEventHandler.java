@@ -34,8 +34,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.folio.DataImportEventPayload;
-import org.folio.Holdings;
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.dbschema.ObjectMapperTool;
@@ -162,7 +161,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
     payload.getContext().put(CURRENT_HOLDING_PROPERTY, Json.encode(payload.getContext().get(HOLDINGS.value())));
   }
 
-  private Future<Holdings> mapHolding(DataImportEventPayload payload, MappingMetadataDto mappingMetadata) {
+  private Future<HoldingsRecord> mapHolding(DataImportEventPayload payload, MappingMetadataDto mappingMetadata) {
     try {
       var mappingRules = new JsonObject(mappingMetadata.getMappingRules());
       var mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
@@ -170,7 +169,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
       var parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
       String holdingsId = marcRecord.getExternalIdsHolder().getHoldingsId();
       LOGGER.info("Holdings update with holdingId: {}", holdingsId);
-      RecordMapper<Holdings> recordMapper = RecordMapperBuilder.buildMapper(MARC_HOLDINGS.value());
+      RecordMapper<HoldingsRecord> recordMapper = RecordMapperBuilder.buildMapper(MARC_HOLDINGS.value());
       var holdings = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       holdings.setId(holdingsId);
       return Future.succeededFuture(holdings);
@@ -186,7 +185,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
       : JsonObject.mapFrom(parsedRecord.getContent());
   }
 
-  private Future<HoldingsRecord> processHolding(Holdings holdings, Context context, DataImportEventPayload payload) {
+  private Future<HoldingsRecord> processHolding(HoldingsRecord holdings, Context context, DataImportEventPayload payload) {
     var holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
     Promise<HoldingsRecord> promise = Promise.promise();
     holdingsRecordCollection.findById(holdings.getId()).thenAccept(actualRecord -> {
@@ -205,8 +204,8 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
     return promise.future();
   }
 
-  private Future<Holdings> fillInstanceIdByHrid(DataImportEventPayload dataImportEventPayload, Holdings holdings, Context context) {
-    Promise<Holdings> promise = Promise.promise();
+  private Future<HoldingsRecord> fillInstanceIdByHrid(DataImportEventPayload dataImportEventPayload, HoldingsRecord holdings, Context context) {
+    Promise<HoldingsRecord> promise = Promise.promise();
     if (StringUtils.isBlank(holdings.getInstanceId())) {
       var rec = Json.decodeValue(getMarcHoldingRecordAsString(dataImportEventPayload), Record.class);
       var instanceHrid = getControlFieldValue(rec, INSTANCE_HRID_TAG);
@@ -224,13 +223,13 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
   }
 
   private void fillInstanceIdSearchingByHrid(InstanceCollection instanceCollection,
-                                             String instanceHrid, Holdings holdings,
-                                             Promise<Holdings> promise) {
+                                             String instanceHrid, HoldingsRecord holdings,
+                                             Promise<HoldingsRecord> promise) {
     try {
       instanceCollection.findByCql(format("hrid==%s", instanceHrid), PagingParameters.defaults(),
         findResult -> {
           if (findResult.getResult() != null && findResult.getResult().totalRecords == 1) {
-            var instanceIdFromDb = findResult.getResult().records.get(0).getId();
+            var instanceIdFromDb = findResult.getResult().records.getFirst().getId();
             holdings.setInstanceId(instanceIdFromDb);
             promise.complete(holdings);
           } else {

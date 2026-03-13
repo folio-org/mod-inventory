@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.HoldingsUpdateOwnership;
 import org.folio.HttpStatus;
 import org.folio.ItemsUpdateOwnership;

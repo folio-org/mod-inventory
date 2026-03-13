@@ -2,7 +2,7 @@ package org.folio.inventory.dataimport.entities;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 
 import java.util.ArrayList;
 import java.util.List;

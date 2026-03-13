@@ -7,7 +7,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.JobProfile;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
@@ -246,7 +246,7 @@ public class UpdateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapperForMultipleHoldings)
-      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -292,32 +292,32 @@ public class UpdateHoldingEventHandlerTest {
 
     //actual Holdings which will returned as "actual" after optimistic locking errors
     HoldingsRecord actualHoldings = new HoldingsRecord()
-      .withId(holdingsIds.get(0))
-      .withHrid(holdingsHrids.get(0))
-      .withInstanceId(instanceIds.get(0))
+      .withId(holdingsIds.getFirst())
+      .withHrid(holdingsHrids.getFirst())
+      .withInstanceId(instanceIds.getFirst())
       .withPermanentLocationId(permanentLocationId)
-      .withVersion(2);
+      .withVersion(2L);
 
     HoldingsRecord actualHoldings2 = new HoldingsRecord()
       .withId(holdingsIds.get(3))
       .withHrid(holdingsHrids.get(3))
       .withInstanceId(instanceIds.get(3))
       .withPermanentLocationId(permLocationIds.get(3))
-      .withVersion(2);
+      .withVersion(2L);
 
     HoldingsRecord actualHoldings3 = new HoldingsRecord()
       .withId(holdingsIds.get(4))
       .withHrid(holdingsHrids.get(4))
       .withInstanceId(instanceIds.get(4))
       .withPermanentLocationId(permLocationIds.get(4))
-      .withVersion(2);
+      .withVersion(2L);
 
     HoldingsRecord actualHoldings4 = new HoldingsRecord()
       .withId(holdingsIds.get(5))
       .withHrid(holdingsHrids.get(5))
       .withInstanceId(instanceIds.get(5))
       .withPermanentLocationId(permLocationIds.get(5))
-      .withVersion(2);
+      .withVersion(2L);
 
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
@@ -326,10 +326,10 @@ public class UpdateHoldingEventHandlerTest {
 
     //Real Holdings which will have specific behavior: successful, optimistic locking error (ol), failure by another reason.
     HoldingsRecord olHoldingsRecord1 = new HoldingsRecord()
-      .withId(holdingsIds.get(0))
-      .withInstanceId(instanceIds.get(0))
-      .withHrid(holdingsHrids.get(0))
-      .withPermanentLocationId(permLocationIds.get(0));
+      .withId(holdingsIds.getFirst())
+      .withInstanceId(instanceIds.getFirst())
+      .withHrid(holdingsHrids.getFirst())
+      .withPermanentLocationId(permLocationIds.getFirst());
     HoldingsRecord successfulHoldingsRecord2 = new HoldingsRecord()
       .withId(holdingsIds.get(1))
       .withInstanceId(instanceIds.get(1))
@@ -390,7 +390,7 @@ public class UpdateHoldingEventHandlerTest {
     // Provide behavior for the Holdings
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", holdingsIds.get(0)), 409));
+      failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", holdingsIds.getFirst()), 409));
       return null;
     }).doAnswer(invocationOnMock -> {
         HoldingsRecord tmpHoldingsRecord = invocationOnMock.getArgument(0);
@@ -467,7 +467,7 @@ public class UpdateHoldingEventHandlerTest {
       Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(result));
       return null;
-    }).when(holdingsRecordsCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s OR %s OR %s)", holdingsIds.get(0), holdingsIds.get(3), holdingsIds.get(4), holdingsIds.get(5)))),
+    }).when(holdingsRecordsCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s OR %s OR %s)", holdingsIds.getFirst(), holdingsIds.get(3), holdingsIds.get(4), holdingsIds.get(5)))),
       any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
@@ -485,7 +485,7 @@ public class UpdateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -497,7 +497,7 @@ public class UpdateHoldingEventHandlerTest {
     Assert.assertNull(actualDataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
     List<HoldingsRecord> resultedHoldingsRecords = List.of(Json.decodeValue(actualDataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord[].class));
     Assert.assertEquals(5, resultedHoldingsRecords.size());
-    assertEquals(successfulHoldingsRecord2.getId(), String.valueOf(resultedHoldingsRecords.get(0).getId()));
+    assertEquals(successfulHoldingsRecord2.getId(), String.valueOf(resultedHoldingsRecords.getFirst().getId()));
     assertEquals(successfulHoldingsRecord7.getId(), String.valueOf(resultedHoldingsRecords.get(1).getId()));
     assertEquals(successfulHoldingsRecord8.getId(), String.valueOf(resultedHoldingsRecords.get(2).getId()));
     assertEquals(olHoldingsRecord1.getId(), String.valueOf(resultedHoldingsRecords.get(3).getId()));
@@ -506,12 +506,12 @@ public class UpdateHoldingEventHandlerTest {
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(ERRORS));
     List<PartialError> resultedErrorList = List.of(Json.decodeValue(actualDataImportEventPayload.getContext().get(ERRORS), PartialError[].class));
     Assert.assertEquals(5, resultedErrorList.size());
-    assertEquals(partialErrorHoldingsRecord3.getId(), String.valueOf(resultedErrorList.get(0).getId()));
+    assertEquals(partialErrorHoldingsRecord3.getId(), String.valueOf(resultedErrorList.getFirst().getId()));
     assertEquals(partialErrorHoldingsRecord9.getId(), String.valueOf(resultedErrorList.get(1).getId()));
     assertEquals(partialErrorHoldingsRecord10.getId(), String.valueOf(resultedErrorList.get(2).getId()));
     assertEquals(olHoldingsRecord5.getId(), String.valueOf(resultedErrorList.get(3).getId()));
     assertEquals(olHoldingsRecord4.getId(), String.valueOf(resultedErrorList.get(4).getId()));
-    assertEquals(resultedErrorList.get(0).getError(), format("Cannot update record %s not found", partialErrorHoldingsRecord3.getId()));
+    assertEquals(resultedErrorList.getFirst().getError(), format("Cannot update record %s not found", partialErrorHoldingsRecord3.getId()));
     assertEquals(resultedErrorList.get(1).getError(), format("Cannot update record %s not found", partialErrorHoldingsRecord9.getId()));
     assertEquals(resultedErrorList.get(2).getError(), format("Cannot update record %s not found", partialErrorHoldingsRecord10.getId()));
     assertEquals(resultedErrorList.get(3).getError(), format("Cannot update record %s not found", olHoldingsRecord5.getId()));
@@ -533,7 +533,7 @@ public class UpdateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(contextSecondRun)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
 
     doAnswer(invocationOnMock -> {
@@ -573,7 +573,7 @@ public class UpdateHoldingEventHandlerTest {
       Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(result));
       return null;
-    }).when(holdingsRecordsCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s)", holdingsIds.get(0), holdingsIds.get(3)))),
+    }).when(holdingsRecordsCollection).findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s)", holdingsIds.getFirst(), holdingsIds.get(3)))),
       any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     CompletableFuture<DataImportEventPayload> futureSecondRun = updateHoldingEventHandler.handle(dataImportEventPayloadSecondRun);
@@ -586,15 +586,15 @@ public class UpdateHoldingEventHandlerTest {
     List<HoldingsRecord> resultedHoldingsRecordsSecondRun = List.of(Json.decodeValue(actualDataImportEventPayloadSecondRun.getContext().get(HOLDINGS.value()), HoldingsRecord[].class));
     Assert.assertEquals(3, resultedHoldingsRecordsSecondRun.size());
 
-    assertEquals(successfulHoldingsRecord2.getId(), String.valueOf(resultedHoldingsRecordsSecondRun.get(0).getId()));
+    assertEquals(successfulHoldingsRecord2.getId(), String.valueOf(resultedHoldingsRecordsSecondRun.getFirst().getId()));
     assertEquals(olHoldingsRecord1.getId(), String.valueOf(resultedHoldingsRecordsSecondRun.get(1).getId()));
     assertEquals(olHoldingsRecord4.getId(), String.valueOf(resultedHoldingsRecordsSecondRun.get(2).getId()));
 
     Assert.assertNotNull(actualDataImportEventPayloadSecondRun.getContext().get(ERRORS));
     List<PartialError> resultedErrorListSecondRun = List.of(Json.decodeValue(actualDataImportEventPayloadSecondRun.getContext().get(ERRORS), PartialError[].class));
     Assert.assertEquals(1, resultedErrorListSecondRun.size());
-    assertEquals(partialErrorHoldingsRecord3.getId(), String.valueOf(resultedErrorListSecondRun.get(0).getId()));
-    assertEquals(resultedErrorListSecondRun.get(0).getError(), format("Cannot update record %s not found", partialErrorHoldingsRecord3.getId()));
+    assertEquals(partialErrorHoldingsRecord3.getId(), String.valueOf(resultedErrorListSecondRun.getFirst().getId()));
+    assertEquals(resultedErrorListSecondRun.getFirst().getError(), format("Cannot update record %s not found", partialErrorHoldingsRecord3.getId()));
   }
 
   @Test
@@ -615,7 +615,7 @@ public class UpdateHoldingEventHandlerTest {
       .withHrid(hrid)
       .withInstanceId(instanceId)
       .withPermanentLocationId(permanentLocationId)
-      .withVersion(2);
+      .withVersion(2L);
 
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
@@ -664,7 +664,7 @@ public class UpdateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -676,7 +676,7 @@ public class UpdateHoldingEventHandlerTest {
     Assert.assertNull(actualDataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
     List<HoldingsRecord> resultedHoldingsRecords = List.of(Json.decodeValue(actualDataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord[].class));
     Assert.assertEquals(1, resultedHoldingsRecords.size());
-    assertEquals(olHoldingsRecord1.getId(), String.valueOf(resultedHoldingsRecords.get(0).getId()));
+    assertEquals(olHoldingsRecord1.getId(), String.valueOf(resultedHoldingsRecords.getFirst().getId()));
     List<PartialError> resultedErrorList = List.of(Json.decodeValue(actualDataImportEventPayload.getContext().get(ERRORS), PartialError[].class));
     Assert.assertEquals(0, resultedErrorList.size());
   }
@@ -699,7 +699,7 @@ public class UpdateHoldingEventHandlerTest {
       .withHrid(hrid)
       .withInstanceId(instanceId)
       .withPermanentLocationId(permanentLocationId)
-      .withVersion(2);
+      .withVersion(2L);
 
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
@@ -747,7 +747,7 @@ public class UpdateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -762,8 +762,8 @@ public class UpdateHoldingEventHandlerTest {
     Assert.assertNotNull(actualDataImportEventPayload.getContext().get(ERRORS));
     List<PartialError> resultedErrorList = List.of(Json.decodeValue(actualDataImportEventPayload.getContext().get(ERRORS), PartialError[].class));
     Assert.assertEquals(1, resultedErrorList.size());
-    assertEquals(holdingId, String.valueOf(resultedErrorList.get(0).getId()));
-    assertEquals(format("Current retry number 1 exceeded or equal given number 1 for the Holding update for jobExecutionId '%s' ", actualDataImportEventPayload.getJobExecutionId()), resultedErrorList.get(0).getError());
+    assertEquals(holdingId, String.valueOf(resultedErrorList.getFirst().getId()));
+    assertEquals(format("Current retry number 1 exceeded or equal given number 1 for the Holding update for jobExecutionId '%s' ", actualDataImportEventPayload.getJobExecutionId()), resultedErrorList.getFirst().getError());
   }
 
   @Test
@@ -827,7 +827,7 @@ public class UpdateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapperForMultipleHoldings)
-      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -855,7 +855,7 @@ public class UpdateHoldingEventHandlerTest {
     String firstPermanentLocationId = UUID.randomUUID().toString();
     String secondPermanentLocationId = UUID.randomUUID().toString();
     List<String> locations = List.of(firstPermanentLocationId, secondPermanentLocationId);
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()), StringValue.of(locations.get(1)));
 
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
     when(storage.getItemCollection(any())).thenReturn(itemCollection);
@@ -897,7 +897,7 @@ public class UpdateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapperForMultipleHoldings)
-      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -928,7 +928,7 @@ public class UpdateHoldingEventHandlerTest {
     String firstPermanentLocationId = UUID.randomUUID().toString();
     String secondPermanentLocationId = UUID.randomUUID().toString();
     List<String> locations = List.of(firstPermanentLocationId, secondPermanentLocationId);
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()), StringValue.of(locations.get(1)));
 
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
     when(storage.getItemCollection(any())).thenReturn(itemCollection);
@@ -976,7 +976,7 @@ public class UpdateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapperForMultipleHoldings)
-      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -1005,7 +1005,7 @@ public class UpdateHoldingEventHandlerTest {
     String firstPermanentLocationId = UUID.randomUUID().toString();
     String secondPermanentLocationId = UUID.randomUUID().toString();
     List<String> locations = List.of(firstPermanentLocationId, secondPermanentLocationId);
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()), StringValue.of(locations.get(1)));
 
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
     when(storage.getItemCollection(any())).thenReturn(itemCollection);
@@ -1052,7 +1052,7 @@ public class UpdateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapperForMultipleHoldings)
-      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -1066,7 +1066,7 @@ public class UpdateHoldingEventHandlerTest {
     String firstPermanentLocationId = UUID.randomUUID().toString();
     String secondPermanentLocationId = UUID.randomUUID().toString();
     List<String> locations = List.of(firstPermanentLocationId, secondPermanentLocationId);
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()), StringValue.of(locations.get(1)));
 
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
     when(storage.getItemCollection(any())).thenReturn(itemCollection);
@@ -1116,7 +1116,7 @@ public class UpdateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapperForMultipleHoldings)
-      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().getFirst());
 
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
@@ -1160,7 +1160,7 @@ public class UpdateHoldingEventHandlerTest {
     String firstPermanentLocationId = UUID.randomUUID().toString();
     String secondPermanentLocationId = UUID.randomUUID().toString();
     List<String> locations = List.of(firstPermanentLocationId, secondPermanentLocationId);
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()), StringValue.of(locations.get(1)));
 
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
     when(storage.getItemCollection(any())).thenReturn(itemCollection);
@@ -1197,7 +1197,7 @@ public class UpdateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapperForMultipleHoldings)
-      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -1219,7 +1219,7 @@ public class UpdateHoldingEventHandlerTest {
     String firstPermanentLocationId = UUID.randomUUID().toString();
     String secondPermanentLocationId = UUID.randomUUID().toString();
     List<String> locations = List.of(firstPermanentLocationId, secondPermanentLocationId);
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()), StringValue.of(locations.get(1)));
 
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
     when(storage.getItemCollection(any())).thenReturn(itemCollection);
@@ -1258,7 +1258,7 @@ public class UpdateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapperForMultipleHoldings)
-      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -1280,7 +1280,7 @@ public class UpdateHoldingEventHandlerTest {
     String firstPermanentLocationId = UUID.randomUUID().toString();
     String secondPermanentLocationId = UUID.randomUUID().toString();
     List<String> locations = List.of(firstPermanentLocationId, secondPermanentLocationId);
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.get(0)), StringValue.of(locations.get(1)));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()), StringValue.of(locations.get(1)));
 
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
     when(storage.getItemCollection(any())).thenReturn(itemCollection);
@@ -1319,7 +1319,7 @@ public class UpdateHoldingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapperForMultipleHoldings)
-      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -1360,7 +1360,7 @@ public class UpdateHoldingEventHandlerTest {
       .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -1385,7 +1385,7 @@ public class UpdateHoldingEventHandlerTest {
       .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(null)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -1410,7 +1410,7 @@ public class UpdateHoldingEventHandlerTest {
       .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -1441,7 +1441,7 @@ public class UpdateHoldingEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
       .withContext(new HashMap<>())
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
     assertTrue(updateHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 
