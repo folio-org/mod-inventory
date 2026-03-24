@@ -105,9 +105,9 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
 
   protected Future<Instance> saveRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record srcRecord,
                                                               Instance instance, InstanceCollection instanceCollection,
-                                                              String tenantId, String userId) {
+                                                              String tenantId, String userId, String requestId) {
     Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId).postSourceStorageRecords(srcRecord)
+    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId, requestId).postSourceStorageRecords(srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
@@ -128,9 +128,9 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   protected Future<Instance> putRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record srcRecord,
-                                                             Instance instance, String matchedId, String tenantId, String userId) {
+                                                             Instance instance, String matchedId, String tenantId, String userId, String requestId) {
     Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId)
+    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId, requestId)
       .putSourceStorageRecordsGenerationById(matchedId ,srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
@@ -200,12 +200,12 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     promise.future();
   }
 
-  public SourceStorageRecordsClient getSourceStorageRecordsClient(String okapiUrl, String token, String tenantId, String userId) {
-    return new SourceStorageRecordsClientWrapper(okapiUrl, tenantId, token, userId, getHttpClient());
+  public SourceStorageRecordsClient getSourceStorageRecordsClient(String okapiUrl, String token, String tenantId, String userId, String requestId) {
+    return new SourceStorageRecordsClientWrapper(okapiUrl, tenantId, token, userId, requestId, getHttpClient());
   }
 
-  public SourceStorageSnapshotsClient getSourceStorageSnapshotsClient(String okapiUrl, String token, String tenantId, String userId) {
-    return new SourceStorageSnapshotsClientWrapper(okapiUrl, tenantId, token, userId, getHttpClient());
+  public SourceStorageSnapshotsClient getSourceStorageSnapshotsClient(String okapiUrl, String token, String tenantId, String userId, String requestId) {
+    return new SourceStorageSnapshotsClientWrapper(okapiUrl, tenantId, token, userId, requestId, getHttpClient());
   }
 
   private Record encodeParsedRecordContent(Record srcRecord) {

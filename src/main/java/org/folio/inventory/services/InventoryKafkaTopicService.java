@@ -1,9 +1,6 @@
 package org.folio.inventory.services;
 
 import static org.apache.commons.lang3.StringUtils.firstNonBlank;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_MATCHED;
@@ -42,10 +39,7 @@ public class InventoryKafkaTopicService {
       new InventoryKafkaTopic(DI_SRS_MARC_BIB_RECORD_NOT_MATCHED.value(), marcBibNotMatchedPartitions()),
       new InventoryKafkaTopic(DI_INVENTORY_ITEM_UPDATED.value(), itemUpdatedPartitions()),
       new InventoryKafkaTopic(DI_INVENTORY_ITEM_NOT_MATCHED.value(), itemNotMatchedPartitions()),
-      new InventoryKafkaTopic(DI_INVENTORY_AUTHORITY_UPDATED.value(), authorityUpdatedPartitions()),
       new InventoryKafkaTopic(DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING.value(), holdingCreatedReadyForPostProcessingPartitions()),
-      new InventoryKafkaTopic(DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING.value(), authorityCreatedReadyForPostProcessingPartitions()),
-      new InventoryKafkaTopic(DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING.value(), authorityUpdatedReadyForPostProcessingPartitions()),
       new InventoryKafkaTopic(DI_SRS_MARC_BIB_RECORD_MODIFIED.value(), marcBibRecordModifiedPartitions()),
       new InventoryKafkaTopic(INSTANCE_INGRESS_TOPIC, instanceIngressPartitions())
     };
@@ -107,23 +101,9 @@ public class InventoryKafkaTopicService {
     return Integer.valueOf(firstNonBlank(System.getenv("DI_SRS_MARC_BIB_RECORD_NOT_MATCHED_PARTITIONS"), "1"));
   }
 
-  private Integer authorityUpdatedPartitions() {
-    return Integer.valueOf(firstNonBlank(System.getenv("DI_INVENTORY_AUTHORITY_UPDATED_PARTITIONS"), "1"));
-  }
-
   private Integer holdingCreatedReadyForPostProcessingPartitions() {
     return Integer.valueOf(firstNonBlank(System.getenv(
       "DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING_PARTITIONS"), "1"));
-  }
-
-  private Integer authorityCreatedReadyForPostProcessingPartitions() {
-    return Integer.valueOf(firstNonBlank(System.getenv(
-      "DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING_PARTITIONS"), "1"));
-  }
-
-  private Integer authorityUpdatedReadyForPostProcessingPartitions() {
-    return Integer.valueOf(firstNonBlank(System.getenv(
-      "DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING_PARTITIONS"), "1"));
   }
 
   private Integer marcBibRecordModifiedPartitions() {

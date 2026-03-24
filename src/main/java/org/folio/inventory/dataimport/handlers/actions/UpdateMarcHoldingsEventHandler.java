@@ -9,6 +9,7 @@ import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_HOLDINGS;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDINGS_UPDATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
@@ -105,7 +106,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
       prepareEvent(payload);
 
       var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(),
-        payload.getContext().get(PAYLOAD_USER_ID));
+        payload.getContext().get(PAYLOAD_USER_ID), payload.getContext().get(OKAPI_REQUEST_ID));
       var jobExecutionId = payload.getJobExecutionId();
       LOGGER.info("Update marc holding with jobExecutionId: {}, incomingRecordId: {}",
         jobExecutionId, payload.getContext().get(INCOMING_RECORD_ID));
@@ -187,23 +188,19 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
 
   private Future<HoldingsRecord> processHolding(Holdings holdings, Context context, DataImportEventPayload payload) {
     var holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
-    HoldingsRecord mappedRecord = Json.decodeValue(Json.encode(JsonObject.mapFrom(holdings)), HoldingsRecord.class);
     Promise<HoldingsRecord> promise = Promise.promise();
-    holdingsRecordCollection.findById(mappedRecord.getId()).thenAccept(actualRecord -> {
+    holdingsRecordCollection.findById(holdings.getId()).thenAccept(actualRecord -> {
       if (actualRecord == null) {
-        promise.fail(new EventProcessingException(format(HOLDING_NOT_FOUND_ERROR_MESSAGE, mappedRecord.getId())));
+        promise.fail(new EventProcessingException(format(HOLDING_NOT_FOUND_ERROR_MESSAGE, holdings.getId())));
         return;
       }
-
-      mappedRecord.setVersion(actualRecord.getVersion());
-      holdingsRecordCollection.update(mappedRecord,
+      var holdingsRecord = HoldingsUpdateDelegate.mergeRecords(actualRecord, holdings, holdings.getSourceId());
+      holdingsRecordCollection.update(holdingsRecord,
         success -> {
-          holdings.setVersion(mappedRecord.getVersion());
-          holdings.setInstanceId(mappedRecord.getInstanceId());
-          payload.getContext().put(HOLDINGS.value(), Json.encode(holdings));
-          promise.complete(mappedRecord);
+          payload.getContext().put(HOLDINGS.value(), Json.encode(holdingsRecord));
+          promise.complete(holdingsRecord);
         },
-        failure -> failureUpdateHandler(payload, mappedRecord.getId(), holdingsRecordCollection, promise, failure));
+        failure -> failureUpdateHandler(payload, holdings.getId(), holdingsRecordCollection, promise, failure));
     });
     return promise.future();
   }

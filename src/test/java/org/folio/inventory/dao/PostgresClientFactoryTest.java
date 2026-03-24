@@ -5,7 +5,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.pgclient.PgConnectOptions;
-import io.vertx.pgclient.PgPool;
+import io.vertx.sqlclient.Pool;
 import io.vertx.pgclient.SslMode;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.common.dao.PostgresConnectionOptions;
@@ -49,9 +49,10 @@ public class PostgresClientFactoryTest {
   @AfterClass
   public static void tearDown(TestContext context) {
     Async async = context.async();
-    vertx.close(context.asyncAssertSuccess(res -> {
-      async.complete();
-    }));
+    vertx.close()
+      .onComplete(context.asyncAssertSuccess(res -> {
+        async.complete();
+      }));
     PgPoolContainer.setEmbeddedPostgresOptions();
     PostgresClientFactory.closeAll();
   }
@@ -60,7 +61,7 @@ public class PostgresClientFactoryTest {
   public void shouldCreateCachedPool() {
     PostgresClientFactory postgresClientFactory =
       new PostgresClientFactory(vertx);
-    PgPool cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
+    Pool cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
 
     assertNotNull(cachedPool);
   }
@@ -69,8 +70,8 @@ public class PostgresClientFactoryTest {
   public void shouldReturnPgPoolFromCache() {
     PostgresClientFactory postgresClientFactory =
       new PostgresClientFactory(vertx);
-    PgPool cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
-    PgPool poolFromCache = postgresClientFactory.getCachedPool(TENANT_ID);
+    Pool cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
+    Pool poolFromCache = postgresClientFactory.getCachedPool(TENANT_ID);
     assertNotNull(cachedPool);
     assertNotNull(poolFromCache);
     assertEquals(cachedPool, poolFromCache);
@@ -80,9 +81,9 @@ public class PostgresClientFactoryTest {
   public void shouldResetPgPoolCache() {
     PostgresClientFactory postgresClientFactory =
       new PostgresClientFactory(vertx);
-    PgPool cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
+    Pool cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
     postgresClientFactory.setShouldResetPool(true);
-    PgPool poolFromCache = postgresClientFactory.getCachedPool(TENANT_ID);
+    Pool poolFromCache = postgresClientFactory.getCachedPool(TENANT_ID);
     assertNotNull(cachedPool);
     assertNotNull(poolFromCache);
     assertNotEquals(cachedPool, poolFromCache);
@@ -123,13 +124,12 @@ public class PostgresClientFactoryTest {
     assertEquals("test", pgConnectOpts.getUser());
     assertEquals("test", pgConnectOpts.getPassword());
     assertEquals("test", pgConnectOpts.getDatabase());
-    assertEquals(60000, pgConnectOpts.getIdleTimeout());
     assertEquals(SslMode.VERIFY_FULL, pgConnectOpts.getSslMode());
-    assertEquals("HTTPS", pgConnectOpts.getHostnameVerificationAlgorithm());
+    assertEquals("HTTPS", pgConnectOpts.getSslOptions().getHostnameVerificationAlgorithm());
     assertEquals(MAX_POOL_SIZE, PostgresConnectionOptions.getMaxPoolSize());
-    assertNotNull(pgConnectOpts.getPemTrustOptions());
-    assertEquals(expectedEnabledSecureTransportProtocols, pgConnectOpts.getEnabledSecureTransportProtocols());
-    assertNotNull(pgConnectOpts.getOpenSslEngineOptions());
+    assertNotNull(pgConnectOpts.getSslOptions().getTrustOptions());
+    assertEquals(60000, PostgresConnectionOptions.getPoolOptions().getIdleTimeout());
+    assertEquals(expectedEnabledSecureTransportProtocols, pgConnectOpts.getSslOptions().getEnabledSecureTransportProtocols());
 
     PostgresConnectionOptions.setSystemProperties(new HashMap<>());
   }

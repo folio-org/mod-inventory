@@ -1,6 +1,5 @@
 package org.folio.inventory.dataimport.handlers.matching.loaders;
 
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -23,7 +22,10 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.MAX_UUIDS_TO_DISPLAY;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.buildMultiMatchErrorMessage;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
 
@@ -45,7 +47,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     LoadResult loadResult = new LoadResult();
     loadResult.setEntityType(getEntityType().value());
     Context context = constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl(),
-      eventPayload.getContext().get(PAYLOAD_USER_ID));
+      eventPayload.getContext().get(PAYLOAD_USER_ID), eventPayload.getContext().get(OKAPI_REQUEST_ID));
     boolean canProcessMultiMatchResult = canProcessMultiMatchResult(eventPayload);
     PagingParameters pagingParameters = buildPagingParameters(canProcessMultiMatchResult);
 
@@ -62,7 +64,8 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
               loadResult.setEntityType(MULTI_MATCH_IDS);
               loadResult.setValue(mapEntityListToIdsJsonString(collection.records));
             } else {
-              String errorMessage = format("Found multiple records matching specified conditions. CQL query: [%s].%nFound records: %s", cql, Json.encodePrettily(collection.records));
+              String idsJson = mapEntityListToIdsJsonString(collection.records);
+              String errorMessage = buildMultiMatchErrorMessage(idsJson, collection.totalRecords);
               LOG.error(errorMessage);
               future.completeExceptionally(new MatchingException(errorMessage));
               return;
@@ -94,7 +97,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   private PagingParameters buildPagingParameters(boolean multiMatchLoadingParams) {
     // currently, limit = 90 is used because of constraint for URL size that is used for processing multi-match result
     // in scope of https://issues.folio.org/browse/MODDICORE-251 a new approach will be introduced for multi-matching result processing
-    return multiMatchLoadingParams ? new PagingParameters(MULTI_MATCH_LOAD_LIMIT, 0) : new PagingParameters(2, 0);
+    return multiMatchLoadingParams ? new PagingParameters(MULTI_MATCH_LOAD_LIMIT, 0) : new PagingParameters(MAX_UUIDS_TO_DISPLAY, 0);
   }
 
   private boolean canProcessMultiMatchResult(DataImportEventPayload eventPayload) {

@@ -17,7 +17,6 @@ import org.folio.inventory.client.wrappers.ChangeManagerClientWrapper;
 import org.folio.rest.jaxrs.model.InitJobExecutionsRqDto;
 import org.folio.rest.jaxrs.model.JobExecution;
 import org.folio.rest.jaxrs.model.JobProfileInfo;
-import org.folio.rest.jaxrs.model.ParsedRecordDto;
 import org.folio.rest.jaxrs.model.RawRecordsDto;
 import org.folio.rest.jaxrs.model.StatusDto;
 import org.junit.Before;
@@ -47,9 +46,9 @@ public class ChangeManagerClientWrapperTest {
   private JobExecution stubJobExecution;
   private JobProfileInfo stubJobProfileInfo;
   private StatusDto stubStatusDto;
-  private ParsedRecordDto stubParsedRecordDto;
   private static final String TOKEN = "token";
   private static final String USER_ID = "userId";
+  private static final String REQUEST_ID = "requestId";
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -59,15 +58,14 @@ public class ChangeManagerClientWrapperTest {
 
   @Before
   public void setUp() {
-    changeManagerClientWrapper = new ChangeManagerClientWrapper(mockServer.baseUrl(), TENANT_ID, TOKEN, USER_ID,
-      vertx.createHttpClient());
+    changeManagerClientWrapper = new ChangeManagerClientWrapper(mockServer.baseUrl(), TENANT_ID, TOKEN,
+      USER_ID, REQUEST_ID, vertx.createHttpClient());
 
     stubRawRecordsDto = new RawRecordsDto().withId(UUID.randomUUID().toString());
     stubInitJobExecutionsRqDto = new InitJobExecutionsRqDto().withParentJobId(UUID.randomUUID().toString());
     stubJobExecution = new JobExecution().withId(UUID.randomUUID().toString());
     stubJobProfileInfo = new JobProfileInfo().withId(UUID.randomUUID().toString());
     stubStatusDto = new StatusDto();
-    stubParsedRecordDto = new ParsedRecordDto().withId(UUID.randomUUID().toString());
 
     WireMock.stubFor(post(new UrlPathPattern(new RegexPattern("/change-manager/jobExecutions"), true))
       .withHeader(OKAPI_URL, equalTo(mockServer.baseUrl()))
@@ -99,13 +97,6 @@ public class ChangeManagerClientWrapperTest {
       .willReturn(WireMock.ok()));
 
     WireMock.stubFor(put(new UrlPathPattern(new RegexPattern("/change-manager/jobExecutions/" + stubJobExecution.getId() + "/status"), true))
-      .withHeader(OKAPI_URL, equalTo(mockServer.baseUrl()))
-      .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
-      .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
-      .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
-      .willReturn(WireMock.ok()));
-
-    WireMock.stubFor(put(new UrlPathPattern(new RegexPattern("/change-manager/parsedRecords/" + stubParsedRecordDto.getId()), true))
       .withHeader(OKAPI_URL, equalTo(mockServer.baseUrl()))
       .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
       .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
@@ -174,20 +165,6 @@ public class ChangeManagerClientWrapperTest {
 
     Future<HttpResponse<Buffer>> optionalFuture = changeManagerClientWrapper
       .putChangeManagerJobExecutionsStatusById(stubJobExecution.getId(), stubStatusDto);
-
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertEquals(ar.result().statusCode(), SC_OK);
-      async.complete();
-    });
-  }
-
-  @Test
-  public void shouldPutChangeManagerParsedRecordsById(TestContext context) {
-    Async async = context.async();
-
-    Future<HttpResponse<Buffer>> optionalFuture = changeManagerClientWrapper
-      .putChangeManagerParsedRecordsById(stubParsedRecordDto.getId(), stubParsedRecordDto);
 
     optionalFuture.onComplete(ar -> {
       context.assertTrue(ar.succeeded());

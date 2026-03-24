@@ -1,10 +1,12 @@
 
 package org.folio.inventory.domain.items;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.vertx.core.json.JsonObject;
 import org.joda.time.DateTime;
 import org.joda.time.format.ISODateTimeFormat;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class LastCheckIn {
 
   private final DateTime dateTime;

@@ -339,11 +339,16 @@ public class MarcBibliographicMatchEventHandlerTest {
   @Test
   public void shouldReturnFailedFutureIfMultipleRecordsMatchCriteriaAndNextProfileNotEligibleForMultiMatchResult(TestContext context) {
     Async async = context.async();
-    List<RecordIdentifiersDto> recordsIdentifiers = Stream.iterate(0, i -> i < 2, i -> ++i)
-      .map(v -> new RecordIdentifiersDto()
+    String externalId1 = UUID.randomUUID().toString();
+    String externalId2 = UUID.randomUUID().toString();
+    List<RecordIdentifiersDto> recordsIdentifiers = List.of(
+      new RecordIdentifiersDto()
         .withRecordId(UUID.randomUUID().toString())
-        .withExternalId(UUID.randomUUID().toString()))
-      .toList();
+        .withExternalId(externalId1),
+      new RecordIdentifiersDto()
+        .withRecordId(UUID.randomUUID().toString())
+        .withExternalId(externalId2)
+    );
 
     WireMock.stubFor(post(RECORDS_MATCHING_PATH)
       .willReturn(WireMock.ok().withBody(Json.encode(new RecordsIdentifiersCollection()
@@ -358,11 +363,15 @@ public class MarcBibliographicMatchEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
 
-    future.whenComplete((payload, throwable) -> {
+    future.whenComplete((payload, throwable) -> context.verify(v -> {
       context.assertNotNull(throwable);
       context.assertEquals(DI_SRS_MARC_BIB_RECORD_NOT_MATCHED.value(), eventPayload.getEventType());
+      String errorMessage = throwable.getMessage();
+      context.assertTrue(errorMessage.contains("UUIDs:"));
+      context.assertTrue(errorMessage.contains(externalId1));
+      context.assertTrue(errorMessage.contains(externalId2));
       async.complete();
-    });
+    }));
   }
 
   @Test

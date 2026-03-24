@@ -1,6 +1,5 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
@@ -56,6 +55,7 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
@@ -110,25 +110,25 @@ public class CreateItemEventHandler implements EventHandler {
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
+    String jobExecutionId = dataImportEventPayload.getJobExecutionId();
     try {
       dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_CREATED.value());
 
       HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
       if (payloadContext == null || isBlank(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))) {
-        LOGGER.warn("handle:: " + PAYLOAD_HAS_NO_DATA_MSG);
+        LOGGER.warn("handle:: " + PAYLOAD_HAS_NO_DATA_MSG + " jobExecutionId: {}", jobExecutionId);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
+      String recordId = payloadContext.get(RECORD_ID_HEADER);
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
-        LOGGER.warn("handle:: " + ACTION_HAS_NO_MAPPING_MSG);
+        LOGGER.warn("handle:: " + ACTION_HAS_NO_MAPPING_MSG + " jobExecutionId: {} recordId: {}", jobExecutionId, recordId);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
       dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-      dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
+      dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
       dataImportEventPayload.getContext().put(ITEM.value(), new JsonArray().encode());
 
-      String jobExecutionId = dataImportEventPayload.getJobExecutionId();
-      String recordId = dataImportEventPayload.getContext().get(RECORD_ID_HEADER);
       String chunkId = dataImportEventPayload.getContext().get(CHUNK_ID_HEADER);
       LOGGER.info("handle:: Create items with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId, chunkId);
 
@@ -136,7 +136,7 @@ public class CreateItemEventHandler implements EventHandler {
       recordToItemFuture.onSuccess(res -> {
         String deduplicationItemId = res.getEntityId();
         Context context = EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
-          payloadContext.get(PAYLOAD_USER_ID));
+          payloadContext.get(PAYLOAD_USER_ID), payloadContext.get(OKAPI_REQUEST_ID));
         ItemCollection itemCollection = storage.getItemCollection(context);
 
         mappingMetadataCache.get(jobExecutionId, context)
@@ -152,7 +152,7 @@ public class CreateItemEventHandler implements EventHandler {
             LOGGER.trace(format("handle:: Mapped items: %s", mappedItemList.encode()));
             Promise<List<Item>> createMultipleItemsPromise = Promise.promise();
             List<PartialError> multipleItemsCreateErrors = new ArrayList<>();
-            List<Future> createItemsFutures = new ArrayList<>();
+            List<Future<?>> createItemsFutures = new ArrayList<>();
             List<Item> createdItems = new ArrayList<>();
 
             mappedItemList.forEach(e -> {
@@ -179,7 +179,7 @@ public class CreateItemEventHandler implements EventHandler {
               createItemsFutures.add(createItemPromise.future());
             });
 
-            CompositeFuture.all(createItemsFutures).onComplete(ar -> {
+            Future.all(createItemsFutures).onComplete(ar -> {
               if (payloadContext.containsKey(ERRORS) || !multipleItemsCreateErrors.isEmpty()) {
                 payloadContext.put(ERRORS, Json.encode(multipleItemsCreateErrors));
               }

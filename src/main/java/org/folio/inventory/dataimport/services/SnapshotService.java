@@ -25,13 +25,14 @@ public class SnapshotService {
     this.httpClient = httpClient;
   }
 
-  public SourceStorageSnapshotsClient getSourceStorageSnapshotsClient(String okapiUrl, String token, String tenantId, String userId) {
-    return new SourceStorageSnapshotsClientWrapper(okapiUrl, tenantId, token, userId, getHttpClient());
+  public SourceStorageSnapshotsClient getSourceStorageSnapshotsClient(String okapiUrl, String token, String tenantId, String userId, String requestId) {
+    return new SourceStorageSnapshotsClientWrapper(okapiUrl, tenantId, token, userId, requestId, getHttpClient());
   }
 
   public Future<Snapshot> postSnapshotInSrsAndHandleResponse(Context context, Snapshot snapshot) {
     Promise<Snapshot> promise = Promise.promise();
-    getSourceStorageSnapshotsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId(), context.getUserId()).postSourceStorageSnapshots(snapshot)
+    getSourceStorageSnapshotsClient(context.getOkapiLocation(), context.getToken(),
+      context.getTenantId(), context.getUserId(), context.getRequestId()).postSourceStorageSnapshots(snapshot)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {

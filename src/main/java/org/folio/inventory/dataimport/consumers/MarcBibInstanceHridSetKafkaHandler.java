@@ -77,7 +77,8 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
         return Future.failedFuture(message);
       }
 
-      Context context = EventHandlingUtil.constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER));
+      Context context = EventHandlingUtil.constructContext(headersMap.get(OKAPI_TENANT_HEADER), headersMap.get(OKAPI_TOKEN_HEADER), headersMap.get(OKAPI_URL_HEADER),
+        headersMap.get(OKAPI_USER_ID), headersMap.get(OKAPI_REQUEST_ID));
       Record marcRecord = new JsonObject(eventPayload.get(MARC_BIB_RECORD_FORMAT)).mapTo(Record.class);
 
       mappingMetadataCache.get(jobExecutionId, context)
@@ -94,7 +95,7 @@ public class MarcBibInstanceHridSetKafkaHandler implements AsyncRecordHandler<St
               processOLError(record, promise, eventPayload, ar);
             } else {
               eventPayload.remove(CURRENT_RETRY_NUMBER);
-              LOGGER.error("Failed to set MarcBib Hrid by jobExecutionId {}", jobExecutionId, ar.cause());
+              LOGGER.error("Failed to set MarcBib Hrid by jobExecutionId: {} recordId: {} chunkId: {}", jobExecutionId, recordId, chunkId, ar.cause());
               promise.fail(ar.cause());
             }
           }

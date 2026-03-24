@@ -15,6 +15,7 @@ import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
@@ -31,7 +32,6 @@ import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaConsumerWrapper;
 import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SubscriptionDefinition;
-import org.folio.okapi.common.GenericCompositeFuture;
 
 public abstract class KafkaConsumerVerticle extends AbstractVerticle {
   private static final String LOAD_LIMIT_TEMPLATE = "inventory.kafka.%s.loadLimit";
@@ -53,7 +53,7 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
       .map(KafkaConsumerWrapper::stop)
       .toList();
 
-    GenericCompositeFuture.join(stopFutures)
+    Future.join(stopFutures)
       .onComplete(ar -> stopPromise.complete());
   }
 

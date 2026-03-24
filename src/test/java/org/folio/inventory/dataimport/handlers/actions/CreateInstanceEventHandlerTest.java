@@ -11,7 +11,6 @@ import com.google.common.collect.Lists;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.buffer.impl.BufferImpl;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -84,6 +83,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static io.vertx.core.buffer.Buffer.buffer;
 import static java.lang.String.format;
 import static java.util.concurrent.CompletableFuture.completedStage;
 import static org.apache.http.HttpStatus.SC_CREATED;
@@ -93,6 +93,7 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.dateTime005Formatter;
@@ -130,6 +131,7 @@ public class CreateInstanceEventHandlerTest {
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
   private static final String TENANT_ID = "diku";
   private static final String USER_ID = "userId";
+  private static final String REQUEST_ID = "requestId";
   private static final String TOKEN = "dummy";
 
   @Mock
@@ -323,7 +325,7 @@ public class CreateInstanceEventHandlerTest {
       MappingMetadataCache.getInstance(vertx, httpClient, true),
       instanceIdStorageService, orderHelperService, snapshotService, httpClient));
 
-    doReturn(sourceStorageClient).when(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), any(), any());
+    doReturn(sourceStorageClient).when(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), any(), any(), any());
     doAnswer(invocationOnMock -> {
       Instance instanceRecord = invocationOnMock.getArgument(0);
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -374,8 +376,9 @@ public class CreateInstanceEventHandlerTest {
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put("acceptInstanceId", acceptInstanceId);
     context.put(PAYLOAD_USER_ID, USER_ID);
+    context.put(OKAPI_REQUEST_ID, REQUEST_ID);
 
-    Buffer buffer = BufferImpl.buffer("{\"parsedRecord\":{" +
+    Buffer buffer = buffer("{\"parsedRecord\":{" +
       "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
       "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\"" +
       "}}");
@@ -416,7 +419,7 @@ public class CreateInstanceEventHandlerTest {
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
     verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(),
-      argThat(tenantId -> tenantId.equals(TENANT_ID)), argThat(USER_ID::equals));
+      argThat(tenantId -> tenantId.equals(TENANT_ID)), argThat(USER_ID::equals), argThat(REQUEST_ID::equals));
   }
 
   @Test
@@ -438,7 +441,7 @@ public class CreateInstanceEventHandlerTest {
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
-    HttpResponse<Buffer> resp = buildHttpResponseWithBuffer(BufferImpl.buffer("{}"), SC_CREATED);
+    HttpResponse<Buffer> resp = buildHttpResponseWithBuffer(Buffer.buffer("{}"), SC_CREATED);
     ArgumentCaptor<Record> recordCaptor = ArgumentCaptor.forClass(Record.class);
     when(sourceStorageClient.postSourceStorageRecords(any())).thenReturn(Future.succeededFuture(resp));
 
@@ -501,8 +504,9 @@ public class CreateInstanceEventHandlerTest {
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
     context.put("acceptInstanceId", "true");
     context.put(PAYLOAD_USER_ID, USER_ID);
+    context.put(OKAPI_REQUEST_ID, REQUEST_ID);
 
-    Buffer buffer = BufferImpl.buffer("{\"parsedRecord\":{" +
+    Buffer buffer = Buffer.buffer("{\"parsedRecord\":{" +
       "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
       "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\"" +
       "}}");
@@ -535,7 +539,8 @@ public class CreateInstanceEventHandlerTest {
     assertEquals("MARC", createdInstance.getString("source"));
     assertThat(createdInstance.getString("discoverySuppress"), is("true"));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
-    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(), argThat(tenantId -> tenantId.equals(TENANT_ID)), argThat(USER_ID::equals));
+    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(),
+      argThat(tenantId -> tenantId.equals(TENANT_ID)), argThat(USER_ID::equals), argThat(REQUEST_ID::equals));
   }
 
   @Test(expected = ExecutionException.class)
@@ -556,7 +561,7 @@ public class CreateInstanceEventHandlerTest {
     MappingManager.registerWriterFactory(new InstanceWriterFactory());
 
     HttpResponseImpl<Buffer> response = new HttpResponseImpl<>(null, HttpStatus.SC_BAD_REQUEST, "",
-      null, null, null, BufferImpl.buffer("{}"), null);
+      null, null, null, Buffer.buffer("{}"), null);
     when(sourceStorageClient.postSourceStorageRecords(any())).thenReturn(Future.succeededFuture(response));
 
     HashMap<String, String> context = new HashMap<>();
@@ -622,7 +627,7 @@ public class CreateInstanceEventHandlerTest {
 
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
-    Buffer buffer = BufferImpl.buffer("{\"id\": \"567859ad-505a-400d-a699-0028a1fdbf84\",\"parsedRecord\": {\"content\": \"{\\\"leader\\\":\\\"00567nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"957985c6-97e3-4038-b0e7-343ecd0b8120\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\"},\"deleted\": false,\"order\": 0,\"externalIdsHolder\": {\"instanceId\": \"b5e25bc3-a5a5-474a-8333-4a728d2f3485\",\"instanceHrid\": \"in00000000028\"},\"state\": \"ACTUAL\"}");
+    Buffer buffer = Buffer.buffer("{\"id\": \"567859ad-505a-400d-a699-0028a1fdbf84\",\"parsedRecord\": {\"content\": \"{\\\"leader\\\":\\\"00567nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"957985c6-97e3-4038-b0e7-343ecd0b8120\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\"},\"deleted\": false,\"order\": 0,\"externalIdsHolder\": {\"instanceId\": \"b5e25bc3-a5a5-474a-8333-4a728d2f3485\",\"instanceHrid\": \"in00000000028\"},\"state\": \"ACTUAL\"}");
     HttpResponse<Buffer> resp = buildHttpResponseWithBuffer(buffer, SC_CREATED);
     when(sourceStorageClient.postSourceStorageRecords(any())).thenReturn(Future.succeededFuture(resp));
 
@@ -685,8 +690,9 @@ public class CreateInstanceEventHandlerTest {
 
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(srsRecord));
     context.put(PAYLOAD_USER_ID, USER_ID);
+    context.put(OKAPI_REQUEST_ID, REQUEST_ID);
 
-    Buffer buffer = BufferImpl.buffer("{\"parsedRecord\":{" +
+    Buffer buffer = Buffer.buffer("{\"parsedRecord\":{" +
       "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
       "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\"" +
       "}}");
@@ -720,7 +726,7 @@ public class CreateInstanceEventHandlerTest {
     assertEquals("true", createdInstance.getString("deleted"));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
     verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(),
-      argThat(tenantId -> tenantId.equals(TENANT_ID)), argThat(USER_ID::equals));
+      argThat(tenantId -> tenantId.equals(TENANT_ID)), argThat(USER_ID::equals), argThat(REQUEST_ID::equals));
     verify(sourceStorageClient).postSourceStorageRecords(argThat(r -> {
       Optional<Character> leader = ParsedRecordUtil.getLeaderStatus(r.getParsedRecord());
       return r.getState() == Record.State.DELETED && r.getAdditionalInfo().getSuppressDiscovery() &&
@@ -756,8 +762,9 @@ public class CreateInstanceEventHandlerTest {
 
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(srsRecord));
     context.put(PAYLOAD_USER_ID, USER_ID);
+    context.put(OKAPI_REQUEST_ID, REQUEST_ID);
 
-    Buffer buffer = BufferImpl.buffer("{\"parsedRecord\":{" +
+    Buffer buffer = Buffer.buffer("{\"parsedRecord\":{" +
       "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
       "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\"" +
       "}}");
@@ -791,7 +798,7 @@ public class CreateInstanceEventHandlerTest {
     assertEquals("true", createdInstance.getString("deleted"));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
     verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(),
-      argThat(tenantId -> tenantId.equals(TENANT_ID)), argThat(USER_ID::equals));
+      argThat(tenantId -> tenantId.equals(TENANT_ID)), argThat(USER_ID::equals), argThat(REQUEST_ID::equals));
     verify(sourceStorageClient).postSourceStorageRecords(argThat(r -> {
       Optional<Character> leader = ParsedRecordUtil.getLeaderStatus(r.getParsedRecord());
       return r.getState() == Record.State.DELETED && r.getAdditionalInfo().getSuppressDiscovery() &&
@@ -976,7 +983,7 @@ public class CreateInstanceEventHandlerTest {
 
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
 
-    Buffer buffer = BufferImpl.buffer("{\"parsedRecord\":{" +
+    Buffer buffer = Buffer.buffer("{\"parsedRecord\":{" +
       "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
       "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\"" +
       "}}");
@@ -1001,7 +1008,7 @@ public class CreateInstanceEventHandlerTest {
   public void shouldNotProcessEventIfRecordContains999field() throws InterruptedException, ExecutionException, TimeoutException {
     var recordId = UUID.randomUUID().toString();
 
-    HttpResponse<Buffer> resp = buildHttpResponseWithBuffer(BufferImpl.buffer("{}"), SC_CREATED);
+    HttpResponse<Buffer> resp = buildHttpResponseWithBuffer(Buffer.buffer("{}"), SC_CREATED);
     when(sourceStorageClient.postSourceStorageRecords(any())).thenReturn(Future.succeededFuture(resp));
 
     var context = new HashMap<String, String>();

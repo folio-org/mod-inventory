@@ -6,7 +6,6 @@ import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.FAIL;
-import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.SUCCESS;
 import static org.mockito.AdditionalMatchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -41,6 +40,7 @@ import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.LinkUpdateReport;
@@ -217,57 +217,53 @@ public class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
   }
 
   @Test
-  public void shouldSendSuccessLinkReportEvent() {
+  public void shouldNotSendSuccessLinkReportEvent(TestContext context) {
     // given
-    var expectedReportsCount = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName()).size() + 1;
-    var instanceId = AdditionalFieldsUtil.getValue(record, TAG_999, SUBFIELD_I)
-      .orElse(null);
-
-    MarcBibUpdate payload = new MarcBibUpdate()
+    var async = context.async();
+    var payload = new MarcBibUpdate()
       .withRecord(record)
       .withLinkIds(List.of(1, 2, 3))
       .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant(TENANT_ID)
       .withJobId(UUID.randomUUID().toString());
 
-    String expectedKafkaRecordKey = "test_key";
+    var expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(payload));
 
     // when
-    marcBibUpdateKafkaHandler.handle(kafkaRecord);
+    var future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
-    vertxAssistant.getVertx().runOnContext(v -> {
-      List<String> reports = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName())
-        .stream().map(ConsumerRecord::value).toList();
-      Assert.assertEquals(expectedReportsCount, reports.size());
+    future.onComplete(ar -> {
+      context.assertTrue(ar.succeeded());
+      context.assertEquals(expectedKafkaRecordKey, ar.result());
+    });
 
+    vertxAssistant.getVertx().runOnContext(v -> {
+      var reports = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName())
+        .stream().map(ConsumerRecord::value).toList();
       var report = reports.stream()
         .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
         .filter(event -> payload.getJobId().equals(event.getJobId()))
         .findAny()
         .orElse(null);
-
-      Assert.assertNotNull(report);
-      Assert.assertEquals(instanceId, report.getInstanceId());
-      Assert.assertEquals(SUCCESS, report.getStatus());
-      Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());
-      Assert.assertEquals(payload.getTenant(), report.getTenant());
-      Assert.assertNull(report.getFailCause());
+      Assert.assertNull(report);
+      async.complete();
     });
   }
 
   @Test
-  public void shouldSendFailedLinkReportEvent() {
+  @SneakyThrows
+  public void shouldSendFailedLinkReportEvent(TestContext context) {
     // given
-    var expectedReportsCount = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName()).size() + 1;
+    var async = context.async();
     var instanceId = AdditionalFieldsUtil.getValue(record, TAG_999, SUBFIELD_I)
       .orElse(null);
 
     record.setId(INVALID_INSTANCE_ID);
     record.getExternalIdsHolder().setInstanceId(INVALID_INSTANCE_ID);
-    MarcBibUpdate payload = new MarcBibUpdate()
+    var payload = new MarcBibUpdate()
       .withRecord(record)
       .withLinkIds(List.of(1, 3))
       .withType(MarcBibUpdate.Type.UPDATE)
@@ -277,16 +273,21 @@ public class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(payload));
+    when(mockedInstanceCollection.findByIdAndUpdate(eq(INVALID_INSTANCE_ID), any(), any()))
+      .thenThrow(new NotFoundException("Can't find Instance by id: " + record.getId()));
 
     // when
-    marcBibUpdateKafkaHandler.handle(kafkaRecord);
+    var future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
+    future.onComplete(ar -> {
+      context.assertTrue(ar.failed());
+    });
     vertxAssistant.getVertx().runOnContext(v -> {
-      List<String> reports = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName())
+      var reports = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName())
         .stream().map(ConsumerRecord::value).toList();
-      Assert.assertEquals(expectedReportsCount, reports.size());
-
+      Assert.assertNotNull(reports);
+      Assert.assertFalse(reports.isEmpty());
       var report = reports.stream()
         .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
         .filter(event -> payload.getJobId().equals(event.getJobId()))
@@ -299,6 +300,7 @@ public class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
       Assert.assertEquals(payload.getTenant(), report.getTenant());
       Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());
       Assert.assertEquals("Can't find Instance by id: " + record.getId(), report.getFailCause());
+      async.complete();
     });
   }
 

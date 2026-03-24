@@ -12,6 +12,7 @@ public class Item {
 
   public static final String VERSION_KEY = "_version";
   public static final String HRID_KEY = "hrid";
+  public static final String BARCODE_KEY = "barcode";
   public static final String TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY
     = "inTransitDestinationServicePointId";
   public static final String FORMER_IDS_KEY = "formerIds";
@@ -48,6 +49,15 @@ public class Item {
   public static final String EFFECTIVE_SHELVING_ORDER_KEY = "effectiveShelvingOrder";
   public static final String BOUND_WITH_TITLES_KEY = "boundWithTitles";
   public static final String ORDER_KEY = "order";
+
+  public static final String TITLE_KEY = "title";
+  public static final String CALL_NUMBER_KEY = "callNumber";
+  public static final String CONTRIBUTOR_NAMES_KEY = "contributorNames";
+  public static final String EFFECTIVE_CALL_NUMBER_COMPONENTS_KEY = "effectiveCallNumberComponents";
+  public static final String IS_BOUND_WTH_KEY = "isBoundWith";
+  public static final String BOUND_WTH_TITLES_KEY = "boundWithTitles";
+  public static final String EFFECTIVE_LOCATION_KEY = "effectiveLocation";
+  public static final String METADATA_KEY = "metadata";
 
   public final String id;
   private final String version;

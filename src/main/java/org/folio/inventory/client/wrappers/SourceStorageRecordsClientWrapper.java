@@ -21,34 +21,36 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
   private final String token;
   private final String okapiUrl;
   private final String userId;
+  private final String requestId;
   private final WebClient webClient;
   public static final String SOURCE_STORAGE_RECORDS = "/source-storage/records/";
 
-  public SourceStorageRecordsClientWrapper(String okapiUrl, String tenantId, String token, String userId, HttpClient httpClient) {
+  public SourceStorageRecordsClientWrapper(String okapiUrl, String tenantId, String token, String userId, String requestId, HttpClient httpClient) {
     super(okapiUrl, tenantId, token, httpClient);
     this.okapiUrl = okapiUrl;
     this.tenantId = tenantId;
     this.token = token;
     this.userId = userId;
+    this.requestId = requestId;
     this.webClient = WebClient.wrap(httpClient);
   }
 
   @Override
   public Future<HttpResponse<Buffer>> postSourceStorageRecords(Record aRecord) {
-    return createRequest(HttpMethod.POST, okapiUrl + "/source-storage/records", okapiUrl, tenantId, token, userId, webClient)
+    return createRequest(HttpMethod.POST, okapiUrl + "/source-storage/records", okapiUrl, tenantId, token, userId, requestId, webClient)
       .sendBuffer(getBuffer(aRecord));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putSourceStorageRecordsById(String id, Record aRecord) {
-    return createRequest(HttpMethod.PUT, okapiUrl + SOURCE_STORAGE_RECORDS + id, okapiUrl, tenantId, token, userId, webClient)
+    return createRequest(HttpMethod.PUT, okapiUrl + SOURCE_STORAGE_RECORDS + id, okapiUrl, tenantId, token, userId, requestId, webClient)
       .sendBuffer(getBuffer(aRecord));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putSourceStorageRecordsGenerationById(String id, Record aRecord) {
     return createRequest(HttpMethod.PUT, okapiUrl + SOURCE_STORAGE_RECORDS + id + "/generation",
-      okapiUrl, tenantId, token, userId, webClient)
+      okapiUrl, tenantId, token, userId, requestId, webClient)
       .sendBuffer(getBuffer(aRecord));
   }
 
@@ -65,7 +67,7 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
     queryParams.append(suppress);
 
     return createRequest(HttpMethod.PUT, okapiUrl + SOURCE_STORAGE_RECORDS + id + "/suppress-from-discovery" + queryParams,
-      okapiUrl, tenantId, token, userId, webClient)
+      okapiUrl, tenantId, token, userId, requestId, webClient)
       .send();
   }
 }

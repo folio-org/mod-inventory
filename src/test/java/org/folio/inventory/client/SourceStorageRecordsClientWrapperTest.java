@@ -41,6 +41,7 @@ public class SourceStorageRecordsClientWrapperTest {
   private Record stubRecord;
   private static final String TOKEN = "token";
   private static final String USER_ID = "userId";
+  private static final String REQUEST_ID = "requestId";
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -50,7 +51,7 @@ public class SourceStorageRecordsClientWrapperTest {
 
   @Before
   public void setUp() {
-    sourceStorageRecordsClientWrapper = new SourceStorageRecordsClientWrapper(mockServer.baseUrl(), TENANT_ID, TOKEN, USER_ID,
+    sourceStorageRecordsClientWrapper = new SourceStorageRecordsClientWrapper(mockServer.baseUrl(), TENANT_ID, TOKEN, USER_ID, REQUEST_ID,
       vertx.createHttpClient());
 
     stubRecord = new Record().withId(UUID.randomUUID().toString());

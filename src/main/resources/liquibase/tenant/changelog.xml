@@ -11,4 +11,6 @@
 
   <include file="scripts/v-20.1.0/2023-09-28--14-00-create-events-shared-instances-table.xml" relativeToChangelogFile="true"/>
 
+  <include file="scripts/v-22.0.0/2026-02-10--14-00-remove-records-authorities-table.xml" relativeToChangelogFile="true"/>
+
 </databaseChangeLog>

@@ -6,7 +6,6 @@ import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -15,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Consumer;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
@@ -34,9 +32,9 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 
 import org.folio.HoldingsType;
-import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler;
+import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
@@ -52,7 +50,6 @@ import org.mockito.MockitoAnnotations;
 import org.folio.HoldingsRecord;
 import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.storage.Storage;
@@ -85,7 +82,7 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
       .notifier(new Slf4jNotifier(true)));
 
   private JsonObject mappingRules;
-  private org.folio.rest.jaxrs.model.Record record;
+  private org.folio.rest.jaxrs.model.Record marcRecord;
   private HoldingsRecord existingHoldingsRecord;
   private MarcHoldingsRecordHridSetKafkaHandler marcHoldingsRecordHridSetKafkaHandler;
   private AutoCloseable mocks;
@@ -96,27 +93,20 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
   public void setUp() throws IOException {
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
     existingHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(HOLDINGS_PATH)).mapTo(HoldingsRecord.class);
-    record = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class);
-    record.getParsedRecord().withContent(JsonObject.mapFrom(record.getParsedRecord().getContent()).encode());
+    marcRecord = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class);
+    marcRecord.getParsedRecord().withContent(JsonObject.mapFrom(marcRecord.getParsedRecord().getContent()).encode());
 
     mocks = MockitoAnnotations.openMocks(this);
     var sourceId = String.valueOf(UUID.randomUUID());
     when(mockedStorage.getHoldingsRecordCollection(any(Context.class))).thenReturn(mockedHoldingsCollection);
     when(mockedStorage.getHoldingsRecordsSourceCollection(any(Context.class))).thenReturn(sourceCollection);
     when(holdingsCollectionService.findSourceIdByName(any(HoldingsRecordsSourceCollection.class), any())).thenReturn(Future.succeededFuture(sourceId));
-
-    doAnswer(invocationOnMock -> {
-      Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(existingHoldingsRecord));
-      return null;
-    }).when(mockedHoldingsCollection).findById(anyString(), any(), any());
-
-    doAnswer(invocationOnMock -> {
-      HoldingsRecord holdingsRecord = invocationOnMock.getArgument(0);
-      Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(holdingsRecord));
-      return null;
-    }).when(mockedHoldingsCollection).update(any(HoldingsRecord.class), any(), any());
+    when(holdingsCollectionService.getById(anyString(), any())).thenReturn(Future.succeededFuture(existingHoldingsRecord));
+    when(holdingsCollectionService.update(any(HoldingsRecord.class), any()))
+      .thenAnswer(invocationOnMock -> {
+        HoldingsRecord holdingsRecord = invocationOnMock.getArgument(0);
+        return Future.succeededFuture(holdingsRecord);
+      });
 
     List<HoldingsType> holdings = new ArrayList<>();
     holdings.add(new HoldingsType()
@@ -150,7 +140,7 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
     payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
-    payload.put("MARC_HOLDINGS", Json.encode(record));
+    payload.put("MARC_HOLDINGS", Json.encode(marcRecord));
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
     String expectedKafkaRecordKey = "test_key";
@@ -175,7 +165,7 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
     Async async = context.async();
     Map<String, String> payload = new HashMap<>();
     payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
-    payload.put("MARC_HOLDINGS", Json.encode(record));
+    payload.put("MARC_HOLDINGS", Json.encode(marcRecord));
     payload.put("CURRENT_RETRY_NUMBER", "1");
 
     Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
@@ -184,42 +174,8 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
     when(kafkaRecord.headers()).thenReturn(okapiHeaders);
 
-    doAnswer(invocationOnMock -> {
-      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
-      return null;
-    }).when(mockedHoldingsCollection).update(any(), any(), any());
-
-    // when
-    Future<String> future = marcHoldingsRecordHridSetKafkaHandler.handle(kafkaRecord);
-
-    // then
-    future.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      async.complete();
-    });
-  }
-
-  @Test
-  public void shouldReturnFailedFutureWhenOLError(TestContext context) {
-    // given
-    Async async = context.async();
-    Map<String, String> payload = new HashMap<>();
-    payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
-    payload.put("MARC_HOLDINGS", Json.encode(record));
-    payload.put("CURRENT_RETRY_NUMBER", "1");
-
-    Event event = new Event().withId("01").withEventPayload(Json.encode(payload));
-    String expectedKafkaRecordKey = "test_key";
-    when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
-    when(kafkaRecord.value()).thenReturn(Json.encode(event));
-    when(kafkaRecord.headers()).thenReturn(okapiHeaders);
-
-    doAnswer(invocationOnMock -> {
-      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
-      return null;
-    }).when(mockedHoldingsCollection).update(any(), any(), any());
+    when(holdingsCollectionService.update(any(), any()))
+      .thenReturn(Future.failedFuture(new OptimisticLockingException("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1")));
 
     // when
     Future<String> future = marcHoldingsRecordHridSetKafkaHandler.handle(kafkaRecord);

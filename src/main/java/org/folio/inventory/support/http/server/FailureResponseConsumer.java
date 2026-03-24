@@ -15,7 +15,7 @@ public class FailureResponseConsumer {
       if (failure.getStatusCode() >= 300 && failure.getStatusCode() <= 599) {
         response.setStatusCode(failure.getStatusCode());
         response.putHeader(HttpHeaders.CONTENT_TYPE, ContentType.TEXT_PLAIN);
-        response.end(failure.getReason());
+        response.end(failure.getReason() == null ? "" : failure.getReason());
       } else {
         ServerErrorResponse.internalError(response, failure.getReason());
       }

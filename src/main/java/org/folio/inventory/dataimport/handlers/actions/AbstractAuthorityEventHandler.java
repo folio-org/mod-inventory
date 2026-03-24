@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 import static io.vertx.core.json.JsonObject.mapFrom;
 import static java.lang.String.format;
 
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
@@ -79,7 +80,8 @@ public abstract class AbstractAuthorityEventHandler implements EventHandler {
 
       prepareEvent(payload);
 
-      var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(), payload.getContext().get(PAYLOAD_USER_ID));
+      var context = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(),
+        payload.getContext().get(PAYLOAD_USER_ID), payload.getContext().get(OKAPI_REQUEST_ID));
       var jobExecutionId = payload.getJobExecutionId();
       mappingMetadataCache.get(jobExecutionId, context)
         .map(mapMetadataOrFail())

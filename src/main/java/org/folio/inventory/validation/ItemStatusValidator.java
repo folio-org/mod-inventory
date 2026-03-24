@@ -28,4 +28,10 @@ public final class ItemStatusValidator {
 
     return Optional.empty();
   }
+
+  public static Optional<ValidationError> checkStatusIfPresent(JsonObject patchRequest) {
+    return patchRequest.containsKey("status")
+      ? itemHasCorrectStatus(patchRequest)
+      : Optional.empty();
+  }
 }

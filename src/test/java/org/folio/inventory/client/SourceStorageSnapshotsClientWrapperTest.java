@@ -40,6 +40,7 @@ public class SourceStorageSnapshotsClientWrapperTest {
   private Snapshot stubSnapshot;
   private static final String TOKEN = "token";
   private static final String USER_ID = "userId";
+  private static final String REQUEST_ID = "requestId";
 
   @Rule
   public WireMockRule mockServer = new WireMockRule(
@@ -49,8 +50,8 @@ public class SourceStorageSnapshotsClientWrapperTest {
 
   @Before
   public void setUp() {
-    sourceStorageSnapshotsClientWrapper = new SourceStorageSnapshotsClientWrapper(mockServer.baseUrl(), TENANT_ID, TOKEN, USER_ID,
-      vertx.createHttpClient());
+    sourceStorageSnapshotsClientWrapper = new SourceStorageSnapshotsClientWrapper(mockServer.baseUrl(), TENANT_ID, TOKEN,
+      USER_ID, REQUEST_ID, vertx.createHttpClient());
 
     stubSnapshot = new Snapshot().withJobExecutionId(UUID.randomUUID().toString());
 

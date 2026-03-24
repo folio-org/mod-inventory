@@ -236,8 +236,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
 
       producer.send(kafkaRecord)
         .<Void>mapEmpty()
-        .eventually(v -> producer.flush())
-        .eventually(v -> producer.close())
+        .eventually(producer::flush)
+        .eventually(producer::close)
         .onSuccess(res -> LOGGER.info("Event with type {}, was sent to kafka about sharing instance with InstanceId={}",
           eventType.value(), sharingInstance.getInstanceIdentifier()))
         .onFailure(err -> {
