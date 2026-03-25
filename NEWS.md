@@ -14,7 +14,6 @@
 * Fix processing of NULL "tags" field [MODINV-1261](https://folio-org.atlassian.net/browse/MODINV-1261)
 * Fix relinking of MARC Authorities when promoting a local MARC bibliographic record to shared [MODINV-1293](https://folio-org.atlassian.net/browse/MODINV-1293)
 * Fix sending links.instance-authority-stats event to a tenant-specific instead of tenant-collection topic [MODINV-1311](https://folio-org.atlassian.net/browse/MODINV-1311)
-* Fix sending links.instance-authority-stats event to a tenant-specific instead of tenant-collection topic [MODINV-1311](https://folio-org.atlassian.net/browse/MODINV-1311)
 * Fix statisticalCodeIds and administrativeNotes fields are cleared after update [MODINV-1323](https://folio-org.atlassian.net/browse/MODINV-1323)
 * Cannot Create/Edit MARC holdings record on ECS Sunflower environments (Bugfest, Mobius DR) [MODINV-1327](https://folio-org.atlassian.net/browse/MODINV-1327)
 * Vert.x 4.5.23 fixing CVE-2025-67735 Netty CRLF injection request smuggling [MODINV-1321](https://folio-org.atlassian.net/browse/MODINV-1321)
@@ -23,6 +22,7 @@
 * Remove LinkUpdateReport sending on successful processing [MODINV-1348](https://folio-org.atlassian.net/browse/MODINV-1348)
 * Move consumption of authority DI events from mod-inventory to mod-entities-links [APPAUTHREC-3](https://folio-org.atlassian.net/browse/APPAUTHREC-3)
 * Cancelled data import jobs updates SRS records without updating Instance records [MODINV-1353](https://folio-org.atlassian.net/browse/MODINV-1353)
+* Remove quick-marc events handling logic [MODINV-1312](https://folio-org.atlassian.net/browse/MODINV-1312)
 
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)
