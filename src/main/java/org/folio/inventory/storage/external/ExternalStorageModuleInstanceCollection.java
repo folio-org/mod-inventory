@@ -1,6 +1,8 @@
 package org.folio.inventory.storage.external;
 
 import static java.lang.String.format;
+import static org.apache.commons.lang3.BooleanUtils.isNotTrue;
+import static org.apache.commons.lang3.BooleanUtils.isTrue;
 import static org.apache.http.HttpStatus.SC_CREATED;
 import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
@@ -168,11 +170,18 @@ class ExternalStorageModuleInstanceCollection
     return modified;
   }
 
-  private Instance modifyInstance(JsonObject existingInstance, JsonObject instance) {
-    instance.put(Instance.ID, existingInstance.getValue(Instance.ID));
-    instance.put(Instance.SOURCE_KEY, existingInstance.getValue(Instance.SOURCE_KEY));
-    JsonObject existing = JsonObject.mapFrom(existingInstance);
-    JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, instance);
+  private Instance modifyInstance(JsonObject existing, JsonObject incoming) {
+    incoming.put(Instance.ID, existing.getValue(Instance.ID));
+    incoming.put(Instance.SOURCE_KEY, existing.getValue(Instance.SOURCE_KEY));
+
+    if (isNotTrue(existing.getBoolean(Instance.DELETED_KEY)) && isTrue(incoming.getBoolean(Instance.DELETED_KEY))) {
+      incoming.put(Instance.DISCOVERY_SUPPRESS_KEY, true);
+      incoming.put(Instance.STAFF_SUPPRESS_KEY, true);
+    } else {
+      incoming.put(Instance.DISCOVERY_SUPPRESS_KEY, existing.getBoolean(Instance.DISCOVERY_SUPPRESS_KEY));
+      incoming.put(Instance.STAFF_SUPPRESS_KEY, existing.getBoolean(Instance.STAFF_SUPPRESS_KEY));
+    }
+    var mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, incoming);
     return Instance.fromJson(mergedInstanceAsJson);
   }
 
