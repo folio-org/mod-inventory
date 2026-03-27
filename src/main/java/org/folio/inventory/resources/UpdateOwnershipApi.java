@@ -1057,13 +1057,13 @@ private CompletableFuture<List<HoldingsRecord>> getHoldingsByInstanceId(Holdings
           }
         },
         failure -> {
-          String msg = format("Error loading inventory holdings page at offset %d for instanceId: '%s' statusCode: '%s', message: '%s'",
+          String msg = format("Error loading inventory holdings at offset %s for instanceId: '%s' statusCode: '%s', message: '%s'",
             offset, instanceId, failure.getStatusCode(), failure.getReason());
           LOGGER.warn("getHoldingsByInstanceId:: {}", msg);
           promise.fail(msg);
         });
     } catch (Exception e) {
-      String msg = format("Error loading inventory holdings page at offset %d for instanceId: '%s'", offset, instanceId);
+      String msg = format("Error loading inventory holdings at offset %s for instanceId: '%s'", offset, instanceId);
       LOGGER.warn("getHoldingsByInstanceId:: {}", msg, e);
       promise.fail(e);
     }
