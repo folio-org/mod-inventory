@@ -64,7 +64,7 @@ import org.mockito.MockitoAnnotations;
 
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.inventory.TestUtil;
@@ -160,7 +160,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     var holdingsId = UUID.randomUUID();
     when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture
-      .completedFuture(new HoldingsRecord().withId(holdingsId.toString()).withVersion(1)));
+      .completedFuture(new HoldingsRecord().withId(holdingsId.toString()).withVersion(1L)));
     var instanceId = String.valueOf(UUID.randomUUID());
     mockSuccessFindByCql(instanceId, instanceRecordCollection);
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
@@ -174,7 +174,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
@@ -220,7 +220,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
 
@@ -234,7 +234,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withContext(null)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -246,7 +246,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -263,7 +263,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -280,7 +280,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
     future.get(5, TimeUnit.MILLISECONDS);
@@ -319,7 +319,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
     assertTrue(eventHandler.isEligible(dataImportEventPayload));
   }
 
@@ -390,7 +390,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       failureHandler.accept(new Failure("Cannot update Holdings record because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
       return null;
     }).when(holdingsCollection).update(any(), any(), any());
-    when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withId(UUID.randomUUID().toString()).withVersion(1)));
+    when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withId(UUID.randomUUID().toString()).withVersion(1L)));
 
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
@@ -405,7 +405,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     var future = eventHandler.handle(dataImportEventPayload);
     ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
@@ -425,7 +425,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       failureHandler.accept(new Failure("Unprocessable Entity", 422));
       return null;
     }).when(holdingsCollection).update(any(), any(), any());
-    when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withId(UUID.randomUUID().toString()).withVersion(1)));
+    when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withId(UUID.randomUUID().toString()).withVersion(1L)));
 
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
@@ -439,7 +439,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     var future = eventHandler.handle(dataImportEventPayload);
     ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
@@ -470,7 +470,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       }
     }).when(holdingsCollection).update(any(), any(), any());
 
-    when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withId(UUID.randomUUID().toString()).withVersion(1)));
+    when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withId(UUID.randomUUID().toString()).withVersion(1L)));
 
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
     Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
@@ -484,7 +484,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     var future = eventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.SECONDS);
@@ -515,7 +515,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
 
@@ -545,7 +545,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     var future = eventHandler.handle(dataImportEventPayload);
 
@@ -578,7 +578,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     var future = eventHandler.handle(dataImportEventPayload);
 
@@ -604,7 +604,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     var future = eventHandler.handle(dataImportEventPayload);
 
@@ -632,7 +632,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
 

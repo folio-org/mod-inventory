@@ -7,7 +7,7 @@ import static org.junit.Assert.assertNotNull;
 
 import java.util.UUID;
 
-import org.folio.HoldingsRecordsSource;
+import org.folio.rest.jaxrs.model.HoldingsRecordsSource;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.junit.Ignore;
 import org.junit.Test;

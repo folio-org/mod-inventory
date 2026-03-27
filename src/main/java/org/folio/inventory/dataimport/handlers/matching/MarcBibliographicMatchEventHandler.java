@@ -5,7 +5,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import org.folio.DataImportEventPayload;
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.api.request.PagingParameters;
@@ -111,8 +111,8 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
             instanceId, eventPayload.getJobExecutionId());
         } else if (holdingsRecords.size() == 1) {
           LOG.info("loadHoldingsRecordByInstanceId:: Found holdings record with id: '{}' by instanceId: '{}' for matched MARC-BIB record, jobExecutionId: '{}'",
-            holdingsRecords.get(0).getId(), instanceId, eventPayload.getJobExecutionId());
-          eventPayload.getContext().put(HOLDINGS.value(), Json.encode(holdingsRecords.get(0)));
+            holdingsRecords.getFirst().getId(), instanceId, eventPayload.getJobExecutionId());
+          eventPayload.getContext().put(HOLDINGS.value(), Json.encode(holdingsRecords.getFirst()));
         }
         return Future.succeededFuture();
       });
@@ -126,7 +126,7 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
       holdingsRecordCollection.findByCql(format("instanceId=%s", instanceId), PagingParameters.defaults(),
         findResult -> {
           if (findResult.getResult() != null && findResult.getResult().totalRecords == 1) {
-            eventPayload.getContext().put(HOLDINGS.value(), Json.encode(findResult.getResult().records.get(0)));
+            eventPayload.getContext().put(HOLDINGS.value(), Json.encode(findResult.getResult().records.getFirst()));
           }
           promise.complete(findResult.getResult().records);
         },

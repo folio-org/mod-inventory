@@ -16,7 +16,7 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import org.folio.DataImportEventPayload;
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
 import org.folio.ParsedRecord;
@@ -912,7 +912,7 @@ public class MarcBibliographicMatchEventHandlerTest {
       context.assertNotNull(payload.getContext().get(INSTANCE.value()));
       WireMock.verify(1, postRequestedFor(urlEqualTo(RECORDS_MATCHING_PATH)));
       List<LoggedRequest> requests = WireMock.findAll(postRequestedFor(urlEqualTo(RECORDS_MATCHING_PATH)));
-      RecordMatchingDto matchingDto = Json.decodeValue(requests.get(0).getBodyAsString(), RecordMatchingDto.class);
+      RecordMatchingDto matchingDto = Json.decodeValue(requests.getFirst().getBodyAsString(), RecordMatchingDto.class);
       context.assertEquals(2, matchingDto.getFilters().size());
       assertThat(matchingDto.getFilters().get(1).getValues(), containsInAnyOrder(instancesIds.getList().toArray()));
       async.complete();
@@ -951,7 +951,7 @@ public class MarcBibliographicMatchEventHandlerTest {
       context.assertNotNull(payload.getContext().get(INSTANCE.value()));
       WireMock.verify(1, postRequestedFor(urlEqualTo(RECORDS_MATCHING_PATH)));
       List<LoggedRequest> requests = WireMock.findAll(postRequestedFor(urlEqualTo(RECORDS_MATCHING_PATH)));
-      RecordMatchingDto matchingRequest = Json.decodeValue(requests.get(0).getBodyAsString(), RecordMatchingDto.class);
+      RecordMatchingDto matchingRequest = Json.decodeValue(requests.getFirst().getBodyAsString(), RecordMatchingDto.class);
       context.assertEquals(2, matchingRequest.getFilters().size());
       context.assertTrue(matchingRequest.getFilters().get(1).getValues().contains(previouslyMatchedRecord.getMatchedId()));
       async.complete();

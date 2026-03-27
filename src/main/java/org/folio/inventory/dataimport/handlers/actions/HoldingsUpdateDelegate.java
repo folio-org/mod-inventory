@@ -9,8 +9,7 @@ import io.vertx.core.json.JsonObject;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.Holdings;
-import org.folio.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.support.HoldingsRecordUtil;
 import org.folio.inventory.services.HoldingsCollectionService;
@@ -36,7 +35,7 @@ public class HoldingsUpdateDelegate {
     MAPPER.setSerializationInclusion(JsonInclude.Include.ALWAYS);
     MAPPER.configOverride(HoldingsRecord.class)
       .setInclude(JsonInclude.Value.construct(JsonInclude.Include.ALWAYS, JsonInclude.Include.ALWAYS));
-    MAPPER.configOverride(Holdings.class)
+    MAPPER.configOverride(HoldingsRecord.class)
       .setInclude(JsonInclude.Value.construct(JsonInclude.Include.ALWAYS, JsonInclude.Include.ALWAYS));
   }
 
@@ -57,7 +56,7 @@ public class HoldingsUpdateDelegate {
       var parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
       var holdingsId = marcRecord.getExternalIdsHolder().getHoldingsId();
       LOGGER.info("Holdings update with holdingId: {}", holdingsId);
-      var recordMapper = RecordMapperBuilder.<Holdings>buildMapper(MARC_FORMAT);
+      var recordMapper = RecordMapperBuilder.<HoldingsRecord>buildMapper(MARC_FORMAT);
       var mappedHoldings = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
       var holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
 
@@ -77,7 +76,7 @@ public class HoldingsUpdateDelegate {
            : JsonObject.mapFrom(parsedRecord.getContent());
   }
 
-  public static HoldingsRecord mergeRecords(HoldingsRecord existingRecord, Holdings mappedRecord, String sourceId) {
+  public static HoldingsRecord mergeRecords(HoldingsRecord existingRecord, HoldingsRecord mappedRecord, String sourceId) {
     try {
       mappedRecord.setId(existingRecord.getId());
       mappedRecord.setVersion(existingRecord.getVersion());
