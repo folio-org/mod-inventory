@@ -1015,6 +1015,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
 private CompletableFuture<List<HoldingsRecord>> getHoldingsByInstanceId(HoldingsRecordCollection holdingsRecordCollection,
                                                                           String instanceId) {
+    LOGGER.debug("getHoldingsByInstanceId:: Starting to load holdings for instanceId: {}", instanceId);
     String cql = format("instanceId=%s", instanceId);
     return fetchHoldingsPage(holdingsRecordCollection, cql, instanceId, 0)
       .thenCompose(firstPageResult -> {
@@ -1037,9 +1038,14 @@ private CompletableFuture<List<HoldingsRecord>> getHoldingsByInstanceId(Holdings
 
         return CompletableFuture.allOf(pageFutures.toArray(new CompletableFuture[0]))
           .thenApply(v -> {
-            pageFutures.forEach(future -> allRecords.addAll(future.join().records));
-            LOGGER.info("getHoldingsByInstanceId:: Loaded all {} holdings for instanceId: {}", allRecords.size(), instanceId);
-            return allRecords;
+            try {
+              pageFutures.forEach(future -> allRecords.addAll(future.join().records));
+              LOGGER.info("getHoldingsByInstanceId:: Loaded all {} holdings for instanceId: {}", allRecords.size(), instanceId);
+              return allRecords;
+            } catch (CompletionException e) {
+              LOGGER.error("getHoldingsByInstanceId:: Error while combining results for instanceId: {}", instanceId, e);
+              throw new CompletionException(e);
+            }
           });
       });
   }
@@ -1050,7 +1056,7 @@ private CompletableFuture<List<HoldingsRecord>> getHoldingsByInstanceId(Holdings
     try {
       holdingsRecordCollection.findByCql(cql, new PagingParameters(HOLDINGS_PAGE_SIZE, offset),
         findResult -> {
-          if (findResult.getResult() == null) {
+          if (findResult == null || findResult.getResult() == null) {
             promise.complete(new MultipleRecords<>(new ArrayList<>(), 0));
           } else {
             promise.complete(new MultipleRecords<>(findResult.getResult().records, findResult.getResult().totalRecords));
@@ -1059,12 +1065,12 @@ private CompletableFuture<List<HoldingsRecord>> getHoldingsByInstanceId(Holdings
         failure -> {
           String msg = format("Error loading inventory holdings at offset %s for instanceId: '%s' statusCode: '%s', message: '%s'",
             offset, instanceId, failure.getStatusCode(), failure.getReason());
-          LOGGER.warn("getHoldingsByInstanceId:: {}", msg);
+          LOGGER.warn("fetchHoldingsPage:: {}", msg);
           promise.fail(msg);
         });
     } catch (Exception e) {
       String msg = format("Error loading inventory holdings at offset %s for instanceId: '%s'", offset, instanceId);
-      LOGGER.warn("getHoldingsByInstanceId:: {}", msg, e);
+      LOGGER.warn("fetchHoldingsPage:: {}", msg, e);
       promise.fail(e);
     }
     return promise.future().toCompletionStage().toCompletableFuture();
