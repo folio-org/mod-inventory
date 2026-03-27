@@ -23,7 +23,6 @@ import static org.folio.inventory.dataimport.util.KafkaConfigConstants.OKAPI_URL
 public class Launcher {
   private static final String DATA_IMPORT_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG = "inventory.kafka.DataImportConsumerVerticle.instancesNumber";
   private static final String MARC_BIB_INSTANCE_HRID_SET_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG = "inventory.kafka.MarcBibInstanceHridSetConsumerVerticle.instancesNumber";
-  private static final String QUICK_MARC_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG = "inventory.kafka.QuickMarcConsumerVerticle.instancesNumber";
   private static final String MARC_BIB_UPDATE_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG = "inventory.kafka.MarcBibUpdateConsumerVerticle.instancesNumber";
   private static final String CONSORTIUM_INSTANCE_SHARING_CONSUMER_VERTICLE_NUMBER_CONFIG = "inventory.kafka.ConsortiumInstanceSharingConsumerVerticle.instancesNumber";
   private static final String INSTANCE_INGRESS_VERTICLE_NUMBER_CONFIG = "inventory.kafka.InstanceIngressConsumerVerticle.instancesNumber";
@@ -33,7 +32,6 @@ public class Launcher {
   private static String inventoryModuleDeploymentId;
   private static String consumerVerticleDeploymentId;
   private static String marcInstHridSetConsumerVerticleDeploymentId;
-  private static String quickMarcConsumerVerticleDeploymentId;
   private static String marcBibUpdateConsumerVerticleDeploymentId;
   private static String consortiumInstanceSharingVerticleDeploymentId;
   private static String instanceIngressConsumerVerticleDeploymentId;
@@ -100,14 +98,12 @@ public class Launcher {
     throws InterruptedException, ExecutionException, TimeoutException {
     int dataImportConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(DATA_IMPORT_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "3"));
     int instanceHridSetConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(MARC_BIB_INSTANCE_HRID_SET_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "3"));
-    int quickMarcConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(QUICK_MARC_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "1"));
     int marcBibUpdateConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(MARC_BIB_UPDATE_CONSUMER_VERTICLE_INSTANCES_NUMBER_CONFIG, "3"));
     int consortiumInstanceSharingVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(CONSORTIUM_INSTANCE_SHARING_CONSUMER_VERTICLE_NUMBER_CONFIG, "3"));
     int instanceIngressConsumerVerticleNumber = Integer.parseInt(System.getenv().getOrDefault(INSTANCE_INGRESS_VERTICLE_NUMBER_CONFIG, "3"));
 
     CompletableFuture<String> future1 = new CompletableFuture<>();
     CompletableFuture<String> future2 = new CompletableFuture<>();
-    CompletableFuture<String> future3 = new CompletableFuture<>();
     CompletableFuture<String> future4 = new CompletableFuture<>();
     CompletableFuture<String> future5 = new CompletableFuture<>();
     CompletableFuture<String> future6 = new CompletableFuture<>();
@@ -118,8 +114,6 @@ public class Launcher {
       dataImportConsumerVerticleNumber, future1);
     vertxAssistant.deployVerticle(MarcHridSetConsumerVerticle.class.getName(),
       consumerVerticlesConfig, instanceHridSetConsumerVerticleNumber, future2);
-    vertxAssistant.deployVerticle(QuickMarcConsumerVerticle.class.getName(),
-      consumerVerticlesConfig, quickMarcConsumerVerticleNumber, future3);
     vertxAssistant.deployVerticle(MarcBibUpdateConsumerVerticle.class.getName(),
       consumerVerticlesConfig, marcBibUpdateConsumerVerticleNumber, future4);
     vertxAssistant.deployVerticle(ConsortiumInstanceSharingConsumerVerticle.class.getName(),
@@ -133,7 +127,6 @@ public class Launcher {
 
     consumerVerticleDeploymentId = future1.get(20, TimeUnit.SECONDS);
     marcInstHridSetConsumerVerticleDeploymentId = future2.get(20, TimeUnit.SECONDS);
-    quickMarcConsumerVerticleDeploymentId = future3.get(20, TimeUnit.SECONDS);
     marcBibUpdateConsumerVerticleDeploymentId = future4.get(20, TimeUnit.SECONDS);
     consortiumInstanceSharingVerticleDeploymentId = future5.get(20, TimeUnit.SECONDS);
     instanceIngressConsumerVerticleDeploymentId = future6.get(20, TimeUnit.SECONDS);
@@ -150,7 +143,6 @@ public class Launcher {
     vertxAssistant.undeployVerticle(inventoryModuleDeploymentId)
       .thenCompose(v -> vertxAssistant.undeployVerticle(consumerVerticleDeploymentId))
       .thenCompose(v -> vertxAssistant.undeployVerticle(marcInstHridSetConsumerVerticleDeploymentId))
-      .thenCompose(v -> vertxAssistant.undeployVerticle(quickMarcConsumerVerticleDeploymentId))
       .thenCompose(v -> vertxAssistant.undeployVerticle(marcBibUpdateConsumerVerticleDeploymentId))
       .thenCompose(v -> vertxAssistant.undeployVerticle(consortiumInstanceSharingVerticleDeploymentId))
       .thenCompose(v -> vertxAssistant.undeployVerticle(instanceIngressConsumerVerticleDeploymentId))
