@@ -149,8 +149,7 @@ class ExternalStorageModuleInstanceCollection
         responseBody, response.getStatusCode(), null);
     }
 
-    var jsonInstance = new JsonObject(responseBody);
-    var existingInstance = mapFromJson(jsonInstance);
+    var existingInstance = new JsonObject(responseBody);
     var modified = modifyInstance(existingInstance, instance);
     var modifiedInstance = mapToRequest(modified);
 
@@ -169,9 +168,9 @@ class ExternalStorageModuleInstanceCollection
     return modified;
   }
 
-  private Instance modifyInstance(Instance existingInstance, JsonObject instance) {
-    instance.put(Instance.ID, existingInstance.getId());
-    instance.put(Instance.SOURCE_KEY, existingInstance.getSource());
+  private Instance modifyInstance(JsonObject existingInstance, JsonObject instance) {
+    instance.put(Instance.ID, existingInstance.getValue(Instance.ID));
+    instance.put(Instance.SOURCE_KEY, existingInstance.getValue(Instance.SOURCE_KEY));
     JsonObject existing = JsonObject.mapFrom(existingInstance);
     JsonObject mergedInstanceAsJson = InstanceUtil.mergeInstances(existing, instance);
     return Instance.fromJson(mergedInstanceAsJson);
