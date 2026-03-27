@@ -73,7 +73,9 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
   }
 
   @Test
-  public void canUpdateItemsOwnershipToDifferentTenant() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
+  @junitparams.Parameters({ "0", "101" })
+  public void canUpdateItemsOwnershipToDifferentTenant_withOptionalExtraHoldingsAtSource(int extraHoldingsCount)
+    throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
     UUID instanceId = UUID.randomUUID();
     JsonObject instance = smallAngryPlanet(instanceId);
     String itemHrId = "it0000001";
@@ -84,12 +86,16 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
     InstanceApiClient.createInstance(consortiumOkapiClient, instance.put("source", FOLIO.getValue()));
     InstanceApiClient.createInstance(collegeOkapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
 
-    final UUID createHoldingsRecord1 = createHoldingForInstance(instanceId);
-    final UUID createHoldingsRecord2 = createHoldingForInstanceAtCollege(instanceId);
+    for (int i = 0; i < extraHoldingsCount; i++) {
+      createHoldingForInstance(instanceId);
+    }
+
+    final UUID sourceHoldingId = createHoldingForInstance(instanceId);
+    final UUID targetHoldingId = createHoldingForInstanceAtCollege(instanceId);
 
     final var firstItem = itemsClient.create(
       new ItemRequestBuilder()
-        .forHolding(createHoldingsRecord1)
+        .forHolding(sourceHoldingId)
         .withOrder(10)
         .withBarcode("645398607547")
         .withStatus(ItemStatusName.AVAILABLE.value())
@@ -98,15 +104,18 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
 
     final var secondItem = itemsClient.create(
       new ItemRequestBuilder()
-        .forHolding(createHoldingsRecord1)
+        .forHolding(sourceHoldingId)
         .withHrid(itemHrId)
         .withBarcode("645398607546")
         .withStatus(ItemStatusName.AVAILABLE.value())
         .withTemporaryLocation(location)
         .withPermanentLocation(location));
 
-    JsonObject itemsUpdateOwnershipRequestBody = new ItemsUpdateOwnershipRequestBuilder(createHoldingsRecord2,
-      new JsonArray(List.of(firstItem.getId().toString(), secondItem.getId().toString())), ApiTestSuite.COLLEGE_TENANT_ID).create();
+    JsonObject itemsUpdateOwnershipRequestBody = new ItemsUpdateOwnershipRequestBuilder(
+      targetHoldingId,
+      new JsonArray(List.of(firstItem.getId().toString(), secondItem.getId().toString())),
+      ApiTestSuite.COLLEGE_TENANT_ID
+    ).create();
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
@@ -115,30 +124,30 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
     assertThat(postItemsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
 
     final var sourceFirstUpdatedItem = itemsClient.getById(firstItem.getId());
-    final var targetHoldingsRecordItems = collegeItemsClient.getMany(format("holdingsRecordId=%s", createHoldingsRecord2), 100);
-    assertEquals(2, targetHoldingsRecordItems.size());
+    final var sourceSecondUpdatedItem = itemsClient.getById(secondItem.getId());
 
-    JsonObject targetTenantItem1 = targetHoldingsRecordItems.get(0);
-    JsonObject targetTenantItem2 = targetHoldingsRecordItems.get(1);
+    final var targetHoldingsRecordItems = collegeItemsClient.getMany(format("holdingsRecordId=%s", targetHoldingId), 100);
+    assertEquals(2, targetHoldingsRecordItems.size());
 
     var targetTenantItemsIds = targetHoldingsRecordItems.stream()
       .map(object -> object.getString(ID))
       .toList();
 
-    final var sourceSecondUpdatedItem = itemsClient.getById(secondItem.getId());
-
-    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceFirstUpdatedItem.getStatusCode()));
-    assertThat(targetTenantItem1.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
-    assertTrue(targetTenantItemsIds.contains(firstItem.getId().toString()));
-    assertTrue(targetTenantItemsIds.contains(secondItem.getId().toString()));
-
     var targetTenantHoldingsIds = targetHoldingsRecordItems.stream()
       .map(object -> object.getString(HOLDINGS_RECORD_ID))
       .toList();
 
+    JsonObject movedSecondItem = targetHoldingsRecordItems.stream()
+      .filter(item -> secondItem.getId().toString().equals(item.getString(ID)))
+      .findFirst()
+      .orElseThrow();
+
+    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceFirstUpdatedItem.getStatusCode()));
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceSecondUpdatedItem.getStatusCode()));
-    assertTrue(targetTenantHoldingsIds.contains(createHoldingsRecord2.toString()));
-    assertNotEquals(targetTenantItem2.getString("hrid"), itemHrId);
+    assertTrue(targetTenantItemsIds.contains(firstItem.getId().toString()));
+    assertTrue(targetTenantItemsIds.contains(secondItem.getId().toString()));
+    assertTrue(targetTenantHoldingsIds.contains(targetHoldingId.toString()));
+    assertNotEquals(movedSecondItem.getString("hrid"), itemHrId);
 
     targetHoldingsRecordItems.forEach(item -> {
       assertNull(item.getInteger(ORDER_KEY));
@@ -186,7 +195,7 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
     final var targetHoldingsRecordItems = collegeItemsClient.getMany(format("holdingsRecordId=%s", createHoldingsRecord2), 100);
     assertEquals(1, targetHoldingsRecordItems.size());
 
-    JsonObject targetTenantItem1 = targetHoldingsRecordItems.get(0);
+    JsonObject targetTenantItem1 = targetHoldingsRecordItems.getFirst();
 
     assertThat(HttpStatus.SC_NOT_FOUND, is(sourceUpdatedItem.getStatusCode()));
     assertThat(targetTenantItem1.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
@@ -241,7 +250,7 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
     final var targetHoldingsRecordItems = collegeItemsClient.getMany(format("holdingsRecordId=%s", createHoldingsRecord2), 100);
     assertEquals(1, targetHoldingsRecordItems.size());
 
-    JsonObject targetTenantItem = targetHoldingsRecordItems.get(0);
+    JsonObject targetTenantItem = targetHoldingsRecordItems.getFirst();
 
     final var sourceSecondUpdatedItem = itemsClient.getById(secondItem.getId());
 
@@ -299,7 +308,7 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
     final var targetHoldingsRecordItems = collegeItemsClient.getMany(format("holdingsRecordId=%s", createHoldingsRecord2), 100);
     assertEquals(1, targetHoldingsRecordItems.size());
 
-    JsonObject targetTenantItem1 = targetHoldingsRecordItems.get(0);
+    JsonObject targetTenantItem1 = targetHoldingsRecordItems.getFirst();
 
 
     assertThat(HttpStatus.SC_OK, is(sourceFirstUpdatedItem.getStatusCode()));
@@ -510,7 +519,7 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
     final var targetHoldingsRecordItems = collegeItemsClient.getMany(format("holdingsRecordId=%s", createHoldingsRecord2), 100);
     assertEquals(1, targetHoldingsRecordItems.size());
 
-    JsonObject targetTenantItem1 = targetHoldingsRecordItems.get(0);
+    JsonObject targetTenantItem1 = targetHoldingsRecordItems.getFirst();
 
     final var sourceSecondUpdatedItem = itemsClient.getById(secondItem.getId());
 
