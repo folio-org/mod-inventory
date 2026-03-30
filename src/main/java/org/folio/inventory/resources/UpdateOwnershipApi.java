@@ -1037,16 +1037,15 @@ private CompletableFuture<List<HoldingsRecord>> getHoldingsByInstanceId(Holdings
         }
 
         return CompletableFuture.allOf(pageFutures.toArray(new CompletableFuture[0]))
-          .thenApply(v -> {
-            try {
+            .thenApply(v -> {
               pageFutures.forEach(future -> allRecords.addAll(future.join().records));
               LOGGER.info("getHoldingsByInstanceId:: Loaded all {} holdings for instanceId: {}", allRecords.size(), instanceId);
               return allRecords;
-            } catch (CompletionException e) {
-              LOGGER.error("getHoldingsByInstanceId:: Error while combining results for instanceId: {}", instanceId, e);
-              throw new CompletionException(e);
-            }
-          });
+            })
+            .exceptionally(throwable -> {
+              LOGGER.error("getHoldingsByInstanceId:: Error while combining results for instanceId: {}", instanceId, throwable);
+              throw new CompletionException(throwable);
+            });
       });
   }
 
