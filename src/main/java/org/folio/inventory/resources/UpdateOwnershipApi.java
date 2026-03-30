@@ -50,6 +50,7 @@ import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.domain.HoldingsRecordCollection;
@@ -88,6 +89,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
   private static final String ITEM_ID = "itemId";
   private static final String INSTANCE_ID = "instanceId";
+  private static final int HOLDINGS_PAGE_SIZE = 100;
 
   private final ConsortiumService consortiumService;
   private final SnapshotService snapshotService;
@@ -1011,27 +1013,64 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     });
   }
 
-  private CompletableFuture<List<HoldingsRecord>> getHoldingsByInstanceId(HoldingsRecordCollection holdingsRecordCollection,
+private CompletableFuture<List<HoldingsRecord>> getHoldingsByInstanceId(HoldingsRecordCollection holdingsRecordCollection,
                                                                           String instanceId) {
-    Promise<List<HoldingsRecord>> promise = Promise.promise();
+    LOGGER.debug("getHoldingsByInstanceId:: Starting to load holdings for instanceId: {}", instanceId);
+    String cql = format("instanceId=%s", instanceId);
+    return fetchHoldingsPage(holdingsRecordCollection, cql, instanceId, 0)
+      .thenCompose(firstPageResult -> {
+        List<HoldingsRecord> firstPageRecords = firstPageResult.records;
+        int totalRecords = firstPageResult.totalRecords;
+
+        if (totalRecords <= HOLDINGS_PAGE_SIZE) {
+          return CompletableFuture.completedFuture(firstPageRecords);
+        }
+
+        LOGGER.info("getHoldingsByInstanceId:: Total holdings {} exceeds page size {}, fetching remaining pages for instanceId: {}",
+          totalRecords, HOLDINGS_PAGE_SIZE, instanceId);
+
+        List<HoldingsRecord> allRecords = new ArrayList<>(firstPageRecords);
+        List<CompletableFuture<MultipleRecords<HoldingsRecord>>> pageFutures = new ArrayList<>();
+
+        for (int offset = HOLDINGS_PAGE_SIZE; offset < totalRecords; offset += HOLDINGS_PAGE_SIZE) {
+          pageFutures.add(fetchHoldingsPage(holdingsRecordCollection, cql, instanceId, offset));
+        }
+
+        return CompletableFuture.allOf(pageFutures.toArray(new CompletableFuture[0]))
+            .thenApply(v -> {
+              pageFutures.forEach(future -> allRecords.addAll(future.join().records));
+              LOGGER.info("getHoldingsByInstanceId:: Loaded all {} holdings for instanceId: {}", allRecords.size(), instanceId);
+              return allRecords;
+            })
+            .exceptionally(throwable -> {
+              LOGGER.error("getHoldingsByInstanceId:: Error while combining results for instanceId: {}", instanceId, throwable);
+              throw new CompletionException(throwable);
+            });
+      });
+  }
+
+  private CompletableFuture<MultipleRecords<HoldingsRecord>> fetchHoldingsPage(HoldingsRecordCollection holdingsRecordCollection,
+                                                                   String cql, String instanceId, int offset) {
+    Promise<MultipleRecords<HoldingsRecord>> promise = Promise.promise();
     try {
-      holdingsRecordCollection.findByCql(format("instanceId=%s", instanceId), PagingParameters.defaults(),
+      holdingsRecordCollection.findByCql(cql, new PagingParameters(HOLDINGS_PAGE_SIZE, offset),
         findResult -> {
-          if (findResult.getResult() == null) {
-            promise.complete(new ArrayList<>());
+          if (findResult == null || findResult.getResult() == null) {
+            promise.complete(new MultipleRecords<>(new ArrayList<>(), 0));
+          } else {
+            promise.complete(new MultipleRecords<>(findResult.getResult().records, findResult.getResult().totalRecords));
           }
-          promise.complete(findResult.getResult().records);
         },
         failure -> {
-          String msg = format("Error loading inventory holdings by shared instance, instanceId: '%s' statusCode: '%s', message: '%s'",
-            instanceId, failure.getStatusCode(), failure.getReason());
-          LOGGER.warn("getHoldingsByInstanceId:: {}", msg);
+          String msg = format("Error loading inventory holdings at offset %s for instanceId: '%s' statusCode: '%s', message: '%s'",
+            offset, instanceId, failure.getStatusCode(), failure.getReason());
+          LOGGER.warn("fetchHoldingsPage:: {}", msg);
           promise.fail(msg);
         });
     } catch (Exception e) {
-      String msg = format("Error loading inventory holdings by shared instance, instanceId: '%s'", instanceId);
-      LOGGER.warn("getHoldingsByInstanceId:: {}", msg, e);
-      promise.fail(msg);
+      String msg = format("Error loading inventory holdings at offset %s for instanceId: '%s'", offset, instanceId);
+      LOGGER.warn("fetchHoldingsPage:: {}", msg, e);
+      promise.fail(e);
     }
     return promise.future().toCompletionStage().toCompletableFuture();
   }
