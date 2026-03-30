@@ -157,6 +157,46 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
   }
 
   @Test
+  public void shouldHandleErrorDuringFetchingHoldingsPages() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+
+    InstanceApiClient.createInstance(okapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.put("source", FOLIO.getValue()));
+    InstanceApiClient.createInstance(collegeOkapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
+
+    final UUID sourceHoldingId = createHoldingForInstance(instanceId);
+    final UUID targetHoldingId = createHoldingForInstanceAtCollege(instanceId);
+
+    final var item = itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(sourceHoldingId)
+        .withBarcode("645398607547")
+        .withStatus(ItemStatusName.AVAILABLE.value()));
+
+    final JsonObject expectedErrorResponse = new JsonObject().put("message", "Server error");
+    holdingsStorageClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
+        .setStatusCode(500)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.GET.name())
+        .setUrlPattern(".*instanceId.*offset=100.*"));
+
+    JsonObject itemsUpdateOwnershipRequestBody = new ItemsUpdateOwnershipRequestBuilder(targetHoldingId,
+      new JsonArray(List.of(item.getId().toString())), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
+
+    holdingsStorageClient.disableFailureEmulation();
+
+    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(400));
+    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("Error loading inventory holdings"));
+  }
+
+
+  @Test
   public void shouldReportErrorsWhenOnlySomeRequestedItemsOwnershipCouldNotBeUpdated() throws MalformedURLException, ExecutionException, InterruptedException, TimeoutException {
     UUID instanceId = UUID.randomUUID();
     JsonObject instance = smallAngryPlanet(instanceId);

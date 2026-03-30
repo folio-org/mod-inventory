@@ -108,31 +108,37 @@ class FakeStorageModule extends AbstractVerticle {
   }
 
   private void emulateFailureIfNeeded(RoutingContext routingContext) {
-    if (shouldEmulateFailure(routingContext)) {
-      final String body = endpointFailureDescriptor.getBody();
-      String bodyContains = endpointFailureDescriptor.getBodyContains();
-
-      if (bodyContains != null) {
-        String requestBody = routingContext.body().asString();
-        if (requestBody != null && requestBody.contains(bodyContains)) {
-          routingContext.response()
-            .setStatusCode(endpointFailureDescriptor.getStatusCode())
-            .putHeader(HttpHeaders.CONTENT_TYPE, endpointFailureDescriptor.getContentType())
-            .end(body);
-        } else {
-          routingContext.next();
-        }
-        return;
-      }
-
-      routingContext.response()
-        .setStatusCode(endpointFailureDescriptor.getStatusCode())
-        .putHeader(HttpHeaders.CONTENT_TYPE, endpointFailureDescriptor.getContentType())
-        .end(body);
-
-    } else {
+    if (!shouldEmulateFailure(routingContext)) {
       routingContext.next();
+      return;
     }
+
+    String urlPattern = endpointFailureDescriptor.getUrlPattern();
+    if (StringUtils.isNotBlank(urlPattern) && !routingContext.request().uri().matches(urlPattern)) {
+      routingContext.next();
+      return;
+    }
+
+    final String body = endpointFailureDescriptor.getBody();
+    String bodyContains = endpointFailureDescriptor.getBodyContains();
+
+    if (bodyContains != null) {
+      String requestBody = routingContext.body().asString();
+      if (requestBody != null && requestBody.contains(bodyContains)) {
+        routingContext.response()
+          .setStatusCode(endpointFailureDescriptor.getStatusCode())
+          .putHeader(HttpHeaders.CONTENT_TYPE, endpointFailureDescriptor.getContentType())
+          .end(body);
+      } else {
+        routingContext.next();
+      }
+      return;
+    }
+
+    routingContext.response()
+      .setStatusCode(endpointFailureDescriptor.getStatusCode())
+      .putHeader(HttpHeaders.CONTENT_TYPE, endpointFailureDescriptor.getContentType())
+      .end(body);
   }
 
   private boolean shouldEmulateFailure(RoutingContext routingContext) {
