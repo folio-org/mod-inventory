@@ -165,6 +165,10 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
     InstanceApiClient.createInstance(consortiumOkapiClient, instance.put("source", FOLIO.getValue()));
     InstanceApiClient.createInstance(collegeOkapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
 
+    for (int i = 0; i < 100; i++) {
+      createHoldingForInstance(instanceId);
+    }
+
     final UUID sourceHoldingId = createHoldingForInstance(instanceId);
     final UUID targetHoldingId = createHoldingForInstanceAtCollege(instanceId);
 
