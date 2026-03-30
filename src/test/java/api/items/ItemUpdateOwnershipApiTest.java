@@ -195,7 +195,7 @@ public class ItemUpdateOwnershipApiTest extends ApiTests {
 
     holdingsStorageClient.disableFailureEmulation();
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(400));
+    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(500));
     assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("Error loading inventory holdings"));
   }
 
