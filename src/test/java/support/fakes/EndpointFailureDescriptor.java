@@ -9,6 +9,7 @@ public class EndpointFailureDescriptor {
   private String body;
   private String method;
   private String bodyContains;
+  private String urlPattern;
 
   public Date getFailureExpireDate() {
     return failureExpireDate;
@@ -61,6 +62,15 @@ public class EndpointFailureDescriptor {
 
   public EndpointFailureDescriptor setBodyContains(String bodyContains) {
     this.bodyContains = bodyContains;
+    return this;
+  }
+
+  public String getUrlPattern() {
+    return urlPattern;
+  }
+
+  public EndpointFailureDescriptor setUrlPattern(String urlPattern) {
+    this.urlPattern = urlPattern;
     return this;
   }
 }
