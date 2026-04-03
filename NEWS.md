@@ -1,3 +1,6 @@
+## 21.1.20 2026-04-03
+* Fix instance mapping on linked bib update [MODINV-1363](https://folio-org.atlassian.net/browse/MODINV-1363)
+
 ## 21.1.19 2026-01-22
 * Add exceptional handling for findById before Authority update [MODDATAIMP-1267](https://folio-org.atlassian.net/browse/MODINV-1342)
 
