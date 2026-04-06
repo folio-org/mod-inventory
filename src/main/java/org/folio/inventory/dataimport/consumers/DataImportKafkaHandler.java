@@ -66,6 +66,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaHeaderUtils;
+import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.publisher.KafkaEventPublisher;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -146,12 +147,15 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
   // TODO: generalize userId header in events
   String extractUserId(DataImportEventPayload eventPayload, Map<String, String> headersMap) {
+    LOGGER.info("extractUserId:: Event payload context: '{}'", eventPayload.getContext());
     String userId = headersMap.get(USER_ID_HEADER);
     if (isNull(userId)) {
       if (eventPayload.getAdditionalProperties().get(USER_ID_HEADER) != null) {
         userId = String.valueOf(eventPayload.getAdditionalProperties().get(USER_ID_HEADER));
       } else if (eventPayload.getContext().get("USER_ID") != null) {
         userId = eventPayload.getContext().get("USER_ID");
+      } else if (eventPayload.getContext().getOrDefault(XOkapiHeaders.USER_ID, headersMap.get(XOkapiHeaders.USER_ID.toLowerCase())) != null) {
+        userId = eventPayload.getContext().getOrDefault(XOkapiHeaders.USER_ID, headersMap.get(XOkapiHeaders.USER_ID.toLowerCase()));
       } else {
         userId = headersMap.get(OKAPI_USER_ID);
       }
