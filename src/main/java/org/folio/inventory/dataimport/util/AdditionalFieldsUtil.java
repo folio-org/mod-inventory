@@ -25,15 +25,10 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -42,6 +37,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.processing.util.MarcRecordNormalizer;
 import org.folio.rest.jaxrs.model.MarcFieldProtectionSetting;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
@@ -78,11 +74,9 @@ public final class AdditionalFieldsUtil {
   private static final String HR_ID_FIELD = "hrid";
   private static final CacheLoader<String, org.marc4j.marc.Record> parsedRecordContentCacheLoader;
   private static final LoadingCache<String, org.marc4j.marc.Record> parsedRecordContentCache;
-  private static final String OCLC = "OCoLC";
   private static final String OCLC_PREFIX = "(OCoLC)";
   private static final ObjectMapper objectMapper = new ObjectMapper();
   public static final String FIELDS = "fields";
-  private static final String OCLC_PATTERN = "\\((" + OCLC + ")\\)((ocm|ocn|on)?0*|([a-zA-Z]+)0*)(\\d+\\w*)";
 
   static {
     // this function is executed when creating a new item to be saved in the cache.
@@ -273,77 +267,25 @@ public final class AdditionalFieldsUtil {
   }
 
   public static void normalize035(Record srcRecord) {
-    List<Subfield> subfields = get035SubfieldOclcValues(srcRecord, TAG_035);
-    if (!subfields.isEmpty()) {
-      formatOclc(subfields);
-      deduplicateOclc(srcRecord, subfields, TAG_035);
-      recalculateLeaderAndParsedRecord(srcRecord);
+    org.marc4j.marc.Record marcRecord = computeMarcRecord(srcRecord);
+    if (marcRecord != null && has035SubfieldWithOclcPrefix(marcRecord)) {
+      MarcRecordNormalizer.normalize035Field(marcRecord);
+      recalculateLeaderAndParsedRecord(srcRecord, marcRecord);
     }
   }
 
-  private static void formatOclc(List<Subfield> subfields) {
-    Pattern pattern = Pattern.compile(OCLC_PATTERN);
-
-    for (Subfield subfield : subfields) {
-      String data = subfield.getData().replaceAll("[.\\s]", "");
-      Matcher matcher = pattern.matcher(data);
-      if (matcher.find()) {
-        String oclcTag = matcher.group(1); // "OCoLC"
-        String numericAndTrailing = matcher.group(5); // Numeric part and any characters that follow
-        String prefix = matcher.group(2); // Entire prefix including letters and potentially leading zeros
-
-        if (prefix != null && (prefix.startsWith("ocm") || prefix.startsWith("ocn") || prefix.startsWith("on"))) {
-          // If "ocm" or "ocn", strip entirely from the prefix
-          subfield.setData("(" + oclcTag + ")" + numericAndTrailing);
-        } else {
-          // For other cases, strip leading zeros only from the numeric part
-          numericAndTrailing = numericAndTrailing.replaceFirst("^0+", "");
-          if (prefix != null) {
-            prefix = prefix.replaceAll("\\d+", ""); // Safely remove digits from the prefix if not null
-          }
-          // Add back any other prefix that might have been included like "tfe"
-          subfield.setData("(" + oclcTag + ")" + (prefix != null ? prefix : "") + numericAndTrailing);
-        }
-      }
-    }
+  private static boolean has035SubfieldWithOclcPrefix(org.marc4j.marc.Record marcRecord) {
+    return marcRecord.getVariableFields(TAG_035).stream()
+      .filter(DataField.class::isInstance)
+      .map(DataField.class::cast)
+      .flatMap(dataField -> dataField.getSubfields().stream())
+      .anyMatch(sf -> sf.getData() != null && sf.getData().trim().startsWith(OCLC_PREFIX));
   }
 
-  private static void deduplicateOclc(Record srcRecord, List<Subfield> subfields, String tag) {
-    List<Subfield> subfieldsToDelete = new ArrayList<>();
-
-    for (Subfield subfield: new ArrayList<>(subfields)) {
-      if (subfields.stream().anyMatch(s -> isOclcSubfieldDuplicated(subfield, s))) {
-        subfieldsToDelete.add(subfield);
-        subfields.remove(subfield);
-      }
-    }
-    Optional.ofNullable(computeMarcRecord(srcRecord)).ifPresent(marcRecord -> {
-      List<VariableField> variableFields = marcRecord.getVariableFields(tag);
-
-      subfieldsToDelete.forEach(subfieldToDelete ->
-        variableFields.forEach(field -> removeSubfieldIfExist(marcRecord, field, subfieldToDelete)));
-    });
-  }
-
-  private static boolean isOclcSubfieldDuplicated(Subfield s1, Subfield s2) {
-    return s1 != s2 && s1.getData().equals(s2.getData()) && s1.getCode() == s2.getCode();
-  }
-
-  private static void removeSubfieldIfExist(org.marc4j.marc.Record marcRecord, VariableField field, Subfield subfieldToDelete) {
-    if (field instanceof DataField dataField && dataField.getSubfields().contains(subfieldToDelete)) {
-      if (dataField.getSubfields().size() > 1) {
-        dataField.removeSubfield(subfieldToDelete);
-      } else {
-        marcRecord.removeVariableField(dataField);
-      }
-    }
-  }
-
-  private static void recalculateLeaderAndParsedRecord(Record recordForUpdate) {
+  private static void recalculateLeaderAndParsedRecord(Record recordForUpdate, org.marc4j.marc.Record marcRecord) {
     try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
       MarcWriter streamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
       MarcJsonWriter jsonWriter = new MarcJsonWriter(os);
-      org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
 
       if (marcRecord != null) {
         // use stream writer to recalculate leader
@@ -358,23 +300,6 @@ public final class AdditionalFieldsUtil {
     } catch (Exception e) {
       LOGGER.warn("recalculateLeaderAndParsedRecord:: Failed to recalculate leader and parsed record for record: {}", recordForUpdate.getId(), e);
     }
-  }
-
-  public static List<Subfield> get035SubfieldOclcValues(Record srcRecord, String tag) {
-    return Optional.ofNullable(computeMarcRecord(srcRecord))
-      .stream()
-      .flatMap(marcRecord -> marcRecord.getVariableFields(tag).stream())
-      .flatMap(field -> get035oclcSubfields(field).stream())
-      .collect(Collectors.toList());
-  }
-
-  private static List<Subfield> get035oclcSubfields(VariableField field) {
-    if (field instanceof DataField dataField) {
-      return dataField.getSubfields().stream()
-        .filter(sf -> sf.getData().trim().startsWith(OCLC_PREFIX))
-        .toList();
-    }
-    return Collections.emptyList();
   }
 
   public static void fill001FieldInMarcRecord(Record marcRecord, String hrId) {

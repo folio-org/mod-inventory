@@ -23,6 +23,7 @@
 * Move consumption of authority DI events from mod-inventory to mod-entities-links [APPAUTHREC-3](https://folio-org.atlassian.net/browse/APPAUTHREC-3)
 * Cancelled data import jobs updates SRS records without updating Instance records [MODINV-1353](https://folio-org.atlassian.net/browse/MODINV-1353)
 * Remove quick-marc events handling logic [MODINV-1312](https://folio-org.atlassian.net/browse/MODINV-1312)
+* Use MarcRecordNormalizer from data-import-processing-core for MARC OCLC 035 value normalization ([MODINV-1340](https://folio-org.atlassian.net/browse/MODINV-1340))
 
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)
