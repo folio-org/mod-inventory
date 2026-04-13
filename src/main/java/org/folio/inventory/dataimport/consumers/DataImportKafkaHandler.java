@@ -135,10 +135,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
       eventPublisher.publish(eventPayload);
       var eventType = eventPayload.getEventType();
       LOGGER.warn("publish:: {} send error for event: '{}' by jobExecutionId: '{}' recordId: '{}' ",
-        eventType + "_Producer",
-        eventType,
-        eventPayload.getJobExecutionId(),
-        LoggerUtil.extractRecordId(eventPayload));
+        eventType + "_Producer", eventType, eventPayload.getJobExecutionId(), LoggerUtil.extractRecordId(eventPayload));
     } catch (Exception e) {
       LOGGER.error("Error closing kafka publisher: {}", e.getMessage());
     }
@@ -194,7 +191,11 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
         userId, requestId);
       String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
       profileSnapshotCache.get(jobProfileSnapshotId, context)
-        .onFailure(e -> sendPayloadWithDiError(eventPayload))
+        .onFailure(e -> {
+          LOGGER.error("Failed to retrieve profile snapshot from cache for jobExecutionId: {} recordId: {} error: {}",
+            jobExecutionId, recordId, e.getMessage());
+          promise.fail("Failed to retrieve profile snapshot from cache: " + e.getMessage());
+        })
         .toCompletionStage()
         .thenCompose(snapshotOptional -> snapshotOptional
           .map(profileSnapshot -> EventManager.handleEvent(eventPayload, profileSnapshot))
