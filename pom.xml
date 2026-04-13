@@ -48,6 +48,21 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <dependency>
+        <groupId>org.folio</groupId>
+        <artifactId>domain-models-runtime</artifactId>
+        <version>36.0.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.folio</groupId>
+        <artifactId>domain-models-api-interfaces</artifactId>
+        <version>36.0.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.folio</groupId>
+        <artifactId>domain-models-api-aspects</artifactId>
+        <version>36.0.0</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
