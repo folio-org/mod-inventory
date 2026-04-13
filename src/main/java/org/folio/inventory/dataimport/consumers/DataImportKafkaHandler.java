@@ -57,7 +57,6 @@ import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.services.OrderHelperService;
 import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
 import org.folio.inventory.dataimport.services.SnapshotService;
-import org.folio.inventory.dataimport.util.LoggerUtil;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.services.HoldingsIdStorageService;
 import org.folio.inventory.services.InstanceIdStorageService;
@@ -126,19 +125,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     orderHelperService = new OrderHelperServiceImpl(profileSnapshotCache);
     consortiumService = new ConsortiumServiceImpl(client, consortiumDataCache);
     registerDataImportProcessingHandlers(storage, client);
-  }
-
-  // TODO: possible wrong placement of entity logs when cache error
-  private void sendPayloadWithDiError(DataImportEventPayload eventPayload) {
-    eventPayload.setEventType(DI_ERROR.value());
-    try (var eventPublisher = new KafkaEventPublisher(kafkaConfig, vertx, 100)) {
-      eventPublisher.publish(eventPayload);
-      var eventType = eventPayload.getEventType();
-      LOGGER.warn("publish:: {} send error for event: '{}' by jobExecutionId: '{}' recordId: '{}' ",
-        eventType + "_Producer", eventType, eventPayload.getJobExecutionId(), LoggerUtil.extractRecordId(eventPayload));
-    } catch (Exception e) {
-      LOGGER.error("Error closing kafka publisher: {}", e.getMessage());
-    }
   }
 
   // TODO: generalize userId header in events

@@ -31,6 +31,7 @@ import org.folio.kafka.GlobalLoadSensor;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaConsumerWrapper;
 import org.folio.kafka.KafkaTopicNameHelper;
+import org.folio.kafka.ProcessRecordErrorHandler;
 import org.folio.kafka.SubscriptionDefinition;
 
 public abstract class KafkaConsumerVerticle extends AbstractVerticle {
@@ -60,19 +61,35 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
   protected abstract Logger getLogger();
 
   protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, String loadLimitPropertyKey) {
-    return createConsumer(eventType, loadLimitPropertyKey, true);
+    return createConsumer(eventType, loadLimitPropertyKey, true, null);
   }
 
   protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, String loadLimitPropertyKey, boolean namespacedTopic) {
-    var kafkaConsumerWrapper = KafkaConsumerWrapper.<String, String>builder()
+    return createConsumer(eventType, loadLimitPropertyKey, namespacedTopic, null);
+  }
+
+  protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, String loadLimitPropertyKey,
+                                                                ProcessRecordErrorHandler<String, String> errorHandler) {
+    return createConsumer(eventType, loadLimitPropertyKey, true, errorHandler);
+  }
+
+  protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, String loadLimitPropertyKey,
+                                                                boolean namespacedTopic,
+                                                                ProcessRecordErrorHandler<String, String> errorHandler) {
+    var builder = KafkaConsumerWrapper.<String, String>builder()
       .context(context)
       .vertx(vertx)
       .kafkaConfig(getKafkaConfig())
       .loadLimit(getLoadLimit(loadLimitPropertyKey))
       .globalLoadSensor(new GlobalLoadSensor())
       .subscriptionDefinition(getSubscriptionDefinition(getKafkaConfig().getEnvId(), eventType, namespacedTopic))
-      .groupInstanceId(getClass().getSimpleName() + "-" + UUID.randomUUID())
-      .build();
+      .groupInstanceId(getClass().getSimpleName() + "-" + UUID.randomUUID());
+
+    if (errorHandler != null) {
+      builder.processRecordErrorHandler(errorHandler);
+    }
+
+    var kafkaConsumerWrapper = builder.build();
     consumerWrappers.add(kafkaConsumerWrapper);
     return kafkaConsumerWrapper;
   }

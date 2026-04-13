@@ -33,6 +33,7 @@ import org.folio.DataImportEventTypes;
 import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
 import org.folio.inventory.dataimport.consumers.DataImportKafkaHandler;
+import org.folio.inventory.dataimport.consumers.DataImportProcessRecordErrorHandler;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.support.KafkaConsumerVerticle;
 import org.folio.processing.events.EventManager;
@@ -79,12 +80,13 @@ public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
   public void start(Promise<Void> startPromise) {
     EventManager.registerKafkaEventPublisher(getKafkaConfig(), vertx, getMaxDistributionNumber(MAX_DISTRIBUTION_PROPERTY));
     var consortiumDataCache = new ConsortiumDataCache(vertx, getHttpClient());
+    var processRecordErrorHandler = new DataImportProcessRecordErrorHandler(getKafkaConfig(), vertx);
 
     var dataImportKafkaHandler = new DataImportKafkaHandler(vertx, getStorage(), getHttpClient(), getProfileSnapshotCache(),
       getKafkaConfig(), getMappingMetadataCache(), consortiumDataCache, cancelledJobsIdsCache);
 
     var futures = EVENT_TYPES.stream()
-      .map(type -> super.createConsumer(type.value(), LOAD_LIMIT_PROPERTY))
+      .map(type -> super.createConsumer(type.value(), LOAD_LIMIT_PROPERTY, processRecordErrorHandler))
       .map(consumerWrapper -> consumerWrapper.start(dataImportKafkaHandler, ConsumerWrapperUtil.constructModuleName())
         .map(consumerWrapper)
       )
