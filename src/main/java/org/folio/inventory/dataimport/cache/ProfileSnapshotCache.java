@@ -43,7 +43,9 @@ public class ProfileSnapshotCache {
 
   public Future<Optional<ProfileSnapshotWrapper>> get(String profileSnapshotId, Context context) {
     try {
-      return Future.fromCompletionStage(cache.get(profileSnapshotId, (key, executor) -> loadJobProfileSnapshot(key, context)));
+      //TODO: should be deleted
+      return Future.failedFuture(new RuntimeException("Forced exception for testing profile snapshot cache failure"));
+      //return Future.fromCompletionStage(cache.get(profileSnapshotId, (key, executor) -> loadJobProfileSnapshot(key, context)));
     } catch (Exception e) {
       LOGGER.warn("Error loading ProfileSnapshotWrapper by id: '{}'", profileSnapshotId, e);
       return Future.failedFuture(e);

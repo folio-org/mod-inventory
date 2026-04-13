@@ -525,6 +525,56 @@ public class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
   }
 
   @Test
+  public void shouldFailSharingWhenGetInstanceByIdOnTargetTenantThrowsUnsupportedSourceTypeError(TestContext context) throws IOException {
+
+    // given
+    Async async = context.async();
+    JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
+    jsonInstance.put("source", "FOLIO");
+    existingInstance = Instance.fromJson(jsonInstance);
+
+    String shareId = "b4842c97-6574-4854-837d-b796ed1f1f21";
+    String instanceId = "b4842c97-6574-4854-837d-b796ed1f1f21";
+
+    SharingInstance sharingInstance = new SharingInstance()
+      .withId(UUID.fromString(shareId))
+      .withInstanceIdentifier(UUID.fromString(instanceId))
+      .withSourceTenantId("university")
+      .withTargetTenantId("consortium")
+      .withStatus(IN_PROGRESS);
+
+    when(kafkaRecord.key()).thenReturn(shareId);
+    when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
+    when(kafkaRecord.headers()).thenReturn(
+      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
+        KafkaHeader.header(OKAPI_URL_HEADER, "url"),
+        KafkaHeader.header(OKAPI_TENANT_HEADER, "consortium")
+      ));
+
+    when(storage.getInstanceCollection(any(Context.class)))
+      .thenReturn(mockedTargetInstanceCollection);
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
+      failureHandler.accept(new Failure("Unsupported source type: AVCMS", 500));
+      return null;
+    }).when(mockedTargetInstanceCollection).findById(any(String.class), any(), any());
+
+    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService).store(any(), any());
+
+    // when
+    consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig, eventIdStorageService);
+
+    //then
+    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    future.onComplete(ar -> {
+      context.assertTrue(ar.failed());
+      context.assertTrue(ar.cause().getMessage().equals("Unsupported source type: AVCMS"));
+      async.complete();
+    });
+  }
+
+  @Test
   public void shouldNotProcessIfDuplicatedEventReceived(TestContext context) throws IOException {
 
     // given
