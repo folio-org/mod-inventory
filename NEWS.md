@@ -1,4 +1,4 @@
-## 21.2.0 2025-xx-xx
+## 22.0.0 2026-04-16
 * ECS: Improve logs in move holdings operation for [MODINV-1276](https://folio-org.atlassian.net/browse/MODINV-1276)
 * ECS: Moving holdings to another instance produces error if the instance does not already have an associated holdings with active affiliation [MODINV-1213](https://folio-org.atlassian.net/browse/MODINV-1213)
 * Error editing the "Temporary" field in the holding [MODINV-1189](https://folio-org.atlassian.net/browse/MODINV-1189)
@@ -24,6 +24,14 @@
 * Cancelled data import jobs updates SRS records without updating Instance records [MODINV-1353](https://folio-org.atlassian.net/browse/MODINV-1353)
 * Remove quick-marc events handling logic [MODINV-1312](https://folio-org.atlassian.net/browse/MODINV-1312)
 * Use MarcRecordNormalizer from data-import-processing-core for MARC OCLC 035 value normalization ([MODINV-1340](https://folio-org.atlassian.net/browse/MODINV-1340))
+* Fix Update Ownership 'Item not linked to shared instance' error [MODINV-1357](https://folio-org.atlassian.net/browse/MODINV-1357)
+* Implement of PATCH requests for items [MODINV-1335](https://folio-org.atlassian.net/browse/MODINV-1335)
+* Add dependency on mod-inventory-storage-dto and remove inventory schemas [MODINV-1324](https://folio-org.atlassian.net/browse/MODINV-1324)
+* Upgrade module to Vert.x 5.0 [MODINV-1271](https://folio-org.atlassian.net/browse/MODINV-1271)
+* Update to Support itemLevelCallNumberTypeId Constraint [MODINV-1250](https://folio-org.atlassian.net/browse/MODINV-1250)
+* ECS: Ability to restrict Data Import Actions in Member Tenant to Local Instances only [MODINV-1236](https://folio-org.atlassian.net/browse/MODINV-1236)
+* Add new field "Instance Source URI" to Inventory Instance [MODINV-1195](https://folio-org.atlassian.net/browse/MODINV-1195)
+* Update log JSON error message when multiple matches found: Inventory [MODINV-799](https://folio-org.atlassian.net/browse/MODINV-799)
 
 ## 21.1.0 2025-03-13
 * Update deduplication logic in mod-inventory [MODINV-1151](https://folio-org.atlassian.net/browse/MODINV-1151)
