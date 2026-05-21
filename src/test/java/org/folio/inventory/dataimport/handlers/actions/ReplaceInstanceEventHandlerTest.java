@@ -975,6 +975,67 @@ public class ReplaceInstanceEventHandlerTest {
   }
 
   @Test
+  public void shouldNotUpdateInstanceWhenSrsUpdateFails() throws InterruptedException, ExecutionException, TimeoutException {
+    // Test that verifies SRS-first approach: if SRS update fails, instance should NOT be updated
+    Record incomingRecord = new Record()
+      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT))
+      .withMatchedId(UUID.randomUUID().toString())
+      .withSnapshotId(jobExecutionId);
+
+    HashMap<String, String> context = new HashMap<>();
+    context.put(PAYLOAD_USER_ID, USER_ID);
+    context.put(OKAPI_REQUEST_ID, REQUEST_ID);
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("hrid", UUID.randomUUID().toString())
+      .put("source", FOLIO.getValue()) // FOLIO instance being converted to MARC
+      .put("_version", INSTANCE_VERSION)
+      .encode());
+
+    Reader fakeReader = Mockito.mock(Reader.class);
+    String instanceTypeId = UUID.randomUUID().toString();
+    String title = "Test Title";
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    mockInstance(FOLIO.getValue());
+
+    // Mock SRS client to return FAILED response (simulating SRS failure)
+    Buffer errorBuffer = Buffer.buffer("SRS update failed");
+    HttpResponse<Buffer> failedResponse = buildHttpResponseWithBuffer(errorBuffer, HttpStatus.SC_BAD_REQUEST);
+    when(sourceStorageClient.postSourceStorageRecords(any()))
+      .thenReturn(Future.succeededFuture(failedResponse));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst())
+      .withOkapiUrl(mockServer.baseUrl())
+      .withTenant(TENANT_ID)
+      .withToken(TOKEN)
+      .withContext(context)
+      .withJobExecutionId(UUID.randomUUID().toString());
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+
+    // Expect ExecutionException because SRS update failed
+    ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(20, TimeUnit.SECONDS));
+
+    // Verify the exception message contains expected error
+    assertTrue(exception.getMessage().contains("Failed to create MARC record in SRS"));
+
+    // MOST IMPORTANT: Verify that instance update was NOT called (0 times)
+    // because SRS operation failed before reaching instance update
+    verify(instanceRecordCollection, times(0)).update(any(Instance.class), any(Consumer.class), any(Consumer.class));
+  }
+
+  @Test
   public void shouldFailIfPayloadContainsCentralTenantIdAndSharedInstanceButHasNoPermissionForSharedInstanceUpdate() {
     Record incomingRecord = new Record().withSnapshotId(jobExecutionId)
       .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
