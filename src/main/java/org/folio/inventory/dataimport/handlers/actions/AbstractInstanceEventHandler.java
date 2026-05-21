@@ -150,6 +150,77 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     return promise.future();
   }
 
+  /**
+   * Creates a new MARC record in SRS without modifying the Instance.
+   * Use this method for UPDATE operations where the instance is managed separately.
+   * If SRS creation fails, the operation fails without any instance modifications.
+   *
+   * @param payload          data import event payload
+   * @param srcRecord        MARC record to create in SRS
+   * @param tenantId         tenant identifier
+   * @param userId           user identifier
+   * @param requestId        request identifier
+   * @return future that completes when SRS operation finishes (success or failure)
+   */
+  protected Future<Void> saveRecordInSrsOnly(DataImportEventPayload payload, Record srcRecord,
+                                             String tenantId, String userId, String requestId) {
+    Promise<Void> promise = Promise.promise();
+    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId, requestId)
+      .postSourceStorageRecords(srcRecord)
+      .onComplete(ar -> {
+        var result = ar.result();
+        if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
+          payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(),
+            Json.encode(encodeParsedRecordContent(result.bodyAsJson(Record.class))));
+          LOGGER.info("saveRecordInSrsOnly:: Created MARC record in SRS with id: '{}', from tenant: {}, jobExecutionId: {}",
+            srcRecord.getId(), payload.getTenant(), payload.getJobExecutionId());
+          promise.complete();
+        } else {
+          String msg = format("Failed to create MARC record in SRS, jobExecutionId: '%s', status code: %s, Record: %s",
+            payload.getJobExecutionId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
+          LOGGER.error("saveRecordInSrsOnly:: {}", msg);
+          promise.fail(msg);
+        }
+      });
+    return promise.future();
+  }
+
+  /**
+   * Updates an existing MARC record in SRS without modifying the Instance.
+   * Use this method for UPDATE operations where the instance is managed separately.
+   * If SRS update fails, the operation fails without any instance modifications.
+   *
+   * @param payload          data import event payload
+   * @param srcRecord        MARC record to update in SRS
+   * @param matchedId        matched record identifier
+   * @param tenantId         tenant identifier
+   * @param userId           user identifier
+   * @param requestId        request identifier
+   * @return future that completes when SRS operation finishes (success or failure)
+   */
+  protected Future<Void> putRecordInSrsOnly(DataImportEventPayload payload, Record srcRecord,
+                                            String matchedId, String tenantId, String userId, String requestId) {
+    Promise<Void> promise = Promise.promise();
+    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId, requestId)
+      .putSourceStorageRecordsGenerationById(matchedId, srcRecord)
+      .onComplete(ar -> {
+        var result = ar.result();
+        if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_OK.toInt()) {
+          payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(),
+            Json.encode(encodeParsedRecordContent(result.bodyAsJson(Record.class))));
+          LOGGER.info("putRecordInSrsOnly:: Updated MARC record in SRS with id: '{}', from tenant: {}, jobExecutionId: {}",
+            srcRecord.getId(), payload.getTenant(), payload.getJobExecutionId());
+          promise.complete();
+        } else {
+          String msg = format("Failed to update MARC record in SRS, jobExecutionId: '%s', status code: %s, Record: %s",
+            payload.getJobExecutionId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
+          LOGGER.error("putRecordInSrsOnly:: {}", msg);
+          promise.fail(msg);
+        }
+      });
+    return promise.future();
+  }
+
   protected Future<Snapshot> postSnapshotInSrsAndHandleResponse(Context context, Snapshot snapshot) {
     return snapshotService.postSnapshotInSrsAndHandleResponse(context, snapshot);
   }
