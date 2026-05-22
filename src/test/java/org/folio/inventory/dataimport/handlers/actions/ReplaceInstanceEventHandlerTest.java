@@ -975,7 +975,7 @@ public class ReplaceInstanceEventHandlerTest {
   }
 
   @Test
-  public void shouldNotUpdateInstanceWhenSrsUpdateFails() throws InterruptedException, ExecutionException, TimeoutException {
+  public void shouldNotUpdateInstanceWhenSrsUpdateFails() {
     // Test that verifies SRS-first approach: if SRS update fails, instance should NOT be updated
     Record incomingRecord = new Record()
       .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT))
