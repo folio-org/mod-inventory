@@ -263,7 +263,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         }
 
         markInstanceAndRecordAsDeletedIfNeeded(mappedInstance, targetRecord);
-        
+
         // Step 1: Copy snapshot to central tenant if needed (consortium scenario)
         Future<Void> snapshotFuture;
         if (dataImportEventPayload.getContext().containsKey(CENTRAL_TENANT_ID)) {
@@ -299,8 +299,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
                   tenantId, context.getUserId(), context.getRequestId());
               } else {
                 LOGGER.debug("processInstanceUpdate:: MARC instance with existing SRS: {}, updating record", targetRecord.getMatchedId());
-                return putRecordInSrsOnly(dataImportEventPayload, targetRecord, targetRecord.getMatchedId(),
-                  tenantId, context.getUserId(), context.getRequestId());
+                return putRecordInSrs(dataImportEventPayload, targetRecord, targetRecord.getMatchedId(),
+                  tenantId, context.getUserId(), context.getRequestId(), mappedInstance.getId());
               }
 
             } else {

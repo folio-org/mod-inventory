@@ -127,29 +127,6 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     return promise.future();
   }
 
-  protected Future<Instance> putRecordInSrsAndHandleResponse(DataImportEventPayload payload, Record srcRecord,
-                                                             Instance instance, String matchedId, String tenantId, String userId, String requestId) {
-    Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId, requestId)
-      .putSourceStorageRecordsGenerationById(matchedId ,srcRecord)
-      .onComplete(ar -> {
-        var result = ar.result();
-        if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_OK.toInt()) {
-          payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(),
-            Json.encode(encodeParsedRecordContent(result.bodyAsJson(Record.class))));
-          LOGGER.info("Update MARC record in SRS with id: '{}', instanceId: '{}', from tenant: {}, jobExecutionId: {}",
-            srcRecord.getId(), instance.getId(), payload.getTenant(), payload.getJobExecutionId());
-          promise.complete(instance);
-        } else {
-          String msg = format("Failed to update MARC record in SRS, instanceId: '%s', jobExecutionId: '%s', status code: %s, Record: %s",
-            instance.getId(), payload.getJobExecutionId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
-          LOGGER.warn(msg);
-          promise.fail(msg);
-        }
-      });
-    return promise.future();
-  }
-
   /**
    * Creates a new MARC record in SRS without modifying the Instance.
    * Use this method for UPDATE operations where the instance is managed separately.
@@ -196,10 +173,11 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
    * @param tenantId         tenant identifier
    * @param userId           user identifier
    * @param requestId        request identifier
+   * @param instanceId       instance identifier for logging
    * @return future that completes when SRS operation finishes (success or failure)
    */
-  protected Future<Void> putRecordInSrsOnly(DataImportEventPayload payload, Record srcRecord,
-                                            String matchedId, String tenantId, String userId, String requestId) {
+  protected Future<Void> putRecordInSrs(DataImportEventPayload payload, Record srcRecord,
+                                        String matchedId, String tenantId, String userId, String requestId, String instanceId) {
     Promise<Void> promise = Promise.promise();
     getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId, requestId)
       .putSourceStorageRecordsGenerationById(matchedId, srcRecord)
@@ -208,12 +186,12 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_OK.toInt()) {
           payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(),
             Json.encode(encodeParsedRecordContent(result.bodyAsJson(Record.class))));
-          LOGGER.info("putRecordInSrsOnly:: Updated MARC record in SRS with id: '{}', from tenant: {}, jobExecutionId: {}",
-            srcRecord.getId(), payload.getTenant(), payload.getJobExecutionId());
+          LOGGER.info("putRecordInSrsOnly:: Updated MARC record in SRS with id: '{}' for instanceId: '{}', from tenant: {}, jobExecutionId: {}",
+            instanceId, srcRecord.getId(), payload.getTenant(), payload.getJobExecutionId());
           promise.complete();
         } else {
-          String msg = format("Failed to update MARC record in SRS, jobExecutionId: '%s', status code: %s, Record: %s",
-            payload.getJobExecutionId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
+          String msg = format("Failed to update MARC record in SRS for instanceId: '%s', jobExecutionId: '%s', status code: %s, Record: %s",
+            instanceId, payload.getJobExecutionId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
           LOGGER.error("putRecordInSrsOnly:: {}", msg);
           promise.fail(msg);
         }
