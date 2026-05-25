@@ -1,3 +1,6 @@
+## 22.0.1 2026-05-25
+* Fixed an issue where the Instance source was updated to `MARC` even when SRS record creation failed [MODINV-1373](https://folio-org.atlassian.net/browse/MODINV-1373)
+
 ## 22.0.0 2026-04-16
 * ECS: Improve logs in move holdings operation for [MODINV-1276](https://folio-org.atlassian.net/browse/MODINV-1276)
 * ECS: Moving holdings to another instance produces error if the instance does not already have an associated holdings with active affiliation [MODINV-1213](https://folio-org.atlassian.net/browse/MODINV-1213)
