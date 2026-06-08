@@ -39,6 +39,7 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.Date;
+import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -262,42 +263,86 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         }
 
         markInstanceAndRecordAsDeletedIfNeeded(mappedInstance, targetRecord);
-        return updateInstanceAndRetryIfOlExists(mappedInstance, instanceCollection, dataImportEventPayload)
-          .compose(updatedInstance -> getPrecedingSucceedingTitlesHelper().getExistingPrecedingSucceedingTitles(mappedInstance, context))
-          .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
-            .map(titleJson -> titleJson.getString("id"))
-            .collect(Collectors.toSet()))
-          .compose(titlesIds -> getPrecedingSucceedingTitlesHelper().deletePrecedingSucceedingTitles(titlesIds, context))
-          .map(mappedInstance)
-          .compose(instance -> {
-            if (dataImportEventPayload.getContext().containsKey(CENTRAL_TENANT_ID)) {
-              return copySnapshotToOtherTenant(targetRecord.getSnapshotId(), dataImportEventPayload, tenantId).map(instance);
-            }
-            return Future.succeededFuture(instance);
-          })
-          .compose(instance -> {
+
+        // Step 1: Copy snapshot to central tenant if needed (consortium scenario)
+        Future<Void> snapshotFuture;
+        if (dataImportEventPayload.getContext().containsKey(CENTRAL_TENANT_ID)) {
+          LOGGER.debug("processInstanceUpdate:: Copying snapshot to central tenant for consortium instance");
+          snapshotFuture = copySnapshotToOtherTenant(targetRecord.getSnapshotId(), dataImportEventPayload, tenantId)
+            .mapEmpty();
+        } else {
+          snapshotFuture = Future.succeededFuture();
+        }
+
+        return snapshotFuture
+          // Step 2: Execute SRS operations FIRST (before instance update)
+          .compose(v -> {
+            LOGGER.debug("processInstanceUpdate:: Executing SRS operations for instance: {}, source: {}",
+              mappedInstance.getId(), instanceToUpdate.getSource());
+
             if (instanceToUpdate.getSource().equals(FOLIO.getValue())) {
-              LOGGER.debug("processInstanceUpdate:: processing FOLIO Instance with id: {}", instance.getId());
-              executeFieldsManipulation(instance, targetRecord);
-              return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance, instanceCollection,
-                tenantId, context.getUserId(), context.getRequestId());
-            }
-            if (instanceToUpdate.getSource().equals(MARC.getValue())) {
-              LOGGER.debug("processInstanceUpdate:: processing MARC Instance with id: {}", instance.getId());
-              setExternalIds(targetRecord, instance);
-              setSuppressFromDiscovery(targetRecord, instance.getDiscoverySuppress());
+              // FOLIO -> MARC: Create SRS record FIRST
+              LOGGER.debug("processInstanceUpdate:: FOLIO instance, creating SRS record first");
+              executeFieldsManipulation(mappedInstance, targetRecord);
+              return saveRecordInSrsOnly(dataImportEventPayload, targetRecord, tenantId, context.getUserId(), context.getRequestId());
+
+            } else if (instanceToUpdate.getSource().equals(MARC.getValue())) {
+              // MARC: Create/update SRS record FIRST
+              LOGGER.debug("processInstanceUpdate:: MARC instance, creating/updating SRS record first");
+              setExternalIds(targetRecord, mappedInstance);
+              setSuppressFromDiscovery(targetRecord, mappedInstance.getDiscoverySuppress());
+
               if (targetRecord.getMatchedId() == null) {
-                LOGGER.debug("processInstanceUpdate:: Instance with id: {} has no related marc bib. Creating new record in SRS", instance.getId());
+                LOGGER.debug("processInstanceUpdate:: MARC instance without SRS, creating new record");
                 String matchedId = UUID.randomUUID().toString();
-                return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord.withId(matchedId).withMatchedId(matchedId),
-                  instance, instanceCollection, tenantId, context.getUserId(), context.getRequestId());
+                return saveRecordInSrsOnly(dataImportEventPayload, targetRecord.withId(matchedId).withMatchedId(matchedId),
+                  tenantId, context.getUserId(), context.getRequestId());
+              } else {
+                LOGGER.debug("processInstanceUpdate:: MARC instance with existing SRS: {}, updating record", targetRecord.getMatchedId());
+                return putRecordInSrs(dataImportEventPayload, targetRecord, targetRecord.getMatchedId(),
+                  tenantId, context.getUserId(), context.getRequestId(), mappedInstance.getId());
               }
-              LOGGER.debug("processInstanceUpdate:: Instance with id: {} has related marc bib with id: {}. Updating record in SRS", instance.getId(), targetRecord.getMatchedId());
-              return putRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, instance,
-                targetRecord.getMatchedId(), tenantId, context.getUserId(), context.getRequestId());
+
+            } else {
+              // CONSORTIUM_FOLIO, CONSORTIUM_MARC or other sources: skip SRS operations
+              LOGGER.debug("processInstanceUpdate:: Source: {}, skipping SRS operations", instanceToUpdate.getSource());
+              return Future.succeededFuture();
             }
-            return Future.succeededFuture(instance);
-          }).compose(ar -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance, context).map(ar))
+          })
+          // Step 3: Change source field AFTER successful SRS operation (for FOLIO->MARC conversion)
+          .map(v -> {
+            if (instanceToUpdate.getSource().equals(FOLIO.getValue())) {
+              // Now that SRS succeeded, we can safely change source to MARC
+              LOGGER.debug("processInstanceUpdate:: SRS succeeded, changing instance source from FOLIO to MARC");
+              JsonObject updatedInstanceJson = JsonObject.mapFrom(mappedInstance);
+              updatedInstanceJson.put(SOURCE_KEY, MARC_FORMAT);
+              return Instance.fromJson(updatedInstanceJson);
+            }
+            return mappedInstance;
+          })
+          // Step 4: Update Instance (only after SRS succeeds)
+          .compose(instanceToSave -> {
+            LOGGER.debug("processInstanceUpdate:: SRS operations completed successfully, now updating instance");
+            return updateInstanceAndRetryIfOlExists(instanceToSave, instanceCollection, dataImportEventPayload);
+          })
+          // Step 5: Get existing preceding/succeeding titles
+          .compose(updatedInstance -> getPrecedingSucceedingTitlesHelper()
+            .getExistingPrecedingSucceedingTitles(mappedInstance, context)
+            .map(titles -> titles.stream()
+              .map(titleJson -> titleJson.getString("id"))
+              .collect(Collectors.toSet()))
+            .map(titleIds -> new AbstractMap.SimpleEntry<>(updatedInstance, titleIds))
+          )
+          // Step 6: Delete old titles (errors are logged, not failed)
+          .compose(entry -> getPrecedingSucceedingTitlesHelper()
+            .deletePrecedingSucceedingTitles(entry.getValue(), context)
+            .map(entry.getKey())
+          )
+          // Step 7: Create new titles (if error - fail the whole operation)
+          .compose(updatedInstance -> getPrecedingSucceedingTitlesHelper()
+            .createPrecedingSucceedingTitles(mappedInstance, context)
+            .map(updatedInstance)
+          )
           .map(Json::encode);
       })
       .onComplete(ar -> {
@@ -364,10 +409,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       .toList());
     instanceAsJson.put("id", instanceToUpdate.getId());
     instanceAsJson.put(HRID_KEY, instanceToUpdate.getHrid());
-    if (instanceToUpdate.getSource() != null && (!(instanceToUpdate.getSource().equals(CONSORTIUM_FOLIO.getValue())
-      || instanceToUpdate.getSource().equals(CONSORTIUM_MARC.getValue())) || instanceToUpdate.getSource().equals(FOLIO.getValue()))) {
-      instanceAsJson.put(SOURCE_KEY, MARC_FORMAT);
-    }
+    // Do NOT change source here - it will be changed AFTER successful SRS operations
     instanceAsJson.put(METADATA_KEY, instanceToUpdate.getMetadata());
     return instanceAsJson;
   }
