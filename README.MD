@@ -262,3 +262,7 @@ For each matched instance, the script does a GET and then PUT to `/inventory/ins
 - Run first in a non-production environment.
 - Validate DB/API credentials and tenant before execution.
 - Review output logs for `GET failed` or `PUT failed` messages.
+
+### Testing
+The script was tested on https://folio-eperf-corsair-fs09000000.ci.folio.org and for 55k records it
+took 2.1 hours.
