@@ -35,7 +35,7 @@ public final class KafkaUtility {
   public static final int MAX_REQUEST_SIZE = 1048576;
 
   public static final DockerImageName IMAGE_NAME
-    = DockerImageName.parse("apache/kafka-native:3.8.0");
+    = DockerImageName.parse("apache/kafka-native:4.2.0");
 
   private static final KafkaContainer KAFKA_CONTAINER = new KafkaContainer(IMAGE_NAME)
       .withStartupAttempts(3);
