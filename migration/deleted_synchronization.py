@@ -19,7 +19,7 @@ TENANT = '...'
 
 BATCH_SIZE = 10
 PARALLEL_BATCHES = 4
-TOKEN_REFRESH_INTERVAL = 8 * 60  # 8 minutes in seconds
+TOKEN_REFRESH_INTERVAL = 5 * 60  # 5 minutes in seconds
 
 SQL_QUERY = f"""
 SELECT external_id FROM {TENANT}_mod_source_record_storage.records_lb record_lb
