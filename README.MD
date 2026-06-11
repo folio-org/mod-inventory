@@ -216,3 +216,49 @@ If these methods don't work for you, please do get in touch, so this section can
 On Linux, `ifconfig docker0 | grep 'inet addr:'` should give output similar to `inet addr:192.168.X.X  Bcast:0.0.0.0  Mask:255.255.0.0`, , the first IP address is usually routable from within containers.
 
 On Mac OS X (using Docker Native), `ifconfig en0 | grep 'inet '` should give output similar to `inet 192.168.X.X netmask 0xffffff00 broadcast 192.168.X.X`, the first IP address is usually routable from within containers.
+
+# Appendix 2 - Migration Information
+
+## When Using deleted_synchronization.py script
+
+This script is intended to synchronize deleted records between Inventory and SRS. It searches for records with leader `d` 
+or `DELETED` state in SRS and sets `deleted = true` for the corresponding Inventory instance.
+
+### Script location
+
+`migration/deleted_synchronization.py`
+
+```bash
+pip install requests psycopg2-binary
+```
+
+### Configure the script
+
+Edit the configuration block at the top of `migration/deleted_synchronization.py` and set the following values:
+
+- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
+- `API_HOST`, `API_PORT`
+- `USERNAME`, `PASSWORD`, `TENANT`
+- Optional tuning: `BATCH_SIZE`, `PARALLEL_BATCHES`, `TOKEN_REFRESH_INTERVAL`
+
+### Run
+
+From the repository root:
+
+```bash
+python migration/deleted_synchronization.py
+```
+
+### What the script updates
+
+For each matched instance, the script does a GET and then PUT to `/inventory/instances/{id}` and sets:
+
+- `deleted = true`
+- `discoverySuppress = true`
+- `staffSuppress = true`
+
+### Recommended safety checks
+
+- Run first in a non-production environment.
+- Validate DB/API credentials and tenant before execution.
+- Review output logs for `GET failed` or `PUT failed` messages.
