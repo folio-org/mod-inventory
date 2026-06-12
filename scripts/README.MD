@@ -1,4 +1,4 @@
-# Migration Information
+# Scripts Information
 
 ## When Using deleted_synchronization.py script
 
@@ -9,25 +9,26 @@ total time taken, total records to update and any errors encountered during GET 
 
 ### Script location
 
-`migration/deleted_synchronization.py`
+`scripts/deleted_synchronization.py`
 
 ```bash
 pip install requests psycopg2-binary
 ```
+### Run (use your own values for env variables!)
 
-### Configure the script
-
-Edit the configuration file .env and set the following environment variables:
-
-- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
-- `API_HOST`, `API_PORT`
-- `USERNAME`, `PASSWORD`, `TENANT`
-- Optional tuning: `BATCH_SIZE`, `PARALLEL_BATCHES`, `TOKEN_REFRESH_INTERVAL`
-
-### Run
-
+```terminaloutput
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_NAME=folio
+export DB_USER=folio
+export DB_PASSWORD=postgres_password
+export API_HOST=localhost
+export API_PORT=8000
+export USERNAME=diku_admin
+export PASSWORD=admin
+export TENANT=diku
 python deleted_synchronization.py
-
+```
 ### What the script updates
 
 For each matched instance, the script does a GET and then PUT to `/inventory/instances/{id}` and sets:
