@@ -2,20 +2,24 @@ import psycopg2
 import requests
 import time
 import threading
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dotenv import load_dotenv
 
 # --- CONFIGURATION ---
-DB_HOST = '...'
-DB_PORT = '...'
-DB_NAME = '...'
-DB_USER = '...'
-DB_PASSWORD = '...'
+load_dotenv()
 
-API_HOST = '...'
-API_PORT = '...'
-USERNAME = '...'
-PASSWORD = '...'
-TENANT = '...'
+DB_HOST = os.getenv('DB_HOST')
+DB_PORT = os.getenv('DB_PORT')
+DB_NAME = os.getenv('DB_NAME')
+DB_USER = os.getenv('DB_USER')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+
+API_HOST = os.getenv('API_HOST')
+API_PORT = os.getenv('API_PORT')
+USERNAME = os.getenv('USERNAME')
+PASSWORD = os.getenv('PASSWORD')
+TENANT = os.getenv('TENANT')
 
 BATCH_SIZE = 10
 PARALLEL_BATCHES = 4
@@ -23,7 +27,10 @@ TOKEN_REFRESH_INTERVAL = 5 * 60  # 5 minutes in seconds
 
 SQL_QUERY = f"""
 SELECT external_id FROM {TENANT}_mod_source_record_storage.records_lb record_lb
-WHERE record_type = 'MARC_BIB'
+JOIN {TENANT}_mod_inventory_storage.instance inst
+ON record_lb.external_id = inst.id 
+WHERE inst.jsonb ->> 'deleted' != 'true' 
+AND record_type = 'MARC_BIB'
   AND ((record_lb.leader_record_status = 'd' AND (record_lb.state = 'ACTUAL' OR record_lb.state = 'DELETED')) OR record_lb.state = 'DELETED');
 """
 
@@ -191,3 +198,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
