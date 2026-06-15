@@ -9,6 +9,7 @@ import junitparams.Parameters;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.DataImportEventTypes;
+import org.folio.processing.value.ListValue;
 import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.JobProfile;
 import org.folio.MappingMetadataDto;
@@ -41,6 +42,7 @@ import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -71,7 +73,6 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.ACTION_HAS_NO_MAPPING_MSG;
-import static org.folio.inventory.dataimport.handlers.actions.UpdateItemEventHandler.CURRENT_RETRY_NUMBER;
 import static org.folio.inventory.domain.items.Item.HRID_KEY;
 import static org.folio.inventory.domain.items.Item.STATUS_KEY;
 import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
@@ -83,7 +84,9 @@ import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -1348,6 +1351,66 @@ public class UpdateItemEventHandlerTest {
     // then
     ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
     Assert.assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
+  }
+
+  @Test
+  public void shouldNotUpdateItemIfStatisticalCodeIdIsInvalid() {
+    // given
+    MappingProfile invalidStatCodeMappingProfile = new MappingProfile()
+      .withId(UUID.randomUUID().toString())
+      .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(ITEM)
+      .withMappingDetails(new MappingDetail()
+        .withMappingFields(Collections.singletonList(
+          new MappingRule().withName("statisticalCodeId").withPath("item.statisticalCodeIds[]").withValue("990$a").withEnabled("true")
+            .withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
+
+    ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(jobProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(JsonObject.mapFrom(jobProfile).getMap())
+      .withChildSnapshotWrappers(Collections.singletonList(
+        new ProfileSnapshotWrapper()
+          .withProfileId(actionProfile.getId())
+          .withContentType(ACTION_PROFILE)
+          .withContent(JsonObject.mapFrom(actionProfile).getMap())
+          .withChildSnapshotWrappers(Collections.singletonList(
+            new ProfileSnapshotWrapper()
+              .withProfileId(invalidStatCodeMappingProfile.getId())
+              .withContentType(MAPPING_PROFILE)
+              .withContent(JsonObject.mapFrom(invalidStatCodeMappingProfile).getMap())))));
+
+    // reader returns invalid statistical code string
+    when(fakeReader.read(any(MappingRule.class)))
+      .thenReturn(ListValue.of(List.of("ebookss")));
+
+    JsonObject itemJson = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("status", new JsonObject().put("name", AVAILABLE.value()))
+      .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
+      .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
+      .put("holdingsRecordId", UUID.randomUUID().toString());
+
+    JsonArray itemsList = new JsonArray();
+    itemsList.add(new JsonObject().put("item", itemJson));
+
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID))));
+    payloadContext.put(ITEM.value(), itemsList.encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(snapshotWrapper.getChildSnapshotWrappers().getFirst());
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
+
+    // then
+    ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    MatcherAssert.assertThat(exception.getMessage(), containsString("Mapped Item is invalid: [Provided Statistical code is not a valid value.]"));
   }
 
   @Test

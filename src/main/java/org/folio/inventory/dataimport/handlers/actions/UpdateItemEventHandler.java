@@ -27,6 +27,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.CqlHelper;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.JsonHelper;
+import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
@@ -338,6 +339,11 @@ public class UpdateItemEventHandler implements EventHandler {
   private List<String> validateItem(JsonObject itemAsJson, List<String> requiredFields) {
     List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(itemAsJson, requiredFields);
     validateStatusName(itemAsJson, errors);
+    JsonArray statCodeIdsArray = itemAsJson.getJsonArray("statisticalCodeIds");
+    List<String> statCodeIds = statCodeIdsArray != null
+      ? statCodeIdsArray.stream().map(Object::toString).toList()
+      : List.of();
+    errors.addAll(ValidationUtil.validateStatisticalCodeIds(statCodeIds));
     return errors;
   }
 

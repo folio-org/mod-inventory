@@ -29,6 +29,7 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
+import org.folio.processing.value.ListValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
@@ -37,6 +38,8 @@ import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -71,6 +74,9 @@ import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -1356,5 +1362,66 @@ public class CreateItemEventHandlerTest {
       Assert.assertNotNull(createdItem.getString("materialTypeId"));
       Assert.assertEquals(holdingsAsJson.getJsonObject(i).getString("id"), createdItem.getString("holdingId"));
     }
+  }
+
+  @Test()
+  public void shouldNotCreateItemIfStatisticalCodeIdIsNotUUID() {
+    MappingProfile invalidStatCodeMappingProfile = new MappingProfile()
+      .withId(UUID.randomUUID().toString())
+      .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(ITEM)
+      .withMappingDetails(new MappingDetail()
+        .withMappingFields(Arrays.asList(
+          new MappingRule().withPath("item.status.name").withValue("\"statusExpression\"").withEnabled("true"),
+          new MappingRule().withPath("item.permanentLoanType.id").withValue("\"permanentLoanTypeExpression\"").withEnabled("true"),
+          new MappingRule().withPath("item.materialType.id").withValue("\"materialTypeExpression\"").withEnabled("true"),
+          new MappingRule().withName("statisticalCodeId").withPath("item.statisticalCodeIds[]").withValue("invalidStatCodeValue").withEnabled("true").withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING)
+        )));
+
+    ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(jobProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(JsonObject.mapFrom(jobProfile).getMap())
+      .withChildSnapshotWrappers(Collections.singletonList(
+        new ProfileSnapshotWrapper()
+          .withProfileId(actionProfile.getId())
+          .withContentType(ACTION_PROFILE)
+          .withContent(JsonObject.mapFrom(actionProfile).getMap())
+          .withChildSnapshotWrappers(Collections.singletonList(
+            new ProfileSnapshotWrapper()
+              .withProfileId(invalidStatCodeMappingProfile.getId())
+              .withContentType(MAPPING_PROFILE)
+              .withContent(JsonObject.mapFrom(invalidStatCodeMappingProfile).getMap())))));
+
+    // reader returns: status, permanentLoanType, materialType, then non-UUID statistical code
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(
+      StringValue.of(AVAILABLE.value()),
+      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(UUID.randomUUID().toString()),
+      ListValue.of(List.of("ebookss")));
+
+    JsonArray holdingsAsJson = new JsonArray(List.of(
+      new JsonObject().put("id", UUID.randomUUID().toString()).put("permanentLocationId", PERMANENT_LOCATION_ID)));
+
+    HashMap<String, String> payloadContext = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITHOUT_HOLDING_ID));
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingsAsJson.encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(snapshotWrapper.getChildSnapshotWrappers().getFirst());
+
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    Json.decodeValue(dataImportEventPayload.getContext().get(ERRORS), JsonArray.class);
+    JsonArray errors = new JsonArray(dataImportEventPayload.getContext().get(ERRORS));
+    assertEquals(1, errors.size());
+    PartialError partialError = errors.getJsonObject(0).mapTo(PartialError.class);
+    MatcherAssert.assertThat(partialError.getError(), containsString("Mapped Item is invalid: [Provided Statistical code is not a valid value.]"));
   }
 }

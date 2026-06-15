@@ -11,6 +11,8 @@ import java.util.UUID;
  */
 public class ValidationUtil {
 
+  public static final String INVALID_STATISTICAL_CODE_MSG = "Provided Statistical code is not a valid value.";
+
   private ValidationUtil() {
   }
 
@@ -27,8 +29,27 @@ public class ValidationUtil {
     //TODO: This will be extended for different fields and entities.That's why there are so many methods just for 1 field.
     // Branch for it extending validation: MODINV-1012-extended
     validateField(errorMessages, instance.getNatureOfContentTermIds(), "natureOfContentTermIds");
+    validateStatisticalCodeIds(errorMessages, instance.getStatisticalCodeIds());
 
     return errorMessages;
+  }
+
+  /**
+   * Validates that all provided statistical code IDs are valid UUIDs.
+   * Returns an error message for each invalid entry.
+   * @param ids list of statistical code IDs to validate
+   * @return list of error messages; empty if all IDs are valid UUIDs
+   */
+  public static List<String> validateStatisticalCodeIds(List<String> ids) {
+    ArrayList<String> errorMessages = new ArrayList<>();
+    validateStatisticalCodeIds(errorMessages, ids);
+    return errorMessages;
+  }
+
+  private static void validateStatisticalCodeIds(List<String> errorMessages, List<String> ids) {
+    ids.stream()
+      .filter(id -> !isUUID(id))
+      .forEach(id -> errorMessages.add(INVALID_STATISTICAL_CODE_MSG));
   }
 
   private static void validateField(List<String> errorMessages, List<String> values, String fieldName) {

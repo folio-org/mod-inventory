@@ -18,6 +18,7 @@ import org.folio.inventory.dataimport.entities.PartialError;
 import org.folio.inventory.dataimport.services.OrderHelperService;
 import org.folio.inventory.consortium.util.ConsortiumUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
+import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.IdStorageService;
@@ -32,8 +33,10 @@ import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -117,6 +120,8 @@ public class CreateHoldingEventHandler implements EventHandler {
               MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
               JsonArray holdingsList = new JsonArray(payloadContext.get(HOLDINGS.value()));
               String instanceId = getInstanceId(dataImportEventPayload);
+//              List<PartialError> validationErrors = new ArrayList<>();
+              JsonArray validHoldingsList = new JsonArray();
               for (int i = 0; i < holdingsList.size(); i++) {
                 JsonObject holdingAsJson = holdingsList.getJsonObject(i);
                 if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
@@ -128,20 +133,28 @@ public class CreateHoldingEventHandler implements EventHandler {
                 fillInstanceIdIfNeeded(instanceId, holdingAsJson);
               }
 
-              LOGGER.trace(format("handle:: Mapped holdings: %s", holdingsList.encode()));
-              dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingsList.encode());
-              return List.of(Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord[].class));
+              List<PartialError> validationErrors = validateHoldings(holdingsList, validHoldingsList);
+              if (validHoldingsList.isEmpty()) {
+                List<String> errors = validationErrors.stream().map(PartialError::getError).toList();
+                throw new EventProcessingException("Mapped Holdings record(s) are invalid: %s".formatted(errors));
+              }
+
+              LOGGER.trace(format("handle:: Mapped holdings: %s", validHoldingsList.encode()));
+              dataImportEventPayload.getContext().put(HOLDINGS.value(), validHoldingsList.encode());
+              return Map.entry(
+                List.of(Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord[].class)),
+                validationErrors);
             })
-            .compose(holdingsToCreate -> consortiumService.getConsortiumConfiguration(context)
+            .compose(entry -> consortiumService.getConsortiumConfiguration(context)
               .compose(consortiumConfigurationOptional -> {
                 if (consortiumConfigurationOptional.isPresent()) {
                   return ConsortiumUtil.createShadowInstanceIfNeeded(consortiumService, storage.getInstanceCollection(context),
                       context, getInstanceId(dataImportEventPayload), consortiumConfigurationOptional.get())
-                    .map(holdingsToCreate);
+                    .map(entry);
                 }
-                return Future.succeededFuture(holdingsToCreate);
+                return Future.succeededFuture(entry);
               }))
-            .compose(holdingsToCreate -> addHoldings(holdingsToCreate, payloadContext, context))
+            .compose(entry -> addHoldings(entry.getKey(), entry.getValue(), payloadContext, context))
             .onSuccess(createdHoldings -> {
               LOGGER.info("handle:: Created Holdings records by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
                 jobExecutionId, recordId, chunkId);
@@ -210,14 +223,39 @@ public class CreateHoldingEventHandler implements EventHandler {
   }
 
   private void fillInstanceId(JsonObject holdingAsJson, String instanceId) {
-    LOGGER.trace(format("fillInstanceId:: Adding instance id: %s, to holding with id: %s", instanceId, holdingAsJson.getString("id")));
+    LOGGER.trace("fillInstanceId:: Adding instance id: {}, to holding with id: {}",
+      instanceId, holdingAsJson.getString("id"));
     holdingAsJson.put(INSTANCE_ID_FIELD, instanceId);
   }
 
-  private Future<List<HoldingsRecord>> addHoldings(List<HoldingsRecord> holdingsList, HashMap<String, String> payloadContext, Context context) {
+  private List<PartialError> validateHoldings(JsonArray holdingsToValidate, JsonArray validHoldingsList) {
+    List<PartialError> validationErrors = new ArrayList<>();
+    for (int i = 0; i < holdingsToValidate.size(); i++) {
+      JsonObject holdingAsJson = holdingsToValidate.getJsonObject(i);
+      List<String> statCodeErrors = validateStatisticalCodeIds(holdingAsJson);
+
+      if (!statCodeErrors.isEmpty()) {
+        validationErrors.add(new PartialError(holdingAsJson.getString("id"), String.join(", ", statCodeErrors)));
+      } else {
+        validHoldingsList.add(holdingAsJson);
+      }
+    }
+    return validationErrors;
+  }
+
+  private List<String> validateStatisticalCodeIds(JsonObject holdingAsJson) {
+    JsonArray statCodeIdsArray = holdingAsJson.getJsonArray("statisticalCodeIds");
+    List<String> statCodeIds = statCodeIdsArray != null
+      ? statCodeIdsArray.stream().map(Object::toString).toList()
+      : Collections.emptyList();
+    return ValidationUtil.validateStatisticalCodeIds(statCodeIds);
+  }
+
+  private Future<List<HoldingsRecord>> addHoldings(List<HoldingsRecord> holdingsList, List<PartialError> initialErrors,
+                                                    HashMap<String, String> payloadContext, Context context) {
     Promise<List<HoldingsRecord>> holdingsPromise = Promise.promise();
     List<HoldingsRecord> createdHoldingsRecord = new ArrayList<>();
-    List<PartialError> errors = new ArrayList<>();
+    List<PartialError> errors = new ArrayList<>(initialErrors);
     List<Future<?>> createHoldingsRecordFutures = new ArrayList<>();
 
     HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
