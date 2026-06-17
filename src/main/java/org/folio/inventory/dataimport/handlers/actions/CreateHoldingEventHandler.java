@@ -139,7 +139,7 @@ public class CreateHoldingEventHandler implements EventHandler {
                 throw new EventProcessingException("Mapped Holdings record(s) are invalid: %s".formatted(errors));
               }
 
-              LOGGER.trace(format("handle:: Mapped holdings: %s", validHoldingsList.encode()));
+              LOGGER.trace("handle:: Mapped holdings: {}", validHoldingsList.encode());
               dataImportEventPayload.getContext().put(HOLDINGS.value(), validHoldingsList.encode());
               return Map.entry(
                 List.of(Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord[].class)),
@@ -262,7 +262,7 @@ public class CreateHoldingEventHandler implements EventHandler {
 
     HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
     holdingsList.forEach(holdings -> {
-      LOGGER.debug(format("addHoldings:: Trying to add holdings with id: %s", holdings.getId()));
+      LOGGER.debug("addHoldings:: Trying to add holdings with id: {}", holdings.getId());
       Promise<Void> createPromise = Promise.promise();
       createHoldingsRecordFutures.add(createPromise.future());
       holdingsRecordCollection.add(holdings,
@@ -276,7 +276,7 @@ public class CreateHoldingEventHandler implements EventHandler {
             LOGGER.info("addHoldings:: Duplicated event received by Holding id: {}. Ignoring...", holdings.getId());
             createPromise.fail(new DuplicateEventException(format("Duplicated event by Holding id: %s", holdings.getId())));
           } else {
-            LOGGER.warn(format("addHoldings:: Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+            LOGGER.warn("addHoldings:: Error posting Holdings cause {}, status code {}", failure.getReason(), failure.getStatusCode());
             createPromise.complete();
           }
         });
