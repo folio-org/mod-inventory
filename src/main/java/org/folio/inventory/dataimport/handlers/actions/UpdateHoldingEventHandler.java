@@ -23,6 +23,7 @@ import org.folio.inventory.dataimport.entities.OlHoldingsAccumulativeResults;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.ItemUtil;
+import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
@@ -32,8 +33,10 @@ import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -134,6 +137,12 @@ public class UpdateHoldingEventHandler implements EventHandler {
           List<Future<?>> updatedHoldingsRecordFutures = new ArrayList<>();
           isPayloadConstructed = false;
           convertHoldings(dataImportEventPayload);
+
+          JsonArray holdingsArray = new JsonArray(dataImportEventPayload.getContext().get(HOLDINGS.value()));
+          Map.Entry<JsonArray, List<PartialError>> validationResult = validateHoldings(holdingsArray);
+          errors.addAll(validationResult.getValue());
+          dataImportEventPayload.getContext().put(HOLDINGS.value(), validationResult.getKey().encode());
+
           List<HoldingsRecord> list = List.of(Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord[].class));
           LOGGER.trace(format("handle:: Mapped holding: %s", Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()))));
           HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
@@ -213,6 +222,30 @@ public class UpdateHoldingEventHandler implements EventHandler {
         future.completeExceptionally(new EventProcessingException(errorsAsStringJson));
       }
     }
+  }
+
+  private Map.Entry<JsonArray, List<PartialError>> validateHoldings(JsonArray holdingsToValidate) {
+    List<PartialError> validationErrors = new ArrayList<>();
+    JsonArray validHoldingsList = new JsonArray();
+
+    for (int i = 0; i < holdingsToValidate.size(); i++) {
+      JsonObject holdingAsJson = holdingsToValidate.getJsonObject(i);
+      List<String> statCodeErrors = validateStatisticalCodeIds(holdingAsJson);
+      if (!statCodeErrors.isEmpty()) {
+        validationErrors.add(new PartialError(holdingAsJson.getString("id"), String.join(", ", statCodeErrors)));
+      } else {
+        validHoldingsList.add(holdingAsJson);
+      }
+    }
+    return Map.entry(validHoldingsList, validationErrors);
+  }
+
+  private List<String> validateStatisticalCodeIds(JsonObject holdingAsJson) {
+    JsonArray statCodeIdsArray = holdingAsJson.getJsonArray("statisticalCodeIds");
+    List<String> statCodeIds = statCodeIdsArray != null
+      ? statCodeIdsArray.stream().map(Object::toString).toList()
+      : Collections.emptyList();
+    return ValidationUtil.validateStatisticalCodeIds(statCodeIds);
   }
 
   private static void convertHoldings(DataImportEventPayload dataImportEventPayload) {
