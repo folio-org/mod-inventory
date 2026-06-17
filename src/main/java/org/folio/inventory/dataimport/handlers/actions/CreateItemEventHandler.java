@@ -26,6 +26,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.CqlHelper;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.JsonHelper;
+import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -179,7 +180,7 @@ public class CreateItemEventHandler implements EventHandler {
               createItemsFutures.add(createItemPromise.future());
             });
 
-            Future.all(createItemsFutures).onComplete(ar -> {
+            Future.join(createItemsFutures).onComplete(ar -> {
               if (payloadContext.containsKey(ERRORS) || !multipleItemsCreateErrors.isEmpty()) {
                 payloadContext.put(ERRORS, Json.encode(multipleItemsCreateErrors));
               }
@@ -354,7 +355,16 @@ public class CreateItemEventHandler implements EventHandler {
   private List<String> validateItem(JsonObject itemAsJson, List<String> requiredFields) {
     List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(itemAsJson, requiredFields);
     validateStatusName(itemAsJson, errors);
+    validateStatisticalCodes(itemAsJson, errors);
     return errors;
+  }
+
+  private void validateStatisticalCodes(JsonObject itemAsJson, List<String> errors) {
+    JsonArray statCodeIdsArray = itemAsJson.getJsonArray("statisticalCodeIds");
+    List<String> statCodeIds = statCodeIdsArray != null
+      ? statCodeIdsArray.stream().map(Object::toString).toList()
+      : List.of();
+    errors.addAll(ValidationUtil.validateStatisticalCodeIds(statCodeIds));
   }
 
   private Future<Boolean> isItemBarcodeUnique(String barcode, ItemCollection itemCollection) {
