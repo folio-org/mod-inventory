@@ -1,9 +1,13 @@
 package org.folio.inventory.dataimport.util;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import org.folio.inventory.dataimport.entities.PartialError;
 import org.folio.inventory.domain.instances.Instance;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -13,6 +17,7 @@ import java.util.stream.Collectors;
 public class ValidationUtil {
 
   private static final String INVALID_STATISTICAL_CODE_MSG = "Provided Statistical code(s) are not a valid values: ";
+  private static final String STATISTICAL_CODE_IDS_FIELD = "statisticalCodeIds";
 
   private ValidationUtil() {
   }
@@ -33,6 +38,29 @@ public class ValidationUtil {
     validateStatisticalCodeIds(errorMessages, instance.getStatisticalCodeIds());
 
     return errorMessages;
+  }
+
+  /**
+   * Validates holdings records specified in the JSON array.
+   * Invalid holdings are reported as {@link PartialError} entries.
+   *
+   * @param holdingsToValidate array of holding JSON objects to validate
+   * @return {@link Map.Entry} where the key is the array of valid holdings and the value is the list of validation errors
+   */
+  public static Map.Entry<JsonArray, List<PartialError>> validateHoldings(JsonArray holdingsToValidate) {
+    List<PartialError> validationErrors = new ArrayList<>();
+    JsonArray validHoldingsList = new JsonArray();
+
+    for (int i = 0; i < holdingsToValidate.size(); i++) {
+      JsonObject holdingAsJson = holdingsToValidate.getJsonObject(i);
+      List<String> statCodeErrors = validateHoldingStatisticalCodeIds(holdingAsJson);
+      if (!statCodeErrors.isEmpty()) {
+        validationErrors.add(new PartialError(holdingAsJson.getString("id"), String.join(", ", statCodeErrors)));
+      } else {
+        validHoldingsList.add(holdingAsJson);
+      }
+    }
+    return Map.entry(validHoldingsList, validationErrors);
   }
 
   /**
@@ -73,5 +101,13 @@ public class ValidationUtil {
     } catch (Exception ex) {
       return false;
     }
+  }
+
+  private static List<String> validateHoldingStatisticalCodeIds(JsonObject holdingAsJson) {
+    JsonArray statCodeIdsArray = holdingAsJson.getJsonArray(STATISTICAL_CODE_IDS_FIELD);
+    List<String> statCodeIds = statCodeIdsArray != null
+      ? statCodeIdsArray.stream().map(Object::toString).toList()
+      : List.of();
+    return validateStatisticalCodeIds(statCodeIds);
   }
 }

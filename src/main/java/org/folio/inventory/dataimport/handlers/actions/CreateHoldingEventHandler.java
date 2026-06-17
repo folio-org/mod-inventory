@@ -33,7 +33,6 @@ import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Record;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -131,7 +130,7 @@ public class CreateHoldingEventHandler implements EventHandler {
                 fillInstanceIdIfNeeded(instanceId, holdingAsJson);
               }
 
-              Map.Entry<JsonArray, List<PartialError>> validationResult = validateHoldings(holdingsList);
+              Map.Entry<JsonArray, List<PartialError>> validationResult = ValidationUtil.validateHoldings(holdingsList);
               JsonArray validHoldingsList = validationResult.getKey();
               List<PartialError> validationErrors = validationResult.getValue();
               if (validHoldingsList.isEmpty()) {
@@ -226,31 +225,6 @@ public class CreateHoldingEventHandler implements EventHandler {
     LOGGER.trace("fillInstanceId:: Adding instance id: {}, to holding with id: {}",
       instanceId, holdingAsJson.getString("id"));
     holdingAsJson.put(INSTANCE_ID_FIELD, instanceId);
-  }
-
-  private Map.Entry<JsonArray, List<PartialError>> validateHoldings(JsonArray holdingsToValidate) {
-    List<PartialError> validationErrors = new ArrayList<>();
-    JsonArray validHoldingsList = new JsonArray();
-
-    for (int i = 0; i < holdingsToValidate.size(); i++) {
-      JsonObject holdingAsJson = holdingsToValidate.getJsonObject(i);
-      List<String> statCodeErrors = validateStatisticalCodeIds(holdingAsJson);
-
-      if (!statCodeErrors.isEmpty()) {
-        validationErrors.add(new PartialError(holdingAsJson.getString("id"), String.join(", ", statCodeErrors)));
-      } else {
-        validHoldingsList.add(holdingAsJson);
-      }
-    }
-    return Map.entry(validHoldingsList, validationErrors);
-  }
-
-  private List<String> validateStatisticalCodeIds(JsonObject holdingAsJson) {
-    JsonArray statCodeIdsArray = holdingAsJson.getJsonArray("statisticalCodeIds");
-    List<String> statCodeIds = statCodeIdsArray != null
-      ? statCodeIdsArray.stream().map(Object::toString).toList()
-      : Collections.emptyList();
-    return ValidationUtil.validateStatisticalCodeIds(statCodeIds);
   }
 
   private Future<List<HoldingsRecord>> addHoldings(List<HoldingsRecord> holdingsList, List<PartialError> initialErrors,

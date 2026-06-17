@@ -33,7 +33,6 @@ import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +74,6 @@ public class UpdateHoldingEventHandler implements EventHandler {
   private static final String CURRENT_EVENT_TYPE_PROPERTY = "CURRENT_EVENT_TYPE";
   private static final String CURRENT_HOLDING_PROPERTY = "CURRENT_HOLDING";
   private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
-  private static final String CANNOT_UPDATE_HOLDING_ERROR_MESSAGE = "Error updating Holding by holdingId '%s' and jobExecution '%s' recordId '%s' chunkId '%s' - %s, status code %s";
   private static final String CANNOT_GET_ACTUAL_ITEM_MESSAGE = "Cannot get actual Item after successfully updating holdings, by ITEM id: '%s' - '%s', status code '%s'";
   private static final String BLANK = "";
   private static final String ERRORS = "ERRORS";
@@ -139,7 +137,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
           convertHoldings(dataImportEventPayload);
 
           JsonArray holdingsArray = new JsonArray(dataImportEventPayload.getContext().get(HOLDINGS.value()));
-          Map.Entry<JsonArray, List<PartialError>> validationResult = validateHoldings(holdingsArray);
+          Map.Entry<JsonArray, List<PartialError>> validationResult = ValidationUtil.validateHoldings(holdingsArray);
           errors.addAll(validationResult.getValue());
           dataImportEventPayload.getContext().put(HOLDINGS.value(), validationResult.getKey().encode());
 
@@ -226,30 +224,6 @@ public class UpdateHoldingEventHandler implements EventHandler {
     }
   }
 
-  private Map.Entry<JsonArray, List<PartialError>> validateHoldings(JsonArray holdingsToValidate) {
-    List<PartialError> validationErrors = new ArrayList<>();
-    JsonArray validHoldingsList = new JsonArray();
-
-    for (int i = 0; i < holdingsToValidate.size(); i++) {
-      JsonObject holdingAsJson = holdingsToValidate.getJsonObject(i);
-      List<String> statCodeErrors = validateStatisticalCodeIds(holdingAsJson);
-      if (!statCodeErrors.isEmpty()) {
-        validationErrors.add(new PartialError(holdingAsJson.getString("id"), String.join(", ", statCodeErrors)));
-      } else {
-        validHoldingsList.add(holdingAsJson);
-      }
-    }
-    return Map.entry(validHoldingsList, validationErrors);
-  }
-
-  private List<String> validateStatisticalCodeIds(JsonObject holdingAsJson) {
-    JsonArray statCodeIdsArray = holdingAsJson.getJsonArray("statisticalCodeIds");
-    List<String> statCodeIds = statCodeIdsArray != null
-      ? statCodeIdsArray.stream().map(Object::toString).toList()
-      : Collections.emptyList();
-    return ValidationUtil.validateStatisticalCodeIds(statCodeIds);
-  }
-
   private static void convertHoldings(DataImportEventPayload dataImportEventPayload) {
     JsonArray holdingsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(HOLDINGS.value()));
     for (int i = 0; i < holdingsJsonArray.size(); i++) {
@@ -312,11 +286,11 @@ public class UpdateHoldingEventHandler implements EventHandler {
     int currentRetryNumber = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       dataImportEventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-       LOGGER.warn("processOLError:: Error updating Holdings. Expired Holdings: '{}'. Current retry number = '{}'. Retry UpdateHoldingEventHandler handler...", expiredHoldings, currentRetryNumber);
+      LOGGER.warn("processOLError:: Error updating Holdings. Expired Holdings: '{}'. Current retry number = '{}'. Retry UpdateHoldingEventHandler handler...", expiredHoldings, currentRetryNumber);
       getActualHoldingsList(expiredHoldings, holdingsRecords)
         .onSuccess(actualHoldingsList -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actualHoldingsList, errors, olAccumulativeResults))
         .onFailure(e -> {
-           String errMessage = format("Cannot get actual Holdings.Expired Holdings: '%s' for jobExecutionId '%s'. Error: %s ", expiredHoldings, dataImportEventPayload.getJobExecutionId(), e.getCause());
+          String errMessage = format("Cannot get actual Holdings.Expired Holdings: '%s' for jobExecutionId '%s'. Error: %s ", expiredHoldings, dataImportEventPayload.getJobExecutionId(), e.getCause());
           for (HoldingsRecord expiredHolding : expiredHoldings) {
             errors.add(new PartialError(expiredHolding.getId() != null ? expiredHolding.getId() : BLANK, errMessage));
           }
@@ -326,7 +300,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
         });
     } else {
       String errMessage = format("Current retry number %s exceeded or equal given number %s for the Holding update for jobExecutionId '%s' ", MAX_RETRIES_COUNT, currentRetryNumber, dataImportEventPayload.getJobExecutionId());
-       LOGGER.warn("processOLError:: {}", errMessage);
+      LOGGER.warn("processOLError:: {}", errMessage);
       for (HoldingsRecord expiredHolding : expiredHoldings) {
         errors.add(new PartialError(expiredHolding.getId() != null ? expiredHolding.getId() : BLANK, errMessage));
       }
