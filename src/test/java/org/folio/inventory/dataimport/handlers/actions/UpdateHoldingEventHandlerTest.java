@@ -1527,10 +1527,11 @@ public class UpdateHoldingEventHandlerTest {
     JsonArray holdingsList = new JsonArray();
     holdingsList.add(new JsonObject().put("holdings", JsonObject.mapFrom(holdingsRecord)));
 
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    Record incomingRecord = new Record()
+      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
     context.put(HOLDINGS.value(), Json.encode(holdingsList));
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_MARC_FOR_UPDATE_RECEIVED.value())
@@ -1544,7 +1545,10 @@ public class UpdateHoldingEventHandlerTest {
 
     // then
     ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
-    assertThat(exception.getMessage(), containsString("Provided Statistical code is not a valid value."));
+    assertThat(
+      exception.getMessage(),
+      containsString("Provided Statistical code(s) are not a valid values: 'ebookss'.")
+    );
   }
 
   @Test
@@ -1638,10 +1642,10 @@ public class UpdateHoldingEventHandlerTest {
 
     JsonArray errors = new JsonArray(actualEventPayload.getContext().get(ERRORS));
     assertEquals(1, errors.size());
-    JsonObject partialError = errors.getJsonObject(0);
+    PartialError partialError = errors.getJsonObject(0).mapTo(PartialError.class);
     assertThat(
-      partialError.getString("error"),
-      containsString("Provided Statistical code is not a valid value.")
+      partialError.getError(),
+      containsString("Provided Statistical code(s) are not a valid values: 'ebookss'.")
     );
   }
 

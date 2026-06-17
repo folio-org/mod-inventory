@@ -120,7 +120,6 @@ public class CreateHoldingEventHandler implements EventHandler {
               MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
               JsonArray holdingsList = new JsonArray(payloadContext.get(HOLDINGS.value()));
               String instanceId = getInstanceId(dataImportEventPayload);
-              JsonArray validHoldingsList = new JsonArray();
               for (int i = 0; i < holdingsList.size(); i++) {
                 JsonObject holdingAsJson = holdingsList.getJsonObject(i);
                 if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
@@ -132,7 +131,9 @@ public class CreateHoldingEventHandler implements EventHandler {
                 fillInstanceIdIfNeeded(instanceId, holdingAsJson);
               }
 
-              List<PartialError> validationErrors = validateHoldings(holdingsList, validHoldingsList);
+              Map.Entry<JsonArray, List<PartialError>> validationResult = validateHoldings(holdingsList);
+              JsonArray validHoldingsList = validationResult.getKey();
+              List<PartialError> validationErrors = validationResult.getValue();
               if (validHoldingsList.isEmpty()) {
                 List<String> errors = validationErrors.stream().map(PartialError::getError).toList();
                 throw new EventProcessingException("Mapped Holdings record(s) are invalid: %s".formatted(errors));
@@ -227,8 +228,10 @@ public class CreateHoldingEventHandler implements EventHandler {
     holdingAsJson.put(INSTANCE_ID_FIELD, instanceId);
   }
 
-  private List<PartialError> validateHoldings(JsonArray holdingsToValidate, JsonArray validHoldingsList) {
+  private Map.Entry<JsonArray, List<PartialError>> validateHoldings(JsonArray holdingsToValidate) {
     List<PartialError> validationErrors = new ArrayList<>();
+    JsonArray validHoldingsList = new JsonArray();
+
     for (int i = 0; i < holdingsToValidate.size(); i++) {
       JsonObject holdingAsJson = holdingsToValidate.getJsonObject(i);
       List<String> statCodeErrors = validateStatisticalCodeIds(holdingAsJson);
@@ -239,7 +242,7 @@ public class CreateHoldingEventHandler implements EventHandler {
         validHoldingsList.add(holdingAsJson);
       }
     }
-    return validationErrors;
+    return Map.entry(validHoldingsList, validationErrors);
   }
 
   private List<String> validateStatisticalCodeIds(JsonObject holdingAsJson) {

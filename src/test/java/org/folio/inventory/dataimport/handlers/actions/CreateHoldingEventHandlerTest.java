@@ -845,9 +845,9 @@ public class CreateHoldingEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
-    assertEquals(
-      "org.folio.processing.exceptions.EventProcessingException: Mapped Holdings record(s) are invalid: [Provided Statistical code is not a valid value.]",
-      exception.getMessage()
+    assertThat(
+      exception.getMessage(),
+      containsString("Provided Statistical code(s) are not a valid values: 'ebookss'.")
     );
   }
 
@@ -935,7 +935,7 @@ public class CreateHoldingEventHandlerTest {
     PartialError partialError = errors.getJsonObject(0).mapTo(PartialError.class);
     assertThat(
       partialError.getError(),
-      containsString("Provided Statistical code is not a valid value.")
+      containsString("Provided Statistical code(s) are not a valid values: 'ebookss'.")
     );
   }
 

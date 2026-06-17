@@ -1373,7 +1373,7 @@ public class ReplaceInstanceEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
 
     ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
-    assertThat(exception.getMessage(), containsString("Mapped Instance is invalid: [Provided Statistical code is not a valid value.]"));
+    assertThat(exception.getMessage(), containsString("Provided Statistical code(s) are not a valid values: 'ebookss'."));
   }
 
   @Test

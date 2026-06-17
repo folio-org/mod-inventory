@@ -38,7 +38,6 @@ import org.folio.rest.jaxrs.model.MappingRule;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
-import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -1423,7 +1422,10 @@ public class CreateItemEventHandlerTest {
     JsonArray errors = new JsonArray(dataImportEventPayload.getContext().get(ERRORS));
     assertEquals(1, errors.size());
     PartialError partialError = errors.getJsonObject(0).mapTo(PartialError.class);
-    assertThat(partialError.getError(), containsString("Mapped Item is invalid: [Provided Statistical code is not a valid value.]"));
+    assertThat(
+      partialError.getError(),
+      containsString("Provided Statistical code(s) are not a valid values: 'ebookss'.")
+    );
   }
 
   @Test()
@@ -1519,8 +1521,11 @@ public class CreateItemEventHandlerTest {
     JsonArray errors = new JsonArray(dataImportEventPayload.getContext().get(ERRORS));
     assertEquals(1, errors.size());
     PartialError partialError = errors.getJsonObject(0).mapTo(PartialError.class);
-    MatcherAssert.assertThat(partialError.getError(), containsString("Provided Statistical code is not a valid value."));
     assertEquals(expectedHoldingId2, partialError.getHoldingId());
+    assertThat(
+      partialError.getError(),
+      containsString("Provided Statistical code(s) are not a valid values: 'ebookss'.")
+    );
   }
 
 }

@@ -5,13 +5,14 @@ import org.folio.inventory.domain.instances.Instance;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Util for detailed validation different entities.
  */
 public class ValidationUtil {
 
-  public static final String INVALID_STATISTICAL_CODE_MSG = "Provided Statistical code is not a valid value.";
+  private static final String INVALID_STATISTICAL_CODE_MSG = "Provided Statistical code(s) are not a valid values: ";
 
   private ValidationUtil() {
   }
@@ -47,9 +48,16 @@ public class ValidationUtil {
   }
 
   private static void validateStatisticalCodeIds(List<String> errorMessages, List<String> ids) {
-    ids.stream()
+    List<String> invalidIds = ids.stream()
       .filter(id -> !isUUID(id))
-      .forEach(id -> errorMessages.add(INVALID_STATISTICAL_CODE_MSG));
+      .toList();
+
+    if (!invalidIds.isEmpty()) {
+      String values = invalidIds.stream()
+        .map(id -> "'" + id + "'")
+        .collect(Collectors.joining(", "));
+      errorMessages.add(INVALID_STATISTICAL_CODE_MSG + values + ".");
+    }
   }
 
   private static void validateField(List<String> errorMessages, List<String> values, String fieldName) {
