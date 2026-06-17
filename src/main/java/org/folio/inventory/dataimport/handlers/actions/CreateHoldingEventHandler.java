@@ -120,7 +120,6 @@ public class CreateHoldingEventHandler implements EventHandler {
               MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
               JsonArray holdingsList = new JsonArray(payloadContext.get(HOLDINGS.value()));
               String instanceId = getInstanceId(dataImportEventPayload);
-//              List<PartialError> validationErrors = new ArrayList<>();
               JsonArray validHoldingsList = new JsonArray();
               for (int i = 0; i < holdingsList.size(); i++) {
                 JsonObject holdingAsJson = holdingsList.getJsonObject(i);

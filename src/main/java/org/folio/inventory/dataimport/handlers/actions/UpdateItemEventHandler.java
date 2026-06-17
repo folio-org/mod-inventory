@@ -103,6 +103,7 @@ public class UpdateItemEventHandler implements EventHandler {
   private static final String MULTIPLE_HOLDINGS_FIELD = "MULTIPLE_HOLDINGS_FIELD";
   private static final String TEMPORARY_MULTIPLE_HOLDINGS_FIELD = "TEMPORARY_MULTIPLE_HOLDINGS_FIELD";
   public static final String ID_PATH_FIELD = "id";
+  private static final String STATISTICAL_CODE_IDS_FIELD = "statisticalCodeIds";
   private final List<String> requiredFields = Arrays.asList("status.name", "materialType.id", "permanentLoanType.id", "holdingsRecordId");
   private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
 
@@ -339,11 +340,7 @@ public class UpdateItemEventHandler implements EventHandler {
   private List<String> validateItem(JsonObject itemAsJson, List<String> requiredFields) {
     List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(itemAsJson, requiredFields);
     validateStatusName(itemAsJson, errors);
-    JsonArray statCodeIdsArray = itemAsJson.getJsonArray("statisticalCodeIds");
-    List<String> statCodeIds = statCodeIdsArray != null
-      ? statCodeIdsArray.stream().map(Object::toString).toList()
-      : List.of();
-    errors.addAll(ValidationUtil.validateStatisticalCodeIds(statCodeIds));
+    validateStatisticalCodes(itemAsJson, errors);
     return errors;
   }
 
@@ -352,6 +349,14 @@ public class UpdateItemEventHandler implements EventHandler {
     if (StringUtils.isNotBlank(statusName) && !ItemStatusName.isStatusCorrect(statusName)) {
       errors.add(format("Invalid status specified '%s'", statusName));
     }
+  }
+
+  private void validateStatisticalCodes(JsonObject itemAsJson, List<String> errors) {
+    JsonArray statCodeIdsArray = itemAsJson.getJsonArray(STATISTICAL_CODE_IDS_FIELD);
+    List<String> statCodeIds = statCodeIdsArray != null
+      ? statCodeIdsArray.stream().map(Object::toString).toList()
+      : List.of();
+    errors.addAll(ValidationUtil.validateStatisticalCodeIds(statCodeIds));
   }
 
   private Future<Void> verifyItemBarcodeUniqueness(Item item, ItemCollection itemCollection, Promise<Void> updatePromise, List<PartialError> errors) {
