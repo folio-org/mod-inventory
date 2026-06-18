@@ -276,18 +276,7 @@ public class CreateInstanceEventHandlerTest {
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfileWithNatureOfContentTerm).getMap())))));
 
-  private JobProfile jobProfileWithInvalidStatisticalCode = new JobProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Create MARC Bibs with invalid statistical code")
-    .withDataType(JobProfile.DataType.MARC);
-
-  private ActionProfile actionProfileWithInvalidStatisticalCode = new ActionProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Create Instance with invalid statistical code")
-    .withAction(ActionProfile.Action.CREATE)
-    .withFolioRecord(INSTANCE);
-
-  private MappingProfile mappingProfileWithInvalidStatisticalCode = new MappingProfile()
+  private MappingProfile mappingProfileWithStatisticalCode = new MappingProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Mapping profile with invalid statistical code")
     .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
@@ -298,21 +287,21 @@ public class CreateInstanceEventHandlerTest {
         new MappingRule().withPath("instance.title").withValue("\"titleExpression\"").withEnabled("true"),
         new MappingRule().withPath("instance.statisticalCodeIds[]").withName("statisticalCodeId").withValue("\"ebookss\"").withEnabled("true").withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
 
-  private ProfileSnapshotWrapper profileSnapshotWrapperWithInvalidStatisticalCode = new ProfileSnapshotWrapper()
+  private ProfileSnapshotWrapper profileSnapshotWrapperWithStatisticalCode = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
-    .withProfileId(jobProfileWithInvalidStatisticalCode.getId())
+    .withProfileId(jobProfile.getId())
     .withContentType(JOB_PROFILE)
-    .withContent(jobProfileWithInvalidStatisticalCode)
-    .withChildSnapshotWrappers(Collections.singletonList(
+    .withContent(jobProfile)
+    .withChildSnapshotWrappers(List.of(
       new ProfileSnapshotWrapper()
-        .withProfileId(actionProfileWithInvalidStatisticalCode.getId())
+        .withProfileId(actionProfile.getId())
         .withContentType(ACTION_PROFILE)
-        .withContent(actionProfileWithInvalidStatisticalCode)
-        .withChildSnapshotWrappers(Collections.singletonList(
+        .withContent(actionProfile)
+        .withChildSnapshotWrappers(List.of(
           new ProfileSnapshotWrapper()
-            .withProfileId(mappingProfileWithInvalidStatisticalCode.getId())
+            .withProfileId(mappingProfileWithStatisticalCode.getId())
             .withContentType(MAPPING_PROFILE)
-            .withContent(JsonObject.mapFrom(mappingProfileWithInvalidStatisticalCode).getMap())))));
+            .withContent(JsonObject.mapFrom(mappingProfileWithStatisticalCode).getMap())))));
 
   private MappingProfile mappingProfileWithSuppressFalse = new MappingProfile()
     .withId(UUID.randomUUID().toString())
@@ -1077,7 +1066,7 @@ public class CreateInstanceEventHandlerTest {
       .withTenant(TENANT_ID)
       .withOkapiUrl(mockServer.baseUrl())
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapperWithInvalidStatisticalCode.getChildSnapshotWrappers().getFirst());
+      .withCurrentNode(profileSnapshotWrapperWithStatisticalCode.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
     ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));

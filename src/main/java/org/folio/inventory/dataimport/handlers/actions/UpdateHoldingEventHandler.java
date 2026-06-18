@@ -38,9 +38,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.*;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
@@ -381,7 +381,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
   }
 
   private static String getQueryParamForMultipleHoldings(List<HoldingsRecord> holdings) {
-    return holdings.stream().map(HoldingsRecord::getId).collect(Collectors.joining(" OR "));
+    return holdings.stream().map(HoldingsRecord::getId).collect(joining(" OR "));
   }
 
   private void fillPayloadAndClearLists(DataImportEventPayload dataImportEventPayload, String errorsAsStringJson, CompletableFuture<DataImportEventPayload> future, OlHoldingsAccumulativeResults olAccumulativeResults) {

@@ -158,13 +158,13 @@ public class UpdateItemEventHandler implements EventHandler {
           List<PartialError> errors = new ArrayList<>();
 
           JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
-          LOGGER.trace(format("handle:: Mapped Items to update: %s", dataImportEventPayload.getContext().get(ITEM.value())));
+          LOGGER.trace("handle:: Mapped Items to update: {}", dataImportEventPayload.getContext().get(ITEM.value()));
           List<Item> expiredItems = new ArrayList<>();
           for (int i = 0; i < itemsJsonArray.size(); i++) {
             Promise<Void> updatePromise = Promise.promise();
             updatedItemsRecordFutures.add(updatePromise.future());
             JsonObject mappedItemAsJson = itemsJsonArray.getJsonObject(i).getJsonObject(ITEM_PATH_FIELD);
-            LOGGER.debug(format("handle:: Updating Item with id: %s", mappedItemAsJson.getString("id")));
+            LOGGER.debug("handle:: Updating Item with id: {}", mappedItemAsJson.getString("id"));
             List<String> validationErrors = validateItem(mappedItemAsJson, requiredFields);
             if (!validationErrors.isEmpty()) {
               String msg = format("Mapped Item is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", validationErrors,

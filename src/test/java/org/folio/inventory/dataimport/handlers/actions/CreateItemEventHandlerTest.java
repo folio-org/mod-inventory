@@ -219,7 +219,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -287,7 +287,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -366,7 +366,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -445,7 +445,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -514,7 +514,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -564,7 +564,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -611,7 +611,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -681,7 +681,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -738,7 +738,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -793,7 +793,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -857,7 +857,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -911,7 +911,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -974,7 +974,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -1044,6 +1044,7 @@ public class CreateItemEventHandlerTest {
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
     DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+
     // then
     verify(mockedItemCollection, Mockito.times(0))
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
@@ -1059,7 +1060,7 @@ public class CreateItemEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withContext(new HashMap<>())
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -1083,7 +1084,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -1119,7 +1120,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -1147,13 +1148,13 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
 
     // then
-    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    future.get(5, TimeUnit.SECONDS);
   }
 
   @Rule
@@ -1187,7 +1188,7 @@ public class CreateItemEventHandlerTest {
     // given
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     boolean isEligible = createItemHandler.isEligible(dataImportEventPayload);
@@ -1237,7 +1238,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -1289,7 +1290,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -1342,7 +1343,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);

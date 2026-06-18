@@ -1233,7 +1233,6 @@ public class UpdateHoldingEventHandlerTest {
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
     MappingManager.registerMapperFactory(new HoldingsMapperFactory());
 
-    String instanceId = UUID.randomUUID().toString();
     String firstId = UUID.randomUUID().toString();
     String secondId = UUID.randomUUID().toString();
     String firstHrid = UUID.randomUUID().toString();
@@ -1478,7 +1477,6 @@ public class UpdateHoldingEventHandlerTest {
     // given
     MappingProfile invalidStatCodeMappingProfile = new MappingProfile()
       .withId(UUID.randomUUID().toString())
-      .withName("Mapping with invalid statistical code")
       .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
       .withExistingRecordType(EntityType.HOLDINGS)
       .withMappingDetails(new MappingDetail()

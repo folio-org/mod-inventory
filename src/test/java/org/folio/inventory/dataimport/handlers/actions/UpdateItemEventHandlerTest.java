@@ -264,7 +264,7 @@ public class UpdateItemEventHandlerTest {
       .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
@@ -338,7 +338,7 @@ public class UpdateItemEventHandlerTest {
       .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
@@ -414,7 +414,7 @@ public class UpdateItemEventHandlerTest {
       .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
@@ -551,7 +551,7 @@ public class UpdateItemEventHandlerTest {
     // Provide behavior for the items
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", itemIds.get(0)), 409));
+      failureHandler.accept(new Failure(format("Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", itemIds.getFirst()), 409));
       return null;
     }).doAnswer(invocationOnMock -> {
         Item itemRecord = invocationOnMock.getArgument(0);
@@ -653,7 +653,7 @@ public class UpdateItemEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
@@ -703,7 +703,7 @@ public class UpdateItemEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(contextSecondRun)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
 
     doAnswer(invocationOnMock -> {
@@ -1003,7 +1003,7 @@ public class UpdateItemEventHandlerTest {
       .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
@@ -1076,7 +1076,7 @@ public class UpdateItemEventHandlerTest {
       .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
@@ -1199,7 +1199,7 @@ public class UpdateItemEventHandlerTest {
       .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
       .withContext(new HashMap<>())
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
@@ -1219,7 +1219,7 @@ public class UpdateItemEventHandlerTest {
       .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
       .withContext(payloadContext)
       .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
@@ -1291,7 +1291,7 @@ public class UpdateItemEventHandlerTest {
       .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = updateItemHandler.handle(dataImportEventPayload);
@@ -1356,7 +1356,7 @@ public class UpdateItemEventHandlerTest {
   @Test
   public void shouldReturnFailedFutureAndNotUpdateItemIfStatisticalCodeIdIsInvalid() {
     // given
-    MappingProfile invalidStatCodeMappingProfile = new MappingProfile()
+    MappingProfile statCodeMappingProfile = new MappingProfile()
       .withId(UUID.randomUUID().toString())
       .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
       .withExistingRecordType(ITEM)
@@ -1377,9 +1377,9 @@ public class UpdateItemEventHandlerTest {
           .withContent(JsonObject.mapFrom(actionProfile).getMap())
           .withChildSnapshotWrappers(Collections.singletonList(
             new ProfileSnapshotWrapper()
-              .withProfileId(invalidStatCodeMappingProfile.getId())
+              .withProfileId(statCodeMappingProfile.getId())
               .withContentType(MAPPING_PROFILE)
-              .withContent(JsonObject.mapFrom(invalidStatCodeMappingProfile).getMap())))));
+              .withContent(JsonObject.mapFrom(statCodeMappingProfile).getMap())))));
 
     // reader returns invalid statistical code ID value
     when(fakeReader.read(any(MappingRule.class)))
@@ -1421,7 +1421,7 @@ public class UpdateItemEventHandlerTest {
     // given
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_ITEM_MATCHED.value())
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     boolean isEligible = updateItemHandler.isEligible(dataImportEventPayload);

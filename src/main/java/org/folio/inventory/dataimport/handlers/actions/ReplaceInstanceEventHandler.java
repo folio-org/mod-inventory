@@ -561,8 +561,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   protected Future<Record> getRecordByInstanceId(SourceStorageRecordsClient client, String instanceId) {
     return client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE).compose(resp -> {
       if (resp.statusCode() != 200) {
-        LOGGER.warn(format("Failed to retrieve MARC record by instance id: '%s', status code: %s",
-          instanceId, resp.statusCode()));
+        LOGGER.warn("getRecordByInstanceId:: Failed to retrieve MARC record by instance id: '{}', status code: {}",
+          instanceId, resp.statusCode());
         return Future.succeededFuture(new Record().withParsedRecord(new ParsedRecord().withContent(new JsonObject())));
       }
       return Future.succeededFuture(resp.bodyAsJson(Record.class));
@@ -578,7 +578,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
           processOLError(instance, instanceCollection, eventPayload, promise, failure);
         } else {
           eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
-          LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          LOGGER.error("updateInstanceAndRetryIfOlExists:: Error updating Instance - {}, status code {}", failure.getReason(), failure.getStatusCode());
           promise.fail(failure.getReason());
         }
       });
@@ -610,7 +610,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
         handle(eventPayload).whenComplete((res, e) -> {
           if (e != null) {
-
             promise.fail(e.getMessage());
           } else {
             promise.complete();

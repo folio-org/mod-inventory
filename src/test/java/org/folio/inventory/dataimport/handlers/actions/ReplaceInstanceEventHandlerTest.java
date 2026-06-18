@@ -309,18 +309,7 @@ public class ReplaceInstanceEventHandlerTest {
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfileWithNatureOfContentTerm).getMap())))));
 
-  private JobProfile jobProfileWithInvalidStatisticalCode = new JobProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Create MARC Bibs with invalid StatisticalCode")
-    .withDataType(JobProfile.DataType.MARC);
-
-  private ActionProfile actionProfileWithInvalidStatisticalCode = new ActionProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Replace preliminary Item with invalid StatisticalCode")
-    .withAction(ActionProfile.Action.UPDATE)
-    .withFolioRecord(INSTANCE);
-
-  private MappingProfile mappingProfileWithInvalidStatisticalCode = new MappingProfile()
+  private MappingProfile mappingProfileWithStatisticalCode = new MappingProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Prelim item from MARC with invalid StatisticalCode")
     .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
@@ -332,21 +321,21 @@ public class ReplaceInstanceEventHandlerTest {
         new MappingRule().withPath("instance.statisticalCodeIds[]").withValue("\"ebookss\"").withEnabled("true")
           .withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
 
-  private ProfileSnapshotWrapper profileSnapshotWrapperWithInvalidStatisticalCode = new ProfileSnapshotWrapper()
+  private ProfileSnapshotWrapper profileSnapshotWrapperWithStatisticalCode = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
-    .withProfileId(jobProfileWithInvalidStatisticalCode.getId())
+    .withProfileId(jobProfile.getId())
     .withContentType(JOB_PROFILE)
-    .withContent(jobProfileWithInvalidStatisticalCode)
+    .withContent(jobProfile)
     .withChildSnapshotWrappers(Collections.singletonList(
       new ProfileSnapshotWrapper()
-        .withProfileId(actionProfileWithInvalidStatisticalCode.getId())
+        .withProfileId(actionProfile.getId())
         .withContentType(ACTION_PROFILE)
-        .withContent(actionProfileWithInvalidStatisticalCode)
+        .withContent(actionProfile)
         .withChildSnapshotWrappers(Collections.singletonList(
           new ProfileSnapshotWrapper()
-            .withProfileId(mappingProfileWithInvalidStatisticalCode.getId())
+            .withProfileId(mappingProfileWithStatisticalCode.getId())
             .withContentType(MAPPING_PROFILE)
-            .withContent(JsonObject.mapFrom(mappingProfileWithInvalidStatisticalCode).getMap())))));
+            .withContent(JsonObject.mapFrom(mappingProfileWithStatisticalCode).getMap())))));
 
   private ReplaceInstanceEventHandler replaceInstanceEventHandler;
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
@@ -1368,7 +1357,7 @@ public class ReplaceInstanceEventHandlerTest {
       .withOkapiUrl(mockServer.baseUrl())
       .withToken(TOKEN)
       .withContext(context)
-      .withCurrentNode(profileSnapshotWrapperWithInvalidStatisticalCode.getChildSnapshotWrappers().getFirst());
+      .withCurrentNode(profileSnapshotWrapperWithStatisticalCode.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
 

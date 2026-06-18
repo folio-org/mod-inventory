@@ -47,7 +47,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
@@ -151,7 +150,7 @@ public class CreateItemEventHandler implements EventHandler {
             return processMappingResult(dataImportEventPayload, deduplicationItemId);
           })
           .compose(mappedItemList -> {
-            LOGGER.trace("handle:: Mapped items: {}", mappedItemList.encode());
+            LOGGER.trace("handle:: Mapped items: {}", mappedItemList::encode);
             Promise<List<Item>> createMultipleItemsPromise = Promise.promise();
             List<PartialError> multipleItemsCreateErrors = new ArrayList<>();
             List<Future<?>> createItemsFutures = new ArrayList<>();
@@ -227,7 +226,7 @@ public class CreateItemEventHandler implements EventHandler {
 
   private Future<Item> processSingleItem(String jobExecutionId, String recordId, String chunkId, ItemCollection itemCollection, JsonObject mappedItemJson) {
     List<String> errors = validateItem(mappedItemJson, requiredFields);
-    LOGGER.debug("processSingleItem:: Trying to create item with id: {}", mappedItemJson.getString("id"));
+    LOGGER.debug("processSingleItem:: Trying to create item with id: {}", () -> mappedItemJson.getString("id"));
     if (!errors.isEmpty()) {
       String msg = format("Mapped Item is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
         jobExecutionId, recordId, chunkId);
@@ -394,7 +393,7 @@ public class CreateItemEventHandler implements EventHandler {
       .map(note -> note.withSource(null))
       .map(note -> note.withDate(dateTimeFormatter.format(ZonedDateTime.now())))
       .map(note -> note.withNoteType(validNotes.getOrDefault(note.getNoteType(), note.getNoteType())))
-      .collect(Collectors.toList());
+      .toList();
 
     if (LOGGER.isTraceEnabled()) {
       notes.forEach(note -> LOGGER.trace("addItem:: circulation note with id : {} added to item with itemId: {}", note.getId(), item.getId()));
