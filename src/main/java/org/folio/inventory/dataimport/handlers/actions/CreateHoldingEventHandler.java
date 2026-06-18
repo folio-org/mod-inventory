@@ -18,6 +18,7 @@ import org.folio.inventory.dataimport.entities.PartialError;
 import org.folio.inventory.dataimport.services.OrderHelperService;
 import org.folio.inventory.consortium.util.ConsortiumUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
+import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.IdStorageService;
@@ -34,6 +35,7 @@ import org.folio.rest.jaxrs.model.Record;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -128,20 +130,30 @@ public class CreateHoldingEventHandler implements EventHandler {
                 fillInstanceIdIfNeeded(instanceId, holdingAsJson);
               }
 
-              LOGGER.trace(format("handle:: Mapped holdings: %s", holdingsList.encode()));
-              dataImportEventPayload.getContext().put(HOLDINGS.value(), holdingsList.encode());
-              return List.of(Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord[].class));
+              Map.Entry<JsonArray, List<PartialError>> validationResult = ValidationUtil.validateHoldings(holdingsList);
+              JsonArray validHoldingsList = validationResult.getKey();
+              List<PartialError> validationErrors = validationResult.getValue();
+              if (validHoldingsList.isEmpty()) {
+                List<String> errors = validationErrors.stream().map(PartialError::getError).toList();
+                throw new EventProcessingException("Mapped Holdings record(s) are invalid: %s".formatted(errors));
+              }
+
+              LOGGER.trace("handle:: Mapped holdings: {}", validHoldingsList.encode());
+              dataImportEventPayload.getContext().put(HOLDINGS.value(), validHoldingsList.encode());
+              return Map.entry(
+                List.of(Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord[].class)),
+                validationErrors);
             })
-            .compose(holdingsToCreate -> consortiumService.getConsortiumConfiguration(context)
+            .compose(entry -> consortiumService.getConsortiumConfiguration(context)
               .compose(consortiumConfigurationOptional -> {
                 if (consortiumConfigurationOptional.isPresent()) {
                   return ConsortiumUtil.createShadowInstanceIfNeeded(consortiumService, storage.getInstanceCollection(context),
                       context, getInstanceId(dataImportEventPayload), consortiumConfigurationOptional.get())
-                    .map(holdingsToCreate);
+                    .map(entry);
                 }
-                return Future.succeededFuture(holdingsToCreate);
+                return Future.succeededFuture(entry);
               }))
-            .compose(holdingsToCreate -> addHoldings(holdingsToCreate, payloadContext, context))
+            .compose(entry -> addHoldings(entry.getKey(), entry.getValue(), payloadContext, context))
             .onSuccess(createdHoldings -> {
               LOGGER.info("handle:: Created Holdings records by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
                 jobExecutionId, recordId, chunkId);
@@ -210,19 +222,21 @@ public class CreateHoldingEventHandler implements EventHandler {
   }
 
   private void fillInstanceId(JsonObject holdingAsJson, String instanceId) {
-    LOGGER.trace(format("fillInstanceId:: Adding instance id: %s, to holding with id: %s", instanceId, holdingAsJson.getString("id")));
+    LOGGER.trace("fillInstanceId:: Adding instance id: {}, to holding with id: {}",
+      instanceId, holdingAsJson.getString("id"));
     holdingAsJson.put(INSTANCE_ID_FIELD, instanceId);
   }
 
-  private Future<List<HoldingsRecord>> addHoldings(List<HoldingsRecord> holdingsList, HashMap<String, String> payloadContext, Context context) {
+  private Future<List<HoldingsRecord>> addHoldings(List<HoldingsRecord> holdingsList, List<PartialError> initialErrors,
+                                                    HashMap<String, String> payloadContext, Context context) {
     Promise<List<HoldingsRecord>> holdingsPromise = Promise.promise();
     List<HoldingsRecord> createdHoldingsRecord = new ArrayList<>();
-    List<PartialError> errors = new ArrayList<>();
+    List<PartialError> errors = new ArrayList<>(initialErrors);
     List<Future<?>> createHoldingsRecordFutures = new ArrayList<>();
 
     HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
     holdingsList.forEach(holdings -> {
-      LOGGER.debug(format("addHoldings:: Trying to add holdings with id: %s", holdings.getId()));
+      LOGGER.debug("addHoldings:: Trying to add holdings with id: {}", holdings.getId());
       Promise<Void> createPromise = Promise.promise();
       createHoldingsRecordFutures.add(createPromise.future());
       holdingsRecordCollection.add(holdings,
@@ -236,7 +250,7 @@ public class CreateHoldingEventHandler implements EventHandler {
             LOGGER.info("addHoldings:: Duplicated event received by Holding id: {}. Ignoring...", holdings.getId());
             createPromise.fail(new DuplicateEventException(format("Duplicated event by Holding id: %s", holdings.getId())));
           } else {
-            LOGGER.warn(format("addHoldings:: Error posting Holdings cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+            LOGGER.warn("addHoldings:: Error posting Holdings cause {}, status code {}", failure.getReason(), failure.getStatusCode());
             createPromise.complete();
           }
         });

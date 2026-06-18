@@ -26,6 +26,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.CqlHelper;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.JsonHelper;
+import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -46,7 +47,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isNotBlank;
@@ -75,6 +75,7 @@ public class CreateItemEventHandler implements EventHandler {
   public static final String HOLDING_ID_FIELD = "id";
   public static final String ITEM_ID_FIELD = "id";
   public static final String PO_LINE_ID_FIELD = "id";
+  private static final String STATISTICAL_CODE_IDS_FIELD = "statisticalCodeIds";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String ERRORS = "ERRORS";
@@ -149,7 +150,7 @@ public class CreateItemEventHandler implements EventHandler {
             return processMappingResult(dataImportEventPayload, deduplicationItemId);
           })
           .compose(mappedItemList -> {
-            LOGGER.trace(format("handle:: Mapped items: %s", mappedItemList.encode()));
+            LOGGER.trace("handle:: Mapped items: {}", mappedItemList::encode);
             Promise<List<Item>> createMultipleItemsPromise = Promise.promise();
             List<PartialError> multipleItemsCreateErrors = new ArrayList<>();
             List<Future<?>> createItemsFutures = new ArrayList<>();
@@ -179,7 +180,7 @@ public class CreateItemEventHandler implements EventHandler {
               createItemsFutures.add(createItemPromise.future());
             });
 
-            Future.all(createItemsFutures).onComplete(ar -> {
+            Future.join(createItemsFutures).onComplete(ar -> {
               if (payloadContext.containsKey(ERRORS) || !multipleItemsCreateErrors.isEmpty()) {
                 payloadContext.put(ERRORS, Json.encode(multipleItemsCreateErrors));
               }
@@ -225,11 +226,11 @@ public class CreateItemEventHandler implements EventHandler {
 
   private Future<Item> processSingleItem(String jobExecutionId, String recordId, String chunkId, ItemCollection itemCollection, JsonObject mappedItemJson) {
     List<String> errors = validateItem(mappedItemJson, requiredFields);
-    LOGGER.debug(format("processSingleItem:: Trying to create item with id: %s", mappedItemJson.getString("id")));
+    LOGGER.debug("processSingleItem:: Trying to create item with id: {}", () -> mappedItemJson.getString("id"));
     if (!errors.isEmpty()) {
       String msg = format("Mapped Item is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", errors,
         jobExecutionId, recordId, chunkId);
-      LOGGER.warn("processSingleItem:: " + msg);
+      LOGGER.warn("processSingleItem:: {}", msg);
       return Future.failedFuture(msg);
     }
     Item mappedItem = ItemUtil.jsonToItem(mappedItemJson);
@@ -273,7 +274,7 @@ public class CreateItemEventHandler implements EventHandler {
     }).toList();
 
     if (materialTypes.stream().distinct().count() != 1) {
-      LOGGER.warn("validateItemsToContainSameMaterialType:: " + ITEMS_SHOULD_HAVE_SAME_MATERIAL_TYPE_MSG);
+      LOGGER.warn("validateItemsToContainSameMaterialType:: {}", ITEMS_SHOULD_HAVE_SAME_MATERIAL_TYPE_MSG);
       throw new EventProcessingException(ITEMS_SHOULD_HAVE_SAME_MATERIAL_TYPE_MSG);
     }
   }
@@ -354,7 +355,16 @@ public class CreateItemEventHandler implements EventHandler {
   private List<String> validateItem(JsonObject itemAsJson, List<String> requiredFields) {
     List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(itemAsJson, requiredFields);
     validateStatusName(itemAsJson, errors);
+    validateStatisticalCodes(itemAsJson, errors);
     return errors;
+  }
+
+  private void validateStatisticalCodes(JsonObject itemAsJson, List<String> errors) {
+    JsonArray statCodeIdsArray = itemAsJson.getJsonArray(STATISTICAL_CODE_IDS_FIELD);
+    List<String> statCodeIds = statCodeIdsArray != null
+      ? statCodeIdsArray.stream().map(Object::toString).toList()
+      : List.of();
+    errors.addAll(ValidationUtil.validateStatisticalCodeIds(statCodeIds));
   }
 
   private Future<Boolean> isItemBarcodeUnique(String barcode, ItemCollection itemCollection) {
@@ -369,7 +379,7 @@ public class CreateItemEventHandler implements EventHandler {
         findResult -> promise.complete(findResult.getResult().records.isEmpty()),
         failure -> promise.fail(failure.getReason()));
     } catch (UnsupportedEncodingException e) {
-      LOGGER.warn(format("isItemBarcodeUnique:: Error to find items by barcode '%s'", barcode), e);
+      LOGGER.warn("isItemBarcodeUnique:: Error to find items by barcode '{}'", barcode, e);
       promise.fail(e);
     }
     return promise.future();
@@ -383,7 +393,7 @@ public class CreateItemEventHandler implements EventHandler {
       .map(note -> note.withSource(null))
       .map(note -> note.withDate(dateTimeFormatter.format(ZonedDateTime.now())))
       .map(note -> note.withNoteType(validNotes.getOrDefault(note.getNoteType(), note.getNoteType())))
-      .collect(Collectors.toList());
+      .toList();
 
     if (LOGGER.isTraceEnabled()) {
       notes.forEach(note -> LOGGER.trace("addItem:: circulation note with id : {} added to item with itemId: {}", note.getId(), item.getId()));
@@ -396,7 +406,7 @@ public class CreateItemEventHandler implements EventHandler {
           LOGGER.info("addItem:: Duplicated event received by ItemId: {}. Ignoring...", item.getId());
           promise.fail(new DuplicateEventException(format("Duplicated event by Item id: %s", item.getId())));
         } else {
-          LOGGER.warn(format("addItem:: Error posting Item cause %s, status code %s", failure.getReason(), failure.getStatusCode()));
+          LOGGER.warn("addItem:: Error posting Item cause {}, status code {}", failure.getReason(), failure.getStatusCode());
           promise.fail(failure.getReason());
         }
       });

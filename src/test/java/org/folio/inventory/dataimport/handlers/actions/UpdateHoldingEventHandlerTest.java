@@ -7,6 +7,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.processing.value.ListValue;
 import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.JobProfile;
 import org.folio.MappingMetadataDto;
@@ -64,19 +65,23 @@ import static org.folio.ActionProfile.FolioRecord.ITEM;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
+import static org.folio.DataImportEventTypes.DI_MARC_FOR_UPDATE_RECEIVED;
 import static org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler.ACTION_HAS_NO_MAPPING_MSG;
 import static org.folio.inventory.dataimport.handlers.actions.UpdateHoldingEventHandler.CURRENT_RETRY_NUMBER;
 import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.junit.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -1228,7 +1233,6 @@ public class UpdateHoldingEventHandlerTest {
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
     MappingManager.registerMapperFactory(new HoldingsMapperFactory());
 
-    String instanceId = UUID.randomUUID().toString();
     String firstId = UUID.randomUUID().toString();
     String secondId = UUID.randomUUID().toString();
     String firstHrid = UUID.randomUUID().toString();
@@ -1466,6 +1470,181 @@ public class UpdateHoldingEventHandlerTest {
       .withContext(new HashMap<>())
       .withCurrentNode(profileSnapshotWrapper);
     assertFalse(updateHoldingEventHandler.isEligible(dataImportEventPayload));
+  }
+
+  @Test()
+  public void shouldNotUpdateHoldingIfStatisticalCodeIdIsInvalid() {
+    // given
+    MappingProfile invalidStatCodeMappingProfile = new MappingProfile()
+      .withId(UUID.randomUUID().toString())
+      .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(EntityType.HOLDINGS)
+      .withMappingDetails(new MappingDetail()
+        .withMappingFields(Lists.newArrayList(
+          new MappingRule().withName("permanentLocationId").withPath("holdings.permanentLocationId").withValue("KU/CC/DI/M").withEnabled("true"),
+          new MappingRule().withName("statisticalCodeId").withPath("holdings.statisticalCodeIds[]").withValue("990$a").withEnabled("true")
+            .withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
+
+    ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(jobProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(jobProfile)
+      .withChildSnapshotWrappers(Collections.singletonList(
+        new ProfileSnapshotWrapper()
+          .withProfileId(actionProfile.getId())
+          .withContentType(ACTION_PROFILE)
+          .withContent(actionProfile)
+          .withChildSnapshotWrappers(Collections.singletonList(
+            new ProfileSnapshotWrapper()
+              .withProfileId(invalidStatCodeMappingProfile.getId())
+              .withContentType(MAPPING_PROFILE)
+              .withContent(JsonObject.mapFrom(invalidStatCodeMappingProfile).getMap())))));
+
+    Reader fakeReader = Mockito.mock(Reader.class);
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+    // reader returns: invalid statistical code string
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(
+      StringValue.of(permanentLocationId),
+      ListValue.of(List.of("ebookss"))
+    );
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingWriterFactory());
+    MappingManager.registerMapperFactory(new HoldingsMapperFactory());
+
+    String instanceId = UUID.randomUUID().toString();
+    String holdingId = UUID.randomUUID().toString();
+    HoldingsRecord holdingsRecord = new HoldingsRecord()
+      .withId(holdingId)
+      .withHrid("ho001")
+      .withInstanceId(instanceId)
+      .withPermanentLocationId(permanentLocationId);
+
+    JsonArray holdingsList = new JsonArray();
+    holdingsList.add(new JsonObject().put("holdings", JsonObject.mapFrom(holdingsRecord)));
+
+    Record incomingRecord = new Record()
+      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(HOLDINGS.value(), Json.encode(holdingsList));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_MARC_FOR_UPDATE_RECEIVED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(context)
+      .withProfileSnapshot(snapshotWrapper)
+      .withCurrentNode(snapshotWrapper.getChildSnapshotWrappers().getFirst());
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
+
+    // then
+    ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    assertThat(
+      exception.getMessage(),
+      containsString("Provided Statistical code(s) are not a valid values: 'ebookss'.")
+    );
+  }
+
+  @Test
+  public void shouldUpdateMultipleHoldingsWithPartialErrorIfOneHoldingHasInvalidStatisticalCode() throws InterruptedException, ExecutionException, TimeoutException {
+    MappingProfile invalidStatCodeMappingProfile = new MappingProfile()
+      .withId(UUID.randomUUID().toString())
+      .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(EntityType.HOLDINGS)
+      .withMappingDetails(new MappingDetail()
+        .withMappingFields(Lists.newArrayList(
+          new MappingRule().withName("permanentLocationId").withPath("holdings.permanentLocationId").withValue("945$h").withEnabled("true"),
+          new MappingRule().withName("statisticalCodeId").withPath("holdings.statisticalCodeIds[]").withValue("990$a").withEnabled("true")
+            .withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
+
+    ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(jobProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(jobProfile)
+      .withChildSnapshotWrappers(Collections.singletonList(
+        new ProfileSnapshotWrapper()
+          .withProfileId(actionProfile.getId())
+          .withContentType(ACTION_PROFILE)
+          .withContent(actionProfile)
+          .withChildSnapshotWrappers(Collections.singletonList(
+            new ProfileSnapshotWrapper()
+              .withProfileId(invalidStatCodeMappingProfile.getId())
+              .withContentType(MAPPING_PROFILE)
+              .withContent(JsonObject.mapFrom(invalidStatCodeMappingProfile).getMap())))));
+
+    String firstPermanentLocationId = UUID.randomUUID().toString();
+    String secondPermanentLocationId = UUID.randomUUID().toString();
+    String validStatisticalCodeUuid = UUID.randomUUID().toString();
+
+    Reader fakeReader = Mockito.mock(Reader.class);
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(
+      StringValue.of(firstPermanentLocationId),
+      ListValue.of(List.of(validStatisticalCodeUuid)),
+      StringValue.of(secondPermanentLocationId),
+      ListValue.of(List.of("ebookss"))
+    );
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+    when(storage.getItemCollection(any())).thenReturn(itemCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingWriterFactory());
+    MappingManager.registerMapperFactory(new HoldingsMapperFactory());
+
+    String instanceId = UUID.randomUUID().toString();
+    HoldingsRecord firstHoldingsRecord = new HoldingsRecord()
+      .withId(UUID.randomUUID().toString())
+      .withInstanceId(instanceId)
+      .withHrid("ho001")
+      .withPermanentLocationId(permanentLocationId);
+
+    HoldingsRecord secondHoldingsRecord = new HoldingsRecord()
+      .withId(UUID.randomUUID().toString())
+      .withInstanceId(instanceId)
+      .withHrid("ho002")
+      .withPermanentLocationId(permanentLocationId);
+
+    JsonArray holdingsList = new JsonArray();
+    holdingsList.add(new JsonObject().put("holdings", firstHoldingsRecord));
+    holdingsList.add(new JsonObject().put("holdings", secondHoldingsRecord));
+
+    Record incomingRecord = new Record()
+      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID_AND_MULTIPLE_HOLDINGS));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(HOLDINGS.value(), Json.encode(holdingsList));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_MARC_FOR_UPDATE_RECEIVED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(context)
+      .withProfileSnapshot(snapshotWrapper)
+      .withCurrentNode(snapshotWrapper.getChildSnapshotWrappers().getFirst());
+
+    CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
+
+    DataImportEventPayload actualEventPayload = future.get(5, TimeUnit.MILLISECONDS);
+    assertNotNull(actualEventPayload.getContext().get(HOLDINGS.value()));
+    JsonArray resultedHoldingsList = new JsonArray(actualEventPayload.getContext().get(HOLDINGS.value()));
+    assertEquals(1, resultedHoldingsList.size());
+    HoldingsRecord firstResultedHolding = resultedHoldingsList.getJsonObject(0).mapTo(HoldingsRecord.class);
+    assertEquals(firstHoldingsRecord.getId(), firstResultedHolding.getId());
+    assertTrue(firstResultedHolding.getStatisticalCodeIds().contains(validStatisticalCodeUuid));
+    assertEquals(firstPermanentLocationId, firstResultedHolding.getPermanentLocationId());
+
+    JsonArray errors = new JsonArray(actualEventPayload.getContext().get(ERRORS));
+    assertEquals(1, errors.size());
+    PartialError partialError = errors.getJsonObject(0).mapTo(PartialError.class);
+    assertThat(
+      partialError.getError(),
+      containsString("Provided Statistical code(s) are not a valid values: 'ebookss'.")
+    );
   }
 
   @Test

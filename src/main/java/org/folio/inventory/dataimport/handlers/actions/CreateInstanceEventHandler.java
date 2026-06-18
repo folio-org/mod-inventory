@@ -236,7 +236,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
           LOGGER.info("Duplicated event received by InstanceId: {}. Ignoring...", instance.getId());
           promise.fail(new DuplicateEventException(format("Duplicated event by Instance id: %s", instance.getId())));
         } else {
-          LOGGER.error(format("Error posting Instance by instanceId:'%s' cause %s, status code %s", instance.getId(), failure.getReason(), failure.getStatusCode()));
+          LOGGER.error("Error posting Instance by instanceId:'{}' cause {}, status code {}", instance.getId(), failure.getReason(), failure.getStatusCode());
           promise.fail(failure.getReason());
         }
       });

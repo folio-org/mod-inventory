@@ -309,6 +309,34 @@ public class ReplaceInstanceEventHandlerTest {
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfileWithNatureOfContentTerm).getMap())))));
 
+  private MappingProfile mappingProfileWithStatisticalCode = new MappingProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Prelim item from MARC with invalid StatisticalCode")
+    .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+    .withExistingRecordType(EntityType.INSTANCE)
+    .withMappingDetails(new MappingDetail()
+      .withMappingFields(Lists.newArrayList(
+        new MappingRule().withPath("instance.instanceTypeId").withValue("\"instanceTypeIdExpression\"").withEnabled("true"),
+        new MappingRule().withPath("instance.title").withValue("\"titleExpression\"").withEnabled("true"),
+        new MappingRule().withPath("instance.statisticalCodeIds[]").withValue("\"ebookss\"").withEnabled("true")
+          .withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
+
+  private ProfileSnapshotWrapper profileSnapshotWrapperWithStatisticalCode = new ProfileSnapshotWrapper()
+    .withId(UUID.randomUUID().toString())
+    .withProfileId(jobProfile.getId())
+    .withContentType(JOB_PROFILE)
+    .withContent(jobProfile)
+    .withChildSnapshotWrappers(Collections.singletonList(
+      new ProfileSnapshotWrapper()
+        .withProfileId(actionProfile.getId())
+        .withContentType(ACTION_PROFILE)
+        .withContent(actionProfile)
+        .withChildSnapshotWrappers(Collections.singletonList(
+          new ProfileSnapshotWrapper()
+            .withProfileId(mappingProfileWithStatisticalCode.getId())
+            .withContentType(MAPPING_PROFILE)
+            .withContent(JsonObject.mapFrom(mappingProfileWithStatisticalCode).getMap())))));
+
   private ReplaceInstanceEventHandler replaceInstanceEventHandler;
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
 
@@ -1293,6 +1321,49 @@ public class ReplaceInstanceEventHandlerTest {
     future.get(10, TimeUnit.SECONDS);
   }
 
+  @Test()
+  public void shouldNotUpdatedInstanceIfStatisticalCodeIdIsInvalid() {
+    String instanceTypeId = UUID.randomUUID().toString();
+    String title = "titleValue";
+    Reader fakeReader = Mockito.mock(Reader.class);
+    mockInstance(MARC_INSTANCE_SOURCE);
+
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(
+      StringValue.of(instanceTypeId),
+      StringValue.of(title),
+      ListValue.of(Lists.newArrayList("ebookss"))
+    );
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record incomingRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", instanceId)
+      .put("hrid", UUID.randomUUID().toString())
+      .put("source", MARC_INSTANCE_SOURCE)
+      .put("_version", INSTANCE_VERSION)
+      .put("discoverySuppress", false)
+      .encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapperWithStatisticalCode.getChildSnapshotWrappers().getFirst());
+
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+
+    ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    assertThat(exception.getMessage(), containsString("Provided Statistical code(s) are not a valid values: 'ebookss'."));
+  }
 
   @Test
   public void shouldReturnFailedFutureIfCurrentActionProfileHasNoMappingProfile() {

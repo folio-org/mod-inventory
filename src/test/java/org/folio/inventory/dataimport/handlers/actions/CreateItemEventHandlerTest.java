@@ -29,6 +29,7 @@ import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
+import org.folio.processing.value.ListValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.MappingDetail;
@@ -71,6 +72,12 @@ import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.junit.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -212,7 +219,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -280,7 +287,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -359,7 +366,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -438,7 +445,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -507,7 +514,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -557,7 +564,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -604,7 +611,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -674,7 +681,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -731,7 +738,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -786,7 +793,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -850,7 +857,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -904,7 +911,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -967,7 +974,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -1037,6 +1044,7 @@ public class CreateItemEventHandlerTest {
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
     DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+
     // then
     verify(mockedItemCollection, Mockito.times(0))
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
@@ -1052,7 +1060,7 @@ public class CreateItemEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withContext(new HashMap<>())
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -1076,7 +1084,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -1112,7 +1120,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -1140,13 +1148,13 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
 
     // then
-    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    future.get(5, TimeUnit.SECONDS);
   }
 
   @Rule
@@ -1180,7 +1188,7 @@ public class CreateItemEventHandlerTest {
     // given
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     boolean isEligible = createItemHandler.isEligible(dataImportEventPayload);
@@ -1230,7 +1238,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -1282,7 +1290,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -1335,7 +1343,7 @@ public class CreateItemEventHandlerTest {
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
@@ -1357,4 +1365,168 @@ public class CreateItemEventHandlerTest {
       Assert.assertEquals(holdingsAsJson.getJsonObject(i).getString("id"), createdItem.getString("holdingId"));
     }
   }
+
+  @Test()
+  public void shouldNotCreateItemIfStatisticalCodeIdIsInvalid() {
+    MappingProfile invalidStatCodeMappingProfile = new MappingProfile()
+      .withId(UUID.randomUUID().toString())
+      .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(ITEM)
+      .withMappingDetails(new MappingDetail()
+        .withMappingFields(Arrays.asList(
+          new MappingRule().withPath("item.status.name").withValue("\"statusExpression\"").withEnabled("true"),
+          new MappingRule().withPath("item.permanentLoanType.id").withValue("\"permanentLoanTypeExpression\"").withEnabled("true"),
+          new MappingRule().withPath("item.materialType.id").withValue("\"materialTypeExpression\"").withEnabled("true"),
+          new MappingRule().withName("statisticalCodeId").withPath("item.statisticalCodeIds[]").withValue("invalidStatCodeValue").withEnabled("true").withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING)
+        )));
+
+    ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(jobProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(JsonObject.mapFrom(jobProfile).getMap())
+      .withChildSnapshotWrappers(Collections.singletonList(
+        new ProfileSnapshotWrapper()
+          .withProfileId(actionProfile.getId())
+          .withContentType(ACTION_PROFILE)
+          .withContent(JsonObject.mapFrom(actionProfile).getMap())
+          .withChildSnapshotWrappers(Collections.singletonList(
+            new ProfileSnapshotWrapper()
+              .withProfileId(invalidStatCodeMappingProfile.getId())
+              .withContentType(MAPPING_PROFILE)
+              .withContent(JsonObject.mapFrom(invalidStatCodeMappingProfile).getMap())))));
+
+    // reader returns: status, permanentLoanType, materialType, then invalid statistical code ID
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(
+      StringValue.of(AVAILABLE.value()),
+      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(UUID.randomUUID().toString()),
+      ListValue.of(List.of("ebookss")));
+
+    JsonArray holdingsAsJson = new JsonArray(List.of(
+      new JsonObject().put("id", UUID.randomUUID().toString()).put("permanentLocationId", PERMANENT_LOCATION_ID)));
+
+    HashMap<String, String> payloadContext = new HashMap<>();
+    Record incomingRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITHOUT_HOLDING_ID));
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingsAsJson.encode());
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(snapshotWrapper.getChildSnapshotWrappers().getFirst());
+
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    JsonArray errors = new JsonArray(dataImportEventPayload.getContext().get(ERRORS));
+    assertEquals(1, errors.size());
+    PartialError partialError = errors.getJsonObject(0).mapTo(PartialError.class);
+    assertThat(
+      partialError.getError(),
+      containsString("Provided Statistical code(s) are not a valid values: 'ebookss'.")
+    );
+  }
+
+  @Test()
+  public void shouldCreateMultipleItemsAndReturnPartialErrorsForItemWithInvalidStatisticalCode()
+    throws ExecutionException, InterruptedException, TimeoutException {
+    MappingProfile invalidStatCodeMappingProfile = new MappingProfile()
+      .withId(UUID.randomUUID().toString())
+      .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(ITEM)
+      .withMappingDetails(new MappingDetail()
+        .withMappingFields(Arrays.asList(
+          new MappingRule().withPath("item.status.name").withValue("\"statusExpression\"").withEnabled("true"),
+          new MappingRule().withPath("item.permanentLoanType.id").withValue("\"permanentLoanTypeExpression\"").withEnabled("true"),
+          new MappingRule().withPath("item.materialType.id").withValue("\"materialTypeExpression\"").withEnabled("true"),
+          new MappingRule().withName("statisticalCodeId").withPath("item.statisticalCodeIds[]").withValue("invalidStatCodeValue").withEnabled("true").withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING)
+        )));
+
+    ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(jobProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(JsonObject.mapFrom(jobProfile).getMap())
+      .withChildSnapshotWrappers(Collections.singletonList(
+        new ProfileSnapshotWrapper()
+          .withProfileId(actionProfile.getId())
+          .withContentType(ACTION_PROFILE)
+          .withContent(JsonObject.mapFrom(actionProfile).getMap())
+          .withChildSnapshotWrappers(Collections.singletonList(
+            new ProfileSnapshotWrapper()
+              .withProfileId(invalidStatCodeMappingProfile.getId())
+              .withContentType(MAPPING_PROFILE)
+              .withContent(JsonObject.mapFrom(invalidStatCodeMappingProfile).getMap())))));
+
+    String validStatisticalCodeUuid = UUID.randomUUID().toString();
+
+    Mockito.when(fakeReader.read(any(MappingRule.class))).thenReturn(
+      StringValue.of(AVAILABLE.value()),
+      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(UUID.randomUUID().toString()),
+      ListValue.of(List.of(validStatisticalCodeUuid)),
+      StringValue.of(AVAILABLE.value()),
+      StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(UUID.randomUUID().toString()),
+    // reader returns the invalid statistical code
+      ListValue.of(List.of("ebookss"))
+    );
+
+    Mockito.doAnswer(invocationOnMock -> {
+      Item item = invocationOnMock.getArgument(0);
+      Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(item));
+      return null;
+    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+
+    String expectedHoldingId1 = UUID.randomUUID().toString();
+    String expectedHoldingId2 = UUID.randomUUID().toString();
+    String permanentLocationId2 = UUID.randomUUID().toString();
+
+    JsonArray holdingsAsJson = new JsonArray(List.of(
+      new JsonObject()
+        .put("id", expectedHoldingId1)
+        .put("permanentLocationId", PERMANENT_LOCATION_ID),
+      new JsonObject()
+        .put("id", expectedHoldingId2)
+        .put("permanentLocationId", permanentLocationId2)));
+
+    HashMap<String, String> payloadContext = new HashMap<>();
+    Record incomingRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
+    payloadContext.put(EntityType.HOLDINGS.value(), holdingsAsJson.encode());
+    payloadContext.put(MULTIPLE_HOLDINGS_FIELD, "945");
+    payloadContext.put(HOLDINGS_IDENTIFIERS, Json.encode(List.of(PERMANENT_LOCATION_ID, permanentLocationId2)));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withCurrentNode(snapshotWrapper.getChildSnapshotWrappers().getFirst());
+
+    CompletableFuture<DataImportEventPayload> future = createItemHandler.handle(dataImportEventPayload);
+
+    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    assertNotNull(eventPayload.getContext().get(ITEM.value()));
+    JsonArray createdItems = new JsonArray(eventPayload.getContext().get(ITEM.value()));
+    assertEquals(1, createdItems.size());
+    JsonObject createdItem = createdItems.getJsonObject(0);
+    assertNotNull(createdItem.getJsonObject("status").getString("name"));
+    assertNotNull(createdItem.getString("permanentLoanTypeId"));
+    assertNotNull(createdItem.getString("materialTypeId"));
+    assertEquals(holdingsAsJson.getJsonObject(0).getString("id"), createdItem.getString("holdingId"));
+    assertTrue(createdItem.getJsonArray("statisticalCodeIds").contains(validStatisticalCodeUuid));
+
+    JsonArray errors = new JsonArray(dataImportEventPayload.getContext().get(ERRORS));
+    assertEquals(1, errors.size());
+    PartialError partialError = errors.getJsonObject(0).mapTo(PartialError.class);
+    assertEquals(expectedHoldingId2, partialError.getHoldingId());
+    assertThat(
+      partialError.getError(),
+      containsString("Provided Statistical code(s) are not a valid values: 'ebookss'.")
+    );
+  }
+
 }

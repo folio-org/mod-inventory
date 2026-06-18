@@ -27,6 +27,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.CqlHelper;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.JsonHelper;
+import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
@@ -102,6 +103,7 @@ public class UpdateItemEventHandler implements EventHandler {
   private static final String MULTIPLE_HOLDINGS_FIELD = "MULTIPLE_HOLDINGS_FIELD";
   private static final String TEMPORARY_MULTIPLE_HOLDINGS_FIELD = "TEMPORARY_MULTIPLE_HOLDINGS_FIELD";
   public static final String ID_PATH_FIELD = "id";
+  private static final String STATISTICAL_CODE_IDS_FIELD = "statisticalCodeIds";
   private final List<String> requiredFields = Arrays.asList("status.name", "materialType.id", "permanentLoanType.id", "holdingsRecordId");
   private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
 
@@ -156,13 +158,13 @@ public class UpdateItemEventHandler implements EventHandler {
           List<PartialError> errors = new ArrayList<>();
 
           JsonArray itemsJsonArray = new JsonArray(dataImportEventPayload.getContext().get(ITEM.value()));
-          LOGGER.trace(format("handle:: Mapped Items to update: %s", dataImportEventPayload.getContext().get(ITEM.value())));
+          LOGGER.trace("handle:: Mapped Items to update: {}", dataImportEventPayload.getContext().get(ITEM.value()));
           List<Item> expiredItems = new ArrayList<>();
           for (int i = 0; i < itemsJsonArray.size(); i++) {
             Promise<Void> updatePromise = Promise.promise();
             updatedItemsRecordFutures.add(updatePromise.future());
             JsonObject mappedItemAsJson = itemsJsonArray.getJsonObject(i).getJsonObject(ITEM_PATH_FIELD);
-            LOGGER.debug(format("handle:: Updating Item with id: %s", mappedItemAsJson.getString("id")));
+            LOGGER.debug("handle:: Updating Item with id: {}", mappedItemAsJson.getString("id"));
             List<String> validationErrors = validateItem(mappedItemAsJson, requiredFields);
             if (!validationErrors.isEmpty()) {
               String msg = format("Mapped Item is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ", validationErrors,
@@ -338,6 +340,7 @@ public class UpdateItemEventHandler implements EventHandler {
   private List<String> validateItem(JsonObject itemAsJson, List<String> requiredFields) {
     List<String> errors = EventHandlingUtil.validateJsonByRequiredFields(itemAsJson, requiredFields);
     validateStatusName(itemAsJson, errors);
+    validateStatisticalCodes(itemAsJson, errors);
     return errors;
   }
 
@@ -346,6 +349,14 @@ public class UpdateItemEventHandler implements EventHandler {
     if (StringUtils.isNotBlank(statusName) && !ItemStatusName.isStatusCorrect(statusName)) {
       errors.add(format("Invalid status specified '%s'", statusName));
     }
+  }
+
+  private void validateStatisticalCodes(JsonObject itemAsJson, List<String> errors) {
+    JsonArray statCodeIdsArray = itemAsJson.getJsonArray(STATISTICAL_CODE_IDS_FIELD);
+    List<String> statCodeIds = statCodeIdsArray != null
+      ? statCodeIdsArray.stream().map(Object::toString).toList()
+      : List.of();
+    errors.addAll(ValidationUtil.validateStatisticalCodeIds(statCodeIds));
   }
 
   private Future<Void> verifyItemBarcodeUniqueness(Item item, ItemCollection itemCollection, Promise<Void> updatePromise, List<PartialError> errors) {

@@ -23,6 +23,7 @@ import org.folio.inventory.dataimport.entities.OlHoldingsAccumulativeResults;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.ItemUtil;
+import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.MappingManager;
@@ -34,11 +35,12 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.*;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
@@ -72,7 +74,6 @@ public class UpdateHoldingEventHandler implements EventHandler {
   private static final String CURRENT_EVENT_TYPE_PROPERTY = "CURRENT_EVENT_TYPE";
   private static final String CURRENT_HOLDING_PROPERTY = "CURRENT_HOLDING";
   private static final String CURRENT_NODE_PROPERTY = "CURRENT_NODE";
-  private static final String CANNOT_UPDATE_HOLDING_ERROR_MESSAGE = "Error updating Holding by holdingId '%s' and jobExecution '%s' recordId '%s' chunkId '%s' - %s, status code %s";
   private static final String CANNOT_GET_ACTUAL_ITEM_MESSAGE = "Cannot get actual Item after successfully updating holdings, by ITEM id: '%s' - '%s', status code '%s'";
   private static final String BLANK = "";
   private static final String ERRORS = "ERRORS";
@@ -134,8 +135,14 @@ public class UpdateHoldingEventHandler implements EventHandler {
           List<Future<?>> updatedHoldingsRecordFutures = new ArrayList<>();
           isPayloadConstructed = false;
           convertHoldings(dataImportEventPayload);
+
+          JsonArray holdingsArray = new JsonArray(dataImportEventPayload.getContext().get(HOLDINGS.value()));
+          Map.Entry<JsonArray, List<PartialError>> validationResult = ValidationUtil.validateHoldings(holdingsArray);
+          errors.addAll(validationResult.getValue());
+          dataImportEventPayload.getContext().put(HOLDINGS.value(), validationResult.getKey().encode());
+
           List<HoldingsRecord> list = List.of(Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()), HoldingsRecord[].class));
-          LOGGER.trace(format("handle:: Mapped holding: %s", Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value()))));
+          LOGGER.trace("handle:: Mapped holding: {}", Json.decodeValue(dataImportEventPayload.getContext().get(HOLDINGS.value())));
           HoldingsRecordCollection holdingsRecordCollection = storage.getHoldingsRecordCollection(context);
           List<HoldingsRecord> expiredHoldings = new ArrayList<>();
           for (HoldingsRecord holding : list) {
@@ -144,7 +151,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
             holdingsRecordCollection.update(holding,
               success -> {
                 try {
-                  LOGGER.info(format("handle:: Successfully updated holdings with id: %s", holding.getId()));
+                  LOGGER.info("handle:: Successfully updated holdings with id: {}, jobExecutionId: '{}' recordId: '{}' chunkId: '{}'",
+                    holding.getId(), jobExecutionId, recordId, chunkId);
                   updatedHoldingsRecord.add(holding);
                   constructDataImportEventPayload(updatePromise, dataImportEventPayload, list, context, errors);
                 } catch (Exception e) {
@@ -157,7 +165,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
                   expiredHoldings.add(holding);
                 } else {
                   errors.add(new PartialError(holding.getId() != null ? holding.getId() : BLANK, failure.getReason()));
-                  LOGGER.warn("handle:: " + format(CANNOT_UPDATE_HOLDING_ERROR_MESSAGE, holding.getId(), jobExecutionId, recordId, chunkId, failure.getReason(), failure.getStatusCode()));
+                  LOGGER.warn("handle:: Error updating Holding by holdingId '{}' and jobExecution '{}' recordId '{}' chunkId '{}' - {}, status code {}",
+                    holding.getId(), jobExecutionId, recordId, chunkId, failure.getReason(), failure.getStatusCode());
                 }
                 updatePromise.complete();
               });
@@ -277,7 +286,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
     int currentRetryNumber = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       dataImportEventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn("processOLError:: Error updating Holdings. Expired Holdings: '{} '.Current retry number = '{}'. Retry UpdateHoldingEventHandler handler...", expiredHoldings, currentRetryNumber);
+      LOGGER.warn("processOLError:: Error updating Holdings. Expired Holdings: '{}'. Current retry number = '{}'. Retry UpdateHoldingEventHandler handler...", expiredHoldings, currentRetryNumber);
       getActualHoldingsList(expiredHoldings, holdingsRecords)
         .onSuccess(actualHoldingsList -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actualHoldingsList, errors, olAccumulativeResults))
         .onFailure(e -> {
@@ -291,7 +300,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
         });
     } else {
       String errMessage = format("Current retry number %s exceeded or equal given number %s for the Holding update for jobExecutionId '%s' ", MAX_RETRIES_COUNT, currentRetryNumber, dataImportEventPayload.getJobExecutionId());
-      LOGGER.warn("processOLError:: " + errMessage);
+      LOGGER.warn("processOLError:: {}", errMessage);
       for (HoldingsRecord expiredHolding : expiredHoldings) {
         errors.add(new PartialError(expiredHolding.getId() != null ? expiredHolding.getId() : BLANK, errMessage));
       }
@@ -307,7 +316,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
     try {
       dataImportEventPayload.setCurrentNode(ObjectMapperTool.getMapper().readValue(dataImportEventPayload.getContext().get(CURRENT_NODE_PROPERTY), ProfileSnapshotWrapper.class));
     } catch (JsonProcessingException e) {
-      LOGGER.warn(format("prepareDataAndReInvokeCurrentHandler:: Cannot map from CURRENT_NODE value %s", e.getCause()));
+      LOGGER.warn("prepareDataAndReInvokeCurrentHandler:: Cannot map from CURRENT_NODE value, jobExecutionId: {}", dataImportEventPayload, e);
     }
     dataImportEventPayload.getContext().remove(CURRENT_EVENT_TYPE_PROPERTY);
     dataImportEventPayload.getContext().remove(CURRENT_NODE_PROPERTY);
@@ -344,7 +353,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
         errors.add(new PartialError(itemId != null ? itemId : BLANK, failure.getReason()));
         EventProcessingException processingException =
           new EventProcessingException(format(CANNOT_GET_ACTUAL_ITEM_MESSAGE, itemId, failure.getReason(), failure.getStatusCode()));
-        LOGGER.warn("updateDataImportEventPayloadItem:: " + processingException);
+        LOGGER.warn("updateDataImportEventPayloadItem:: ", processingException);
         updateItemPromise.complete();
       });
     }
@@ -372,7 +381,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
   }
 
   private static String getQueryParamForMultipleHoldings(List<HoldingsRecord> holdings) {
-    return holdings.stream().map(HoldingsRecord::getId).collect(Collectors.joining(" OR "));
+    return holdings.stream().map(HoldingsRecord::getId).collect(joining(" OR "));
   }
 
   private void fillPayloadAndClearLists(DataImportEventPayload dataImportEventPayload, String errorsAsStringJson, CompletableFuture<DataImportEventPayload> future, OlHoldingsAccumulativeResults olAccumulativeResults) {

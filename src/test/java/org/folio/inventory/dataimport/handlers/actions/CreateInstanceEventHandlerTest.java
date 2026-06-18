@@ -74,6 +74,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -103,6 +104,7 @@ import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
@@ -273,6 +275,33 @@ public class CreateInstanceEventHandlerTest {
             .withProfileId(mappingProfileWithNatureOfContentTerm.getId())
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfileWithNatureOfContentTerm).getMap())))));
+
+  private MappingProfile mappingProfileWithStatisticalCode = new MappingProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Mapping profile with invalid statistical code")
+    .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+    .withExistingRecordType(EntityType.INSTANCE)
+    .withMappingDetails(new MappingDetail()
+      .withMappingFields(Lists.newArrayList(
+        new MappingRule().withPath("instance.instanceTypeId").withValue("\"instanceTypeIdExpression\"").withEnabled("true"),
+        new MappingRule().withPath("instance.title").withValue("\"titleExpression\"").withEnabled("true"),
+        new MappingRule().withPath("instance.statisticalCodeIds[]").withName("statisticalCodeId").withValue("\"ebookss\"").withEnabled("true").withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
+
+  private ProfileSnapshotWrapper profileSnapshotWrapperWithStatisticalCode = new ProfileSnapshotWrapper()
+    .withId(UUID.randomUUID().toString())
+    .withProfileId(jobProfile.getId())
+    .withContentType(JOB_PROFILE)
+    .withContent(jobProfile)
+    .withChildSnapshotWrappers(List.of(
+      new ProfileSnapshotWrapper()
+        .withProfileId(actionProfile.getId())
+        .withContentType(ACTION_PROFILE)
+        .withContent(actionProfile)
+        .withChildSnapshotWrappers(List.of(
+          new ProfileSnapshotWrapper()
+            .withProfileId(mappingProfileWithStatisticalCode.getId())
+            .withContentType(MAPPING_PROFILE)
+            .withContent(JsonObject.mapFrom(mappingProfileWithStatisticalCode).getMap())))));
 
   private MappingProfile mappingProfileWithSuppressFalse = new MappingProfile()
     .withId(UUID.randomUUID().toString())
@@ -1002,6 +1031,46 @@ public class CreateInstanceEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
     future.get(10, TimeUnit.SECONDS);
+  }
+
+  @Test
+  public void shouldNotCreateInstanceIfStatisticalCodeIdIsInvalid() {
+    String instanceTypeId = "fe19bae4-da28-472b-be90-d442e2428ead";
+    String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
+    String instanceId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
+    String title = "titleValue";
+    RecordToEntity recordToInstance = RecordToEntity.builder().recordId(recordId).entityId(instanceId).build();
+
+    Reader fakeReader = Mockito.mock(Reader.class);
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+    when(instanceIdStorageService.store(any(), any(), any())).thenReturn(Future.succeededFuture(recordToInstance));
+
+    // reader returns invalid statisticalCodeIds field value
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(
+      StringValue.of(instanceTypeId),
+      StringValue.of(title),
+      ListValue.of(List.of("ebookss"))
+    );
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    HashMap<String, String> context = new HashMap<>();
+    Record incomingRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapperWithStatisticalCode.getChildSnapshotWrappers().getFirst());
+
+    CompletableFuture<DataImportEventPayload> future = createInstanceEventHandler.handle(dataImportEventPayload);
+    ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    assertThat(exception.getMessage(), containsString("Provided Statistical code(s) are not a valid values: 'ebookss'."));
   }
 
   @Test(expected = Exception.class)
