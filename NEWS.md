@@ -1,3 +1,6 @@
+## 22.1.0-SNAPSHOT 2026-mm-dd
+* Data Import profiles will map invalid statistical codes [MODINV-1391](https://folio-org.atlassian.net/browse/MODINV-1391)
+
 ## 22.0.0 2026-04-16
 * ECS: Improve logs in move holdings operation for [MODINV-1276](https://folio-org.atlassian.net/browse/MODINV-1276)
 * ECS: Moving holdings to another instance produces error if the instance does not already have an associated holdings with active affiliation [MODINV-1213](https://folio-org.atlassian.net/browse/MODINV-1213)
