@@ -47,6 +47,7 @@ SELECT COUNT(*) FROM {TENANT}_mod_source_record_storage.records_lb record_lb
 JOIN {TENANT}_mod_inventory_storage.instance inst
 ON record_lb.external_id = inst.id 
 WHERE inst.jsonb ->> 'deleted' != 'true' 
+AND inst.jsonb ->> 'source' = 'MARC'
 AND record_type = 'MARC_BIB'
   AND ((record_lb.leader_record_status = 'd' AND (record_lb.state = 'ACTUAL' OR record_lb.state = 'DELETED')) OR record_lb.state = 'DELETED');
 ```
