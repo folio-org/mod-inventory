@@ -1,3 +1,6 @@
+## 21.1.21 2026-06-24
+* Fix failing Update Ownership of Items [MODINV-1393](https://folio-org.atlassian.net/browse/MODINV-1393)
+
 ## 21.1.20 2026-04-03
 * Fix instance mapping on linked bib update [MODINV-1363](https://folio-org.atlassian.net/browse/MODINV-1363)
 
