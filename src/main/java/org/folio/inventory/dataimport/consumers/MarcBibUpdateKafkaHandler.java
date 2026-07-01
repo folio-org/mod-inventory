@@ -6,6 +6,7 @@ import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
@@ -212,8 +213,9 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   }
 
   private LinkUpdateReport mapToLinkReport(MarcBibUpdate marcBibUpdate, String errMessage) {
-    var instanceId = AdditionalFieldsUtil.getValue(marcBibUpdate.getRecord(), TAG_999, SUBFIELD_I)
-      .orElse(null);
+    var instanceId =
+      AdditionalFieldsUtil.getValueFromDataField(marcBibUpdate.getRecord(), TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I)
+        .orElse(null);
     return new LinkUpdateReport()
       .withJobId(marcBibUpdate.getJobId())
       .withInstanceId(instanceId)
