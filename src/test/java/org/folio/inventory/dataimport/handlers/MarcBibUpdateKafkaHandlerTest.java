@@ -2,6 +2,7 @@ package org.folio.inventory.dataimport.handlers;
 
 import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
 import static org.folio.inventory.KafkaUtility.checkKafkaEventSent;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
@@ -258,7 +259,7 @@ public class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
   public void shouldSendFailedLinkReportEvent(TestContext context) {
     // given
     var async = context.async();
-    var instanceId = AdditionalFieldsUtil.getValue(record, TAG_999, SUBFIELD_I)
+    var instanceId = AdditionalFieldsUtil.getValueFromDataField(record, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I)
       .orElse(null);
 
     record.setId(INVALID_INSTANCE_ID);

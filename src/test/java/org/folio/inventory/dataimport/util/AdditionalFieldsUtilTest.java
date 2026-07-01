@@ -1,21 +1,24 @@
 package org.folio.inventory.dataimport.util;
 
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_001;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addControlledFieldToMarcRecord;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addDataFieldToMarcRecord;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addFieldToMarcRecord;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.dateTime005Formatter;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getCacheStats;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValue;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValueFromControlledField;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValueFromDataField;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.isFieldExist;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.removeField;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
@@ -656,14 +659,13 @@ public class AdditionalFieldsUtilTest {
   }
 
   @Test
-  public void shouldReturnFields() {
+  public void shouldReturnValueFromDataField() {
     // given
     var id = UUID.randomUUID().toString();
-    var hrId = "in001";
     var parsedContent = """
       {
           "fields": [
-              {"001": "%s"},
+              {"001": "in001"},
               {"999": {
                   "ind1": "f",
                   "ind2": "f",
@@ -673,21 +675,91 @@ public class AdditionalFieldsUtilTest {
               }}
           ]
       }
-      """.formatted(hrId, id);
+      """.formatted(id);
     var marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedContent));
 
     // when
-    var parsedHrId = getValue(marcRecord, TAG_001, ' ');
-    var parsedId = getValue(marcRecord, TAG_999, 'i');
-    var missingField = getValue(marcRecord, TAG_005, ' ');
+    var parsedId = getValueFromDataField(marcRecord, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I);
 
     // then
-    assertTrue(parsedHrId.isPresent());
     assertTrue(parsedId.isPresent());
-    assertTrue(missingField.isEmpty());
-
-    assertEquals(hrId, parsedHrId.get());
     assertEquals(id, parsedId.get());
+  }
+
+  @Test
+  public void shouldReturnEmptyOptionalFromDataFieldWhenIndicatorsDoNotMatch() {
+    // given
+    var parsedContent = """
+      {
+          "fields": [
+              {"999": {
+                  "ind1": " ",
+                  "ind2": " ",
+                  "subfields": [
+                      {"i": "test"}
+                  ]
+              }}
+          ]
+      }
+      """;
+    var marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedContent));
+
+    // when
+    var result = getValueFromDataField(marcRecord, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I);
+
+    // then
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  public void shouldReturnEmptyOptionalFromDataFieldWhenSubfieldIsAbsent() {
+    // given
+    var parsedContent = """
+      {
+          "fields": [
+              {"999": {
+                  "ind1": "f",
+                  "ind2": "f",
+                  "subfields": [
+                      {"s": "test"}
+                  ]
+              }}
+          ]
+      }
+      """;
+    var marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedContent));
+
+    // when
+    var result = getValueFromDataField(marcRecord, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I);
+
+    // then
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  public void shouldReturnEmptyOptionalFromDataFieldWhenTagIsAbsent() {
+    // given
+    var parsedContent = """
+      {
+          "fields": [
+              {"001": "ybp7406411"},
+              {"245": {
+                  "ind1": "1",
+                  "ind2": "0",
+                  "subfields": [
+                      {"a": "titleValue"}
+                  ]
+              }}
+          ]
+      }
+      """;
+    var marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedContent));
+
+    // when
+    var result = getValueFromDataField(marcRecord, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I);
+
+    // then
+    assertTrue(result.isEmpty());
   }
 
   @Test
