@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.util;
 
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INVALID_DATA_FIELD_MSG;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_001;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
@@ -18,7 +19,7 @@ import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
@@ -760,6 +761,17 @@ public class AdditionalFieldsUtilTest {
 
     // then
     assertTrue(result.isEmpty());
+  }
+
+  @Test
+  public void shouldThrowIllegalArgumentExceptionOnGetValueFromDataFieldCallWithNonDataFieldTag() {
+    // given
+    var marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent("{}"));
+
+    // when / then
+    var exception = assertThrows(IllegalArgumentException.class,
+      () -> getValueFromDataField(marcRecord, TAG_001, INDICATOR_F, INDICATOR_F, SUBFIELD_I));
+    assertEquals(INVALID_DATA_FIELD_MSG.formatted(TAG_001), exception.getMessage());
   }
 
   @Test

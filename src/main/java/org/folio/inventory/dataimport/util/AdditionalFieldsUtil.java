@@ -51,6 +51,7 @@ import org.marc4j.marc.DataField;
 import org.marc4j.marc.MarcFactory;
 import org.marc4j.marc.Subfield;
 import org.marc4j.marc.VariableField;
+import org.marc4j.marc.impl.Verifier;
 
 /**
  * Util to work with additional fields
@@ -77,6 +78,7 @@ public final class AdditionalFieldsUtil {
   private static final String OCLC_PREFIX = "(OCoLC)";
   private static final ObjectMapper objectMapper = new ObjectMapper();
   public static final String FIELDS = "fields";
+  static final String INVALID_DATA_FIELD_MSG = "Field '%s' is not a data field.";
 
   static {
     // this function is executed when creating a new item to be saved in the cache.
@@ -339,22 +341,18 @@ public final class AdditionalFieldsUtil {
   }
 
   public static Optional<String> getValueFromDataField(Record srcRecord, String tag, char ind1, char ind2, char subfield) {
+    if (Verifier.isControlField(tag)) {
+      String msg = INVALID_DATA_FIELD_MSG.formatted(tag);
+      LOGGER.warn("getValueFromDataField:: {}", msg);
+      throw new IllegalArgumentException(msg);
+    }
+
     return Optional.ofNullable(computeMarcRecord(srcRecord))
       .stream()
-      .flatMap(marcRecord -> marcRecord.getVariableFields(tag).stream())
-      .filter(f -> f instanceof DataField df && df.getIndicator1() == ind1 && df.getIndicator2() == ind2)
-      .flatMap(field -> getFieldValue(field, subfield).stream())
-      .findFirst();
-  }
-
-  private static Optional<String> getFieldValue(VariableField field, char subfield) {
-    if (field instanceof DataField dataField) {
-      return dataField.getSubfields(subfield).stream().findFirst().map(Subfield::getData);
-    } else if (field instanceof ControlField controlField) {
-      return Optional.ofNullable(controlField.getData());
-    } else {
-      return Optional.empty();
-    }
+      .flatMap(marcRecord -> marcRecord.getDataFields().stream())
+      .filter(df -> df.getTag().equals(tag) && df.getIndicator1() == ind1 && df.getIndicator2() == ind2)
+      .findFirst()
+      .flatMap(df -> df.getSubfields(subfield).stream().findFirst().map(Subfield::getData));
   }
 
   private static MarcReader buildMarcReader(Record srcRecord) {
@@ -388,7 +386,7 @@ public final class AdditionalFieldsUtil {
         org.marc4j.marc.Record marcRecord = reader.next();
         List<VariableField> variableFields = marcRecord.getVariableFields(TAG_005);
         if(!variableFields.isEmpty()) {
-          VariableField field = variableFields.get(0);
+          VariableField field = variableFields.getFirst();
           needToUpdate = isNotProtected(fieldProtectionSettings, (ControlField) field);
         }
       }
