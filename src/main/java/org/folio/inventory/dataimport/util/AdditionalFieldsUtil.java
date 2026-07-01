@@ -68,7 +68,7 @@ public final class AdditionalFieldsUtil {
   public static final char TAG_035_SUB = 'a';
   private static final char TAG_035_IND = ' ';
   private static final String ANY_STRING = "*";
-  private static final char INDICATOR = 'f';
+  public static final char INDICATOR_F = 'f';
   public static final char SUBFIELD_I = 'i';
   public static final char SUBFIELD_L = 'l';
   private static final String HR_ID_FIELD = "hrid";
@@ -150,14 +150,14 @@ public final class AdditionalFieldsUtil {
           VariableField variableField = getSingleFieldByIndicators(marcRecord.getVariableFields(field));
           DataField dataField;
           if (variableField != null
-            && ((DataField) variableField).getIndicator1() == INDICATOR
-            && ((DataField) variableField).getIndicator2() == INDICATOR
+            && ((DataField) variableField).getIndicator1() == INDICATOR_F
+            && ((DataField) variableField).getIndicator2() == INDICATOR_F
           ) {
             dataField = (DataField) variableField;
             marcRecord.removeVariableField(variableField);
             dataField.removeSubfield(dataField.getSubfield(subfield));
           } else {
-            dataField = factory.newDataField(field, INDICATOR, INDICATOR);
+            dataField = factory.newDataField(field, INDICATOR_F, INDICATOR_F);
           }
           dataField.addSubfield(factory.newSubfield(subfield, value));
           marcRecord.addVariableField(dataField);
@@ -338,12 +338,13 @@ public final class AdditionalFieldsUtil {
     return null;
   }
 
-  public static Optional<String> getValue(Record srcRecord, String tag, char subfield) {
-      return Optional.ofNullable(computeMarcRecord(srcRecord))
-        .stream()
-        .flatMap(marcRecord -> marcRecord.getVariableFields(tag).stream())
-        .flatMap(field -> getFieldValue(field, subfield).stream())
-        .findFirst();
+  public static Optional<String> getValueFromDataField(Record srcRecord, String tag, char ind1, char ind2, char subfield) {
+    return Optional.ofNullable(computeMarcRecord(srcRecord))
+      .stream()
+      .flatMap(marcRecord -> marcRecord.getVariableFields(tag).stream())
+      .filter(f -> f instanceof DataField df && df.getIndicator1() == ind1 && df.getIndicator2() == ind2)
+      .flatMap(field -> getFieldValue(field, subfield).stream())
+      .findFirst();
   }
 
   private static Optional<String> getFieldValue(VariableField field, char subfield) {
@@ -366,7 +367,7 @@ public final class AdditionalFieldsUtil {
       return null;
     }
     return list.stream()
-      .filter(f -> ((DataField) f).getIndicator1() == INDICATOR && ((DataField) f).getIndicator2() == INDICATOR)
+      .filter(f -> ((DataField) f).getIndicator1() == INDICATOR_F && ((DataField) f).getIndicator2() == INDICATOR_F)
       .findFirst()
       .orElse(null);
   }
