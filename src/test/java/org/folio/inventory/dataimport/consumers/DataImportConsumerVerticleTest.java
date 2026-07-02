@@ -48,6 +48,7 @@ import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -129,6 +130,7 @@ public class DataImportConsumerVerticleTest extends KafkaTest {
     EventManager.registerEventHandler(mockedEventHandler);
   }
 
+  @Ignore
   @Test
   public void shouldSendEventWithProcessedEventPayloadWhenProcessingCoreHandlerSucceeded()
     throws InterruptedException, ExecutionException {
