@@ -51,6 +51,7 @@ public final class KafkaUtility {
   }
 
   public static void startKafka() {
+    TOPIC_NEXT_OFFSETS.clear();
     KAFKA_CONTAINER.start();
 
     logger.info("starting Kafka host={} port={}",
@@ -68,6 +69,7 @@ public final class KafkaUtility {
   }
 
   public static void stopKafka() {
+    TOPIC_NEXT_OFFSETS.clear();
     if (KAFKA_CONTAINER.isRunning()) {
       logger.info("stopping Kafka host={} port={}",
         KAFKA_CONTAINER.getHost(), KAFKA_CONTAINER.getFirstMappedPort());
