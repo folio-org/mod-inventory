@@ -23,6 +23,7 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.unit.Async;
@@ -31,6 +32,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -152,7 +154,14 @@ public class DataImportConsumerVerticleTest extends KafkaTest {
       DI_INCOMING_MARC_BIB_RECORD_PARSED.value(), event.getId(), Json.encode(event));
 
     // then
-    var observedValues = checkKafkaEventSent(TENANT_ID, DI_COMPLETED.value(), 30000);
+    List<ConsumerRecord<String, String>> observedValues = List.of();
+    long deadline = System.currentTimeMillis() + 30_000;
+    while (observedValues.isEmpty() && System.currentTimeMillis() < deadline) {
+      observedValues = checkKafkaEventSent(TENANT_ID, DI_COMPLETED.value(), 2_000);
+      if (observedValues.isEmpty()) {
+        Thread.sleep(200);
+      }
+    }
 
     assertEquals(1, observedValues.size());
 
