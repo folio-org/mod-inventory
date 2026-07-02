@@ -689,7 +689,6 @@ public class AdditionalFieldsUtilTest {
 
   @Test
   public void shouldReturnEmptyOptionalFromDataFieldWhenIndicatorsDoNotMatch() {
-    // given
     var parsedContent = """
       {
           "fields": [
@@ -703,18 +702,11 @@ public class AdditionalFieldsUtilTest {
           ]
       }
       """;
-    var marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedContent));
-
-    // when
-    var result = getValueFromDataField(marcRecord, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I);
-
-    // then
-    assertTrue(result.isEmpty());
+    shouldReturnEmptyOptional(parsedContent);
   }
 
   @Test
   public void shouldReturnEmptyOptionalFromDataFieldWhenSubfieldIsAbsent() {
-    // given
     var parsedContent = """
       {
           "fields": [
@@ -728,18 +720,11 @@ public class AdditionalFieldsUtilTest {
           ]
       }
       """;
-    var marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedContent));
-
-    // when
-    var result = getValueFromDataField(marcRecord, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I);
-
-    // then
-    assertTrue(result.isEmpty());
+    shouldReturnEmptyOptional(parsedContent);
   }
 
   @Test
   public void shouldReturnEmptyOptionalFromDataFieldWhenTagIsAbsent() {
-    // given
     var parsedContent = """
       {
           "fields": [
@@ -754,6 +739,11 @@ public class AdditionalFieldsUtilTest {
           ]
       }
       """;
+    shouldReturnEmptyOptional(parsedContent);
+  }
+
+  private void shouldReturnEmptyOptional(String parsedContent) {
+    // given
     var marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedContent));
 
     // when

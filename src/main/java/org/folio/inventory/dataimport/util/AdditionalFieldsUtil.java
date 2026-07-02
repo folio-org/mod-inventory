@@ -340,6 +340,22 @@ public final class AdditionalFieldsUtil {
     return null;
   }
 
+  /**
+   * Reads the value of a subfield from the first matching data field in a
+   * MARC record, identified by {@code tag} and indicator values.
+   *
+   * @param srcRecord record containing the parsed MARC content to retrieve data
+   * @param tag       three-character MARC tag of the data field (must not be
+   *                  a control field tag, i.e. must not start with "00")
+   * @param ind1      first indicator
+   * @param ind2      second indicator
+   * @param subfield  subfield code whose data value should be returned
+   * @return {@link Optional} containing the data of the first matching
+   *         subfield, or an empty {@link Optional} if no matching field or
+   *         subfield is found
+   * @throws IllegalArgumentException if {@code tag} identifies a control
+   *                                  instead of a data field
+   */
   public static Optional<String> getValueFromDataField(Record srcRecord, String tag, char ind1, char ind2, char subfield) {
     if (Verifier.isControlField(tag)) {
       String msg = INVALID_DATA_FIELD_MSG.formatted(tag);
@@ -518,8 +534,8 @@ public final class AdditionalFieldsUtil {
    */
   private static boolean isFieldContainsValue(VariableField field, char subfield, String value) {
     boolean isContains = false;
-    if (field instanceof DataField) {
-      for (Subfield sub : ((DataField) field).getSubfields(subfield)) {
+    if (field instanceof DataField dataField) {
+      for (Subfield sub : dataField.getSubfields(subfield)) {
         if (isNotEmpty(sub.getData()) && sub.getData().contains(value.trim())) {
           isContains = true;
           break;
