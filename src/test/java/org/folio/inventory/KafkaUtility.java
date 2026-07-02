@@ -1,6 +1,5 @@
 package org.folio.inventory;
 
-import liquibase.repackaged.org.apache.commons.collections4.IteratorUtils;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -9,6 +8,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.logging.log4j.LogManager;
@@ -18,11 +18,14 @@ import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 
 import static java.time.Duration.ofMinutes;
@@ -33,6 +36,9 @@ public final class KafkaUtility {
   private static final Logger logger = LogManager.getLogger();
   public static final String KAFKA_ENV_VALUE = "env";
   public static final int MAX_REQUEST_SIZE = 1048576;
+  private static final long DEFAULT_CHECK_TIMEOUT_MS = 3000L;
+  private static final long ASSIGNMENT_POLL_INTERVAL_MS = 100L;
+  private static final ConcurrentMap<String, ConcurrentMap<TopicPartition, Long>> TOPIC_NEXT_OFFSETS = new ConcurrentHashMap<>();
 
   public static final DockerImageName IMAGE_NAME
     = DockerImageName.parse("apache/kafka-native:3.8.0");
@@ -74,27 +80,31 @@ public final class KafkaUtility {
   }
 
   public static List<ConsumerRecord<String, String>> checkKafkaEventSent(String tenant, String eventType) {
-    return checkKafkaEventSent(tenant, eventType, 3000);
+    return checkKafkaEventSent(tenant, eventType, DEFAULT_CHECK_TIMEOUT_MS);
   }
 
   public static List<ConsumerRecord<String, String>> checkKafkaEventSent(String tenant, String eventType, long timeout) {
     Properties consumerProperties = getConsumerProperties();
-    ConsumerRecords<String, String> records;
     try (KafkaConsumer<String, String> kafkaConsumer = new KafkaConsumer<>(consumerProperties)) {
-      kafkaConsumer.subscribe(Collections.singletonList(formatToKafkaTopicName(tenant, eventType)));
+      String topicName = formatToKafkaTopicName(tenant, eventType);
+      kafkaConsumer.subscribe(Collections.singletonList(topicName));
 
-      // Wait for partition assignment before seeking
-      await()
-        .atMost(Duration.ofMillis(timeout))
-        .pollInterval(Duration.ofMillis(100))
-        .until(() -> !kafkaConsumer.assignment().isEmpty());
+      if (!waitForAssignment(kafkaConsumer, timeout)) {
+        return List.of();
+      }
 
-      // Now seek to beginning after partitions are assigned
-      kafkaConsumer.seekToBeginning(kafkaConsumer.assignment());
+      seekToNextOffsets(kafkaConsumer, topicName);
 
-      records = kafkaConsumer.poll(Duration.ofMillis(timeout));
+      ConsumerRecords<String, String> records = pollUntilAnyRecords(kafkaConsumer, timeout);
+      if (records.isEmpty()) {
+        return List.of();
+      }
+
+      rememberNextOffsets(topicName, records);
+      List<ConsumerRecord<String, String>> result = new ArrayList<>();
+      records.forEach(result::add);
+      return result;
     }
-    return IteratorUtils.toList(records.iterator()).stream().toList();
   }
 
   public static RecordMetadata sendEvent(Map<String, String> kafkaHeaders, String tenantId,
@@ -124,11 +134,55 @@ public final class KafkaUtility {
     consumerProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
     consumerProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
     consumerProperties.put(ConsumerConfig.GROUP_ID_CONFIG, "test-group-" + UUID.randomUUID());
+    consumerProperties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
     consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
     consumerProperties.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 30000); // 30 seconds
     consumerProperties.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, 10000); // 10 seconds
     consumerProperties.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 300000); // 5 minutes
     return consumerProperties;
+  }
+
+  private static boolean waitForAssignment(KafkaConsumer<String, String> kafkaConsumer, long timeoutMs) {
+    long deadline = System.nanoTime() + Duration.ofMillis(timeoutMs).toNanos();
+    while (kafkaConsumer.assignment().isEmpty() && System.nanoTime() < deadline) {
+      kafkaConsumer.poll(Duration.ofMillis(ASSIGNMENT_POLL_INTERVAL_MS));
+    }
+    return !kafkaConsumer.assignment().isEmpty();
+  }
+
+  private static void seekToNextOffsets(KafkaConsumer<String, String> kafkaConsumer, String topicName) {
+    ConcurrentMap<TopicPartition, Long> nextOffsets = TOPIC_NEXT_OFFSETS.computeIfAbsent(topicName,
+      ignored -> new ConcurrentHashMap<>());
+    for (TopicPartition topicPartition : kafkaConsumer.assignment()) {
+      Long nextOffset = nextOffsets.get(topicPartition);
+      if (nextOffset == null) {
+        kafkaConsumer.seekToBeginning(Collections.singleton(topicPartition));
+      } else {
+        kafkaConsumer.seek(topicPartition, nextOffset);
+      }
+    }
+  }
+
+  private static ConsumerRecords<String, String> pollUntilAnyRecords(KafkaConsumer<String, String> kafkaConsumer,
+                                                                      long timeoutMs) {
+    long deadline = System.nanoTime() + Duration.ofMillis(timeoutMs).toNanos();
+    while (System.nanoTime() < deadline) {
+      ConsumerRecords<String, String> records = kafkaConsumer.poll(Duration.ofMillis(ASSIGNMENT_POLL_INTERVAL_MS));
+      if (!records.isEmpty()) {
+        return records;
+      }
+    }
+    return ConsumerRecords.empty();
+  }
+
+  private static void rememberNextOffsets(String topicName, ConsumerRecords<String, String> records) {
+    ConcurrentMap<TopicPartition, Long> nextOffsets = TOPIC_NEXT_OFFSETS.computeIfAbsent(topicName,
+      ignored -> new ConcurrentHashMap<>());
+    for (TopicPartition topicPartition : records.partitions()) {
+      List<ConsumerRecord<String, String>> partitionRecords = records.records(topicPartition);
+      ConsumerRecord<String, String> lastRecord = partitionRecords.get(partitionRecords.size() - 1);
+      nextOffsets.put(topicPartition, lastRecord.offset() + 1);
+    }
   }
 
   private static Properties getProducerProperties() {
