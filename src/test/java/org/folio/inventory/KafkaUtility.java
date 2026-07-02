@@ -80,9 +80,17 @@ public final class KafkaUtility {
     Properties consumerProperties = getConsumerProperties();
     ConsumerRecords<String, String> records;
     try (KafkaConsumer<String, String> kafkaConsumer = new KafkaConsumer<>(consumerProperties)) {
+      kafkaConsumer.subscribe(Collections.singletonList(formatToKafkaTopicName(tenant, eventType)));
+
+      // Wait for partition assignment before seeking
+      await()
+        .atMost(Duration.ofMillis(timeout))
+        .pollInterval(Duration.ofMillis(100))
+        .until(() -> !kafkaConsumer.assignment().isEmpty());
+
+      // Now seek to beginning after partitions are assigned
       kafkaConsumer.seekToBeginning(kafkaConsumer.assignment());
 
-      kafkaConsumer.subscribe(Collections.singletonList(formatToKafkaTopicName(tenant, eventType)));
       records = kafkaConsumer.poll(Duration.ofMillis(timeout));
     }
     return IteratorUtils.toList(records.iterator()).stream().toList();
@@ -116,6 +124,9 @@ public final class KafkaUtility {
     consumerProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
     consumerProperties.put(ConsumerConfig.GROUP_ID_CONFIG, "test-group");
     consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+    consumerProperties.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 30000); // 30 seconds
+    consumerProperties.put(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG, 10000); // 10 seconds
+    consumerProperties.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 300000); // 5 minutes
     return consumerProperties;
   }
 
