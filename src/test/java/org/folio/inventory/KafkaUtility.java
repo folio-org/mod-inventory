@@ -155,9 +155,17 @@ public final class KafkaUtility {
   private static void seekToNextOffsets(KafkaConsumer<String, String> kafkaConsumer, String topicName) {
     ConcurrentMap<TopicPartition, Long> nextOffsets = TOPIC_NEXT_OFFSETS.computeIfAbsent(topicName,
       ignored -> new ConcurrentHashMap<>());
-    for (TopicPartition topicPartition : kafkaConsumer.assignment()) {
+    var assignment = kafkaConsumer.assignment();
+    var beginningOffsets = kafkaConsumer.beginningOffsets(assignment);
+    var endOffsets = kafkaConsumer.endOffsets(assignment);
+
+    for (TopicPartition topicPartition : assignment) {
       Long nextOffset = nextOffsets.get(topicPartition);
-      if (nextOffset == null) {
+      long beginningOffset = beginningOffsets.getOrDefault(topicPartition, 0L);
+      long endOffset = endOffsets.getOrDefault(topicPartition, beginningOffset);
+      boolean cachedOffsetOutOfRange = nextOffset != null && (nextOffset < beginningOffset || nextOffset > endOffset);
+
+      if (nextOffset == null || cachedOffsetOutOfRange) {
         kafkaConsumer.seekToBeginning(Collections.singleton(topicPartition));
       } else {
         kafkaConsumer.seek(topicPartition, nextOffset);
