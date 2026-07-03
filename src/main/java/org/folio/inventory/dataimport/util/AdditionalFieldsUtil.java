@@ -51,6 +51,7 @@ import org.marc4j.marc.DataField;
 import org.marc4j.marc.MarcFactory;
 import org.marc4j.marc.Subfield;
 import org.marc4j.marc.VariableField;
+import org.marc4j.marc.impl.Verifier;
 
 /**
  * Util to work with additional fields
@@ -68,7 +69,7 @@ public final class AdditionalFieldsUtil {
   public static final char TAG_035_SUB = 'a';
   private static final char TAG_035_IND = ' ';
   private static final String ANY_STRING = "*";
-  private static final char INDICATOR = 'f';
+  public static final char INDICATOR_F = 'f';
   public static final char SUBFIELD_I = 'i';
   public static final char SUBFIELD_L = 'l';
   private static final String HR_ID_FIELD = "hrid";
@@ -77,6 +78,7 @@ public final class AdditionalFieldsUtil {
   private static final String OCLC_PREFIX = "(OCoLC)";
   private static final ObjectMapper objectMapper = new ObjectMapper();
   public static final String FIELDS = "fields";
+  static final String INVALID_DATA_FIELD_MSG = "Field '%s' is not a data field.";
 
   static {
     // this function is executed when creating a new item to be saved in the cache.
@@ -150,14 +152,14 @@ public final class AdditionalFieldsUtil {
           VariableField variableField = getSingleFieldByIndicators(marcRecord.getVariableFields(field));
           DataField dataField;
           if (variableField != null
-            && ((DataField) variableField).getIndicator1() == INDICATOR
-            && ((DataField) variableField).getIndicator2() == INDICATOR
+            && ((DataField) variableField).getIndicator1() == INDICATOR_F
+            && ((DataField) variableField).getIndicator2() == INDICATOR_F
           ) {
             dataField = (DataField) variableField;
             marcRecord.removeVariableField(variableField);
             dataField.removeSubfield(dataField.getSubfield(subfield));
           } else {
-            dataField = factory.newDataField(field, INDICATOR, INDICATOR);
+            dataField = factory.newDataField(field, INDICATOR_F, INDICATOR_F);
           }
           dataField.addSubfield(factory.newSubfield(subfield, value));
           marcRecord.addVariableField(dataField);
@@ -338,22 +340,35 @@ public final class AdditionalFieldsUtil {
     return null;
   }
 
-  public static Optional<String> getValue(Record srcRecord, String tag, char subfield) {
-      return Optional.ofNullable(computeMarcRecord(srcRecord))
-        .stream()
-        .flatMap(marcRecord -> marcRecord.getVariableFields(tag).stream())
-        .flatMap(field -> getFieldValue(field, subfield).stream())
-        .findFirst();
-  }
-
-  private static Optional<String> getFieldValue(VariableField field, char subfield) {
-    if (field instanceof DataField dataField) {
-      return dataField.getSubfields(subfield).stream().findFirst().map(Subfield::getData);
-    } else if (field instanceof ControlField controlField) {
-      return Optional.ofNullable(controlField.getData());
-    } else {
-      return Optional.empty();
+  /**
+   * Reads the value of a subfield from the first matching data field in a
+   * MARC record, identified by {@code tag} and indicator values.
+   *
+   * @param srcRecord record containing the parsed MARC content to retrieve data
+   * @param tag       three-character MARC tag of the data field (must not be
+   *                  a control field tag, i.e. must not start with "00")
+   * @param ind1      first indicator
+   * @param ind2      second indicator
+   * @param subfield  subfield code whose data value should be returned
+   * @return {@link Optional} containing the data of the first matching
+   *         subfield, or an empty {@link Optional} if no matching field or
+   *         subfield is found
+   * @throws IllegalArgumentException if {@code tag} identifies a control
+   *                                  instead of a data field
+   */
+  public static Optional<String> getValueFromDataField(Record srcRecord, String tag, char ind1, char ind2, char subfield) {
+    if (Verifier.isControlField(tag)) {
+      String msg = INVALID_DATA_FIELD_MSG.formatted(tag);
+      LOGGER.warn("getValueFromDataField:: {}", msg);
+      throw new IllegalArgumentException(msg);
     }
+
+    return Optional.ofNullable(computeMarcRecord(srcRecord))
+      .stream()
+      .flatMap(marcRecord -> marcRecord.getDataFields().stream())
+      .filter(df -> df.getTag().equals(tag) && df.getIndicator1() == ind1 && df.getIndicator2() == ind2)
+      .findFirst()
+      .flatMap(df -> df.getSubfields(subfield).stream().findFirst().map(Subfield::getData));
   }
 
   private static MarcReader buildMarcReader(Record srcRecord) {
@@ -366,7 +381,7 @@ public final class AdditionalFieldsUtil {
       return null;
     }
     return list.stream()
-      .filter(f -> ((DataField) f).getIndicator1() == INDICATOR && ((DataField) f).getIndicator2() == INDICATOR)
+      .filter(f -> ((DataField) f).getIndicator1() == INDICATOR_F && ((DataField) f).getIndicator2() == INDICATOR_F)
       .findFirst()
       .orElse(null);
   }
@@ -387,7 +402,7 @@ public final class AdditionalFieldsUtil {
         org.marc4j.marc.Record marcRecord = reader.next();
         List<VariableField> variableFields = marcRecord.getVariableFields(TAG_005);
         if(!variableFields.isEmpty()) {
-          VariableField field = variableFields.get(0);
+          VariableField field = variableFields.getFirst();
           needToUpdate = isNotProtected(fieldProtectionSettings, (ControlField) field);
         }
       }
@@ -519,8 +534,8 @@ public final class AdditionalFieldsUtil {
    */
   private static boolean isFieldContainsValue(VariableField field, char subfield, String value) {
     boolean isContains = false;
-    if (field instanceof DataField) {
-      for (Subfield sub : ((DataField) field).getSubfields(subfield)) {
+    if (field instanceof DataField dataField) {
+      for (Subfield sub : dataField.getSubfields(subfield)) {
         if (isNotEmpty(sub.getData()) && sub.getData().contains(value.trim())) {
           isContains = true;
           break;

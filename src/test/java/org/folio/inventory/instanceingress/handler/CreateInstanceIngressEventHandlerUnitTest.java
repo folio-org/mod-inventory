@@ -6,6 +6,7 @@ import static io.vertx.core.buffer.Buffer.buffer;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_L;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
@@ -389,8 +390,10 @@ public class CreateInstanceIngressEventHandlerUnitTest {
     var recordSentToSRS = recordCaptor.getValue();
     assertThat(recordSentToSRS.getId()).isEqualTo(event.getEventPayload().getSourceRecordIdentifier());
     assertThat(recordSentToSRS.getRecordType()).isEqualTo(Record.RecordType.MARC_BIB);
-    assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, SUBFIELD_I)).hasValue(instance.getId());
-    assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, SUBFIELD_L)).hasValue(linkedDataId);
+    assertThat(AdditionalFieldsUtil.getValueFromDataField(recordSentToSRS, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I))
+      .hasValue(instance.getId());
+    assertThat(AdditionalFieldsUtil.getValueFromDataField(recordSentToSRS, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_L))
+      .hasValue(linkedDataId);
   }
 
   private String metadataCacheKey() {
