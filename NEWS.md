@@ -1,3 +1,6 @@
+## 22.0.2 2026-05-25
+* Importing Records from BNE z39.50 - record not available error [MODINV-1395](https://folio-org.atlassian.net/browse/MODINV-1395)
+
 ## 22.0.1 2026-05-25
 * Fixed an issue where the Instance source was updated to `MARC` even when SRS record creation failed [MODINV-1373](https://folio-org.atlassian.net/browse/MODINV-1373)
 

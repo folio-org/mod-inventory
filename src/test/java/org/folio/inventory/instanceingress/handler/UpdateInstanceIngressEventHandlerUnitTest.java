@@ -6,9 +6,11 @@ import static io.vertx.core.buffer.Buffer.buffer;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_L;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValueFromDataField;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
 import static org.folio.rest.jaxrs.model.InstanceIngressPayload.SourceType.LINKED_DATA;
 import static org.junit.Assert.assertEquals;
@@ -39,7 +41,6 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.services.SnapshotService;
-import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.instanceingress.InstanceIngressEventConsumer;
@@ -574,9 +575,9 @@ public class UpdateInstanceIngressEventHandlerUnitTest {
     assertThat(recordSentToSRS.getId()).isNotEqualTo(initialSrsId);
     assertThat(recordSentToSRS.getMatchedId()).isEqualTo(initialSrsId);
     assertThat(recordSentToSRS.getRecordType()).isEqualTo(Record.RecordType.MARC_BIB);
-    assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, SUBFIELD_I)).hasValue(instance.getId());
-    assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, SUBFIELD_L)).hasValue(linkedDataId);
-    assertThat(AdditionalFieldsUtil.getValue(recordSentToSRS, TAG_999, 's')).hasValue(initialSrsId);
+    assertThat(getValueFromDataField(recordSentToSRS, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I)).hasValue(instance.getId());
+    assertThat(getValueFromDataField(recordSentToSRS, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_L)).hasValue(linkedDataId);
+    assertThat(getValueFromDataField(recordSentToSRS, TAG_999, INDICATOR_F, INDICATOR_F, 's')).hasValue(initialSrsId);
   }
 
   private String metadataCacheKey() {
