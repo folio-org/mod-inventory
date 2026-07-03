@@ -9,6 +9,7 @@ import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.reorderMarcRecordFields;
@@ -60,7 +61,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   private static final String PAYLOAD_HAS_NO_DATA_MSG = "Failed to handle event payload - event payload context does not contain MARC_BIBLIOGRAPHIC data";
   static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Instance requires a mapping profile by jobExecutionId: '%s' and recordId: '%s'";
   private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId: '%s'. RecordId: '%s', chunkId: '%s' ";
-  private static final String INSTANCE_CREATION_999_ERROR_MESSAGE = "A new Instance was not created because the incoming record already contained a 999ff$s or 999ff$i field";
+  private static final String INSTANCE_CREATION_999_ERROR_MESSAGE = "A new Instance was not created because the incoming record already contains a 999ff$s or 999ff$i field";
   private static final String RECORD_ID_HEADER = "recordId";
   private static final String CHUNK_ID_HEADER = "chunkId";
   public static final String DISCOVERY_SUPPRESS_PROPERTY = "discoverySuppress";
@@ -101,7 +102,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
       Record targetRecord = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
       var sourceContent = targetRecord.getParsedRecord().getContent().toString();
 
-      if (!Boolean.parseBoolean(payloadContext.get("acceptInstanceId")) && AdditionalFieldsUtil.getValue(targetRecord, TAG_999, SUBFIELD_I).isPresent()) {
+      if (!Boolean.parseBoolean(payloadContext.get("acceptInstanceId")) && contains999ffSubfieldIValue(targetRecord)) {
         LOGGER.error(INSTANCE_CREATION_999_ERROR_MESSAGE);
         return CompletableFuture.failedFuture(new EventProcessingException(INSTANCE_CREATION_999_ERROR_MESSAGE));
       }
@@ -182,6 +183,10 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     return future;
   }
 
+  private boolean contains999ffSubfieldIValue(Record targetRecord) {
+    return AdditionalFieldsUtil.getValueFromDataField(targetRecord, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I).isPresent();
+  }
+
   private JsonObject prepareInstance(DataImportEventPayload dataImportEventPayload, String instanceId, String jobExecutionId) {
     JsonObject instanceAsJson = new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value()));
     if (instanceAsJson.getJsonObject(INSTANCE_PATH) != null) {
@@ -235,7 +240,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
           LOGGER.info("Duplicated event received by InstanceId: {}. Ignoring...", instance.getId());
           promise.fail(new DuplicateEventException(format("Duplicated event by Instance id: %s", instance.getId())));
         } else {
-          LOGGER.error(format("Error posting Instance by instanceId:'%s' cause %s, status code %s", instance.getId(), failure.getReason(), failure.getStatusCode()));
+          LOGGER.error("Error posting Instance by instanceId:'{}' cause {}, status code {}", instance.getId(), failure.getReason(), failure.getStatusCode());
           promise.fail(failure.getReason());
         }
       });
