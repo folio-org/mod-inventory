@@ -1,5 +1,5 @@
-## 21.1.22 2026-06-24
-* Importing Records from BNE z39.50 - record not available error [MODINV-1395](https://folio-org.atlassian.net/browse/MODINV-1395)
+## 21.1.22 2026-07-08
+* Importing Records from BNE z39.50 - record not available error (MODINV-1395) [MODINV-1397](https://folio-org.atlassian.net/browse/MODINV-1397)
 
 ## 21.1.21 2026-06-24
 * Fix failing Update Ownership of Items [MODINV-1393](https://folio-org.atlassian.net/browse/MODINV-1393)
