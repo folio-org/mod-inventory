@@ -7,6 +7,7 @@ import api.support.InstanceApiClient;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.HoldingsRecordUpdateOwnershipRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
+import api.support.http.StorageInterfaceUrls;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -57,6 +58,7 @@ import static support.matchers.ResponseMatchers.hasValidationError;
 public class HoldingsUpdateOwnershipApiTest extends ApiTests {
   private static final String INSTANCE_ID = "instanceId";
   private static final String ID = "id";
+  private static final String MAIN_LIBRARY_LOCATION_CODE = "NU/JC/DL/ML";
 
   @Before
   public void initConsortia() throws Exception {
@@ -790,6 +792,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     final String sourceSrsId = srsRecordToCreate.getString("id");
     sourceRecordStorageClient.create(srsRecordToCreate);
 
+    ensureCollegeTenantLocationExists(getMainLibraryLocation());
+
     JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
       new JsonArray(List.of(holdingsId.toString())), UUID.fromString(getMainLibraryLocation()), ApiTestSuite.COLLEGE_TENANT_ID).create();
 
@@ -819,6 +823,14 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertNotEquals(sourceSrsId, targetSrsRecord.getString("id"));
     assertEquals(sourceSrsId, targetSrsRecord.getString("matchedId"));
     assertEquals("MARC_HOLDING", targetSrsRecord.getString("recordType"));
+
+    JsonObject parsedRecord = targetSrsRecord.getJsonObject("parsedRecord");
+    JsonObject parsedContent = getParsedContent(parsedRecord);
+
+    List<String> field852bValues = getField852bValues(parsedContent);
+    assertEquals(1, field852bValues.size());
+    assertEquals(MAIN_LIBRARY_LOCATION_CODE, field852bValues.getFirst());
+    assertNotEquals("OLD_LOCATION_CODE", field852bValues.getFirst());
   }
 
   @Test
@@ -1181,12 +1193,69 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
         .put("content", new JsonObject()
           .put("leader", "00000nu  a2200000   4500")
           .put("fields", new JsonArray()
+            .add(new JsonObject().put("001", holdingsId.toString()))
             .add(new JsonObject().put("852", new JsonObject()
-              .put("subfields", new JsonArray().add(new JsonObject().put("h", "Some call number")))
+              .put("subfields", new JsonArray()
+                .add(new JsonObject().put("b", "OLD_LOCATION_CODE"))
+                .add(new JsonObject().put("h", "Some call number")))
               .put("ind1", " ")
               .put("ind2", " "))))
         )
       );
+  }
+
+
+  private List<String> getField852bValues(JsonObject parsedContent) {
+    List<String> values = new java.util.ArrayList<>();
+    JsonArray fields = parsedContent.getJsonArray("fields", new JsonArray());
+    for (int i = 0; i < fields.size(); i++) {
+      JsonObject field = fields.getJsonObject(i);
+      if (field == null || !field.containsKey("852")) {
+        continue;
+      }
+
+      JsonObject dataField = field.getJsonObject("852");
+      JsonArray subfields = dataField.getJsonArray("subfields", new JsonArray());
+      for (int j = 0; j < subfields.size(); j++) {
+        JsonObject subfield = subfields.getJsonObject(j);
+        if (subfield != null && subfield.containsKey("b")) {
+          values.add(subfield.getString("b"));
+        }
+      }
+    }
+    return values;
+  }
+
+  private JsonObject getParsedContent(JsonObject parsedRecord) {
+    Object content = parsedRecord.getValue("content");
+    if (content instanceof JsonObject contentJson) {
+      return contentJson;
+    }
+    if (content instanceof String contentString) {
+      return new JsonObject(contentString);
+    }
+    throw new IllegalStateException("Unexpected parsedRecord.content type: " + (content == null ? "null" : content.getClass().getName()));
+  }
+
+  private void ensureCollegeTenantLocationExists(String locationId)
+    throws ExecutionException, InterruptedException, TimeoutException {
+    JsonObject locationBody = new JsonObject()
+      .put("id", locationId)
+      .put("name", "Main Library (college test fixture)")
+      .put("code", MAIN_LIBRARY_LOCATION_CODE)
+      .put("institutionId", UUID.randomUUID().toString())
+      .put("campusId", UUID.randomUUID().toString())
+      .put("libraryId", UUID.randomUUID().toString())
+      .put("primaryServicePoint", UUID.randomUUID().toString());
+
+    Response createLocationResponse = collegeOkapiClient
+      .post(StorageInterfaceUrls.locationsStorageUrl(""), locationBody)
+      .toCompletableFuture()
+      .get(30, TimeUnit.SECONDS);
+
+    // 201 means created; 422 means already exists in this test environment.
+    assertTrue(createLocationResponse.getStatusCode() == HttpStatus.SC_CREATED
+      || createLocationResponse.getStatusCode() == HttpStatus.SC_UNPROCESSABLE_ENTITY);
   }
 
   private Response updateHoldingsRecordsOwnership(JsonObject holdingsRecordUpdateOwnershipRequestBody) throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
