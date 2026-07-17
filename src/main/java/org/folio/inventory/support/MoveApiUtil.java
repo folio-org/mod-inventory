@@ -9,6 +9,7 @@ import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.NotUpdatedEntity;
 import org.folio.UpdateOwnershipResponse;
+import org.folio.inventory.common.Context;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CqlQuery;
@@ -17,9 +18,11 @@ import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static org.folio.inventory.support.http.server.JsonResponse.badRequest;
 import static org.folio.inventory.support.http.server.JsonResponse.success;
@@ -31,6 +34,7 @@ public final class MoveApiUtil {
   public static final String BOUND_WITH_PARTS_RECORDS_PROPERTY = "boundWithParts";
   public static final String TARGET_TENANT_ID = "targetTenantId";
   public static final String ITEM_STORAGE = "/item-storage/items";
+  public static final String LOCATION_STORAGE = "/locations";
   public static final String ITEMS_PROPERTY = "items";
   private static final String HOLDINGS_ITEMS_PROPERTY = "holdingsItems";
   private static final String BARE_HOLDINGS_ITEMS_PROPERTY = "bareHoldingsItems";
@@ -43,6 +47,12 @@ public final class MoveApiUtil {
         String.format("Failed to contact storage module: %s", exception.toString())));
   }
 
+  public static OkapiHttpClient createHttpClient(HttpClient client, Context context,
+                                                 Consumer<Throwable> exceptionHandler) throws MalformedURLException {
+    return new OkapiHttpClient(WebClient.wrap(client), URI.create(context.getOkapiLocation()).toURL(),
+      context.getTenantId(), context.getToken(), context.getUserId(), context.getRequestId(), exceptionHandler);
+  }
+
 
   private static MultipleRecordsFetchClient createFetchClient(CollectionResourceClient client, String propertyName) {
     return MultipleRecordsFetchClient.builder()
@@ -52,10 +62,10 @@ public final class MoveApiUtil {
       .build();
   }
 
-  public static CollectionResourceClient createStorageClient(OkapiHttpClient client, WebContext context, String storageUrl)
+  public static CollectionResourceClient createStorageClient(OkapiHttpClient client, Context context, String storageUrl)
     throws MalformedURLException {
 
-    return new CollectionResourceClient(client, new URL(context.getOkapiLocation() + storageUrl));
+    return new CollectionResourceClient(client, URI.create(context.getOkapiLocation() + storageUrl).toURL());
   }
 
   public static CollectionResourceClient createHoldingsStorageClient(OkapiHttpClient client, WebContext context)
@@ -71,6 +81,11 @@ public final class MoveApiUtil {
   public static CollectionResourceClient createItemStorageClient(OkapiHttpClient client, WebContext context)
     throws MalformedURLException {
     return createStorageClient(client, context, ITEM_STORAGE);
+  }
+
+  public static CollectionResourceClient createLocationStorageClient(OkapiHttpClient client, Context context)
+    throws MalformedURLException {
+    return createStorageClient(client, context, LOCATION_STORAGE);
   }
 
   public static MultipleRecordsFetchClient createHoldingsRecordsFetchClient(CollectionResourceClient client) {

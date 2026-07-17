@@ -22,10 +22,8 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.client.WebClient;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -66,7 +64,6 @@ import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.MoveApiUtil;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.jaxrs.model.Snapshot;
@@ -91,7 +88,6 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
   private static final String ITEM_ID = "itemId";
   private static final String INSTANCE_ID = "instanceId";
-  private static final String LOCATION_STORAGE_PATH = "/locations";
   private static final String LOCATION_CODE_FIELD = "code";
   private static final String MARC_TAG_852 = "852";
   private static final char INDICATOR_BLANK = ' ';
@@ -620,12 +616,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     }
 
     try {
-      OkapiHttpClient okapiClient = new OkapiHttpClient(WebClient.wrap(client), URI.create(targetTenantContext.getOkapiLocation()).toURL(),
-        targetTenantContext.getTenantId(), targetTenantContext.getToken(), targetTenantContext.getUserId(),
-        targetTenantContext.getRequestId(), throwable -> LOGGER.warn("fetchLocationCode:: Failed to contact location storage", throwable));
-
-      CollectionResourceClient locationsClient = new CollectionResourceClient(okapiClient,
-        URI.create(targetTenantContext.getOkapiLocation() + LOCATION_STORAGE_PATH).toURL());
+      CollectionResourceClient locationsClient = MoveApiUtil.createLocationStorageClient(
+        MoveApiUtil.createHttpClient(client, targetTenantContext,
+          throwable -> LOGGER.warn("fetchLocationCode:: Failed to contact location storage", throwable)),
+        targetTenantContext);
 
       CompletableFuture<String> future = new CompletableFuture<>();
       locationsClient.get(locationId, response -> {
