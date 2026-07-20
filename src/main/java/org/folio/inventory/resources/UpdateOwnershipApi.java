@@ -23,7 +23,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import java.lang.invoke.MethodHandles;
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -429,7 +428,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                 LOGGER.info("processHoldingsOwnershipUpdate:: Created {} holdings in target tenant: {}",
                   createdHoldings.size(), updateContext.targetTenantContext.getTenantId());
 
-                return moveSrsRecordsForMarcHoldings(holdingsRecords, createdHoldings, updateContext.sourceContext, updateContext.targetTenantContext, notUpdatedEntities, holdingMarcSources)
+                return moveSrsRecordsForMarcHoldings(holdingsRecords, createdHoldings, updateContext.sourceContext, updateContext.targetTenantContext, notUpdatedEntities, holdingMarcSources, updateContext.targetLocationClient)
                   .thenCompose(v -> transferAttachedItems(createdHoldings, notUpdatedEntities, updateContext.routingContext, updateContext.sourceContext, updateContext.targetTenantContext))
                   .thenCompose(itemIds -> {
                     // Calculate holdings to delete after SRS migration to account for any SRS errors
@@ -501,7 +500,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
    */
   private CompletableFuture<Void> moveSrsRecordsForMarcHoldings(List<HoldingsRecord> sourceHoldings, List<HoldingsRecord> targetHoldings,
                                                                 WebContext sourceContext, Context targetTenantContext, List<NotUpdatedEntity> notUpdatedEntities,
-                                                                Map<String, Record> holdingMarcSources) {
+                                                                Map<String, Record> holdingMarcSources, CollectionResourceClient locationClient) {
 
     LOGGER.info("moveSrsRecordsForMarcHoldings:: Starting SRS record migration for {} source holdings", sourceHoldings.size());
 
@@ -537,7 +536,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         List<CompletableFuture<Void>> futures = marcHoldingsToProcess.stream()
           .map(sourceHolding -> prepareAndExecuteHoldingsSrsMove(
             sourceHolding, targetHoldings, holdingMarcSources, createdSnapshot,
-            sourceContext, targetTenantContext, notUpdatedEntities))
+            sourceContext, targetTenantContext, notUpdatedEntities, locationClient))
           .toList();
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
       })
@@ -560,7 +559,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private CompletableFuture<Void> prepareAndExecuteHoldingsSrsMove(HoldingsRecord sourceHolding, List<HoldingsRecord> targetHoldings,
                                                                    Map<String, Record> holdingMarcSources, Snapshot createdSnapshot,
                                                                    WebContext sourceContext, Context targetTenantContext,
-                                                                   List<NotUpdatedEntity> notUpdatedEntities) {
+                                                                   List<NotUpdatedEntity> notUpdatedEntities, CollectionResourceClient locationClient) {
     try {
       LOGGER.info("moveSrsRecordsForMarcHoldings:: Processing MARC holdings: {}", sourceHolding.getId());
 
@@ -577,7 +576,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         sourceHolding.getId(), targetHolding.getId());
 
       return fetchLocationCodeAndMoveSrsRecord(sourceHolding, sourceHoldingRecord, targetHolding,
-        sourceContext, targetTenantContext, notUpdatedEntities, createdSnapshot);
+        sourceContext, targetTenantContext, notUpdatedEntities, createdSnapshot, locationClient);
 
     } catch (Exception ex) {
       String errorMessage = String.format("Unexpected error processing holdings record %s: %s", sourceHolding.getId(), ex.getMessage());
@@ -589,10 +588,11 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
   private CompletableFuture<Void> fetchLocationCodeAndMoveSrsRecord(HoldingsRecord sourceHolding, Record sourceHoldingRecord, HoldingsRecord targetHolding,
                                                                     WebContext sourceContext, Context targetTenantContext,
-                                                                    List<NotUpdatedEntity> notUpdatedEntities, Snapshot snapshot) {
+                                                                    List<NotUpdatedEntity> notUpdatedEntities, Snapshot snapshot,
+                                                                    CollectionResourceClient locationClient) {
     LOGGER.info("fetchLocationCodeAndMoveSrsRecord:: Fetching location code for holdings: {}", targetHolding.getId());
 
-    return fetchLocationCode(targetHolding.getPermanentLocationId(), targetTenantContext)
+    return fetchLocationCode(targetHolding.getPermanentLocationId(), locationClient)
       .thenCompose(locationCode -> {
         LOGGER.debug("fetchLocationCodeAndMoveSrsRecord:: Retrieved location code: {} for location ID: {}",
           locationCode, targetHolding.getPermanentLocationId());
@@ -607,44 +607,34 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       });
   }
 
-  private CompletableFuture<String> fetchLocationCode(String locationId, Context targetTenantContext) {
-    LOGGER.debug("fetchLocationCode:: Fetching location by ID: {} for tenant: {}", locationId, targetTenantContext.getTenantId());
+  private CompletableFuture<String> fetchLocationCode(String locationId, CollectionResourceClient locationClient) {
+    LOGGER.debug("fetchLocationCode:: Fetching location by ID: {}", locationId);
 
     if (locationId == null || locationId.isBlank()) {
       LOGGER.warn("fetchLocationCode:: locationId is empty, cannot fetch location code");
       return CompletableFuture.completedFuture("");
     }
 
-    try {
-      CollectionResourceClient locationsClient = MoveApiUtil.createLocationStorageClient(
-        MoveApiUtil.createHttpClient(client, targetTenantContext,
-          throwable -> LOGGER.warn("fetchLocationCode:: Failed to contact location storage", throwable)),
-        targetTenantContext);
-
-      CompletableFuture<String> future = new CompletableFuture<>();
-      locationsClient.get(locationId, response -> {
-        try {
-          if (response.getStatusCode() == HttpStatus.HTTP_OK.toInt() && response.hasBody()) {
-            String locationCode = response.getJson().getString(LOCATION_CODE_FIELD);
-            if (locationCode != null && !locationCode.isBlank()) {
-              future.complete(locationCode);
-              return;
-            }
-            LOGGER.warn("fetchLocationCode:: Location {} does not contain code field, fallback to locationId", locationId);
-          } else {
-            LOGGER.warn("fetchLocationCode:: Failed to fetch location {}, status: {}", locationId, response.getStatusCode());
+    CompletableFuture<String> future = new CompletableFuture<>();
+    locationClient.get(locationId, response -> {
+      try {
+        if (response.getStatusCode() == HttpStatus.HTTP_OK.toInt() && response.hasBody()) {
+          String locationCode = response.getJson().getString(LOCATION_CODE_FIELD);
+          if (locationCode != null && !locationCode.isBlank()) {
+            future.complete(locationCode);
+            return;
           }
-          future.complete(locationId);
-        } catch (Exception e) {
-          LOGGER.warn("fetchLocationCode:: Unexpected response parse error for location {}", locationId, e);
-          future.complete(locationId);
+          LOGGER.warn("fetchLocationCode:: Location {} does not contain code field, fallback to locationId", locationId);
+        } else {
+          LOGGER.warn("fetchLocationCode:: Failed to fetch location {}, status: {}", locationId, response.getStatusCode());
         }
-      });
-      return future;
-    } catch (MalformedURLException e) {
-      LOGGER.warn("fetchLocationCode:: Invalid location URL for tenant {}", targetTenantContext.getTenantId(), e);
-      return CompletableFuture.completedFuture(locationId);
-    }
+        future.complete(locationId);
+      } catch (Exception e) {
+        LOGGER.warn("fetchLocationCode:: Unexpected response parse error for location {}", locationId, e);
+        future.complete(locationId);
+      }
+    });
+    return future;
   }
 
   private CompletableFuture<Void> moveSingleMarcHoldingsSrsRecord(HoldingsRecord sourceHolding, Record marcSrsRecord, HoldingsRecord targetHolding,
@@ -656,8 +646,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     CompletableFuture<Void> result = new CompletableFuture<>();
 
     try {
-      String jsonTargetHolding = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(targetHolding);
-      LOGGER.trace("moveSingleMarcHoldingsSrsRecord:: targetHolding: \n{}", jsonTargetHolding);
+      if (LOGGER.isTraceEnabled()) {
+        LOGGER.trace("moveSingleMarcHoldingsSrsRecord:: targetHolding: \n{}",
+          objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(targetHolding));
+      }
       LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Preparing to move SRS record for holdings: {}, hrId: {}",
         targetHolding.getId(), targetHolding.getHrid());
 
@@ -1221,6 +1213,7 @@ private CompletableFuture<List<HoldingsRecord>> getHoldingsByInstanceId(Holdings
 
     MultipleRecordsFetchClient holdingsRecordFetchClient = clientFactory.createHoldingsRecordsFetchClient(routingContext, context, client);
     SourceStorageRecordsClientWrapper sourceSrsClient = clientFactory.createSourceStorageRecordsClient(context, client);
+    CollectionResourceClient targetLocationClient = clientFactory.createLocationClient(targetTenantContext, client);
 
     HoldingsRecordCollection sourceTenantHoldingsRecordCollection = storage.getHoldingsRecordCollection(context);
     HoldingsRecordCollection targetTenantHoldingsRecordCollection = storage.getHoldingsRecordCollection(targetTenantContext);
@@ -1228,7 +1221,7 @@ private CompletableFuture<List<HoldingsRecord>> getHoldingsByInstanceId(Holdings
     LOGGER.debug("initializeUpdateContext:: Update context initialized successfully");
 
     return new HoldingsOwnershipUpdateContext(holdingsRecordFetchClient, sourceSrsClient,
-      sourceTenantHoldingsRecordCollection, targetTenantHoldingsRecordCollection,
+      targetLocationClient, sourceTenantHoldingsRecordCollection, targetTenantHoldingsRecordCollection,
       context, targetTenantContext, routingContext);
 
   }
@@ -1239,6 +1232,7 @@ private CompletableFuture<List<HoldingsRecord>> getHoldingsByInstanceId(Holdings
   record HoldingsOwnershipUpdateContext(
     MultipleRecordsFetchClient holdingsRecordFetchClient,
     SourceStorageRecordsClientWrapper sourceSrsClient,
+    CollectionResourceClient targetLocationClient,
     HoldingsRecordCollection sourceTenantHoldingsRecordCollection,
     HoldingsRecordCollection targetTenantHoldingsRecordCollection,
     WebContext sourceContext, Context targetTenantContext,

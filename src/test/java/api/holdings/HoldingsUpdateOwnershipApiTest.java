@@ -1180,7 +1180,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertTrue("FOLIO holding should be in target tenant", targetHoldingIds.contains(folioHoldingsId.toString()));
   }
 
-   private JsonObject buildMarcSourceRecord(UUID holdingsId) {
+  private JsonObject buildMarcSourceRecord(UUID holdingsId) {
     final var srsId = UUID.randomUUID();
     return new JsonObject()
       .put("id", srsId.toString())

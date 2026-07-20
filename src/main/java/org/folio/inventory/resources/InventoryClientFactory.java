@@ -5,6 +5,7 @@ import io.vertx.ext.web.RoutingContext;
 import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.WebContext;
+import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 
 /**
@@ -31,5 +32,14 @@ public interface InventoryClientFactory {
    * @return A configured SourceStorageRecordsClientWrapper.
    */
   SourceStorageRecordsClientWrapper createSourceStorageRecordsClient(Context context, HttpClient client);
+
+  /**
+   * Creates a client for fetching locations by ID from the target tenant.
+   *
+   * @param context The context containing tenant, token, and user information for the target tenant.
+   * @param client  The shared HttpClient instance.
+   * @return A configured CollectionResourceClient for the locations API.
+   */
+  CollectionResourceClient createLocationClient(Context context, HttpClient client);
 
 }
