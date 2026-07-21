@@ -646,8 +646,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     CompletableFuture<Void> result = new CompletableFuture<>();
 
     try {
-      LOGGER.trace("moveSingleMarcHoldingsSrsRecord:: targetHolding: \n{}",
-          objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(targetHolding));
+      String jsonTargetHolding = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(targetHolding);
+      LOGGER.trace("moveSingleMarcHoldingsSrsRecord:: targetHolding: \n{}", jsonTargetHolding);
       LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Preparing to move SRS record for holdings: {}, hrId: {}",
         targetHolding.getId(), targetHolding.getHrid());
 

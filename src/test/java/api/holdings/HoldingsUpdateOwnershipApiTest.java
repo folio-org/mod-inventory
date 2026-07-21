@@ -1039,6 +1039,58 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
   }
 
   @Test
+  public void shouldReturn400WhenMarcSrsRecordCreationFailsInTargetTenant() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.copy().put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.copy().put("source", FOLIO.getValue()));
+
+    final UUID marcHoldingsId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(instanceId)
+        .withMarcSource())
+      .getId();
+
+    final JsonObject sourceSrsRecord = buildMarcSourceRecord(marcHoldingsId);
+    final String sourceSrsId = sourceSrsRecord.getString("id");
+    sourceRecordStorageClient.create(sourceSrsRecord);
+
+    ensureCollegeTenantLocationExists(getMainLibraryLocation());
+
+    collegeSourceRecordStorageClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(5).toDate())
+        .setStatusCode(500)
+        .setContentType("application/json")
+        .setBody(new JsonObject().put("message", "target MARC SRS create failed").toString())
+        .setMethod(HttpMethod.POST.name())
+        .setBodyContains(marcHoldingsId.toString())
+    );
+
+    JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
+      new JsonArray(List.of(marcHoldingsId.toString())),
+      UUID.fromString(getMainLibraryLocation()), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response response = updateHoldingsRecordsOwnership(requestBody);
+    collegeSourceRecordStorageClient.disableFailureEmulation();
+
+    assertThat(response.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
+
+    JsonArray notUpdatedEntities = response.getJson().getJsonArray("notUpdatedEntities");
+    assertThat(notUpdatedEntities.size(), is(1));
+    JsonObject failedEntity = notUpdatedEntities.getJsonObject(0);
+    assertThat(failedEntity.getString("entityId"), is(marcHoldingsId.toString()));
+    assertThat(failedEntity.getString("errorMessage"), containsString("Failed to post SRS record to target tenant=college"));
+
+    // Holdings stays in source tenant when MARC SRS move cannot be completed.
+    assertThat(holdingsStorageClient.getById(marcHoldingsId).getStatusCode(), is(HttpStatus.SC_OK));
+
+    // Source SRS still exists and target SRS is not created.
+    assertThat(sourceRecordStorageClient.getById(UUID.fromString(sourceSrsId)).getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1).size(), is(0));
+  }
+
+  @Test
   public void shouldDoNothingAndReportAllAsNotUpdatedWhenNoValidHoldingsRemainAfterValidation() throws Exception {
     UUID instanceId = UUID.randomUUID();
     JsonObject instance = smallAngryPlanet(instanceId);
