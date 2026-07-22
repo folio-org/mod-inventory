@@ -428,7 +428,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
                 LOGGER.info("processHoldingsOwnershipUpdate:: Created {} holdings in target tenant: {}",
                   createdHoldings.size(), updateContext.targetTenantContext.getTenantId());
 
-                return moveSrsRecordsForMarcHoldings(holdingsRecords, createdHoldings, updateContext.sourceContext, updateContext.targetTenantContext, notUpdatedEntities, holdingMarcSources, updateContext.targetLocationClient)
+                return moveSrsRecordsForMarcHoldings(holdingsRecords, createdHoldings, notUpdatedEntities, holdingMarcSources, updateContext)
                   .thenCompose(v -> transferAttachedItems(createdHoldings, notUpdatedEntities, updateContext.routingContext, updateContext.sourceContext, updateContext.targetTenantContext))
                   .thenCompose(itemIds -> {
                     // Calculate holdings to delete after SRS migration to account for any SRS errors
@@ -492,15 +492,14 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
    *
    * @param sourceHoldings     The original list of holdings records from the source tenant.
    * @param targetHoldings     The list of newly created holdings records in the target tenant.
-   * @param sourceContext      The context for the source tenant.
-   * @param targetTenantContext The context for the target tenant.
    * @param notUpdatedEntities A list to which any entities that fail during processing will be added.
    * @param holdingMarcSources A map of source holdings ID to its fetched MARC Record.
+   * @param updateContext      The context holding source/target tenant contexts and the target location client.
    * @return A CompletableFuture that completes when all SRS records have been processed.
    */
   private CompletableFuture<Void> moveSrsRecordsForMarcHoldings(List<HoldingsRecord> sourceHoldings, List<HoldingsRecord> targetHoldings,
-                                                                WebContext sourceContext, Context targetTenantContext, List<NotUpdatedEntity> notUpdatedEntities,
-                                                                Map<String, Record> holdingMarcSources, CollectionResourceClient locationClient) {
+                                                                List<NotUpdatedEntity> notUpdatedEntities, Map<String, Record> holdingMarcSources,
+                                                                HoldingsOwnershipUpdateContext updateContext) {
 
     LOGGER.info("moveSrsRecordsForMarcHoldings:: Starting SRS record migration for {} source holdings", sourceHoldings.size());
 
@@ -527,7 +526,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .withStatus(Snapshot.Status.PARSING_IN_PROGRESS);
 
     //Create a snapshot. An error at this stage is fatal for the full batch.
-    return snapshotService.postSnapshotInSrsAndHandleResponse(targetTenantContext, snapshot)
+    return snapshotService.postSnapshotInSrsAndHandleResponse(updateContext.targetTenantContext, snapshot)
       .toCompletionStage().toCompletableFuture()
       .thenCompose(createdSnapshot -> {
         LOGGER.info("moveSrsRecordsForMarcHoldings:: Created a single snapshot {} for the entire operation", createdSnapshot.getJobExecutionId());
@@ -536,7 +535,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         List<CompletableFuture<Void>> futures = marcHoldingsToProcess.stream()
           .map(sourceHolding -> prepareAndExecuteHoldingsSrsMove(
             sourceHolding, targetHoldings, holdingMarcSources, createdSnapshot,
-            sourceContext, targetTenantContext, notUpdatedEntities, locationClient))
+            notUpdatedEntities, updateContext))
           .toList();
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
       })
@@ -558,8 +557,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
 
   private CompletableFuture<Void> prepareAndExecuteHoldingsSrsMove(HoldingsRecord sourceHolding, List<HoldingsRecord> targetHoldings,
                                                                    Map<String, Record> holdingMarcSources, Snapshot createdSnapshot,
-                                                                   WebContext sourceContext, Context targetTenantContext,
-                                                                   List<NotUpdatedEntity> notUpdatedEntities, CollectionResourceClient locationClient) {
+                                                                   List<NotUpdatedEntity> notUpdatedEntities, HoldingsOwnershipUpdateContext updateContext) {
     try {
       LOGGER.info("moveSrsRecordsForMarcHoldings:: Processing MARC holdings: {}", sourceHolding.getId());
 
@@ -576,7 +574,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         sourceHolding.getId(), targetHolding.getId());
 
       return fetchLocationCodeAndMoveSrsRecord(sourceHolding, sourceHoldingRecord, targetHolding,
-        sourceContext, targetTenantContext, notUpdatedEntities, createdSnapshot, locationClient);
+        notUpdatedEntities, createdSnapshot, updateContext);
 
     } catch (Exception ex) {
       String errorMessage = String.format("Unexpected error processing holdings record %s: %s", sourceHolding.getId(), ex.getMessage());
@@ -587,17 +585,16 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   }
 
   private CompletableFuture<Void> fetchLocationCodeAndMoveSrsRecord(HoldingsRecord sourceHolding, Record sourceHoldingRecord, HoldingsRecord targetHolding,
-                                                                    WebContext sourceContext, Context targetTenantContext,
                                                                     List<NotUpdatedEntity> notUpdatedEntities, Snapshot snapshot,
-                                                                    CollectionResourceClient locationClient) {
+                                                                    HoldingsOwnershipUpdateContext updateContext) {
     LOGGER.info("fetchLocationCodeAndMoveSrsRecord:: Fetching location code for holdings: {}", targetHolding.getId());
 
-    return fetchLocationCode(targetHolding.getPermanentLocationId(), locationClient)
+    return fetchLocationCode(targetHolding.getPermanentLocationId(), updateContext.targetLocationClient)
       .thenCompose(locationCode -> {
         LOGGER.debug("fetchLocationCodeAndMoveSrsRecord:: Retrieved location code: {} for location ID: {}",
           locationCode, targetHolding.getPermanentLocationId());
         return moveSingleMarcHoldingsSrsRecord(sourceHolding, sourceHoldingRecord, targetHolding,
-          sourceContext, targetTenantContext, notUpdatedEntities, snapshot, locationCode);
+          notUpdatedEntities, snapshot, locationCode, updateContext);
       })
       .exceptionally(throwable -> {
         String errorMessage = String.format("Failed to fetch location code for holdings: %s", sourceHolding.getId());
@@ -638,7 +635,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   }
 
   private CompletableFuture<Void> moveSingleMarcHoldingsSrsRecord(HoldingsRecord sourceHolding, Record marcSrsRecord, HoldingsRecord targetHolding,
-                                                                  WebContext sourceContext, Context targetTenantContext, List<NotUpdatedEntity> notUpdatedEntities, Snapshot snapshot, String locationCode) {
+                                                                  List<NotUpdatedEntity> notUpdatedEntities, Snapshot snapshot, String locationCode,
+                                                                  HoldingsOwnershipUpdateContext updateContext) {
 
     LOGGER.info("moveSingleMarcHoldingsSrsRecord:: Starting SRS record migration for holdings: {} -> {}",
       sourceHolding.getId(), targetHolding.getId());
@@ -651,14 +649,14 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Preparing to move SRS record for holdings: {}, hrId: {}",
         targetHolding.getId(), targetHolding.getHrid());
 
-      SourceStorageRecordsClientWrapper sourceSrsClient = clientFactory.createSourceStorageRecordsClient(sourceContext, client);
-      SourceStorageRecordsClientWrapper targetSrsClient = clientFactory.createSourceStorageRecordsClient(targetTenantContext, client);
+      SourceStorageRecordsClientWrapper sourceSrsClient = clientFactory.createSourceStorageRecordsClient(updateContext.sourceContext, client);
+      SourceStorageRecordsClientWrapper targetSrsClient = clientFactory.createSourceStorageRecordsClient(updateContext.targetTenantContext, client);
 
       Record newRecordForTarget = buildTargetSrsRecord(marcSrsRecord, targetHolding, snapshot, locationCode);
       targetSrsClient.postSourceStorageRecords(newRecordForTarget).onComplete(postAr -> {
         if (postAr.failed() || postAr.result().statusCode() != HttpStatus.HTTP_CREATED.toInt()) {
           String msg = String.format("Failed to post SRS record to target tenant=%s: %s",
-            targetTenantContext.getTenantId(), postAr.cause() != null ? postAr.cause().getMessage() : postAr.result().bodyAsString());
+            updateContext.targetTenantContext.getTenantId(), postAr.cause() != null ? postAr.cause().getMessage() : postAr.result().bodyAsString());
           LOGGER.warn("moveSingleMarcHoldingsSrsRecord:: {}", msg);
           notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHolding.getId()).withErrorMessage(msg));
           result.complete(null);
@@ -666,13 +664,13 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         }
 
         LOGGER.trace("moveSingleMarcHoldingsSrsRecord:: Posted SRS record to target tenant={}, response: \n{}",
-          targetTenantContext.getTenantId(), postAr.result().bodyAsString());
+          updateContext.targetTenantContext.getTenantId(), postAr.result().bodyAsString());
 
         LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Deleting source SRS record with id: {}", marcSrsRecord.getId());
         sourceSrsClient.deleteSourceStorageRecordsById(marcSrsRecord.getId(), "SRS_RECORD").onComplete(deleteAr -> {
           if (deleteAr.failed() || deleteAr.result().statusCode() != HttpStatus.HTTP_NO_CONTENT.toInt()) {
             String msg = String.format("Failed to delete source SRS record in source tenant=%s: %s",
-              sourceContext.getTenantId(), deleteAr.cause() != null ? deleteAr.cause().getMessage() : deleteAr.result().bodyAsString());
+              updateContext.sourceContext.getTenantId(), deleteAr.cause() != null ? deleteAr.cause().getMessage() : deleteAr.result().bodyAsString());
             LOGGER.warn("moveSingleMarcHoldingsSrsRecord:: {}", msg);
             notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(sourceHolding.getId()).withErrorMessage(msg));
             result.complete(null);
