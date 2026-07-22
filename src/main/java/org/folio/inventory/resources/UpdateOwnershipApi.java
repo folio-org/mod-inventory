@@ -715,17 +715,15 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       AdditionalFieldsUtil::replaceOrAddControlledFieldInMarcRecord);
     LOGGER.info("buildTargetSrsRecord:: Updated field 001 with new HRID: {}", targetHolding.getHrid());
 
-    // Replace existing 852$b values and set target holding permanent location code.
+    // Replace existing 852$b values (regardless of indicators) and set target holding permanent location code.
     if (locationCode != null && !locationCode.isEmpty()) {
-      Optional<String> existing852b = AdditionalFieldsUtil.getValueFromDataField(sourceSrsRecord,
-        MARC_TAG_852, INDICATOR_BLANK, INDICATOR_BLANK, SUBFIELD_B);
+      Optional<String> existing852b = AdditionalFieldsUtil.getValueFromDataField(sourceSrsRecord, MARC_TAG_852, SUBFIELD_B);
       while (existing852b.isPresent()) {
         boolean removed = AdditionalFieldsUtil.removeField(sourceSrsRecord, MARC_TAG_852, SUBFIELD_B, existing852b.get());
         if (!removed) {
           break;
         }
-        existing852b = AdditionalFieldsUtil.getValueFromDataField(sourceSrsRecord,
-          MARC_TAG_852, INDICATOR_BLANK, INDICATOR_BLANK, SUBFIELD_B);
+        existing852b = AdditionalFieldsUtil.getValueFromDataField(sourceSrsRecord, MARC_TAG_852, SUBFIELD_B);
       }
       AdditionalFieldsUtil.addDataFieldToMarcRecord(sourceSrsRecord, MARC_TAG_852,
         INDICATOR_BLANK, INDICATOR_BLANK, SUBFIELD_B, locationCode);

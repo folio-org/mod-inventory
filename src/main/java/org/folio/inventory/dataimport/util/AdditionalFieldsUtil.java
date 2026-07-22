@@ -371,6 +371,36 @@ public final class AdditionalFieldsUtil {
       .flatMap(df -> df.getSubfields(subfield).stream().findFirst().map(Subfield::getData));
   }
 
+  /**
+   * Reads the value of a subfield from the first matching data field in a
+   * MARC record, identified by {@code tag} only, disregarding indicator values.
+   *
+   * @param srcRecord record containing the parsed MARC content to retrieve data
+   * @param tag       three-character MARC tag of the data field (must not be
+   *                  a control field tag, i.e. must not start with "00")
+   * @param subfield  subfield code whose data value should be returned
+   * @return {@link Optional} containing the data of the first matching
+   *         subfield in any data field with the given tag, or an empty
+   *         {@link Optional} if no matching field or subfield is found
+   * @throws IllegalArgumentException if {@code tag} identifies a control
+   *                                  instead of a data field
+   */
+  public static Optional<String> getValueFromDataField(Record srcRecord, String tag, char subfield) {
+    if (Verifier.isControlField(tag)) {
+      String msg = INVALID_DATA_FIELD_MSG.formatted(tag);
+      LOGGER.warn("getValueFromDataField:: {}", msg);
+      throw new IllegalArgumentException(msg);
+    }
+
+    return Optional.ofNullable(computeMarcRecord(srcRecord))
+      .stream()
+      .flatMap(marcRecord -> marcRecord.getDataFields().stream())
+      .filter(df -> df.getTag().equals(tag))
+      .flatMap(df -> df.getSubfields(subfield).stream())
+      .findFirst()
+      .map(Subfield::getData);
+  }
+
   private static MarcReader buildMarcReader(Record srcRecord) {
     String content = normalizeContent(srcRecord.getParsedRecord());
     return new MarcJsonReader(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));

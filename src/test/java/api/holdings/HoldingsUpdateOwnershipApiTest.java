@@ -835,6 +835,48 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
   }
 
   @Test
+  public void shouldRemoveExisting852bValueRegardlessOfIndicatorsWhenPopulatingLocationCode() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.put("source", FOLIO.getValue()));
+
+    final UUID holdingsId = holdingsStorageClient.create(
+        new HoldingRequestBuilder()
+          .forInstance(instanceId)
+          .withMarcSource()
+      )
+      .getId();
+
+    // Source 852 field carries subfield 'b' under non-blank indicators (e.g. a different cataloging convention).
+    final JsonObject srsRecordToCreate = buildMarcSourceRecord(holdingsId, "4", "0");
+    final String sourceSrsId = srsRecordToCreate.getString("id");
+    sourceRecordStorageClient.create(srsRecordToCreate);
+
+    ensureCollegeTenantLocationExists(getMainLibraryLocation());
+
+    JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
+      new JsonArray(List.of(holdingsId.toString())), UUID.fromString(getMainLibraryLocation()), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response response = updateHoldingsRecordsOwnership(requestBody);
+
+    assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(response.getJson().getJsonArray("notUpdatedEntities").size(), is(0));
+
+    List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
+    assertThat(targetSrsRecords.size(), is(1));
+
+    JsonObject parsedRecord = targetSrsRecords.getFirst().getJsonObject("parsedRecord");
+    JsonObject parsedContent = getParsedContent(parsedRecord);
+    List<String> field852bValues = getField852bValues(parsedContent);
+
+    // The stale 852$b under non-blank indicators should be removed, leaving only the freshly populated one.
+    assertEquals(1, field852bValues.size());
+    assertEquals(MAIN_LIBRARY_LOCATION_CODE, field852bValues.getFirst());
+    assertNotEquals("OLD_LOCATION_CODE", field852bValues.getFirst());
+  }
+
+  @Test
   public void shouldFailMarcHoldingsAndMoveFolioHoldingWhenSnapshotCreationFails() throws Exception {
     UUID instanceId = UUID.randomUUID();
     JsonObject instance = smallAngryPlanet(instanceId);
@@ -1548,6 +1590,10 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
   }
 
   private JsonObject buildMarcSourceRecord(UUID holdingsId) {
+    return buildMarcSourceRecord(holdingsId, " ", " ");
+  }
+
+  private JsonObject buildMarcSourceRecord(UUID holdingsId, String ind1, String ind2) {
     final var srsId = UUID.randomUUID();
     return new JsonObject()
       .put("id", srsId.toString())
@@ -1565,8 +1611,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
               .put("subfields", new JsonArray()
                 .add(new JsonObject().put("b", "OLD_LOCATION_CODE"))
                 .add(new JsonObject().put("h", "Some call number")))
-              .put("ind1", " ")
-              .put("ind2", " "))))
+              .put("ind1", ind1)
+              .put("ind2", ind2))))
         )
       );
   }
