@@ -7,6 +7,8 @@ import api.support.InstanceApiClient;
 import api.support.builders.HoldingRequestBuilder;
 import api.support.builders.HoldingsRecordUpdateOwnershipRequestBuilder;
 import api.support.builders.ItemRequestBuilder;
+import api.support.http.ResourceClient;
+import api.support.http.StorageInterfaceUrls;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -57,6 +59,7 @@ import static support.matchers.ResponseMatchers.hasValidationError;
 public class HoldingsUpdateOwnershipApiTest extends ApiTests {
   private static final String INSTANCE_ID = "instanceId";
   private static final String ID = "id";
+  private static final String MAIN_LIBRARY_LOCATION_CODE = "NU/JC/DL/ML";
 
   @Before
   public void initConsortia() throws Exception {
@@ -790,6 +793,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     final String sourceSrsId = srsRecordToCreate.getString("id");
     sourceRecordStorageClient.create(srsRecordToCreate);
 
+    ensureCollegeTenantLocationExists(getMainLibraryLocation());
+
     JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
       new JsonArray(List.of(holdingsId.toString())), UUID.fromString(getMainLibraryLocation()), ApiTestSuite.COLLEGE_TENANT_ID).create();
 
@@ -819,6 +824,56 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertNotEquals(sourceSrsId, targetSrsRecord.getString("id"));
     assertEquals(sourceSrsId, targetSrsRecord.getString("matchedId"));
     assertEquals("MARC_HOLDING", targetSrsRecord.getString("recordType"));
+
+    JsonObject parsedRecord = targetSrsRecord.getJsonObject("parsedRecord");
+    JsonObject parsedContent = getParsedContent(parsedRecord);
+
+    List<String> field852bValues = getField852bValues(parsedContent);
+    assertEquals(1, field852bValues.size());
+    assertEquals(MAIN_LIBRARY_LOCATION_CODE, field852bValues.getFirst());
+    assertNotEquals("OLD_LOCATION_CODE", field852bValues.getFirst());
+  }
+
+  @Test
+  public void shouldRemoveExisting852bValueRegardlessOfIndicatorsWhenPopulatingLocationCode() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.put("source", FOLIO.getValue()));
+
+    final UUID holdingsId = holdingsStorageClient.create(
+        new HoldingRequestBuilder()
+          .forInstance(instanceId)
+          .withMarcSource()
+      )
+      .getId();
+
+    // Source 852 field carries subfield 'b' under non-blank indicators (e.g. a different cataloging convention).
+    final JsonObject srsRecordToCreate = buildMarcSourceRecord(holdingsId, "4", "0");
+    final String sourceSrsId = srsRecordToCreate.getString("id");
+    sourceRecordStorageClient.create(srsRecordToCreate);
+
+    ensureCollegeTenantLocationExists(getMainLibraryLocation());
+
+    JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
+      new JsonArray(List.of(holdingsId.toString())), UUID.fromString(getMainLibraryLocation()), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response response = updateHoldingsRecordsOwnership(requestBody);
+
+    assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(response.getJson().getJsonArray("notUpdatedEntities").size(), is(0));
+
+    List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
+    assertThat(targetSrsRecords.size(), is(1));
+
+    JsonObject parsedRecord = targetSrsRecords.getFirst().getJsonObject("parsedRecord");
+    JsonObject parsedContent = getParsedContent(parsedRecord);
+    List<String> field852bValues = getField852bValues(parsedContent);
+
+    // The stale 852$b under non-blank indicators should be removed, leaving only the freshly populated one.
+    assertEquals(1, field852bValues.size());
+    assertEquals(MAIN_LIBRARY_LOCATION_CODE, field852bValues.getFirst());
+    assertNotEquals("OLD_LOCATION_CODE", field852bValues.getFirst());
   }
 
   @Test
@@ -1026,6 +1081,58 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
   }
 
   @Test
+  public void shouldReturn400WhenMarcSrsRecordCreationFailsInTargetTenant() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.copy().put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.copy().put("source", FOLIO.getValue()));
+
+    final UUID marcHoldingsId = holdingsStorageClient.create(
+      new HoldingRequestBuilder()
+        .forInstance(instanceId)
+        .withMarcSource())
+      .getId();
+
+    final JsonObject sourceSrsRecord = buildMarcSourceRecord(marcHoldingsId);
+    final String sourceSrsId = sourceSrsRecord.getString("id");
+    sourceRecordStorageClient.create(sourceSrsRecord);
+
+    ensureCollegeTenantLocationExists(getMainLibraryLocation());
+
+    collegeSourceRecordStorageClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(5).toDate())
+        .setStatusCode(500)
+        .setContentType("application/json")
+        .setBody(new JsonObject().put("message", "target MARC SRS create failed").toString())
+        .setMethod(HttpMethod.POST.name())
+        .setBodyContains(marcHoldingsId.toString())
+    );
+
+    JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
+      new JsonArray(List.of(marcHoldingsId.toString())),
+      UUID.fromString(getMainLibraryLocation()), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response response = updateHoldingsRecordsOwnership(requestBody);
+    collegeSourceRecordStorageClient.disableFailureEmulation();
+
+    assertThat(response.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
+
+    JsonArray notUpdatedEntities = response.getJson().getJsonArray("notUpdatedEntities");
+    assertThat(notUpdatedEntities.size(), is(1));
+    JsonObject failedEntity = notUpdatedEntities.getJsonObject(0);
+    assertThat(failedEntity.getString("entityId"), is(marcHoldingsId.toString()));
+    assertThat(failedEntity.getString("errorMessage"), containsString("Failed to post SRS record to target tenant=college"));
+
+    // Holdings stays in source tenant when MARC SRS move cannot be completed.
+    assertThat(holdingsStorageClient.getById(marcHoldingsId).getStatusCode(), is(HttpStatus.SC_OK));
+
+    // Source SRS still exists and target SRS is not created.
+    assertThat(sourceRecordStorageClient.getById(UUID.fromString(sourceSrsId)).getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1).size(), is(0));
+  }
+
+  @Test
   public void shouldDoNothingAndReportAllAsNotUpdatedWhenNoValidHoldingsRemainAfterValidation() throws Exception {
     UUID instanceId = UUID.randomUUID();
     JsonObject instance = smallAngryPlanet(instanceId);
@@ -1168,7 +1275,325 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertTrue("FOLIO holding should be in target tenant", targetHoldingIds.contains(folioHoldingsId.toString()));
   }
 
-   private JsonObject buildMarcSourceRecord(UUID holdingsId) {
+  @Test
+  public void shouldFallbackToLocationIdWhenFetchingTargetLocationFailsForMarcHolding() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.copy().put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.copy().put("source", FOLIO.getValue()));
+
+    final UUID marcHoldingsId = holdingsStorageClient.create(
+        new HoldingRequestBuilder()
+          .forInstance(instanceId)
+          .withMarcSource()
+      )
+      .getId();
+
+    final JsonObject srsRecordToCreate = buildMarcSourceRecord(marcHoldingsId);
+    final String sourceSrsId = srsRecordToCreate.getString("id");
+    sourceRecordStorageClient.create(srsRecordToCreate);
+
+    String targetLocationId = getMainLibraryLocation();
+    ensureCollegeTenantLocationExists(targetLocationId);
+
+    ResourceClient collegeLocationsClient = ResourceClient.forLocations(collegeOkapiClient);
+    collegeLocationsClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(5).toDate())
+        .setStatusCode(500)
+        .setContentType("application/json")
+        .setBody(new JsonObject().put("message", "Location service unavailable").toString())
+        .setMethod(HttpMethod.GET.name())
+        .setUrlPattern("/locations/.*")
+    );
+
+    JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
+      new JsonArray(List.of(marcHoldingsId.toString())), UUID.fromString(targetLocationId), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response response = updateHoldingsRecordsOwnership(requestBody);
+    collegeLocationsClient.disableFailureEmulation();
+
+    assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(response.getJson().getJsonArray("notUpdatedEntities").size(), is(0));
+
+    // Operation should complete and use locationId as fallback when GET /locations fails.
+    assertThat(holdingsStorageClient.getById(marcHoldingsId).getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
+
+    List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
+    assertThat(targetSrsRecords.size(), is(1));
+
+    JsonObject parsedRecord = targetSrsRecords.getFirst().getJsonObject("parsedRecord");
+    JsonObject parsedContent = getParsedContent(parsedRecord);
+    List<String> field852bValues = getField852bValues(parsedContent);
+
+    assertThat(field852bValues.size(), is(1));
+    assertThat(field852bValues.getFirst(), is(targetLocationId));
+  }
+
+  @Test
+  public void shouldFallbackToLocationIdWhenFetchedLocationCodeIsEmpty() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.copy().put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.copy().put("source", FOLIO.getValue()));
+
+    final UUID marcHoldingsId = holdingsStorageClient.create(
+        new HoldingRequestBuilder()
+          .forInstance(instanceId)
+          .withMarcSource()
+      )
+      .getId();
+
+    final JsonObject srsRecordToCreate = buildMarcSourceRecord(marcHoldingsId);
+    final String sourceSrsId = srsRecordToCreate.getString("id");
+    sourceRecordStorageClient.create(srsRecordToCreate);
+
+    String targetLocationId = UUID.randomUUID().toString();
+
+    ResourceClient collegeLocationsClient = ResourceClient.forLocations(collegeOkapiClient);
+    collegeLocationsClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(5).toDate())
+        .setStatusCode(200)
+        .setContentType("application/json")
+        .setBody(new JsonObject().put("id", targetLocationId).put("code", "").toString())
+        .setMethod(HttpMethod.GET.name())
+        .setUrlPattern("/locations/" + targetLocationId)
+    );
+
+    JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
+      new JsonArray(List.of(marcHoldingsId.toString())), UUID.fromString(targetLocationId), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response response = updateHoldingsRecordsOwnership(requestBody);
+    collegeLocationsClient.disableFailureEmulation();
+
+    assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(response.getJson().getJsonArray("notUpdatedEntities").size(), is(0));
+
+    List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
+    assertThat(targetSrsRecords.size(), is(1));
+
+    JsonObject parsedRecord = targetSrsRecords.getFirst().getJsonObject("parsedRecord");
+    JsonObject parsedContent = getParsedContent(parsedRecord);
+    List<String> field852bValues = getField852bValues(parsedContent);
+
+    assertThat(field852bValues.size(), is(1));
+    assertThat(field852bValues.getFirst(), is(targetLocationId));
+  }
+
+  @Test
+  public void shouldFallbackToLocationIdWhenLocationResponseIsNotValidJson() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.copy().put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.copy().put("source", FOLIO.getValue()));
+
+    final UUID marcHoldingsId = holdingsStorageClient.create(
+        new HoldingRequestBuilder()
+          .forInstance(instanceId)
+          .withMarcSource()
+      )
+      .getId();
+
+    final JsonObject srsRecordToCreate = buildMarcSourceRecord(marcHoldingsId);
+    final String sourceSrsId = srsRecordToCreate.getString("id");
+    sourceRecordStorageClient.create(srsRecordToCreate);
+
+    String targetLocationId = UUID.randomUUID().toString();
+
+    ResourceClient collegeLocationsClient = ResourceClient.forLocations(collegeOkapiClient);
+    collegeLocationsClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(5).toDate())
+        .setStatusCode(200)
+        .setContentType("application/json")
+        .setBody("not-a-valid-json-body")
+        .setMethod(HttpMethod.GET.name())
+        .setUrlPattern("/locations/" + targetLocationId)
+    );
+
+    JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
+      new JsonArray(List.of(marcHoldingsId.toString())), UUID.fromString(targetLocationId), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response response = updateHoldingsRecordsOwnership(requestBody);
+    collegeLocationsClient.disableFailureEmulation();
+
+    assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(response.getJson().getJsonArray("notUpdatedEntities").size(), is(0));
+
+    List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
+    assertThat(targetSrsRecords.size(), is(1));
+
+    JsonObject parsedRecord = targetSrsRecords.getFirst().getJsonObject("parsedRecord");
+    JsonObject parsedContent = getParsedContent(parsedRecord);
+    List<String> field852bValues = getField852bValues(parsedContent);
+
+    // Operation should complete and use locationId as fallback when the location response body cannot be parsed.
+    assertThat(field852bValues.size(), is(1));
+    assertThat(field852bValues.getFirst(), is(targetLocationId));
+  }
+
+  @Test
+  public void shouldFallbackToLocationIdWhenLocationResponseHasEmptyBody() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.copy().put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.copy().put("source", FOLIO.getValue()));
+
+    final UUID marcHoldingsId = holdingsStorageClient.create(
+        new HoldingRequestBuilder()
+          .forInstance(instanceId)
+          .withMarcSource()
+      )
+      .getId();
+
+    final JsonObject srsRecordToCreate = buildMarcSourceRecord(marcHoldingsId);
+    final String sourceSrsId = srsRecordToCreate.getString("id");
+    sourceRecordStorageClient.create(srsRecordToCreate);
+
+    String targetLocationId = UUID.randomUUID().toString();
+
+    ResourceClient collegeLocationsClient = ResourceClient.forLocations(collegeOkapiClient);
+    collegeLocationsClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(5).toDate())
+        .setStatusCode(200)
+        .setContentType("application/json")
+        .setBody("")
+        .setMethod(HttpMethod.GET.name())
+        .setUrlPattern("/locations/" + targetLocationId)
+    );
+
+    JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
+      new JsonArray(List.of(marcHoldingsId.toString())), UUID.fromString(targetLocationId), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response response = updateHoldingsRecordsOwnership(requestBody);
+    collegeLocationsClient.disableFailureEmulation();
+
+    assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(response.getJson().getJsonArray("notUpdatedEntities").size(), is(0));
+
+    List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
+    assertThat(targetSrsRecords.size(), is(1));
+
+    JsonObject parsedRecord = targetSrsRecords.getFirst().getJsonObject("parsedRecord");
+    JsonObject parsedContent = getParsedContent(parsedRecord);
+    List<String> field852bValues = getField852bValues(parsedContent);
+
+    // Operation should complete and use locationId as fallback when the location response has no body at all.
+    assertThat(field852bValues.size(), is(1));
+    assertThat(field852bValues.getFirst(), is(targetLocationId));
+  }
+
+  @Test
+  public void shouldFallbackToLocationIdWhenLocationResponseHasNoCodeField() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.copy().put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.copy().put("source", FOLIO.getValue()));
+
+    final UUID marcHoldingsId = holdingsStorageClient.create(
+        new HoldingRequestBuilder()
+          .forInstance(instanceId)
+          .withMarcSource()
+      )
+      .getId();
+
+    final JsonObject srsRecordToCreate = buildMarcSourceRecord(marcHoldingsId);
+    final String sourceSrsId = srsRecordToCreate.getString("id");
+    sourceRecordStorageClient.create(srsRecordToCreate);
+
+    String targetLocationId = UUID.randomUUID().toString();
+
+    ResourceClient collegeLocationsClient = ResourceClient.forLocations(collegeOkapiClient);
+    collegeLocationsClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(5).toDate())
+        .setStatusCode(200)
+        .setContentType("application/json")
+        .setBody(new JsonObject().put("id", targetLocationId).toString())
+        .setMethod(HttpMethod.GET.name())
+        .setUrlPattern("/locations/" + targetLocationId)
+    );
+
+    JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
+      new JsonArray(List.of(marcHoldingsId.toString())), UUID.fromString(targetLocationId), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response response = updateHoldingsRecordsOwnership(requestBody);
+    collegeLocationsClient.disableFailureEmulation();
+
+    assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(response.getJson().getJsonArray("notUpdatedEntities").size(), is(0));
+
+    List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
+    assertThat(targetSrsRecords.size(), is(1));
+
+    JsonObject parsedRecord = targetSrsRecords.getFirst().getJsonObject("parsedRecord");
+    JsonObject parsedContent = getParsedContent(parsedRecord);
+    List<String> field852bValues = getField852bValues(parsedContent);
+
+    // Operation should complete and use locationId as fallback when the location response has no "code" field at all.
+    assertThat(field852bValues.size(), is(1));
+    assertThat(field852bValues.getFirst(), is(targetLocationId));
+  }
+
+  @Test
+  public void shouldMarkHoldingAsNotUpdatedWhenSourceSrsRecordDeleteFails() throws Exception {
+    UUID instanceId = UUID.randomUUID();
+    JsonObject instance = smallAngryPlanet(instanceId);
+    InstanceApiClient.createInstance(okapiClient, instance.copy().put("source", CONSORTIUM_FOLIO.getValue()));
+    InstanceApiClient.createInstance(consortiumOkapiClient, instance.copy().put("source", FOLIO.getValue()));
+
+    final UUID marcHoldingsId = holdingsStorageClient.create(
+        new HoldingRequestBuilder()
+          .forInstance(instanceId)
+          .withMarcSource()
+      )
+      .getId();
+
+    final JsonObject srsRecordToCreate = buildMarcSourceRecord(marcHoldingsId);
+    final String sourceSrsId = srsRecordToCreate.getString("id");
+    sourceRecordStorageClient.create(srsRecordToCreate);
+
+    final JsonObject expectedErrorResponse = new JsonObject().put("message", "Internal Server Error: Delete failed");
+    sourceRecordStorageClient.emulateFailure(
+      new EndpointFailureDescriptor()
+        .setFailureExpireDate(DateTime.now().plusSeconds(5).toDate())
+        .setStatusCode(500)
+        .setContentType("application/json")
+        .setBody(expectedErrorResponse.toString())
+        .setMethod(HttpMethod.DELETE.name())
+    );
+
+    JsonObject requestBody = new HoldingsRecordUpdateOwnershipRequestBuilder(instanceId,
+      new JsonArray(List.of(marcHoldingsId.toString())), UUID.fromString(getMainLibraryLocation()), ApiTestSuite.COLLEGE_TENANT_ID).create();
+
+    Response response = updateHoldingsRecordsOwnership(requestBody);
+    sourceRecordStorageClient.disableFailureEmulation();
+
+    assertThat(response.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
+
+    JsonArray notUpdatedEntities = response.getJson().getJsonArray("notUpdatedEntities");
+    assertThat(notUpdatedEntities.size(), is(1));
+    assertThat(notUpdatedEntities.getJsonObject(0).getString("entityId"), is(marcHoldingsId.toString()));
+    assertThat(notUpdatedEntities.getJsonObject(0).getString("errorMessage"), containsString(expectedErrorResponse.toString()));
+
+    // Source holding is kept since the migration did not fully complete.
+    assertThat(holdingsStorageClient.getById(marcHoldingsId).getStatusCode(), is(HttpStatus.SC_OK));
+
+    // The SRS record was already posted to the target tenant before the delete step failed.
+    List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
+    assertThat(targetSrsRecords.size(), is(1));
+
+    // Source SRS record still exists because its deletion failed.
+    assertThat(sourceRecordStorageClient.getById(UUID.fromString(sourceSrsId)).getStatusCode(), is(HttpStatus.SC_OK));
+  }
+
+  private JsonObject buildMarcSourceRecord(UUID holdingsId) {
+    return buildMarcSourceRecord(holdingsId, " ", " ");
+  }
+
+  private JsonObject buildMarcSourceRecord(UUID holdingsId, String ind1, String ind2) {
     final var srsId = UUID.randomUUID();
     return new JsonObject()
       .put("id", srsId.toString())
@@ -1181,12 +1606,69 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
         .put("content", new JsonObject()
           .put("leader", "00000nu  a2200000   4500")
           .put("fields", new JsonArray()
+            .add(new JsonObject().put("001", holdingsId.toString()))
             .add(new JsonObject().put("852", new JsonObject()
-              .put("subfields", new JsonArray().add(new JsonObject().put("h", "Some call number")))
-              .put("ind1", " ")
-              .put("ind2", " "))))
+              .put("subfields", new JsonArray()
+                .add(new JsonObject().put("b", "OLD_LOCATION_CODE"))
+                .add(new JsonObject().put("h", "Some call number")))
+              .put("ind1", ind1)
+              .put("ind2", ind2))))
         )
       );
+  }
+
+
+  private List<String> getField852bValues(JsonObject parsedContent) {
+    List<String> values = new java.util.ArrayList<>();
+    JsonArray fields = parsedContent.getJsonArray("fields", new JsonArray());
+    for (int i = 0; i < fields.size(); i++) {
+      JsonObject field = fields.getJsonObject(i);
+      if (field == null || !field.containsKey("852")) {
+        continue;
+      }
+
+      JsonObject dataField = field.getJsonObject("852");
+      JsonArray subfields = dataField.getJsonArray("subfields", new JsonArray());
+      for (int j = 0; j < subfields.size(); j++) {
+        JsonObject subfield = subfields.getJsonObject(j);
+        if (subfield != null && subfield.containsKey("b")) {
+          values.add(subfield.getString("b"));
+        }
+      }
+    }
+    return values;
+  }
+
+  private JsonObject getParsedContent(JsonObject parsedRecord) {
+    Object content = parsedRecord.getValue("content");
+    if (content instanceof JsonObject contentJson) {
+      return contentJson;
+    }
+    if (content instanceof String contentString) {
+      return new JsonObject(contentString);
+    }
+    throw new IllegalStateException("Unexpected parsedRecord.content type: " + (content == null ? "null" : content.getClass().getName()));
+  }
+
+  private void ensureCollegeTenantLocationExists(String locationId)
+    throws ExecutionException, InterruptedException, TimeoutException {
+    JsonObject locationBody = new JsonObject()
+      .put("id", locationId)
+      .put("name", "Main Library (college test fixture)")
+      .put("code", MAIN_LIBRARY_LOCATION_CODE)
+      .put("institutionId", UUID.randomUUID().toString())
+      .put("campusId", UUID.randomUUID().toString())
+      .put("libraryId", UUID.randomUUID().toString())
+      .put("primaryServicePoint", UUID.randomUUID().toString());
+
+    Response createLocationResponse = collegeOkapiClient
+      .post(StorageInterfaceUrls.locationsStorageUrl(""), locationBody)
+      .toCompletableFuture()
+      .get(30, TimeUnit.SECONDS);
+
+    // 201 means created; 422 means already exists in this test environment.
+    assertTrue(createLocationResponse.getStatusCode() == HttpStatus.SC_CREATED
+      || createLocationResponse.getStatusCode() == HttpStatus.SC_UNPROCESSABLE_ENTITY);
   }
 
   private Response updateHoldingsRecordsOwnership(JsonObject holdingsRecordUpdateOwnershipRequestBody) throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
