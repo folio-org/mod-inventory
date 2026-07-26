@@ -23,7 +23,7 @@
       <dependency>
         <groupId>org.apache.logging.log4j</groupId>
         <artifactId>log4j-bom</artifactId>
-        <version>2.25.3</version>
+        <version>2.26.1</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -37,7 +37,7 @@
       <dependency>
         <groupId>org.junit</groupId>
         <artifactId>junit-bom</artifactId>
-        <version>5.12.2</version>
+        <version>6.1.2</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -108,7 +108,7 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>33.0.0-jre</version>
+      <version>33.6.0-jre</version>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -143,7 +143,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>mod-inventory-storage-dto</artifactId>
-      <version>30.0.0</version>
+      <version>30.0.5</version>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -181,13 +181,13 @@
     <dependency>
       <groupId>org.awaitility</groupId>
       <artifactId>awaitility</artifactId>
-      <version>3.0.0</version>
+      <version>4.3.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.rest-assured</groupId>
       <artifactId>rest-assured</artifactId>
-      <version>4.3.3</version>
+      <version>6.0.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -199,7 +199,7 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>5.2.0</version>
+      <version>5.23.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -211,13 +211,13 @@
     <dependency>
       <groupId>net.bytebuddy</groupId>
       <artifactId>byte-buddy</artifactId>
-      <version>1.17.1</version>
+      <version>1.18.11</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
-      <version>3.20.2</version>
+      <version>3.27.7</version>
       <scope>test</scope>
     </dependency>
 
@@ -230,12 +230,12 @@
     <dependency>
       <groupId>joda-time</groupId>
       <artifactId>joda-time</artifactId>
-      <version>2.14.0</version>
+      <version>2.14.2</version>
     </dependency>
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>mod-source-record-storage-client</artifactId>
-      <version>6.0.0</version>
+      <version>6.0.1</version>
       <exclusions>
         <!-- This is provided by JDK >= 9 causing a compile error (Eclipse doesn't suppress this compile error):
              "The package org.xml.sax is accessible from more than one module: <unnamed>, java.xml"
@@ -250,7 +250,7 @@
     <dependency>
       <groupId>org.folio</groupId>
       <artifactId>mod-source-record-manager-client</artifactId>
-      <version>4.0.0</version>
+      <version>4.0.5</version>
       <exclusions>
         <!-- This is provided by JDK >= 9 causing a compile error (Eclipse doesn't suppress this compile error):
              "The package org.xml.sax is accessible from more than one module: <unnamed>, java.xml"
@@ -281,13 +281,13 @@
     <dependency>
       <groupId>com.jayway.jsonpath</groupId>
       <artifactId>json-path-assert</artifactId>
-      <version>2.4.0</version>
+      <version>3.0.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>
-      <version>2.8.5</version>
+      <version>3.2.4</version>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -308,16 +308,16 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <vertx.version>5.0.12</vertx.version>
+    <vertx.version>5.1.5</vertx.version>
     <jsonschema2pojo_output_dir>${project.build.directory}/generated-sources/jsonschema2pojo</jsonschema2pojo_output_dir>
     <httpcomponents.version>4.5.14</httpcomponents.version>
-    <lombok.version>1.18.42</lombok.version>
-    <postgres.version>42.7.8</postgres.version>
-    <liquibase.version>5.0.1</liquibase.version>
-    <kafkaclients.version>4.2.0</kafkaclients.version>
+    <lombok.version>1.18.46</lombok.version>
+    <postgres.version>42.7.13</postgres.version>
+    <liquibase.version>5.0.3</liquibase.version>
+    <kafkaclients.version>4.3.1</kafkaclients.version>
     <junit.version>4.13.2</junit.version>
     <data-import-processing-core.version>5.1.0-SNAPSHOT</data-import-processing-core.version>
-    <folio-module-descriptor-validator.version>1.0.0</folio-module-descriptor-validator.version>
+    <folio-module-descriptor-validator.version>1.0.1</folio-module-descriptor-validator.version>
   </properties>
 
   <distributionManagement>
@@ -377,11 +377,11 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-report-plugin</artifactId>
-        <version>3.2.5</version>
+        <version>3.5.6</version>
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.11.0</version>
+        <version>3.15.0</version>
         <configuration>
           <release>21</release>
           <encoding>UTF-8</encoding>
@@ -389,7 +389,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>3.3.1</version>
+        <version>3.5.0</version>
         <executions>
           <execution>
             <id>filter-descriptor-inputs</id>
@@ -447,7 +447,7 @@
       <plugin>
         <groupId>org.jsonschema2pojo</groupId>
         <artifactId>jsonschema2pojo-maven-plugin</artifactId>
-        <version>1.0.2</version>
+        <version>1.3.3</version>
         <configuration>
           <outputDirectory>${jsonschema2pojo_output_dir}</outputDirectory>
         </configuration>
@@ -480,7 +480,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>3.5.2</version>
+        <version>3.6.2</version>
         <executions>
           <execution>
             <phase>package</phase>
@@ -505,7 +505,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.5.4</version>
+        <version>3.5.6</version>
         <configuration>
           <!-- TODO: update to version 3.0.0 and remove useSystemClassLoader
                https://issues.folio.org/browse/FOLIO-1609
@@ -529,7 +529,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
-        <version>3.2.5</version>
+        <version>3.5.6</version>
           <executions>
             <execution>
               <goals>
@@ -542,7 +542,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-release-plugin</artifactId>
-        <version>2.5.3</version>
+        <version>3.3.1</version>
         <configuration>
           <preparationGoals>clean verify</preparationGoals>
           <tagNameFormat>v@{project.version}</tagNameFormat>
@@ -557,7 +557,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-report-plugin</artifactId>
-        <version>3.2.5</version>
+        <version>3.5.6</version>
       </plugin>
     </plugins>
   </reporting>
