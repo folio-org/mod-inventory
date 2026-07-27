@@ -170,7 +170,10 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
               .publishInstance(instance, sharingInstanceMetadata, source, target, kafkaHeaders)
               .onComplete(publishResult -> handleSharingResult(sharingInstanceMetadata, kafkaHeaders, promise, publishResult)),
             () -> {
-              throw new IllegalArgumentException(format("Unsupported source type: %s", instance.getSource()));
+              String errorMessage = format("Error sharing Instance with InstanceId=%s to the target tenant %s. Error: %s",
+                instanceId, targetTenant, format("Unsupported source type: %s", instance.getSource()));
+              LOGGER.error("publishInstance:: {}", errorMessage);
+              promise.fail(errorMessage);
             });
         } else {
           String errorMessage = format("Error sharing Instance with InstanceId=%s to the target tenant %s. " +
