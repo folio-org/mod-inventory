@@ -49,12 +49,10 @@ public class PostgresClientFactoryTest {
   @AfterClass
   public static void tearDown(TestContext context) {
     Async async = context.async();
-    vertx.close()
-      .onComplete(context.asyncAssertSuccess(res -> {
-        async.complete();
-      }));
     PgPoolContainer.setEmbeddedPostgresOptions();
-    PostgresClientFactory.closeAll();
+    PostgresClientFactory.closeAll()
+      .compose(v -> vertx.close())
+      .onComplete(context.asyncAssertSuccess(res -> async.complete()));
   }
 
   @Test
