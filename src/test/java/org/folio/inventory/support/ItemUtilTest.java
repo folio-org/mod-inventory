@@ -142,4 +142,53 @@ public class ItemUtilTest {
     assertEquals("b", itemJson.getString("barcode"));
     assertNotNull(itemJson.getString("holdingsRecordId"));
   }
+
+  @Test
+  public void shouldIncludeCustomFieldsInStoredAndResponseRepresentationsWhenPresent() {
+    // given
+    JsonObject customFields = new JsonObject().put("department", "Acquisitions");
+    Item itemWithCustomFields = new Item(UUID.randomUUID().toString(), "2", UUID.randomUUID().toString(),
+      new Status(AVAILABLE), UUID.randomUUID().toString(), UUID.randomUUID().toString(), null)
+      .withCustomFields(customFields);
+    Item itemWithoutCustomFields = new Item(UUID.randomUUID().toString(), "2", UUID.randomUUID().toString(),
+      new Status(AVAILABLE), UUID.randomUUID().toString(), UUID.randomUUID().toString(), null);
+
+    // then
+    assertEquals(customFields, ItemUtil.toStoredItemRepresentation(itemWithCustomFields).getJsonObject("customFields"));
+    assertEquals(customFields, ItemUtil.mapToJson(itemWithCustomFields).getJsonObject("customFields"));
+    assertFalse(ItemUtil.toStoredItemRepresentation(itemWithoutCustomFields).containsKey("customFields"));
+    assertFalse(ItemUtil.mapToJson(itemWithoutCustomFields).containsKey("customFields"));
+  }
+
+  @Test
+  public void shouldMapCustomFieldsFromStoredItemRepresentation() {
+    // given
+    JsonObject customFields = new JsonObject().put("department", "Acquisitions");
+    JsonObject itemFromServer = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("status", new JsonObject().put("name", "Available"))
+      .put("customFields", customFields);
+
+    // when
+    Item item = ItemUtil.fromStoredItemRepresentation(itemFromServer);
+
+    // then
+    assertEquals(customFields, item.getCustomFields());
+  }
+
+  @Test
+  public void shouldMapCustomFieldsFromItemRequestJson() {
+    // given
+    JsonObject customFields = new JsonObject().put("department", "Acquisitions");
+    JsonObject itemRequest = new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("status", new JsonObject().put("name", "Available"))
+      .put("customFields", customFields);
+
+    // when
+    Item item = ItemUtil.jsonToItem(itemRequest);
+
+    // then
+    assertEquals(customFields, item.getCustomFields());
+  }
 }

@@ -50,4 +50,24 @@ public class ItemRepresentationTest {
     assertThat(electronicAccessObject.getJsonObject(0).getValue("uri"), is(testValue));
     assertThat(emptyElectronicAccessObject, is(new JsonArray()));
   }
+
+  @Test
+  public void jsonContainsCustomFieldsWhenPresent() {
+    var customFields = new JsonObject().put("department", "Acquisitions");
+    var item = new Item(UUID.randomUUID().toString(), "123", null,
+        new Status(ItemStatusName.AVAILABLE), null, null, null)
+      .withCustomFields(customFields);
+    var json = new ItemRepresentation()
+        .toJson(item, null, new JsonObject().put("contributors", new JsonArray()), null, null, null, null, null, null);
+    assertThat(json.getJsonObject("customFields"), is(customFields));
+  }
+
+  @Test
+  public void jsonOmitsCustomFieldsWhenAbsent() {
+    var item = new Item(UUID.randomUUID().toString(), "123", null,
+        new Status(ItemStatusName.AVAILABLE), null, null, null);
+    var json = new ItemRepresentation()
+        .toJson(item, null, new JsonObject().put("contributors", new JsonArray()), null, null, null, null, null, null);
+    assertThat(json.containsKey("customFields"), is(false));
+  }
 }

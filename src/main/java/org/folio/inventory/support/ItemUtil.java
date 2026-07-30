@@ -168,7 +168,8 @@ public final class ItemUtil {
       .withLastCheckIn(LastCheckIn.from(itemFromServer.getJsonObject("lastCheckIn")))
       .withOrder(itemFromServer.getInteger(Item.ORDER_KEY))
       .withEffectiveCallNumberComponents(
-        EffectiveCallNumberComponents.from(itemFromServer.getJsonObject("effectiveCallNumberComponents")));
+        EffectiveCallNumberComponents.from(itemFromServer.getJsonObject("effectiveCallNumberComponents")))
+      .withCustomFields(itemFromServer.getJsonObject(Item.CUSTOM_FIELDS_KEY));
   }
 
   public static JsonObject toStoredItemRepresentation(Item item) {
@@ -226,6 +227,7 @@ public final class ItemUtil {
     itemToSend.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineIdentifier());
     itemToSend.put(Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
     itemToSend.put(Item.ORDER_KEY, item.getOrder());
+    includeIfPresent(itemToSend, Item.CUSTOM_FIELDS_KEY, item.getCustomFields());
 
     return itemToSend;
   }
@@ -326,7 +328,8 @@ public final class ItemUtil {
       .withPurchaseOrderLineIdentifier(itemRequest.getString(Item.PURCHASE_ORDER_LINE_IDENTIFIER))
       .withLastCheckIn(LastCheckIn.from(itemRequest.getJsonObject(Item.LAST_CHECK_IN)))
       .withOrder(order)
-      .withTags(tags);
+      .withTags(tags)
+      .withCustomFields(itemRequest.getJsonObject(Item.CUSTOM_FIELDS_KEY));
   }
 
   private static List<String> getTags(JsonObject itemRequest) {
@@ -388,6 +391,7 @@ public final class ItemUtil {
     itemJson.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineIdentifier());
     itemJson.put(Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
     itemJson.put(Item.ORDER_KEY, item.getOrder());
+    includeIfPresent(itemJson, Item.CUSTOM_FIELDS_KEY, item.getCustomFields());
 
     return itemJson;
   }
