@@ -1,7 +1,5 @@
 package org.folio.inventory.support.http.client;
 
-import static org.apache.http.HttpHeaders.ACCEPT;
-
 import java.net.URL;
 import java.util.Map;
 import java.util.Optional;
@@ -9,6 +7,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Getter;
+import org.folio.HttpHeaders;
 
 @Getter
 public abstract class AbstractOkapiHttpClient {
@@ -43,7 +42,7 @@ public abstract class AbstractOkapiHttpClient {
 
   private Map<String, String> createHeadersMap() {
     return Stream.of(
-        Map.entry(ACCEPT, Optional.of("application/json, text/plain")),
+        Map.entry(HttpHeaders.ACCEPT, Optional.of("application/json, text/plain")),
         Map.entry(OKAPI_URL_HEADER, Optional.ofNullable(this.okapiUrl).map(URL::toString)),
         Map.entry(TENANT_HEADER, Optional.ofNullable(this.tenantId)),
         Map.entry(TOKEN_HEADER, Optional.ofNullable(this.token)),

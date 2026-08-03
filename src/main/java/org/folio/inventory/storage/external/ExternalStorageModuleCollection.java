@@ -1,7 +1,6 @@
 package org.folio.inventory.storage.external;
 
 import static java.lang.String.format;
-import static org.apache.http.HttpHeaders.ACCEPT;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
@@ -12,6 +11,7 @@ import io.vertx.ext.web.client.WebClient;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.HttpHeaders;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
@@ -224,7 +224,7 @@ abstract class ExternalStorageModuleCollection<T> {
   }
 
   protected HttpRequest<Buffer> withStandardHeaders(HttpRequest<Buffer> request) {
-    request.putHeader(ACCEPT, "application/json, text/plain")
+    request.putHeader(HttpHeaders.ACCEPT, "application/json, text/plain")
       .putHeader(TENANT_HEADER, tenant)
       .putHeader(TOKEN_HEADER, token)
       .putHeader(REQUEST_ID_HEADER, requestId);

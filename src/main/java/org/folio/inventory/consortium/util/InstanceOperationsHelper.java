@@ -2,9 +2,9 @@ package org.folio.inventory.consortium.util;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.HttpStatus;
 import org.folio.inventory.consortium.handlers.TenantProvider;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.instances.Instance;

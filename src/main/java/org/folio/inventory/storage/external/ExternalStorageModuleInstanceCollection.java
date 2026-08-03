@@ -3,8 +3,6 @@ package org.folio.inventory.storage.external;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.BooleanUtils.isNotTrue;
 import static org.apache.commons.lang3.BooleanUtils.isTrue;
-import static org.apache.http.HttpStatus.SC_CREATED;
-import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 
 import io.vertx.core.buffer.Buffer;
@@ -17,9 +15,9 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.HttpStatus;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
@@ -130,8 +128,9 @@ class ExternalStorageModuleInstanceCollection
   private boolean isBatchResponse(Response response) {
     int statusCode = response.getStatusCode();
     String contentHeaderValue = response.getContentType();
-    return statusCode == SC_CREATED
-      || (statusCode == SC_INTERNAL_SERVER_ERROR && APPLICATION_JSON.equals(contentHeaderValue));
+    return statusCode == HttpStatus.SC_CREATED
+                                    || (statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR
+                                        && APPLICATION_JSON.equals(contentHeaderValue));
   }
 
   @Override

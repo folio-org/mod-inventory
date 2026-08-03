@@ -5,10 +5,10 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.apache.http.HttpException;
-import org.apache.http.HttpStatus;
+import io.vertx.ext.web.handler.HttpException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.HttpStatus;
 import org.folio.Record;
 import org.folio.inventory.client.wrappers.ChangeManagerClientWrapper;
 import org.folio.inventory.consortium.entities.SharingInstance;
@@ -122,11 +122,12 @@ public class RestDataImportHelper {
         .withUserId(kafkaHeaders.get(USER_ID.toLowerCase()));
 
       changeManagerClient.postChangeManagerJobExecutions(initJobExecutionsRqDto, response -> {
-        if (response.result().statusCode() != HttpStatus.SC_CREATED) {
+        var statusCode = response.result().statusCode();
+        if (statusCode != HttpStatus.SC_CREATED) {
           String errorMessage = format("Error receiving new JobExecution for sharing instance with InstanceId=%s. " +
-            "Status message: %s. Status code: %s", instanceId, response.result().statusMessage(), response.result().statusCode());
+            "Status message: %s. Status code: %s", instanceId, response.result().statusMessage(), statusCode);
           LOGGER.error("initJobExecution:: {}", errorMessage);
-          promise.fail(new HttpException(errorMessage, response.cause()));
+          promise.fail(new HttpException(statusCode, errorMessage, response.cause()));
         } else {
           JsonObject responseBody = response.result().bodyAsJsonObject();
           LOGGER.trace("initJobExecution:: ResponseBody: {} for sharing instance with InstanceId={}.", responseBody, instanceId);
@@ -154,11 +155,12 @@ public class RestDataImportHelper {
     Promise<String> promise = Promise.promise();
     try {
       changeManagerClient.putChangeManagerJobExecutionsJobProfileById(jobExecutionId, JOB_PROFILE_INFO, response -> {
-        if (response.result().statusCode() != HttpStatus.SC_OK) {
+        var statusCode = response.result().statusCode();
+        if (statusCode != HttpStatus.SC_OK) {
           String errorMessage = format("Failed to set JobProfile for JobExecution with jobExecutionId=%s. " +
-            "Status message: %s. Status code: %s", jobExecutionId, response.result().statusMessage(), response.result().statusCode());
+            "Status message: %s. Status code: %s", jobExecutionId, response.result().statusMessage(), statusCode);
           LOGGER.warn("setDefaultJobProfileToJobExecution:: {}", errorMessage);
-          promise.fail(new HttpException(format(errorMessage, jobExecutionId), response.cause()));
+          promise.fail(new HttpException(statusCode, format(errorMessage, jobExecutionId), response.cause()));
         } else {
           LOGGER.trace("setDefaultJobProfileToJobExecution:: Response: {} set JobProfile for JobExecution with jobExecutionId={}.",
             response.result().bodyAsJsonObject(), jobExecutionId);
@@ -179,10 +181,11 @@ public class RestDataImportHelper {
     Promise<String> promise = Promise.promise();
     try {
       changeManagerClient.postChangeManagerJobExecutionsRecordsById(jobExecutionId, shouldAcceptInstanceId, rawRecordsDto, response -> {
-        if (response.result().statusCode() != HttpStatus.SC_NO_CONTENT) {
+        var statusCode = response.result().statusCode();
+        if (statusCode != HttpStatus.SC_NO_CONTENT) {
           LOGGER.error("postChunk:: Failed sending data. Status message: {}. Status code: {}.",
-            response.result().statusMessage(), response.result().statusCode());
-          promise.fail(new HttpException("Failed sending record data.", response.cause()));
+            response.result().statusMessage(), statusCode);
+          promise.fail(new HttpException(statusCode, "Failed sending record data.", response.cause()));
         } else {
           LOGGER.info("postChunk:: Sending data result: {}", response.result());
           promise.complete(jobExecutionId);
