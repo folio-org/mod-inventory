@@ -1,8 +1,5 @@
 package org.folio.inventory.support.http.client;
 
-import static org.apache.http.HttpHeaders.CONTENT_TYPE;
-import static org.apache.http.HttpHeaders.LOCATION;
-
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
@@ -15,6 +12,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
+import org.folio.HttpHeaders;
 import org.folio.inventory.common.WebContext;
 
 public class OkapiHttpClient extends AbstractOkapiHttpClient {
@@ -160,6 +158,6 @@ public class OkapiHttpClient extends AbstractOkapiHttpClient {
 
   private static Response mapResponse(HttpResponse<Buffer> httpResponse) {
     return new Response(httpResponse.statusCode(), httpResponse.bodyAsString(),
-      httpResponse.getHeader(CONTENT_TYPE), httpResponse.getHeader(LOCATION));
+      httpResponse.getHeader(HttpHeaders.CONTENT_TYPE), httpResponse.getHeader(HttpHeaders.LOCATION));
   }
 }

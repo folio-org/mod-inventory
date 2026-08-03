@@ -28,7 +28,6 @@
     <folio-isbn-util.version>1.10.0-SNAPSHOT</folio-isbn-util.version>
 
     <vertx.version>5.1.5</vertx.version>
-    <httpcomponents.version>4.5.14</httpcomponents.version>
     <lombok.version>1.18.46</lombok.version>
     <postgres.version>42.7.13</postgres.version>
     <liquibase.version>5.0.3</liquibase.version>
@@ -160,11 +159,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-1.2-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j-impl</artifactId>
+      <artifactId>log4j-slf4j2-impl</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -175,16 +170,6 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
       <version>${commons-lang3.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpclient-osgi</artifactId>
-      <version>${httpcomponents.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpclient-cache</artifactId>
-      <version>${httpcomponents.version}</version>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>

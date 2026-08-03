@@ -29,11 +29,11 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.folio.DataImportEventPayload;
+import org.folio.HttpStatus;
 import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
