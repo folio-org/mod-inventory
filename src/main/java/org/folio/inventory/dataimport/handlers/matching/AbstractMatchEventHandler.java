@@ -23,6 +23,8 @@ import org.folio.rest.jaxrs.model.MatchExpression;
 
 import java.util.concurrent.CompletableFuture;
 
+import static org.folio.inventory.dataimport.handlers.matching.loaders.AbstractLoader.INSTANCES_IDS;
+import static org.folio.inventory.dataimport.handlers.matching.loaders.AbstractLoader.MULTI_MATCH_IDS;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
@@ -41,7 +43,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
   private MappingMetadataCache mappingMetadataCache;
   private ConsortiumService consortiumService;
 
-  public AbstractMatchEventHandler(MappingMetadataCache mappingMetadataCache, ConsortiumService consortiumService) {
+  protected AbstractMatchEventHandler(MappingMetadataCache mappingMetadataCache, ConsortiumService consortiumService) {
     this.mappingMetadataCache = mappingMetadataCache;
     this.consortiumService = consortiumService;
   }
@@ -87,17 +89,21 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     dataImportEventPayload.getContext().put(MATCHING_RELATIONS,
       Json.encode(matchingParametersRelations.getMatchingRelations()));
 
+    var savedMultiMatchIds = dataImportEventPayload.getContext().get(MULTI_MATCH_IDS);
+    var savedInstancesIds = dataImportEventPayload.getContext().get(INSTANCES_IDS);
+
     return MatchingManager.match(dataImportEventPayload)
       .thenCompose(matchedLocal -> {
         if (isConsortiumActionAvailable()) {
-          return matchCentralTenantIfNeeded(dataImportEventPayload, matchedLocal, context, mappingMetadataDto, matchingParametersRelations);
+          return matchCentralTenantIfNeeded(dataImportEventPayload, matchedLocal, context, mappingMetadataDto, matchingParametersRelations, savedMultiMatchIds, savedInstancesIds);
         }
         return CompletableFuture.completedFuture(matchedLocal);
       });
   }
 
   private CompletableFuture<Boolean> matchCentralTenantIfNeeded(DataImportEventPayload dataImportEventPayload, boolean isMatchedLocal, Context context,
-                                                                MappingMetadataDto mappingMetadataDto, MatchingParametersRelations matchingParametersRelations) {
+                                                                MappingMetadataDto mappingMetadataDto, MatchingParametersRelations matchingParametersRelations,
+                                                                String savedMultiMatchIds, String savedInstancesIds) {
     LOGGER.debug("matchCentralTenantIfNeeded :: dataImportEventPayload.tenant: {}, isMatchedLocal: {}", dataImportEventPayload.getTenant(), isMatchedLocal);
     return consortiumService.getConsortiumConfiguration(context)
       .toCompletionStage().toCompletableFuture()
@@ -106,11 +112,11 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
           && !isMatchByPolOrVrn(dataImportEventPayload)) {
           LOGGER.debug("matchCentralTenantIfNeeded:: Start matching on central tenant with id: {}", consortiumConfiguration.get().getCentralTenantId());
           String localMatchedInstance = dataImportEventPayload.getContext().get(getEntityType().value());
-          preparePayloadBeforeConsortiumProcessing(dataImportEventPayload, consortiumConfiguration.get(), mappingMetadataDto, matchingParametersRelations);
+          preparePayloadBeforeConsortiumProcessing(dataImportEventPayload, consortiumConfiguration.get(), mappingMetadataDto, matchingParametersRelations, savedMultiMatchIds, savedInstancesIds);
           return MatchingManager.match(dataImportEventPayload)
             .thenCompose(isMatchedConsortium -> {
               dataImportEventPayload.setTenant(context.getTenantId());
-              if (isMatchedConsortium && isMatchedLocal && !isShadowEntity(localMatchedInstance, dataImportEventPayload.getContext().get(getEntityType().value()))) {
+              if (Boolean.TRUE.equals(isMatchedConsortium) && isMatchedLocal && !isShadowEntity(localMatchedInstance, dataImportEventPayload.getContext().get(getEntityType().value()))) {
                 LOGGER.warn("matchCentralTenantIfNeeded:: Found multiple results during matching on local tenant: {} and central tenant: {} ",
                   context.getTenantId(), consortiumConfiguration.get().getCentralTenantId());
                 return CompletableFuture.failedFuture(new MatchingException(String.format(FOUND_MULTIPLE_ENTITIES, context.getTenantId(), consortiumConfiguration.get().getCentralTenantId())));
@@ -138,12 +144,19 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
   }
 
   private void preparePayloadBeforeConsortiumProcessing(DataImportEventPayload dataImportEventPayload, ConsortiumConfiguration consortiumConfiguration,
-                                                        MappingMetadataDto mappingMetadataDto, MatchingParametersRelations matchingParametersRelations) {
+                                                        MappingMetadataDto mappingMetadataDto, MatchingParametersRelations matchingParametersRelations,
+                                                        String savedMultiMatchIds, String savedInstancesIds) {
     dataImportEventPayload.setTenant(consortiumConfiguration.getCentralTenantId());
     dataImportEventPayload.getContext().put(MAPPING_PARAMS, mappingMetadataDto.getMappingParams());
     dataImportEventPayload.getContext().put(MATCHING_RELATIONS,
       Json.encode(matchingParametersRelations.getMatchingRelations()));
     dataImportEventPayload.getContext().remove(getEntityType().value());
+    if (savedMultiMatchIds != null) {
+      dataImportEventPayload.getContext().put(MULTI_MATCH_IDS, savedMultiMatchIds);
+    }
+    if (savedInstancesIds != null) {
+      dataImportEventPayload.getContext().put(INSTANCES_IDS, savedInstancesIds);
+    }
   }
 
   private boolean isShadowEntity(String localEntity, String matchedEntity) {
