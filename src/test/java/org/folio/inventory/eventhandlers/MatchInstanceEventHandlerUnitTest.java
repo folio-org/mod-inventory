@@ -847,6 +847,65 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   @Test
+  public void shouldKeepMultiMatchIdsInContextAfterCentralTenantCallFindsNoResultsInConsortium(TestContext testContext)
+    throws UnsupportedEncodingException {
+    var async = testContext.async();
+
+    var centralTenantId = "consortium";
+    var consortiumId = "consortiumId";
+    var matchedInstances = List.of(
+      new Instance(UUID.randomUUID().toString(), 1, "in1", "MARC", "Wonderful", "12334"),
+      new Instance(UUID.randomUUID().toString(), 1, "in2", "MARC", "Wonderful", "12334"));
+
+    var centralInstanceCollection = mock(InstanceCollection.class);
+    when(storage.getInstanceCollection(Mockito.argThat(ctx -> ctx.getTenantId().equals(centralTenantId))))
+      .thenReturn(centralInstanceCollection);
+
+    doAnswer(inv -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+      .when(consortiumService).getConsortiumConfiguration(any());
+
+    // Local: 2 results for the base query -> MULTI_MATCH_IDS set
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      callback.accept(new Success<>(new MultipleRecords<>(matchedInstances, 2)));
+      return null;
+    }).when(instanceCollection)
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    // Central: 0 results (no shadow instances) - the IDs filter is applied but nothing is found
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      callback.accept(new Success<>(new MultipleRecords<>(new ArrayList<>(), 0)));
+      return null;
+    }).when(centralInstanceCollection)
+      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    var context = new HashMap<String, String>();
+    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
+    context.put(RELATIONS, MATCHING_RELATIONS);
+
+    var subMatchProfile = new MatchProfile()
+      .withExistingRecordType(INSTANCE)
+      .withIncomingRecordType(MARC_BIBLIOGRAPHIC);
+
+    var eventPayload = createEventPayload().withContext(context);
+    eventPayload.getCurrentNode().setChildSnapshotWrappers(List.of(new ProfileSnapshotWrapper()
+      .withContent(subMatchProfile)
+      .withContentType(MATCH_PROFILE)
+      .withReactTo(MATCH)));
+
+    eventHandler.handle(eventPayload).whenComplete((processed, throwable) -> testContext.verify(v -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processed.getEventType());
+      // MULTI_MATCH_IDS must still be in context for the next match profile (Match 2) to scope its query
+      assertThat(new JsonArray(processed.getContext().get(MULTI_MATCH_IDS)),
+        hasItems(matchedInstances.get(0).getId(), matchedInstances.get(1).getId()));
+      async.complete();
+    }));
+  }
+
+  @Test
   public void shouldPreserveMultiMatchIdsScopeForCentralTenantQueryInConsortium(TestContext testContext)
     throws UnsupportedEncodingException {
     var async = testContext.async();

@@ -111,7 +111,9 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
         if (consortiumConfiguration.isPresent() && !consortiumConfiguration.get().getCentralTenantId().equals(context.getTenantId())
           && !isMatchByPolOrVrn(dataImportEventPayload)) {
           LOGGER.debug("matchCentralTenantIfNeeded:: Start matching on central tenant with id: {}", consortiumConfiguration.get().getCentralTenantId());
-          String localMatchedInstance = dataImportEventPayload.getContext().get(getEntityType().value());
+          var localMatchedInstance = dataImportEventPayload.getContext().get(getEntityType().value());
+          var localCallMultiMatchIds = dataImportEventPayload.getContext().get(MULTI_MATCH_IDS);
+          var localCallInstancesIds = dataImportEventPayload.getContext().get(INSTANCES_IDS);
           preparePayloadBeforeConsortiumProcessing(dataImportEventPayload, consortiumConfiguration.get(), mappingMetadataDto, matchingParametersRelations, savedMultiMatchIds, savedInstancesIds);
           return MatchingManager.match(dataImportEventPayload)
             .thenCompose(isMatchedConsortium -> {
@@ -120,6 +122,12 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
                 LOGGER.warn("matchCentralTenantIfNeeded:: Found multiple results during matching on local tenant: {} and central tenant: {} ",
                   context.getTenantId(), consortiumConfiguration.get().getCentralTenantId());
                 return CompletableFuture.failedFuture(new MatchingException(String.format(FOUND_MULTIPLE_ENTITIES, context.getTenantId(), consortiumConfiguration.get().getCentralTenantId())));
+              }
+              if (localCallMultiMatchIds != null) {
+                dataImportEventPayload.getContext().put(MULTI_MATCH_IDS, localCallMultiMatchIds);
+              }
+              if (localCallInstancesIds != null) {
+                dataImportEventPayload.getContext().put(INSTANCES_IDS, localCallInstancesIds);
               }
               if (StringUtils.isEmpty(dataImportEventPayload.getContext().get(getEntityType().value()))) {
                 dataImportEventPayload.getContext().put(getEntityType().value(), localMatchedInstance);
