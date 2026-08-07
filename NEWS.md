@@ -1,6 +1,7 @@
 ## 22.1.0-SNAPSHOT 2026-mm-dd
 * Data Import profiles will map invalid statistical codes [MODINV-1391](https://folio-org.atlassian.net/browse/MODINV-1391)
 * Importing Records from BNE z39.50 - record not available error [MODINV-1395](https://folio-org.atlassian.net/browse/MODINV-1395)
+* Fix match results not passed to subsequent matches for consortium tenants [MODINV-1400](https://folio-org.atlassian.net/browse/MODINV-1400)
 
 ## 22.0.0 2026-04-16
 * ECS: Improve logs in move holdings operation for [MODINV-1276](https://folio-org.atlassian.net/browse/MODINV-1276)
