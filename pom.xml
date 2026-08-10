@@ -27,7 +27,7 @@
     <mod-source-record-manager-client.version>4.1.0-SNAPSHOT</mod-source-record-manager-client.version>
     <folio-isbn-util.version>1.10.0-SNAPSHOT</folio-isbn-util.version>
 
-    <vertx.version>5.1.5</vertx.version>
+    <vertx.version>5.1.6</vertx.version>
     <lombok.version>1.18.46</lombok.version>
     <postgres.version>42.7.13</postgres.version>
     <liquibase.version>5.0.3</liquibase.version>
