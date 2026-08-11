@@ -1,9 +1,7 @@
 package org.folio.inventory.support.http.client;
 
-import static org.apache.http.HttpHeaders.CONTENT_TYPE;
-import static org.apache.http.HttpHeaders.LOCATION;
-
 import io.vertx.core.json.JsonObject;
+import org.folio.HttpHeaders;
 import org.folio.inventory.common.Context;
 
 import java.io.IOException;
@@ -76,7 +74,7 @@ public class SynchronousHttpClient extends AbstractOkapiHttpClient {
 
   private static Response mapResponse(HttpResponse<String> response) {
     return new Response(response.statusCode(), response.body(),
-      response.headers().firstValue(CONTENT_TYPE).orElse(null),
-      response.headers().firstValue(LOCATION).orElse(null));
+      response.headers().firstValue(HttpHeaders.CONTENT_TYPE).orElse(null),
+      response.headers().firstValue(HttpHeaders.LOCATION).orElse(null));
   }
 }

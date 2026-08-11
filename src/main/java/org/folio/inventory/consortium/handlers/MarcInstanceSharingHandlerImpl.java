@@ -5,10 +5,10 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
-import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.Authority;
+import org.folio.HttpStatus;
 import org.folio.Link;
 import org.folio.LinkingRuleDto;
 import org.folio.Record;
@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static org.apache.http.HttpStatus.SC_NO_CONTENT;
 import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.SOURCE;
 import static org.folio.inventory.consortium.util.MarcRecordUtil.removeFieldFromMarcRecord;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.INSTANCE_ID_TYPE;
@@ -281,7 +280,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       .onFailure(e -> LOGGER.error("deleteSourceRecordByRecordId:: Error deleting source record with recordId={} by InstanceId={} from tenant {}",
         recordId, instanceId, tenantId, e))
       .compose(response -> {
-        if (response.statusCode() == SC_NO_CONTENT) {
+        if (response.statusCode() == HttpStatus.SC_NO_CONTENT) {
           LOGGER.info("deleteSourceRecordByRecordId:: Source record with recordId={} for instance with InstanceId={} from tenant {} has been deleted.",
             recordId, instanceId, tenantId);
           return Future.succeededFuture(instanceId);

@@ -11,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.DataImportEventTypes;
+import org.folio.HttpStatus;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
 import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
@@ -49,7 +50,6 @@ import java.util.stream.Stream;
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
-import static org.apache.http.HttpStatus.SC_OK;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.buildMultiMatchErrorMessage;
 import static org.folio.processing.value.Value.ValueType.MISSING;
 import static org.folio.rest.jaxrs.model.Filter.ComparisonPartType;
@@ -360,7 +360,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
                                                                             SourceStorageRecordsClient sourceStorageRecordsClient) {
     return sourceStorageRecordsClient.postSourceStorageRecordsMatching(recordMatchingDto)
       .compose(response -> {
-        if (response.statusCode() == SC_OK) {
+        if (response.statusCode() == HttpStatus.SC_OK) {
           return Future.succeededFuture(response.bodyAsJson(RecordsIdentifiersCollection.class));
         }
         String msg = format("Failed to request records identifiers by matching criteria, responseStatus: '%s', body: '%s', jobExecutionId: '%s', tenant: '%s'",
@@ -374,7 +374,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     String recordId = recordIdentifiersDto.getRecordId();
     return sourceStorageRecordsClient.getSourceStorageRecordsById(recordId)
       .compose(response -> {
-        if (response.statusCode() == SC_OK) {
+        if (response.statusCode() == HttpStatus.SC_OK) {
           return Future.succeededFuture(response.bodyAsJson(Record.class));
         }
         String msg = format("Failed to retrieve record by id: '%s', responseStatus: '%s', body: '%s', jobExecutionId: '%s', tenant: '%s'",

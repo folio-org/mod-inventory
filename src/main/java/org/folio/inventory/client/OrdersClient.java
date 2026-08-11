@@ -12,10 +12,10 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import lombok.SneakyThrows;
-import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.folio.HttpStatus;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.OrdersLoadingException;
 import org.folio.inventory.support.http.client.OkapiHttpClient;

@@ -1,6 +1,6 @@
 package org.folio.inventory.exceptions;
 
-import org.apache.http.HttpStatus;
+import org.folio.HttpStatus;
 import org.folio.inventory.support.http.ContentType;
 
 /**

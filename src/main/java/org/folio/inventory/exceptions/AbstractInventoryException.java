@@ -1,6 +1,6 @@
 package org.folio.inventory.exceptions;
 
-import org.apache.http.HttpStatus;
+import org.folio.HttpStatus;
 import org.folio.inventory.support.http.ContentType;
 
 public abstract class AbstractInventoryException extends RuntimeException {
@@ -8,8 +8,7 @@ public abstract class AbstractInventoryException extends RuntimeException {
   protected final int statusCode;
   protected final String contentType;
 
-  public AbstractInventoryException(String message) {
-
+  protected AbstractInventoryException(String message) {
     super(message);
     this.body = message;
     this.statusCode = HttpStatus.SC_INTERNAL_SERVER_ERROR;

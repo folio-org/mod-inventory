@@ -8,7 +8,6 @@ import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -25,7 +24,7 @@ import org.folio.rest.jaxrs.model.EntityType;
 
 public class InstanceLoader extends AbstractLoader<Instance> {
 
-  private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
+  private static final String INSTANCES_IDS_KEY = AbstractLoader.INSTANCES_IDS;
   private static final String ID_FIELD = "id";
 
   private Storage storage;
@@ -83,9 +82,9 @@ public class InstanceLoader extends AbstractLoader<Instance> {
 
   @Override
   protected String mapEntityListToIdsJsonString(List<Instance> instanceList) {
-    List<String> idList = instanceList.stream()
+    var idList = instanceList.stream()
       .map(Instance::getId)
-      .collect(Collectors.toList());
+      .toList();
 
     return Json.encode(idList);
   }
