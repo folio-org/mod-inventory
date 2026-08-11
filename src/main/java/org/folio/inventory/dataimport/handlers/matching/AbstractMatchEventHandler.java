@@ -93,7 +93,9 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     var savedMultiMatchIds = dataImportEventPayload.getContext().get(MULTI_MATCH_IDS);
     var savedInstancesIds = dataImportEventPayload.getContext().get(INSTANCES_IDS);
     var entityJson = dataImportEventPayload.getContext().get(getEntityType().value());
-    var savedInstanceId = StringUtils.isNotEmpty(entityJson) ? new JsonObject(entityJson).getString("id") : null;
+    // Only extract an ID when the value is a JSON object; item submatch stores a JSON array here.
+    var savedInstanceId = StringUtils.isNotEmpty(entityJson) && entityJson.charAt(0) == '{'
+      ? new JsonObject(entityJson).getString("id") : null;
 
     return MatchingManager.match(dataImportEventPayload)
       .thenCompose(matchedLocal -> {
