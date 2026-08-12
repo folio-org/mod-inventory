@@ -1,6 +1,7 @@
 package org.folio.inventory.dataimport.handlers.matching;
 
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -91,11 +92,15 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
 
     var savedMultiMatchIds = dataImportEventPayload.getContext().get(MULTI_MATCH_IDS);
     var savedInstancesIds = dataImportEventPayload.getContext().get(INSTANCES_IDS);
+    var entityJson = dataImportEventPayload.getContext().get(getEntityType().value());
+    // Only extract an ID when the value is a JSON object; item submatch stores a JSON array here.
+    var savedInstanceId = StringUtils.isNotEmpty(entityJson) && entityJson.charAt(0) == '{'
+      ? new JsonObject(entityJson).getString("id") : null;
 
     return MatchingManager.match(dataImportEventPayload)
       .thenCompose(matchedLocal -> {
         if (isConsortiumActionAvailable()) {
-          return matchCentralTenantIfNeeded(dataImportEventPayload, matchedLocal, context, mappingMetadataDto, matchingParametersRelations, savedMultiMatchIds, savedInstancesIds);
+          return matchCentralTenantIfNeeded(dataImportEventPayload, matchedLocal, context, mappingMetadataDto, matchingParametersRelations, savedMultiMatchIds, savedInstancesIds, savedInstanceId);
         }
         return CompletableFuture.completedFuture(matchedLocal);
       });
@@ -103,7 +108,7 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
 
   private CompletableFuture<Boolean> matchCentralTenantIfNeeded(DataImportEventPayload dataImportEventPayload, boolean isMatchedLocal, Context context,
                                                                 MappingMetadataDto mappingMetadataDto, MatchingParametersRelations matchingParametersRelations,
-                                                                String savedMultiMatchIds, String savedInstancesIds) {
+                                                                String savedMultiMatchIds, String savedInstancesIds, String savedInstanceId) {
     LOGGER.debug("matchCentralTenantIfNeeded :: dataImportEventPayload.tenant: {}, isMatchedLocal: {}", dataImportEventPayload.getTenant(), isMatchedLocal);
     return consortiumService.getConsortiumConfiguration(context)
       .toCompletionStage().toCompletableFuture()
@@ -114,6 +119,9 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
           var localMatchedInstance = dataImportEventPayload.getContext().get(getEntityType().value());
           var localCallMultiMatchIds = dataImportEventPayload.getContext().get(MULTI_MATCH_IDS);
           var localCallInstancesIds = dataImportEventPayload.getContext().get(INSTANCES_IDS);
+          if (savedInstanceId != null && savedMultiMatchIds == null && savedInstancesIds == null) {
+            dataImportEventPayload.getContext().put(MULTI_MATCH_IDS, new JsonArray().add(savedInstanceId).encode());
+          }
           preparePayloadBeforeConsortiumProcessing(dataImportEventPayload, consortiumConfiguration.get(), mappingMetadataDto, matchingParametersRelations, savedMultiMatchIds, savedInstancesIds);
           return MatchingManager.match(dataImportEventPayload)
             .thenCompose(isMatchedConsortium -> {
