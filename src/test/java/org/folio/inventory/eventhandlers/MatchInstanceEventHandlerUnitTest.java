@@ -906,6 +906,70 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   @Test
+  public void shouldScopeSubMatchCentralQueryBySingleInstanceIdFromPreviousMatchOnConsortium(TestContext testContext)
+    throws UnsupportedEncodingException {
+    var async = testContext.async();
+
+    var centralTenantId = "consortium";
+    var consortiumId = "consortiumId";
+
+    // SC1: same UUID as SH1 (shadow copy relationship)
+    var shadowInstance = createInstance();   // local shadow SH1, UUID = INSTANCE_ID
+    var centralInstance = createInstance();  // central original SC1, same UUID = INSTANCE_ID
+    var anotherCentralUuid = UUID.randomUUID().toString();
+    var anotherCentralInstance = new Instance(anotherCentralUuid, 5, "in9999999", "MARC", "Another", "99999");
+
+    var centralInstanceCollection = mock(InstanceCollection.class);
+    when(storage.getInstanceCollection(Mockito.argThat(ctx -> ctx.getTenantId().equals(centralTenantId))))
+      .thenReturn(centralInstanceCollection);
+
+    doAnswer(inv -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+      .when(consortiumService).getConsortiumConfiguration(any());
+
+    // Local: scoped by INSTANCE_ID -> finds SH1 (shadow, same UUID)
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      callback.accept(new Success<>(new MultipleRecords<>(singletonList(shadowInstance), 1)));
+      return null;
+    }).when(instanceCollection)
+      .findByCql(eq(format("hrid == \"%s\" AND id == \"%s\"", INSTANCE_HRID, INSTANCE_ID)),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    // Central: scoped by INSTANCE_ID (expected after fix) -> finds SC1 only
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      callback.accept(new Success<>(new MultipleRecords<>(singletonList(centralInstance), 1)));
+      return null;
+    }).when(centralInstanceCollection)
+      .findByCql(eq(format("hrid == \"%s\" AND id == (%s)", INSTANCE_HRID, INSTANCE_ID)),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    // Central: unscoped query (what happens WITHOUT Fix #3) -> 2 results -> should trigger error
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      callback.accept(new Success<>(new MultipleRecords<>(asList(centralInstance, anotherCentralInstance), 2)));
+      return null;
+    }).when(centralInstanceCollection)
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    // Context simulates state after Match 1: INSTANCE = SC1 (central original, uuid = INSTANCE_ID)
+    var context = new HashMap<String, String>();
+    context.put(INSTANCE.value(), JsonObject.mapFrom(centralInstance).encode());
+    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
+    context.put(RELATIONS, MATCHING_RELATIONS);
+    var eventPayload = createEventPayload().withContext(context);
+
+    eventHandler.handle(eventPayload).whenComplete((processed, throwable) -> {
+      testContext.assertNull(throwable);
+      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processed.getEventType());
+      testContext.assertEquals(INSTANCE_ID,
+        new JsonObject(processed.getContext().get(INSTANCE.value())).getString(ID_FIELD));
+      async.complete();
+    });
+  }
+
+  @Test
   public void shouldPreserveMultiMatchIdsScopeForCentralTenantQueryInConsortium(TestContext testContext)
     throws UnsupportedEncodingException {
     var async = testContext.async();
