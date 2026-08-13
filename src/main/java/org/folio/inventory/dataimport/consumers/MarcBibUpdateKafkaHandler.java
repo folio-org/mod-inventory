@@ -3,8 +3,6 @@ package org.folio.inventory.dataimport.consumers;
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
@@ -13,8 +11,6 @@ import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECO
 import static org.folio.kafka.KafkaHeaderUtils.kafkaHeadersToMap;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.FAIL;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.SUCCESS;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.AsyncResult;
@@ -44,6 +40,7 @@ import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.SimpleKafkaProducerManager;
 import org.folio.kafka.services.KafkaProducerRecordBuilder;
+import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.LinkUpdateReport;
 import org.folio.rest.jaxrs.model.MarcBibUpdate;
@@ -102,8 +99,8 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   }
 
   private Future<Instance> processEvent(MarcBibUpdate instanceEvent, Map<String, String> headers, Map<String, String> metaDataPayload) {
-    Context context = constructContext(instanceEvent.getTenant(), headers.get(OKAPI_TOKEN_HEADER), headers.get(OKAPI_URL_HEADER),
-      headers.get(OKAPI_USER_ID), headers.get(OKAPI_REQUEST_ID));
+    Context context = constructContext(instanceEvent.getTenant(), headers.get(XOkapiHeaders.TOKEN), headers.get(XOkapiHeaders.URL),
+      headers.get(XOkapiHeaders.USER_ID), headers.get(XOkapiHeaders.REQUEST_ID));
     Record marcBibRecord = instanceEvent.getRecord();
     var jobId = instanceEvent.getJobId();
 

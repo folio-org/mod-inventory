@@ -20,7 +20,7 @@
     <jsonschema2pojo_output_dir>${project.build.directory}/generated-sources/jsonschema2pojo
     </jsonschema2pojo_output_dir>
 
-    <data-import-processing-core.version>5.1.0-SNAPSHOT</data-import-processing-core.version>
+    <data-import-processing-core.version>6.0.0-SNAPSHOT</data-import-processing-core.version>
     <folio-kafka-wrapper.version>4.1.0-SNAPSHOT</folio-kafka-wrapper.version>
     <mod-inventory-storage-dto.version>30.1.0-SNAPSHOT</mod-inventory-storage-dto.version>
     <mod-source-record-storage-client.version>6.1.0-SNAPSHOT</mod-source-record-storage-client.version>
