@@ -27,6 +27,7 @@ import org.folio.processing.mapping.mapper.writer.marc.MarcRecordModifier;
 import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
+import org.folio.rest.jaxrs.model.MarcMappingDetail;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 
@@ -139,10 +140,69 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
       marcRecordModifier.initialize(payload, mappingParameters, mappingProfile, modifiedEntityType());
       marcRecordModifier.modifyRecord(mappingProfile.getMappingDetails().getMarcMappingDetails());
       marcRecordModifier.getResult(payload);
+      if (containsDeleteRuleFor999Field(mappingProfile)) {
+        syncExternalIdsHolderWithParsedRecord(payload);
+      }
     } catch (IOException e) {
       return Future.failedFuture(e);
     }
     return Future.succeededFuture();
+  }
+
+  /**
+   * Cheap pre-check to avoid unnecessary work: returns {@code true} only if the given MappingProfile
+   * contains at least one MARC-modification rule with action DELETE targeting field "999".
+   * When {@code false}, the parsed-record vs externalIdsHolder synchronization can be safely skipped
+   * because MODIFY did not touch 999 and the inherited holder is still consistent with the MARC content.
+   */
+  private static boolean containsDeleteRuleFor999Field(MappingProfile mappingProfile) {
+    if (mappingProfile == null || mappingProfile.getMappingDetails() == null
+        || mappingProfile.getMappingDetails().getMarcMappingDetails() == null) {
+      return false;
+    }
+    for (MarcMappingDetail detail : mappingProfile.getMappingDetails().getMarcMappingDetails()) {
+      if (detail == null || detail.getAction() != MarcMappingDetail.Action.DELETE || detail.getField() == null) {
+        continue;
+      }
+      if ("999".equals(detail.getField().getField())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Keeps {@link Record#externalIdsHolder} in sync with the modified MARC parsed content.
+   * When the MODIFY profile removes 999ff$i from parsed content, the previously inherited
+   * {@code externalIdsHolder.instanceId} becomes stale and must be cleared so that downstream
+   * handlers (e.g. CreateInstance) can re-populate it with a freshly generated instance UUID
+   * instead of persisting the old value in SRS records_lb.external_id.
+   * Minimal-impact policy: only clear when 999ff$i is missing/blank in the parsed record.
+   */
+  private void syncExternalIdsHolderWithParsedRecord(DataImportEventPayload payload) {
+    try {
+      String modifiedEntityKey = modifiedEntityType().value();
+      String recordAsString = payload.getContext().get(modifiedEntityKey);
+      if (isBlank(recordAsString)) {
+        return;
+      }
+      Record record = Json.decodeValue(recordAsString, Record.class);
+      String subfield999ffI = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(),
+        ParsedRecordUtil.AdditionalSubfields.I);
+      ExternalIdsHolder holder = record.getExternalIdsHolder();
+      if (isBlank(subfield999ffI) && holder != null
+          && (!isBlank(holder.getInstanceId()) || !isBlank(holder.getInstanceHrid()))) {
+        LOGGER.info("syncExternalIdsHolderWithParsedRecord:: Clearing stale externalIdsHolder (instanceId='{}', instanceHrid='{}') " +
+            "because 999ff$i was removed from parsed record by MODIFY profile, jobExecutionId: {}, recordId: {}",
+          holder.getInstanceId(), holder.getInstanceHrid(), payload.getJobExecutionId(), record.getId());
+        holder.setInstanceId(null);
+        holder.setInstanceHrid(null);
+        payload.getContext().put(modifiedEntityKey, Json.encode(record));
+      }
+    } catch (Exception e) {
+      LOGGER.warn("syncExternalIdsHolderWithParsedRecord:: Failed to sync externalIdsHolder, jobExecutionId: {}",
+        payload.getJobExecutionId(), e);
+    }
   }
 
   protected Future<Void> updateRelatedEntity(DataImportEventPayload payload, MappingMetadataDto mappingMetadataDto, Context context) {
@@ -276,6 +336,6 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
 
   private void preparePayload(DataImportEventPayload dataImportEventPayload) {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
+    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
   }
 }
