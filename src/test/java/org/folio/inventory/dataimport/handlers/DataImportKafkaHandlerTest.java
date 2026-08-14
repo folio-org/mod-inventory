@@ -22,6 +22,7 @@ import org.folio.MappingProfile;
 import org.folio.inventory.KafkaTest;
 import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
+import org.folio.inventory.dataimport.cache.DeleteRuleFor999FieldCache;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.dataimport.consumers.DataImportKafkaHandler;
@@ -133,6 +134,7 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
       new ProfileSnapshotCache(vertxAssistant.getVertx(), client, 3600),
       kafkaConfig,
       MappingMetadataCache.getInstance(vertxAssistant.getVertx(), client),
+      DeleteRuleFor999FieldCache.getInstance(vertxAssistant.getVertx()),
       new ConsortiumDataCache(vertxAssistant.getVertx(), client),
       cancelledJobsIdCache);
 

@@ -17,6 +17,7 @@ import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.dataimport.cache.DeleteRuleFor999FieldCache;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.modify.MarcBibModifyEventHandler;
 import org.folio.inventory.domain.instances.Instance;
@@ -181,7 +182,8 @@ public class MarcBibModifyEventHandlerTest {
       .thenReturn(Future.succeededFuture(putRecordHttpResponse));
 
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(ctxt -> mockedOkapiHttpClient);
-    marcBibModifyEventHandler = spy(new MarcBibModifyEventHandler(mappingMetadataCache, new InstanceUpdateDelegate(mockedStorage), precedingSucceedingTitlesHelper, httpClient));
+    DeleteRuleFor999FieldCache deleteRuleFor999FieldCache = new DeleteRuleFor999FieldCache(vertx, 60L);
+    marcBibModifyEventHandler = spy(new MarcBibModifyEventHandler(mappingMetadataCache, deleteRuleFor999FieldCache, new InstanceUpdateDelegate(mockedStorage), precedingSucceedingTitlesHelper, httpClient));
 
     doReturn(sourceStorageClient).when(marcBibModifyEventHandler).getSourceStorageRecordsClient(any());
   }

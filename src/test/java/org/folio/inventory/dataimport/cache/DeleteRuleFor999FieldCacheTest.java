@@ -1,35 +1,57 @@
 package org.folio.inventory.dataimport.cache;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import io.vertx.core.Vertx;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import org.folio.MappingProfile;
 import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.MarcField;
 import org.folio.rest.jaxrs.model.MarcMappingDetail;
 import org.folio.rest.jaxrs.model.MarcSubfield;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class DeleteRuleFor999FieldCacheTest {
 
-  private final DeleteRuleFor999FieldCache cache = new DeleteRuleFor999FieldCache(60);
+  private static Vertx vertx;
+  private static DeleteRuleFor999FieldCache cache;
 
-  @Test
-  public void shouldReturnFalseForNullProfile() {
-    assertFalse(cache.containsDeleteRuleFor999Field(null));
+  @BeforeClass
+  public static void beforeClass() {
+    vertx = Vertx.vertx();
+    cache = new DeleteRuleFor999FieldCache(vertx, 60L);
+  }
+
+  @AfterClass
+  public static void afterClass() throws Exception {
+    vertx.close().toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+  }
+
+  private static boolean check(MappingProfile profile) throws Exception {
+    return cache.containsDeleteRuleFor999Field(profile)
+      .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
   }
 
   @Test
-  public void shouldReturnFalseWhenNoMappingDetails() {
+  public void shouldReturnFalseForNullProfile() throws Exception {
+    assertFalse(check(null));
+  }
+
+  @Test
+  public void shouldReturnFalseWhenNoMappingDetails() throws Exception {
     MappingProfile p = new MappingProfile().withId(UUID.randomUUID().toString());
-    assertFalse(cache.containsDeleteRuleFor999Field(p));
+    assertFalse(check(p));
   }
 
   @Test
-  public void shouldReturnFalseWhenNoDeleteRuleFor999() {
+  public void shouldReturnFalseWhenNoDeleteRuleFor999() throws Exception {
     MarcMappingDetail addRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.ADD)
       .withField(new MarcField().withField("856")
@@ -37,11 +59,11 @@ public class DeleteRuleFor999FieldCacheTest {
     MappingProfile p = new MappingProfile()
       .withId(UUID.randomUUID().toString())
       .withMappingDetails(new MappingDetail().withMarcMappingDetails(Collections.singletonList(addRule)));
-    assertFalse(cache.containsDeleteRuleFor999Field(p));
+    assertFalse(check(p));
   }
 
   @Test
-  public void shouldReturnTrueWhenDeleteRuleFor999Present() {
+  public void shouldReturnTrueWhenDeleteRuleFor999Present() throws Exception {
     MarcMappingDetail deleteRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.DELETE)
       .withField(new MarcField().withField("999")
@@ -49,11 +71,11 @@ public class DeleteRuleFor999FieldCacheTest {
     MappingProfile p = new MappingProfile()
       .withId(UUID.randomUUID().toString())
       .withMappingDetails(new MappingDetail().withMarcMappingDetails(Collections.singletonList(deleteRule)));
-    assertTrue(cache.containsDeleteRuleFor999Field(p));
+    assertTrue(check(p));
   }
 
   @Test
-  public void shouldReturnTrueWhenMixedRulesIncludeDelete999() {
+  public void shouldReturnTrueWhenMixedRulesIncludeDelete999() throws Exception {
     MarcMappingDetail addRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.ADD)
       .withField(new MarcField().withField("856")
@@ -65,11 +87,11 @@ public class DeleteRuleFor999FieldCacheTest {
     MappingProfile p = new MappingProfile()
       .withId(UUID.randomUUID().toString())
       .withMappingDetails(new MappingDetail().withMarcMappingDetails(Arrays.asList(addRule, deleteRule)));
-    assertTrue(cache.containsDeleteRuleFor999Field(p));
+    assertTrue(check(p));
   }
 
   @Test
-  public void shouldReturnFalseWhenDeleteRuleTargetsOtherField() {
+  public void shouldReturnFalseWhenDeleteRuleTargetsOtherField() throws Exception {
     MarcMappingDetail deleteRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.DELETE)
       .withField(new MarcField().withField("856")
@@ -77,11 +99,11 @@ public class DeleteRuleFor999FieldCacheTest {
     MappingProfile p = new MappingProfile()
       .withId(UUID.randomUUID().toString())
       .withMappingDetails(new MappingDetail().withMarcMappingDetails(Collections.singletonList(deleteRule)));
-    assertFalse(cache.containsDeleteRuleFor999Field(p));
+    assertFalse(check(p));
   }
 
   @Test
-  public void shouldMemoizeResultByProfileId() {
+  public void shouldMemoizeResultByProfileId() throws Exception {
     String profileId = UUID.randomUUID().toString();
     MarcMappingDetail deleteRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.DELETE)
@@ -90,19 +112,18 @@ public class DeleteRuleFor999FieldCacheTest {
     MappingProfile p1 = new MappingProfile()
       .withId(profileId)
       .withMappingDetails(new MappingDetail().withMarcMappingDetails(Collections.singletonList(deleteRule)));
-    assertTrue(cache.containsDeleteRuleFor999Field(p1));
+    assertTrue(check(p1));
 
     // Different profile object with the same id but with no delete-999 rule.
     // Cache must return the memoized value (true) - proves that value is keyed by profile id.
     MappingProfile p2 = new MappingProfile()
       .withId(profileId)
       .withMappingDetails(new MappingDetail().withMarcMappingDetails(Collections.emptyList()));
-    assertTrue("memoized value should be returned for the same profile id",
-      cache.containsDeleteRuleFor999Field(p2));
+    assertTrue("memoized value should be returned for the same profile id", check(p2));
   }
 
   @Test
-  public void shouldNotCacheWhenProfileIdIsBlank() {
+  public void shouldNotCacheWhenProfileIdIsBlank() throws Exception {
     MarcMappingDetail deleteRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.DELETE)
       .withField(new MarcField().withField("999")
@@ -110,37 +131,39 @@ public class DeleteRuleFor999FieldCacheTest {
     MappingProfile p = new MappingProfile()
       .withMappingDetails(new MappingDetail().withMarcMappingDetails(Collections.singletonList(deleteRule)));
     // profileId is null -> compute directly, no caching
-    assertTrue(cache.containsDeleteRuleFor999Field(p));
+    assertTrue(check(p));
   }
 
   @Test
-  public void shouldReturnTrueForDelete999WithSubfieldI() {
-    MappingProfile p = buildDelete999Profile("i");
-    assertTrue(cache.containsDeleteRuleFor999Field(p));
+  public void singletonAccessorReturnsSameInstance() {
+    DeleteRuleFor999FieldCache a = DeleteRuleFor999FieldCache.getInstance(vertx);
+    DeleteRuleFor999FieldCache b = DeleteRuleFor999FieldCache.getInstance(vertx);
+    assertNotNull(a);
+    assertTrue(a == b);
   }
 
   @Test
-  public void shouldReturnTrueForDelete999WithSubfieldS() {
-    MappingProfile p = buildDelete999Profile("s");
-    assertTrue(cache.containsDeleteRuleFor999Field(p));
+  public void shouldReturnTrueForDelete999WithSubfieldI() throws Exception {
+    assertTrue(check(buildDelete999Profile("i")));
   }
 
   @Test
-  public void shouldReturnFalseForDelete999WhenSubfieldIsOtherThanIsOrWildcard() {
-    // e.g. profile deletes only 999$l - has nothing to do with externalIdsHolder
-    MappingProfile p = buildDelete999Profile("l");
-    assertFalse(cache.containsDeleteRuleFor999Field(p));
+  public void shouldReturnTrueForDelete999WithSubfieldS() throws Exception {
+    assertTrue(check(buildDelete999Profile("s")));
   }
 
   @Test
-  public void shouldReturnFalseForDelete999WhenSubfieldIsT() {
-    MappingProfile p = buildDelete999Profile("t");
-    assertFalse(cache.containsDeleteRuleFor999Field(p));
+  public void shouldReturnFalseForDelete999WhenSubfieldIsOtherThanIsOrWildcard() throws Exception {
+    assertFalse(check(buildDelete999Profile("l")));
   }
 
   @Test
-  public void shouldReturnTrueForDelete999WhenAtLeastOneRelevantSubfieldAmongMany() {
-    // Rule targeting $l AND $i - $i triggers sync even though $l is irrelevant
+  public void shouldReturnFalseForDelete999WhenSubfieldIsT() throws Exception {
+    assertFalse(check(buildDelete999Profile("t")));
+  }
+
+  @Test
+  public void shouldReturnTrueForDelete999WhenAtLeastOneRelevantSubfieldAmongMany() throws Exception {
     MarcMappingDetail deleteRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.DELETE)
       .withField(new MarcField().withField("999")
@@ -150,11 +173,11 @@ public class DeleteRuleFor999FieldCacheTest {
     MappingProfile p = new MappingProfile()
       .withId(UUID.randomUUID().toString())
       .withMappingDetails(new MappingDetail().withMarcMappingDetails(Collections.singletonList(deleteRule)));
-    assertTrue(cache.containsDeleteRuleFor999Field(p));
+    assertTrue(check(p));
   }
 
   @Test
-  public void shouldReturnFalseWhenAllSubfieldsAreIrrelevant() {
+  public void shouldReturnFalseWhenAllSubfieldsAreIrrelevant() throws Exception {
     MarcMappingDetail deleteRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.DELETE)
       .withField(new MarcField().withField("999")
@@ -164,19 +187,18 @@ public class DeleteRuleFor999FieldCacheTest {
     MappingProfile p = new MappingProfile()
       .withId(UUID.randomUUID().toString())
       .withMappingDetails(new MappingDetail().withMarcMappingDetails(Collections.singletonList(deleteRule)));
-    assertFalse(cache.containsDeleteRuleFor999Field(p));
+    assertFalse(check(p));
   }
 
   @Test
-  public void shouldReturnTrueForDelete999WhenSubfieldsListIsNull() {
-    // No subfields specified - treated as whole-field wildcard
+  public void shouldReturnTrueForDelete999WhenSubfieldsListIsNull() throws Exception {
     MarcMappingDetail deleteRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.DELETE)
       .withField(new MarcField().withField("999"));
     MappingProfile p = new MappingProfile()
       .withId(UUID.randomUUID().toString())
       .withMappingDetails(new MappingDetail().withMarcMappingDetails(Collections.singletonList(deleteRule)));
-    assertTrue(cache.containsDeleteRuleFor999Field(p));
+    assertTrue(check(p));
   }
 
   private static MappingProfile buildDelete999Profile(String subfieldCode) {
@@ -187,10 +209,5 @@ public class DeleteRuleFor999FieldCacheTest {
     return new MappingProfile()
       .withId(UUID.randomUUID().toString())
       .withMappingDetails(new MappingDetail().withMarcMappingDetails(Collections.singletonList(deleteRule)));
-  }
-
-  @Test
-  public void singletonAccessorReturnsSameInstance() {
-    assertTrue(DeleteRuleFor999FieldCache.getInstance() == DeleteRuleFor999FieldCache.getInstance());
   }
 }
