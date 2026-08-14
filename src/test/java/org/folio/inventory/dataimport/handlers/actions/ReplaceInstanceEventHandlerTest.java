@@ -337,6 +337,34 @@ public class ReplaceInstanceEventHandlerTest {
             .withContentType(MAPPING_PROFILE)
             .withContent(JsonObject.mapFrom(mappingProfileWithStatisticalCode).getMap())))));
 
+  private MappingProfile mappingProfileWithDeleteAdministrativeNote = new MappingProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Instance repeatable 2-Find & remove")
+    .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+    .withExistingRecordType(EntityType.INSTANCE)
+    .withMappingDetails(new MappingDetail()
+      .withMappingFields(Lists.newArrayList(
+        new MappingRule().withPath("instance.instanceTypeId").withValue("\"instanceTypeIdExpression\"").withEnabled("true"),
+        new MappingRule().withPath("instance.title").withValue("\"titleExpression\"").withEnabled("true"),
+        new MappingRule().withPath("instance.administrativeNotes[]").withValue("\"Withdrawn as part of workflow\"").withEnabled("true")
+          .withRepeatableFieldAction(MappingRule.RepeatableFieldAction.DELETE_INCOMING))));
+
+  private ProfileSnapshotWrapper profileSnapshotWrapperWithDeleteAdministrativeNote = new ProfileSnapshotWrapper()
+    .withId(UUID.randomUUID().toString())
+    .withProfileId(jobProfile.getId())
+    .withContentType(JOB_PROFILE)
+    .withContent(jobProfile)
+    .withChildSnapshotWrappers(Collections.singletonList(
+      new ProfileSnapshotWrapper()
+        .withProfileId(actionProfile.getId())
+        .withContentType(ACTION_PROFILE)
+        .withContent(actionProfile)
+        .withChildSnapshotWrappers(Collections.singletonList(
+          new ProfileSnapshotWrapper()
+            .withProfileId(mappingProfileWithDeleteAdministrativeNote.getId())
+            .withContentType(MAPPING_PROFILE)
+            .withContent(JsonObject.mapFrom(mappingProfileWithDeleteAdministrativeNote).getMap())))));
+
   private ReplaceInstanceEventHandler replaceInstanceEventHandler;
   private PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
 
@@ -2084,6 +2112,82 @@ public class ReplaceInstanceEventHandlerTest {
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
     assertThat(recordCaptor.getValue().getParsedRecord().getContent().toString(), containsString(authorityId));
     verify(instanceLinkClient, times(0)).updateInstanceLinks(any(), any(), any());
+  }
+
+  @Test
+  public void shouldDeleteAdministrativeNote_whenDeleteIncomingActionIsApplied()
+      throws InterruptedException, ExecutionException, TimeoutException {
+    // arrange
+    String instanceTypeId = UUID.randomUUID().toString();
+    String title = "titleValue";
+    String noteToDelete = "Withdrawn as part of workflow";
+    String noteToKeep1 = "Catalogued by staff";
+    String noteToKeep2 = "Source: OCLC";
+    String noteToKeep3 = "Review pending";
+
+    Reader fakeReader = Mockito.mock(Reader.class);
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(
+      StringValue.of(instanceTypeId),
+      StringValue.of(title),
+      ListValue.of(Lists.newArrayList(noteToDelete), MappingRule.RepeatableFieldAction.DELETE_INCOMING));
+    when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
+    when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+
+    Instance existingInstance = new Instance(instanceId.toString(), INSTANCE_VERSION,
+      instanceHrid, MARC_INSTANCE_SOURCE, "title", "instanceTypeId");
+    existingInstance.setAdministrativeNotes(Lists.newArrayList(
+      noteToKeep1, noteToDelete, noteToKeep2, noteToDelete, noteToDelete, noteToKeep3, noteToDelete));
+
+    doAnswer(invocationOnMock -> {
+      Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
+      successHandler.accept(new Success<>(existingInstance));
+      return null;
+    }).when(instanceRecordCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
+
+    HashMap<String, String> context = new HashMap<>();
+    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(), new JsonObject()
+      .put("id", instanceId)
+      .put("hrid", instanceHrid)
+      .put("source", MARC_INSTANCE_SOURCE)
+      .put("_version", INSTANCE_VERSION)
+      .put("discoverySuppress", false)
+      .encode());
+
+    Buffer buffer = Buffer.buffer("{\"parsedRecord\":{"
+      + "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\","
+      + "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\""
+      + "}}");
+    HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
+    when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(Future.succeededFuture(respForPass));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapperWithDeleteAdministrativeNote.getChildSnapshotWrappers().getFirst())
+      .withTenant(TENANT_ID)
+      .withOkapiUrl(mockServer.baseUrl())
+      .withToken(TOKEN)
+      .withJobExecutionId(UUID.randomUUID().toString());
+
+    // act
+    CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
+
+    // assert
+    assertEquals(DI_INVENTORY_INSTANCE_UPDATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    JsonObject updatedInstance = new JsonObject(actualDataImportEventPayload.getContext().get(INSTANCE.value()));
+    JsonArray administrativeNotes = updatedInstance.getJsonArray("administrativeNotes");
+    assertThat(administrativeNotes.size(), is(3));
+    assertThat(administrativeNotes.contains(noteToDelete), is(false));
+    assertThat(administrativeNotes.contains(noteToKeep1), is(true));
+    assertThat(administrativeNotes.contains(noteToKeep2), is(true));
+    assertThat(administrativeNotes.contains(noteToKeep3), is(true));
   }
 
   private Response createResponse(int statusCode, String body) {
