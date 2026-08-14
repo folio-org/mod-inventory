@@ -742,19 +742,36 @@ public class MatchInstanceEventHandlerUnitTest {
   @Test
   public void shouldPutMultipleMatchResultToPayloadOnHandleEventPayload(TestContext testContext)
     throws UnsupportedEncodingException {
+    // Also covers the consortium case: when central tenant has shadow copies of the same instances,
+    // both sides return MULTI_MATCH_IDS and no "Found multiple entities" error should be thrown.
     Async async = testContext.async();
+
+    String centralTenantId = "consortium";
+    String consortiumId = "consortiumId";
     List<Instance> matchedInstances = List.of(
       new Instance(UUID.randomUUID().toString(), 1, "in1", "MARC", "Wonderful", "12334"),
       new Instance(UUID.randomUUID().toString(), 1, "in2", "MARC", "Wonderful", "12334"));
 
+    doAnswer(inv -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+      .when(consortiumService).getConsortiumConfiguration(any());
+
+    // Local: unscoped query -> 2 instances -> MULTI_MATCH_IDS
     doAnswer(invocation -> {
       Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(2);
-      Success<MultipleRecords<Instance>> result =
-        new Success<>(new MultipleRecords<>(matchedInstances, 2));
-      successHandler.accept(result);
+      successHandler.accept(new Success<>(new MultipleRecords<>(matchedInstances, 2)));
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+
+    // Central: same instances returned for the MULTI_MATCH_IDS-scoped query (shadow copies)
+    doAnswer(invocation -> {
+      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(2);
+      successHandler.accept(new Success<>(new MultipleRecords<>(matchedInstances, 2)));
+      return null;
+    }).when(instanceCollection)
+      .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID,
+          matchedInstances.get(0).getId(), matchedInstances.get(1).getId())),
         any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     MatchProfile subMatchProfile = new MatchProfile()
