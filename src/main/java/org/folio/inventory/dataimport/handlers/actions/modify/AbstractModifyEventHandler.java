@@ -14,6 +14,7 @@ import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.cache.DeleteRuleFor999FieldCache;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
@@ -27,7 +28,6 @@ import org.folio.processing.mapping.mapper.writer.marc.MarcRecordModifier;
 import org.folio.rest.client.SourceStorageRecordsClient;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
-import org.folio.rest.jaxrs.model.MarcMappingDetail;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 
@@ -140,35 +140,13 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
       marcRecordModifier.initialize(payload, mappingParameters, mappingProfile, modifiedEntityType());
       marcRecordModifier.modifyRecord(mappingProfile.getMappingDetails().getMarcMappingDetails());
       marcRecordModifier.getResult(payload);
-      if (containsDeleteRuleFor999Field(mappingProfile)) {
+      if (DeleteRuleFor999FieldCache.getInstance().containsDeleteRuleFor999Field(mappingProfile)) {
         syncExternalIdsHolderWithParsedRecord(payload);
       }
     } catch (IOException e) {
       return Future.failedFuture(e);
     }
     return Future.succeededFuture();
-  }
-
-  /**
-   * Cheap pre-check to avoid unnecessary work: returns {@code true} only if the given MappingProfile
-   * contains at least one MARC-modification rule with action DELETE targeting field "999".
-   * When {@code false}, the parsed-record vs externalIdsHolder synchronization can be safely skipped
-   * because MODIFY did not touch 999 and the inherited holder is still consistent with the MARC content.
-   */
-  private static boolean containsDeleteRuleFor999Field(MappingProfile mappingProfile) {
-    if (mappingProfile == null || mappingProfile.getMappingDetails() == null
-        || mappingProfile.getMappingDetails().getMarcMappingDetails() == null) {
-      return false;
-    }
-    for (MarcMappingDetail detail : mappingProfile.getMappingDetails().getMarcMappingDetails()) {
-      if (detail == null || detail.getAction() != MarcMappingDetail.Action.DELETE || detail.getField() == null) {
-        continue;
-      }
-      if ("999".equals(detail.getField().getField())) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /**
