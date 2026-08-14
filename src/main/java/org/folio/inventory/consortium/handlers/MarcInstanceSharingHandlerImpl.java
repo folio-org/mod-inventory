@@ -25,6 +25,7 @@ import org.folio.inventory.consortium.util.RestDataImportHelper;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.storage.Storage;
+import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.client.SourceStorageRecordsClient;
 
 import java.io.UnsupportedEncodingException;
@@ -36,13 +37,9 @@ import static java.lang.String.format;
 import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.SOURCE;
 import static org.folio.inventory.consortium.util.MarcRecordUtil.removeFieldFromMarcRecord;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.INSTANCE_ID_TYPE;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.domain.items.Item.HRID_KEY;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
 public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
@@ -69,7 +66,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
     String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
 
     SourceStorageRecordsClient sourceStorageClient = getSourceStorageRecordsClient(sourceTenant, kafkaHeaders);
-    Context context = constructContext(sourceTenant, kafkaHeaders.get(OKAPI_TOKEN_HEADER), kafkaHeaders.get(OKAPI_URL_HEADER), kafkaHeaders.get(OKAPI_USER_ID), kafkaHeaders.get(OKAPI_REQUEST_ID));
+    Context context = constructContext(sourceTenant, kafkaHeaders.get(XOkapiHeaders.TOKEN), kafkaHeaders.get(XOkapiHeaders.URL), kafkaHeaders.get(XOkapiHeaders.USER_ID), kafkaHeaders.get(XOkapiHeaders.REQUEST_ID));
 
     // Get source MARC by instance ID
     return getSourceMARCByInstanceId(instanceId, sourceTenant, sourceStorageClient)
@@ -317,11 +314,11 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
   public SourceStorageRecordsClient getSourceStorageRecordsClient(String tenant, Map<String, String> kafkaHeaders) {
     LOGGER.info("getSourceStorageRecordsClient :: Creating SourceStorageRecordsClient for tenant={}", tenant);
     return new SourceStorageRecordsClientWrapper(
-      kafkaHeaders.get(OKAPI_URL_HEADER),
+      kafkaHeaders.get(XOkapiHeaders.URL),
       tenant,
-      kafkaHeaders.get(OKAPI_TOKEN_HEADER),
-      kafkaHeaders.get(OKAPI_USER_ID),
-      kafkaHeaders.get(OKAPI_REQUEST_ID),
+      kafkaHeaders.get(XOkapiHeaders.TOKEN),
+      kafkaHeaders.get(XOkapiHeaders.USER_ID),
+      kafkaHeaders.get(XOkapiHeaders.REQUEST_ID),
       vertx.createHttpClient());
   }
 

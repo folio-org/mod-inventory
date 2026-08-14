@@ -2,7 +2,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import static io.vertx.core.json.JsonObject.mapFrom;
 import static java.lang.String.format;
-import static org.apache.commons.lang.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isBlank;
 
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
