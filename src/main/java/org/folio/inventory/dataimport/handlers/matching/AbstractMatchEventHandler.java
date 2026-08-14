@@ -126,7 +126,8 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
           return MatchingManager.match(dataImportEventPayload)
             .thenCompose(isMatchedConsortium -> {
               dataImportEventPayload.setTenant(context.getTenantId());
-              if (Boolean.TRUE.equals(isMatchedConsortium) && isMatchedLocal && !isShadowEntity(localMatchedInstance, dataImportEventPayload.getContext().get(getEntityType().value()))) {
+              if (Boolean.TRUE.equals(isMatchedConsortium) && isMatchedLocal && localMatchedInstance != null
+                && !isShadowEntity(localMatchedInstance, dataImportEventPayload.getContext().get(getEntityType().value()))) {
                 LOGGER.warn("matchCentralTenantIfNeeded:: Found multiple results during matching on local tenant: {} and central tenant: {} ",
                   context.getTenantId(), consortiumConfiguration.get().getCentralTenantId());
                 return CompletableFuture.failedFuture(new MatchingException(String.format(FOUND_MULTIPLE_ENTITIES, context.getTenantId(), consortiumConfiguration.get().getCentralTenantId())));
