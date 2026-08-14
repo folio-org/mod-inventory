@@ -1,13 +1,8 @@
 package org.folio.inventory.instanceingress;
 
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.InstanceIngressEvent.EventType.CREATE_INSTANCE;
 import static org.folio.rest.jaxrs.model.InstanceIngressEvent.EventType.UPDATE_INSTANCE;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -34,6 +29,7 @@ import org.folio.inventory.services.InstanceIdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
+import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.InstanceIngressEvent;
 
@@ -51,8 +47,8 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
     var kafkaHeaders = KafkaHeaderUtils.kafkaHeadersToMap(consumerRecord.headers());
     var event = Json.decodeValue(consumerRecord.value(), InstanceIngressEvent.class);
     var context = constructContext(getTenantId(event, kafkaHeaders),
-      kafkaHeaders.get(OKAPI_TOKEN_HEADER), kafkaHeaders.get(OKAPI_URL_HEADER),
-      kafkaHeaders.get(OKAPI_USER_ID), kafkaHeaders.get(OKAPI_REQUEST_ID));
+      kafkaHeaders.get(XOkapiHeaders.TOKEN), kafkaHeaders.get(XOkapiHeaders.URL),
+      kafkaHeaders.get(XOkapiHeaders.USER_ID), kafkaHeaders.get(XOkapiHeaders.REQUEST_ID));
     LOGGER.info("Instance ingress event has been received with event type: {}", event.getEventType());
     return Future.succeededFuture(event.getEventPayload())
       .compose(eventPayload -> processEvent(event, context)
@@ -65,7 +61,7 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
   private static String getTenantId(InstanceIngressEvent event,
                                     Map<String, String> kafkaHeaders) {
     return Optional.ofNullable(event.getTenant())
-      .orElseGet(() -> kafkaHeaders.get(OKAPI_TENANT_HEADER));
+      .orElseGet(() -> kafkaHeaders.get(XOkapiHeaders.TENANT));
   }
 
   private Future<InstanceIngressEvent.EventType> processEvent(InstanceIngressEvent event, Context context) {

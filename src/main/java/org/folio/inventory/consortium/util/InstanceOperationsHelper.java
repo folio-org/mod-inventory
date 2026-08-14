@@ -12,7 +12,7 @@ import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.kafka.exception.DuplicateEventException;
 
 import static java.lang.String.format;
-import static org.apache.commons.lang.StringUtils.isNotBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.folio.inventory.dataimport.util.DataImportConstants.ALREADY_EXISTS_ERROR_MSG;
 
 public class InstanceOperationsHelper {

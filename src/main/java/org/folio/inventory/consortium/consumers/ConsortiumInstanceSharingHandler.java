@@ -1,16 +1,11 @@
 package org.folio.inventory.consortium.consumers;
 
 import static java.lang.String.format;
-import static org.apache.commons.lang.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.inventory.consortium.entities.SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_COMPLETE;
 import static org.folio.inventory.consortium.entities.SharingStatus.COMPLETE;
 import static org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory.getInstanceSharingHandler;
 import static org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory.values;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -49,6 +44,7 @@ import org.folio.kafka.KafkaTopicNameHelper;
 import org.folio.kafka.SimpleKafkaProducerManager;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.kafka.services.KafkaProducerRecordBuilder;
+import org.folio.okapi.common.XOkapiHeaders;
 
 public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<String, String> {
 
@@ -223,7 +219,7 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private void sendCompleteEventToKafka(SharingInstance sharingInstance, SharingStatus status, String errorMessage,
                                         Map<String, String> kafkaHeaders) {
     try {
-      String tenantId = kafkaHeaders.get(OKAPI_TENANT_HEADER);
+      String tenantId = kafkaHeaders.get(XOkapiHeaders.TENANT);
       List<KafkaHeader> kafkaHeadersList = convertKafkaHeadersMap(kafkaHeaders);
 
       LOGGER.info("sendEventToKafka :: Sending a message about the result of sharing instance with InstanceId={}" +
@@ -294,23 +290,23 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     return storage.getInstanceCollection(
       EventHandlingUtil.constructContext(
         tenantId,
-        kafkaHeaders.get(OKAPI_TOKEN_HEADER),
-        kafkaHeaders.get(OKAPI_URL_HEADER),
-        kafkaHeaders.get(OKAPI_USER_ID),
-        kafkaHeaders.get(OKAPI_REQUEST_ID))
+        kafkaHeaders.get(XOkapiHeaders.TOKEN),
+        kafkaHeaders.get(XOkapiHeaders.URL),
+        kafkaHeaders.get(XOkapiHeaders.USER_ID),
+        kafkaHeaders.get(XOkapiHeaders.REQUEST_ID))
     );
   }
 
   private List<KafkaHeader> convertKafkaHeadersMap(Map<String, String> kafkaHeaders) {
 
     List<KafkaHeader> headers = new ArrayList<>(List.of(
-      KafkaHeader.header(OKAPI_URL_HEADER, kafkaHeaders.get(OKAPI_URL_HEADER)),
-      KafkaHeader.header(OKAPI_TENANT_HEADER, kafkaHeaders.get(OKAPI_TENANT_HEADER)),
-      KafkaHeader.header(OKAPI_TOKEN_HEADER, kafkaHeaders.get(OKAPI_TOKEN_HEADER)),
-      KafkaHeader.header(OKAPI_USER_ID, kafkaHeaders.get(OKAPI_USER_ID))
+      KafkaHeader.header(XOkapiHeaders.URL, kafkaHeaders.get(XOkapiHeaders.URL)),
+      KafkaHeader.header(XOkapiHeaders.TENANT, kafkaHeaders.get(XOkapiHeaders.TENANT)),
+      KafkaHeader.header(XOkapiHeaders.TOKEN, kafkaHeaders.get(XOkapiHeaders.TOKEN)),
+      KafkaHeader.header(XOkapiHeaders.USER_ID, kafkaHeaders.get(XOkapiHeaders.USER_ID))
     ));
-    if (kafkaHeaders.get(OKAPI_REQUEST_ID) != null) {
-      headers.add(KafkaHeader.header(OKAPI_REQUEST_ID, kafkaHeaders.get(OKAPI_REQUEST_ID)));
+    if (kafkaHeaders.get(XOkapiHeaders.REQUEST_ID) != null) {
+      headers.add(KafkaHeader.header(XOkapiHeaders.REQUEST_ID, kafkaHeaders.get(XOkapiHeaders.REQUEST_ID)));
     }
     return headers;
   }

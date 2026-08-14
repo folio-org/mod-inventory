@@ -2,8 +2,6 @@ package org.folio.inventory.dataimport.handlers;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler.JOB_EXECUTION_ID_KEY;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -31,6 +29,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 
+import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.jaxrs.model.HoldingsType;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler;
@@ -125,8 +124,8 @@ public class MarcHoldingsRecordHridSetKafkaHandlerTest {
       new MarcHoldingsRecordHridSetKafkaHandler(new HoldingsUpdateDelegate(mockedStorage, holdingsCollectionService), mappingMetadataCache);
 
     this.okapiHeaders = List.of(
-      KafkaHeader.header(OKAPI_TENANT_HEADER, "diku"),
-      KafkaHeader.header(OKAPI_URL_HEADER, mockServer.baseUrl()));
+      KafkaHeader.header(XOkapiHeaders.TENANT, "diku"),
+      KafkaHeader.header(XOkapiHeaders.URL, mockServer.baseUrl()));
   }
 
   @After

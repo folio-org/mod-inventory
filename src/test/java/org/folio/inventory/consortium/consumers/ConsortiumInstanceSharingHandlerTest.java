@@ -23,12 +23,12 @@ import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TENANT_HEADER;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.times;
 import org.folio.inventory.services.EventIdStorageService;
 import org.folio.kafka.exception.DuplicateEventException;
 import org.folio.inventory.storage.Storage;
+import org.folio.okapi.common.XOkapiHeaders;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -47,8 +47,6 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import static org.folio.inventory.consortium.entities.SharingStatus.IN_PROGRESS;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_TOKEN_HEADER;
-import static org.folio.rest.util.OkapiConnectionParams.OKAPI_URL_HEADER;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -115,8 +113,8 @@ public class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
     when(kafkaRecord.key()).thenReturn(shareId);
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
     when(kafkaRecord.headers()).thenReturn(
-      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
-        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+      List.of(KafkaHeader.header(XOkapiHeaders.TOKEN, "token"),
+        KafkaHeader.header(XOkapiHeaders.URL, "url")));
 
     when(storage.getInstanceCollection(any(Context.class)))
       .thenReturn(mockedSourceInstanceCollection)
@@ -192,8 +190,8 @@ public class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
     when(kafkaRecord.key()).thenReturn(shareId);
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
     when(kafkaRecord.headers()).thenReturn(
-      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
-        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+      List.of(KafkaHeader.header(XOkapiHeaders.TOKEN, "token"),
+        KafkaHeader.header(XOkapiHeaders.URL, "url")));
 
     when(storage.getInstanceCollection(any(Context.class)))
       .thenReturn(mockedSourceInstanceCollection)
@@ -249,8 +247,8 @@ public class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
     when(kafkaRecord.key()).thenReturn(shareId);
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
     when(kafkaRecord.headers()).thenReturn(
-      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
-        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+      List.of(KafkaHeader.header(XOkapiHeaders.TOKEN, "token"),
+        KafkaHeader.header(XOkapiHeaders.URL, "url")));
 
     when(storage.getInstanceCollection(any(Context.class)))
       .thenReturn(mockedTargetInstanceCollection);
@@ -297,9 +295,9 @@ public class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
     when(kafkaRecord.key()).thenReturn(shareId);
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
     when(kafkaRecord.headers()).thenReturn(
-      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
-        KafkaHeader.header(OKAPI_URL_HEADER, "url"),
-        KafkaHeader.header(OKAPI_TENANT_HEADER, "consortium")
+      List.of(KafkaHeader.header(XOkapiHeaders.TOKEN, "token"),
+        KafkaHeader.header(XOkapiHeaders.URL, "url"),
+        KafkaHeader.header(XOkapiHeaders.TENANT, "consortium")
       ));
 
     when(storage.getInstanceCollection(any(Context.class)))
@@ -347,8 +345,8 @@ public class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
     when(kafkaRecord.key()).thenReturn(shareId);
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
     when(kafkaRecord.headers()).thenReturn(
-      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
-        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+      List.of(KafkaHeader.header(XOkapiHeaders.TOKEN, "token"),
+        KafkaHeader.header(XOkapiHeaders.URL, "url")));
 
     when(storage.getInstanceCollection(any(Context.class)))
       .thenReturn(mockedTargetInstanceCollection)
@@ -404,8 +402,8 @@ public class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
     when(kafkaRecord.key()).thenReturn(shareId);
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
     when(kafkaRecord.headers()).thenReturn(
-      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
-        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+      List.of(KafkaHeader.header(XOkapiHeaders.TOKEN, "token"),
+        KafkaHeader.header(XOkapiHeaders.URL, "url")));
 
     when(storage.getInstanceCollection(any(Context.class)))
       .thenReturn(mockedSourceInstanceCollection)
@@ -475,8 +473,8 @@ public class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
     when(kafkaRecord.key()).thenReturn(shareId);
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
     when(kafkaRecord.headers()).thenReturn(
-      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
-        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+      List.of(KafkaHeader.header(XOkapiHeaders.TOKEN, "token"),
+        KafkaHeader.header(XOkapiHeaders.URL, "url")));
 
     when(storage.getInstanceCollection(any(Context.class)))
       .thenReturn(mockedSourceInstanceCollection)
@@ -546,8 +544,8 @@ public class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
     when(kafkaRecord.key()).thenReturn(shareId);
     when(kafkaRecord.value()).thenReturn(Json.encode(sharingInstance));
     when(kafkaRecord.headers()).thenReturn(
-      List.of(KafkaHeader.header(OKAPI_TOKEN_HEADER, "token"),
-        KafkaHeader.header(OKAPI_URL_HEADER, "url")));
+      List.of(KafkaHeader.header(XOkapiHeaders.TOKEN, "token"),
+        KafkaHeader.header(XOkapiHeaders.URL, "url")));
 
     when(eventIdStorageService.store(any(), any())).thenReturn(Future.failedFuture(new DuplicateEventException("SQL Unique constraint violation prevented repeatedly saving the record")));
 
