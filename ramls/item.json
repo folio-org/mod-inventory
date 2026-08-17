@@ -544,6 +544,11 @@
           "readonly": true
         }
       }
+    },
+    "customFields": {
+      "description": "Object that contains custom fields",
+      "type": "object",
+      "$ref": "customFields.json"
     }
   },
   "additionalProperties": false,

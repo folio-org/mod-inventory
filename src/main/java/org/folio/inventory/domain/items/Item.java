@@ -58,6 +58,7 @@ public class Item {
   public static final String BOUND_WTH_TITLES_KEY = "boundWithTitles";
   public static final String EFFECTIVE_LOCATION_KEY = "effectiveLocation";
   public static final String METADATA_KEY = "metadata";
+  public static final String CUSTOM_FIELDS_KEY = "customFields";
 
   public final String id;
   private final String version;
@@ -110,6 +111,7 @@ public class Item {
 
   private boolean isBoundWith = false;
   private JsonArray boundWithTitles = null;
+  private JsonObject customFields;
 
   private final JsonObject metadata;
 
@@ -553,6 +555,15 @@ public class Item {
     return metadata;
   }
 
+  public JsonObject getCustomFields() {
+    return customFields;
+  }
+
+  public Item withCustomFields(JsonObject customFields) {
+    this.customFields = customFields;
+    return this;
+  }
+
   public Item copyWithNewId(String newId) {
     return new Item(newId, null, holdingId, inTransitDestinationServicePointId, this.status,
         this.materialTypeId, this.permanentLoanTypeId, this.metadata)
@@ -590,7 +601,8 @@ public class Item {
         .withStatisticalCodeIds(this.statisticalCodeIds)
         .withLastCheckIn(this.lastCheckIn)
         .withOrder(this.order)
-        .withPurchaseOrderLineIdentifier(this.purchaseOrderLineIdentifier);
+        .withPurchaseOrderLineIdentifier(this.purchaseOrderLineIdentifier)
+        .withCustomFields(this.customFields);
   }
 
   public Item changeStatus(ItemStatusName newStatus) {
@@ -633,7 +645,8 @@ public class Item {
         .withTags(tags)
         .withCirculationNotes(circulationNotes)
         .withLastCheckIn(this.lastCheckIn)
-        .withOrder(this.order);
+        .withOrder(this.order)
+        .withCustomFields(this.customFields);
   }
 
   @Override

@@ -152,6 +152,7 @@ class ItemRepresentation {
       item.getTemporaryLocationId());
 
     includeIfPresent(representation, "metadata", item.getMetadata());
+    includeIfPresent(representation, Item.CUSTOM_FIELDS_KEY, item.getCustomFields());
 
     if (item.getLastCheckIn() != null) {
       representation.put("lastCheckIn", item.getLastCheckIn().toJson());
