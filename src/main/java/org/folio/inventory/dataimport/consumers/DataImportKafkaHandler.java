@@ -25,6 +25,7 @@ import org.folio.inventory.dataimport.InstanceWriterFactory;
 import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.ItemsMapperFactory;
 import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
+import org.folio.inventory.dataimport.cache.DeleteRuleFor999FieldCache;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler;
@@ -107,6 +108,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   private final Vertx vertx;
   private final ProfileSnapshotCache profileSnapshotCache;
   private final MappingMetadataCache mappingMetadataCache;
+  private final DeleteRuleFor999FieldCache deleteRuleFor999FieldCache;
   private final KafkaConfig kafkaConfig;
   private final OrderHelperService orderHelperService;
   private final ConsortiumService consortiumService;
@@ -116,11 +118,13 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
                                 ProfileSnapshotCache profileSnapshotCache,
                                 KafkaConfig kafkaConfig,
                                 MappingMetadataCache mappingMetadataCache,
+                                DeleteRuleFor999FieldCache deleteRuleFor999FieldCache,
                                 ConsortiumDataCache consortiumDataCache,
                                 CancelledJobsIdsCache cancelledJobsIdCache) {
     this.vertx = vertx;
     this.profileSnapshotCache = profileSnapshotCache;
     this.mappingMetadataCache = mappingMetadataCache;
+    this.deleteRuleFor999FieldCache = deleteRuleFor999FieldCache;
     this.kafkaConfig = kafkaConfig;
     this.cancelledJobsIdCache = cancelledJobsIdCache;
     orderHelperService = new OrderHelperServiceImpl(profileSnapshotCache);
@@ -263,7 +267,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     EventManager.registerEventHandler(new UpdateHoldingEventHandler(storage, mappingMetadataCache));
     EventManager.registerEventHandler(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, client, consortiumService, instanceLinkClient, snapshotService));
     EventManager.registerEventHandler(new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, mappingMetadataCache));
-    EventManager.registerEventHandler(new MarcBibModifyEventHandler(mappingMetadataCache, new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, client));
+    EventManager.registerEventHandler(new MarcBibModifyEventHandler(mappingMetadataCache, deleteRuleFor999FieldCache, new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, client));
   }
 
   private boolean shouldSkipEventProcessing(DataImportEventPayload eventPayload) {

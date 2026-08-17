@@ -81,7 +81,7 @@ public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
     var consortiumDataCache = new ConsortiumDataCache(vertx, getHttpClient());
 
     var dataImportKafkaHandler = new DataImportKafkaHandler(vertx, getStorage(), getHttpClient(), getProfileSnapshotCache(),
-      getKafkaConfig(), getMappingMetadataCache(), consortiumDataCache, cancelledJobsIdsCache);
+      getKafkaConfig(), getMappingMetadataCache(), getDeleteRuleFor999FieldCache(), consortiumDataCache, cancelledJobsIdsCache);
 
     var futures = EVENT_TYPES.stream()
       .map(type -> super.createConsumer(type.value(), LOAD_LIMIT_PROPERTY))

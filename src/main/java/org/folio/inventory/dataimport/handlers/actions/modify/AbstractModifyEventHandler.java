@@ -14,6 +14,7 @@ import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.cache.DeleteRuleFor999FieldCache;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
@@ -61,12 +62,15 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
   private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
   private static final String FAILED_TO_UPDATE_RECORD_ERROR_MESSAGE = "Failed to update MARC record with id: %s during modify for tenant %s. ";
   private final MappingMetadataCache mappingMetadataCache;
+  private final DeleteRuleFor999FieldCache deleteRuleFor999FieldCache;
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final HttpClient client;
 
-  protected AbstractModifyEventHandler(MappingMetadataCache mappingMetadataCache, InstanceUpdateDelegate instanceUpdateDelegate, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, HttpClient client) {
+  protected AbstractModifyEventHandler(MappingMetadataCache mappingMetadataCache, DeleteRuleFor999FieldCache deleteRuleFor999FieldCache,
+                                       InstanceUpdateDelegate instanceUpdateDelegate, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, HttpClient client) {
     this.mappingMetadataCache = mappingMetadataCache;
+    this.deleteRuleFor999FieldCache = deleteRuleFor999FieldCache;
     this.instanceUpdateDelegate = instanceUpdateDelegate;
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
     this.client = client;
@@ -139,10 +143,47 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
       marcRecordModifier.initialize(payload, mappingParameters, mappingProfile, modifiedEntityType());
       marcRecordModifier.modifyRecord(mappingProfile.getMappingDetails().getMarcMappingDetails());
       marcRecordModifier.getResult(payload);
+      if (deleteRuleFor999FieldCache.containsDeleteRuleFor999Field(mappingProfile)) {
+        syncExternalIdsHolderWithParsedRecord(payload);
+      }
     } catch (IOException e) {
       return Future.failedFuture(e);
     }
     return Future.succeededFuture();
+  }
+
+  /**
+   * Keeps {@link Record#externalIdsHolder} in sync with the modified MARC parsed content.
+   * When the MODIFY profile removes 999ff$i from parsed content, the previously inherited
+   * {@code externalIdsHolder.instanceId} becomes stale and must be cleared so that downstream
+   * handlers (e.g. CreateInstance) can re-populate it with a freshly generated instance UUID
+   * instead of persisting the old value in SRS records_lb.external_id.
+   * Minimal-impact policy: only clear when 999ff$i is missing/blank in the parsed record.
+   */
+  private void syncExternalIdsHolderWithParsedRecord(DataImportEventPayload payload) {
+    try {
+      String modifiedEntityKey = modifiedEntityType().value();
+      String recordAsString = payload.getContext().get(modifiedEntityKey);
+      if (isBlank(recordAsString)) {
+        return;
+      }
+      Record record = Json.decodeValue(recordAsString, Record.class);
+      String subfield999ffI = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(),
+        ParsedRecordUtil.AdditionalSubfields.I);
+      ExternalIdsHolder holder = record.getExternalIdsHolder();
+      if (isBlank(subfield999ffI) && holder != null
+          && (!isBlank(holder.getInstanceId()) || !isBlank(holder.getInstanceHrid()))) {
+        LOGGER.info("syncExternalIdsHolderWithParsedRecord:: Clearing stale externalIdsHolder (instanceId='{}', instanceHrid='{}') " +
+            "because 999ff$i was removed from parsed record by MODIFY profile, jobExecutionId: {}, recordId: {}",
+          holder.getInstanceId(), holder.getInstanceHrid(), payload.getJobExecutionId(), record.getId());
+        holder.setInstanceId(null);
+        holder.setInstanceHrid(null);
+        payload.getContext().put(modifiedEntityKey, Json.encode(record));
+      }
+    } catch (Exception e) {
+      LOGGER.warn("syncExternalIdsHolderWithParsedRecord:: Failed to sync externalIdsHolder, jobExecutionId: {}",
+        payload.getJobExecutionId(), e);
+    }
   }
 
   protected Future<Void> updateRelatedEntity(DataImportEventPayload payload, MappingMetadataDto mappingMetadataDto, Context context) {
@@ -276,6 +317,6 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
 
   private void preparePayload(DataImportEventPayload dataImportEventPayload) {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().get(0));
+    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
   }
 }

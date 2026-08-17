@@ -17,6 +17,7 @@ import org.folio.inventory.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.dataimport.cache.DeleteRuleFor999FieldCache;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.modify.MarcBibModifyEventHandler;
 import org.folio.inventory.domain.instances.Instance;
@@ -181,7 +182,8 @@ public class MarcBibModifyEventHandlerTest {
       .thenReturn(Future.succeededFuture(putRecordHttpResponse));
 
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(ctxt -> mockedOkapiHttpClient);
-    marcBibModifyEventHandler = spy(new MarcBibModifyEventHandler(mappingMetadataCache, new InstanceUpdateDelegate(mockedStorage), precedingSucceedingTitlesHelper, httpClient));
+    DeleteRuleFor999FieldCache deleteRuleFor999FieldCache = new DeleteRuleFor999FieldCache(vertx, 60L);
+    marcBibModifyEventHandler = spy(new MarcBibModifyEventHandler(mappingMetadataCache, deleteRuleFor999FieldCache, new InstanceUpdateDelegate(mockedStorage), precedingSucceedingTitlesHelper, httpClient));
 
     doReturn(sourceStorageClient).when(marcBibModifyEventHandler).getSourceStorageRecordsClient(any());
   }
@@ -221,13 +223,13 @@ public class MarcBibModifyEventHandlerTest {
     Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     Assert.assertNotNull(updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
     Assert.assertNotNull(updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst().get());
-    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().get(0));
-    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf", updatedInstance.getNatureOfContentTermIds().get(0));
+    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().getFirst());
+    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf", updatedInstance.getNatureOfContentTermIds().getFirst());
     Assert.assertNotNull(updatedInstance.getSubjects());
     Assert.assertEquals(1, updatedInstance.getSubjects().size());
-    assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
+    assertThat(updatedInstance.getSubjects().getFirst().getValue(), Matchers.containsString("additional subfield"));
     Assert.assertNotNull(updatedInstance.getNotes());
-    Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
+    Assert.assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note);
 
     verify(mockedInstanceCollection).update(any(), any(), any());
     verify(sourceStorageClient).putSourceStorageRecordsById(eq(record.getId()),
@@ -307,13 +309,13 @@ public class MarcBibModifyEventHandlerTest {
     Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     Assert.assertNotNull(updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
     Assert.assertNotNull(updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst().get());
-    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().get(0));
-    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf", updatedInstance.getNatureOfContentTermIds().get(0));
+    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().getFirst());
+    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf", updatedInstance.getNatureOfContentTermIds().getFirst());
     Assert.assertNotNull(updatedInstance.getSubjects());
     Assert.assertEquals(1, updatedInstance.getSubjects().size());
-    assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
+    assertThat(updatedInstance.getSubjects().getFirst().getValue(), Matchers.containsString("additional subfield"));
     Assert.assertNotNull(updatedInstance.getNotes());
-    Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
+    Assert.assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note);
 
     verify(marcBibModifyEventHandler).getSourceStorageRecordsClient(argThat(context -> context.getTenantId().equals(CENTRAL_TENANT_ID)));
     verify(mockedInstanceCollection).update(any(), any(), any());
@@ -368,13 +370,13 @@ public class MarcBibModifyEventHandlerTest {
     Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     Assert.assertNotNull(updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
     Assert.assertNotNull(updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst().get());
-    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().get(0));
-    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf", updatedInstance.getNatureOfContentTermIds().get(0));
+    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().getFirst());
+    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf", updatedInstance.getNatureOfContentTermIds().getFirst());
     Assert.assertNotNull(updatedInstance.getSubjects());
     Assert.assertEquals(1, updatedInstance.getSubjects().size());
-    assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
+    assertThat(updatedInstance.getSubjects().getFirst().getValue(), Matchers.containsString("additional subfield"));
     Assert.assertNotNull(updatedInstance.getNotes());
-    Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
+    Assert.assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note);
 
     verify(mockedInstanceCollection, times(2)).update(any(), any(), any());
     verify(sourceStorageClient).putSourceStorageRecordsById(eq(record.getId()),
@@ -382,7 +384,7 @@ public class MarcBibModifyEventHandlerTest {
   }
 
   @Test
-  public void shouldRemovePrecedingTitlesOnInstanceUpdateWhenIncomingRecordHasNot() throws InterruptedException, ExecutionException, TimeoutException {
+  public void shouldRemovePrecedingTitlesOnInstanceUpdateWhenIncomingRecordHasNot() throws InterruptedException, ExecutionException {
     // given
     JsonArray precedingTitlesJson = new JsonArray().add(new JsonObject()
       .put(PrecedingSucceedingTitle.TITLE_KEY, "Butterflies in the snow"));
@@ -557,7 +559,7 @@ public class MarcBibModifyEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED.value())
       .withContext(new HashMap<>())
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifyEventHandler.handle(dataImportEventPayload);
@@ -619,6 +621,99 @@ public class MarcBibModifyEventHandlerTest {
 
   private Response getOkResponse(String body) {
     return new Response(200, body, null, null);
+  }
+
+
+  @Test
+  public void shouldClearExternalIdsHolderInstanceIdWhenDeleteProfileRemoves999Field()
+      throws InterruptedException, ExecutionException, TimeoutException {
+    // given: MODIFY profile that DELETEs the whole 999 field
+    MarcMappingDetail deleteDetail = new MarcMappingDetail()
+      .withOrder(0)
+      .withAction(MarcMappingDetail.Action.DELETE)
+      .withField(new MarcField()
+        .withField("999")
+        .withIndicator1("*")
+        .withIndicator2("*")
+        .withSubfields(Collections.singletonList(new MarcSubfield().withSubfield("*"))));
+
+    MappingProfile deleteMappingProfile = new MappingProfile()
+      .withId(UUID.randomUUID().toString())
+      .withName("Delete 999")
+      .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
+      .withExistingRecordType(MARC_BIBLIOGRAPHIC)
+      .withMappingDetails(new MappingDetail()
+        .withMarcMappingDetails(Collections.singletonList(deleteDetail))
+        .withMarcMappingOption(MappingDetail.MarcMappingOption.MODIFY));
+
+    ProfileSnapshotWrapper deleteSnapshotWrapper = new ProfileSnapshotWrapper()
+      .withProfileId(actionProfile.getId())
+      .withContentType(ACTION_PROFILE)
+      .withContent(JsonObject.mapFrom(actionProfile).getMap())
+      .withChildSnapshotWrappers(Collections.singletonList(
+        new ProfileSnapshotWrapper()
+          .withProfileId(deleteMappingProfile.getId())
+          .withContentType(MAPPING_PROFILE)
+          .withContent(JsonObject.mapFrom(deleteMappingProfile).getMap())));
+
+    HashMap<String, String> payloadContext = new HashMap<>();
+    // record fixture has externalIdsHolder.instanceId = ddd266ef-... and 999ff$i in parsed content
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withOkapiUrl(OKAPI_URL)
+      .withCurrentNode(deleteSnapshotWrapper)
+      .withTenant(TENANT_ID);
+
+    // sanity precondition: holder is populated before handling
+    Record recordBefore = Json.decodeValue(payloadContext.get(MARC_BIBLIOGRAPHIC.value()), Record.class);
+    Assert.assertNotNull(recordBefore.getExternalIdsHolder());
+    Assert.assertNotNull(recordBefore.getExternalIdsHolder().getInstanceId());
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = marcBibModifyEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload result = future.get(5, TimeUnit.SECONDS);
+
+    // then
+    Record actualRecord = Json.decodeValue(result.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
+    Optional<JsonObject> field999 = getFieldFromParsedRecord(actualRecord.getParsedRecord().getContent().toString(), "999");
+    Assert.assertFalse("999 field must be removed from parsed content", field999.isPresent());
+    Assert.assertTrue("externalIdsHolder.instanceId must be cleared after 999 removal",
+      actualRecord.getExternalIdsHolder() == null
+        || actualRecord.getExternalIdsHolder().getInstanceId() == null
+        || actualRecord.getExternalIdsHolder().getInstanceId().isEmpty());
+  }
+
+  @Test
+  public void shouldNotClearExternalIdsHolderInstanceIdWhenModifyProfileDoesNotRemove999Field()
+      throws InterruptedException, ExecutionException, TimeoutException {
+    // given: default profile only ADDs 856 (does not touch 999)
+    HashMap<String, String> payloadContext = new HashMap<>();
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    String originalInstanceId = record.getExternalIdsHolder().getInstanceId();
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(payloadContext)
+      .withOkapiUrl(OKAPI_URL)
+      .withCurrentNode(profileSnapshotWrapper)
+      .withTenant(TENANT_ID);
+
+    // when
+    CompletableFuture<DataImportEventPayload> future = marcBibModifyEventHandler.handle(dataImportEventPayload);
+    DataImportEventPayload result = future.get(5, TimeUnit.SECONDS);
+
+    // then: 999 must remain, holder must remain untouched
+    Record actualRecord = Json.decodeValue(result.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
+    Optional<JsonObject> field999 = getFieldFromParsedRecord(actualRecord.getParsedRecord().getContent().toString(), "999");
+    Assert.assertTrue("999 field must still be present", field999.isPresent());
+    Assert.assertNotNull(actualRecord.getExternalIdsHolder());
+    Assert.assertEquals("externalIdsHolder.instanceId must remain unchanged",
+      originalInstanceId, actualRecord.getExternalIdsHolder().getInstanceId());
   }
 
   public static Optional<JsonObject> getFieldFromParsedRecord(String parsedContent, String field) {
