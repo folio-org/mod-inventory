@@ -34,24 +34,23 @@ public class DeleteRuleFor999FieldCacheTest {
     vertx.close().toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
   }
 
-  private static boolean check(MappingProfile profile) throws Exception {
-    return cache.containsDeleteRuleFor999Field(profile)
-      .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+  private static boolean check(MappingProfile profile) {
+    return cache.containsDeleteRuleFor999Field(profile);
   }
 
   @Test
-  public void shouldReturnFalseForNullProfile() throws Exception {
+  public void shouldReturnFalseForNullProfile() {
     assertFalse(check(null));
   }
 
   @Test
-  public void shouldReturnFalseWhenNoMappingDetails() throws Exception {
+  public void shouldReturnFalseWhenNoMappingDetails() {
     MappingProfile p = new MappingProfile().withId(UUID.randomUUID().toString());
     assertFalse(check(p));
   }
 
   @Test
-  public void shouldReturnFalseWhenNoDeleteRuleFor999() throws Exception {
+  public void shouldReturnFalseWhenNoDeleteRuleFor999() {
     MarcMappingDetail addRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.ADD)
       .withField(new MarcField().withField("856")
@@ -63,7 +62,7 @@ public class DeleteRuleFor999FieldCacheTest {
   }
 
   @Test
-  public void shouldReturnTrueWhenDeleteRuleFor999Present() throws Exception {
+  public void shouldReturnTrueWhenDeleteRuleFor999Present() {
     MarcMappingDetail deleteRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.DELETE)
       .withField(new MarcField().withField("999")
@@ -75,7 +74,7 @@ public class DeleteRuleFor999FieldCacheTest {
   }
 
   @Test
-  public void shouldReturnTrueWhenMixedRulesIncludeDelete999() throws Exception {
+  public void shouldReturnTrueWhenMixedRulesIncludeDelete999() {
     MarcMappingDetail addRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.ADD)
       .withField(new MarcField().withField("856")
@@ -91,7 +90,7 @@ public class DeleteRuleFor999FieldCacheTest {
   }
 
   @Test
-  public void shouldReturnFalseWhenDeleteRuleTargetsOtherField() throws Exception {
+  public void shouldReturnFalseWhenDeleteRuleTargetsOtherField() {
     MarcMappingDetail deleteRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.DELETE)
       .withField(new MarcField().withField("856")
@@ -103,7 +102,7 @@ public class DeleteRuleFor999FieldCacheTest {
   }
 
   @Test
-  public void shouldMemoizeResultByProfileId() throws Exception {
+  public void shouldMemoizeResultByProfileId() {
     String profileId = UUID.randomUUID().toString();
     MarcMappingDetail deleteRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.DELETE)
@@ -123,7 +122,7 @@ public class DeleteRuleFor999FieldCacheTest {
   }
 
   @Test
-  public void shouldNotCacheWhenProfileIdIsBlank() throws Exception {
+  public void shouldNotCacheWhenProfileIdIsBlank() {
     MarcMappingDetail deleteRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.DELETE)
       .withField(new MarcField().withField("999")
@@ -143,27 +142,27 @@ public class DeleteRuleFor999FieldCacheTest {
   }
 
   @Test
-  public void shouldReturnTrueForDelete999WithSubfieldI() throws Exception {
+  public void shouldReturnTrueForDelete999WithSubfieldI() {
     assertTrue(check(buildDelete999Profile("i")));
   }
 
   @Test
-  public void shouldReturnTrueForDelete999WithSubfieldS() throws Exception {
+  public void shouldReturnTrueForDelete999WithSubfieldS() {
     assertTrue(check(buildDelete999Profile("s")));
   }
 
   @Test
-  public void shouldReturnFalseForDelete999WhenSubfieldIsOtherThanIsOrWildcard() throws Exception {
+  public void shouldReturnFalseForDelete999WhenSubfieldIsOtherThanIsOrWildcard() {
     assertFalse(check(buildDelete999Profile("l")));
   }
 
   @Test
-  public void shouldReturnFalseForDelete999WhenSubfieldIsT() throws Exception {
+  public void shouldReturnFalseForDelete999WhenSubfieldIsT() {
     assertFalse(check(buildDelete999Profile("t")));
   }
 
   @Test
-  public void shouldReturnTrueForDelete999WhenAtLeastOneRelevantSubfieldAmongMany() throws Exception {
+  public void shouldReturnTrueForDelete999WhenAtLeastOneRelevantSubfieldAmongMany() {
     MarcMappingDetail deleteRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.DELETE)
       .withField(new MarcField().withField("999")
@@ -177,7 +176,7 @@ public class DeleteRuleFor999FieldCacheTest {
   }
 
   @Test
-  public void shouldReturnFalseWhenAllSubfieldsAreIrrelevant() throws Exception {
+  public void shouldReturnFalseWhenAllSubfieldsAreIrrelevant() {
     MarcMappingDetail deleteRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.DELETE)
       .withField(new MarcField().withField("999")
@@ -191,7 +190,7 @@ public class DeleteRuleFor999FieldCacheTest {
   }
 
   @Test
-  public void shouldReturnTrueForDelete999WhenSubfieldsListIsNull() throws Exception {
+  public void shouldReturnTrueForDelete999WhenSubfieldsListIsNull() {
     MarcMappingDetail deleteRule = new MarcMappingDetail()
       .withAction(MarcMappingDetail.Action.DELETE)
       .withField(new MarcField().withField("999"));

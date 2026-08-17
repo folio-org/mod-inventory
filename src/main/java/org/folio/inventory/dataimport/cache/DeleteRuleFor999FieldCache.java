@@ -1,11 +1,9 @@
 package org.folio.inventory.dataimport.cache;
 
-import com.github.benmanes.caffeine.cache.AsyncCache;
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -23,9 +21,10 @@ import org.folio.rest.jaxrs.model.MarcSubfield;
  * {@code AbstractModifyEventHandler} to skip the {@code externalIdsHolder} synchronization step
  * when the profile does not delete 999 (i.e., typical case), avoiding the JSON decode/encode cost.
  * <p>
- * Uses the same {@link Caffeine} configuration style as {@link MappingMetadataCache}
- * (expireAfterAccess, {@link AsyncCache} with a Vertx-bound executor). Expiration is configurable
- * via the {@value #CACHE_EXPIRATION_TIME_ENV} system property (seconds);
+ * Uses synchronous {@link Cache} because the computation is purely in-memory (no IO). The Vertx
+ * instance is passed only to bind Caffeine's maintenance executor to the Vertx event loop, so
+ * background tasks (evictions, expiration housekeeping) do not spawn additional threads.
+ * Expiration is configurable via the {@value #CACHE_EXPIRATION_TIME_ENV} system property (seconds);
  * default {@value #DEFAULT_EXPIRATION_TIME_SECONDS} seconds.
  */
 public final class DeleteRuleFor999FieldCache {
@@ -45,13 +44,13 @@ public final class DeleteRuleFor999FieldCache {
 
   private static DeleteRuleFor999FieldCache instance = null;
 
-  private final AsyncCache<String, Boolean> cache;
+  private final Cache<String, Boolean> cache;
 
   public DeleteRuleFor999FieldCache(Vertx vertx, long cacheExpirationTimeSeconds) {
     this.cache = Caffeine.newBuilder()
       .expireAfterAccess(cacheExpirationTimeSeconds, TimeUnit.SECONDS)
       .executor(task -> vertx.runOnContext(v -> task.run()))
-      .buildAsync();
+      .build();
     LOGGER.info("DeleteRuleFor999FieldCache initialized with expireAfterAccess={}s", cacheExpirationTimeSeconds);
   }
 
@@ -70,21 +69,20 @@ public final class DeleteRuleFor999FieldCache {
   }
 
   /**
-   * Returns a {@link Future} completing with {@code true} when the given {@link MappingProfile}
-   * contains a DELETE rule for MARC field 999 targeting $i, $s or wildcard {@code *} subfield.
-   * Rules that only touch other 999 subfields (e.g. $l, $t) are ignored.
-   * Result is memoized by profile id.
+   * Returns {@code true} when the given {@link MappingProfile} contains a DELETE rule for MARC
+   * field 999 targeting $i, $s or wildcard {@code *} subfield. Rules that only touch other 999
+   * subfields (e.g. $l, $t) are ignored. Result is memoized by profile id: profiles that were
+   * already checked (whether positive or negative) are not re-parsed on subsequent calls.
    */
-  public Future<Boolean> containsDeleteRuleFor999Field(MappingProfile mappingProfile) {
+  public boolean containsDeleteRuleFor999Field(MappingProfile mappingProfile) {
     if (mappingProfile == null) {
-      return Future.succeededFuture(false);
+      return false;
     }
     String key = mappingProfile.getId();
     if (StringUtils.isBlank(key)) {
-      return Future.succeededFuture(computeContainsDeleteRuleFor999Field(mappingProfile));
+      return computeContainsDeleteRuleFor999Field(mappingProfile);
     }
-    return Future.fromCompletionStage(cache.get(key,
-      (k, executor) -> CompletableFuture.completedFuture(computeContainsDeleteRuleFor999Field(mappingProfile))));
+    return cache.get(key, k -> computeContainsDeleteRuleFor999Field(mappingProfile));
   }
 
   private static boolean computeContainsDeleteRuleFor999Field(MappingProfile mappingProfile) {

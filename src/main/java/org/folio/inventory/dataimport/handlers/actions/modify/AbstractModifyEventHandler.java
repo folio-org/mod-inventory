@@ -136,24 +136,20 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
   protected abstract String modifyEventType();
 
   protected Future<Void> modifyRecord(DataImportEventPayload payload, MappingParameters mappingParameters) {
-    MappingProfile mappingProfile;
     try {
       preparePayload(payload);
-      mappingProfile = retrieveMappingProfile(payload);
+      MappingProfile mappingProfile = retrieveMappingProfile(payload);
       MarcRecordModifier marcRecordModifier = new MarcRecordModifier();
       marcRecordModifier.initialize(payload, mappingParameters, mappingProfile, modifiedEntityType());
       marcRecordModifier.modifyRecord(mappingProfile.getMappingDetails().getMarcMappingDetails());
       marcRecordModifier.getResult(payload);
+      if (deleteRuleFor999FieldCache.containsDeleteRuleFor999Field(mappingProfile)) {
+        syncExternalIdsHolderWithParsedRecord(payload);
+      }
     } catch (IOException e) {
       return Future.failedFuture(e);
     }
-    return deleteRuleFor999FieldCache.containsDeleteRuleFor999Field(mappingProfile)
-      .map(shouldSync -> {
-        if (Boolean.TRUE.equals(shouldSync)) {
-          syncExternalIdsHolderWithParsedRecord(payload);
-        }
-        return null;
-      });
+    return Future.succeededFuture();
   }
 
   /**
