@@ -1,8 +1,28 @@
-## 22.1.0-SNAPSHOT 2026-mm-dd
+## v22.1.0 YYYY-mm-DD
+### Breaking changes
+* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+
+### New APIs versions
+* Provides `API_NAME vX.Y`
+* Requires `API_NAME vX.Y`
+
+### Features
+* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+
+### Bug fixes
 * Imported MARC Bib with 999ff (using "Modify action") is incorrectly linked to Instance [MODINV-1410](https://folio-org.atlassian.net/browse/MODINV-1410)
 * Data Import profiles will map invalid statistical codes [MODINV-1391](https://folio-org.atlassian.net/browse/MODINV-1391)
 * Importing Records from BNE z39.50 - record not available error [MODINV-1395](https://folio-org.atlassian.net/browse/MODINV-1395)
 * Fix match results not passed to subsequent matches for consortium tenants [MODINV-1400](https://folio-org.atlassian.net/browse/MODINV-1400)
+* Fix missing logging after dependency bump [MODINV-1411](https://folio-org.atlassian.net/browse/MODINV-1411)
+
+### Tech Dept
+* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+
+### Dependencies
+* Bump `LIB_NAME` from `OLD_VERSION` to `NEW_VERSION`
+* Add `LIB_NAME VERSION`
+* Remove `LIB_NAME`
 
 ## 22.0.0 2026-04-16
 * ECS: Improve logs in move holdings operation for [MODINV-1276](https://folio-org.atlassian.net/browse/MODINV-1276)
