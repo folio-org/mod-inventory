@@ -8,7 +8,6 @@ import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
-import static org.folio.kafka.KafkaHeaderUtils.kafkaHeadersToMap;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.FAIL;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.SUCCESS;
 
@@ -25,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -38,6 +38,7 @@ import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
+import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.kafka.SimpleKafkaProducerManager;
 import org.folio.kafka.services.KafkaProducerRecordBuilder;
 import org.folio.okapi.common.XOkapiHeaders;
@@ -77,7 +78,8 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   public Future<String> handle(KafkaConsumerRecord<String, String> consumerRecord) {
     try {
       var instanceEvent = OBJECT_MAPPER.readValue(consumerRecord.value(), MarcBibUpdate.class);
-      var headers = kafkaHeadersToMap(consumerRecord.headers());
+      Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+      headers.putAll(KafkaHeaderUtils.kafkaHeadersToMap(consumerRecord.headers()));
       Map<String, String> metaDataPayload = new HashMap<>();
 
       LOGGER.info("Event payload has been received with event type: {} by jobId: {}", instanceEvent.getType(), instanceEvent.getJobId());
@@ -128,7 +130,8 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
                                    Map<String, String> eventPayload,
                                    Promise<String> promise) {
     if (result.failed() && result.cause() instanceof OptimisticLockingException) {
-      var headers = kafkaHeadersToMap(consumerRecord.headers());
+      Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+      headers.putAll(KafkaHeaderUtils.kafkaHeadersToMap(consumerRecord.headers()));
       processOLError(consumerRecord, instanceEvent, promise, eventPayload, headers);
       return;
     }
