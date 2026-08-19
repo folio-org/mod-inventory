@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -75,7 +76,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     try {
       SharingInstance sharingInstanceMetadata = parseSharingInstance(event.value());
 
-      Map<String, String> kafkaHeaders = KafkaHeaderUtils.kafkaHeadersToMap(event.headers());
+      Map<String, String> kafkaHeaders = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+      kafkaHeaders.putAll(KafkaHeaderUtils.kafkaHeadersToMap(event.headers()));
       String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
 
       LOGGER.info("Event CONSORTIUM_INSTANCE_SHARING_INIT has been received for InstanceId={}, sourceTenant={}, targetTenant={}",

@@ -1,8 +1,6 @@
 package org.folio.inventory.instanceingress;
 
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
-import static org.folio.rest.jaxrs.model.InstanceIngressEvent.EventType.CREATE_INSTANCE;
-import static org.folio.rest.jaxrs.model.InstanceIngressEvent.EventType.UPDATE_INSTANCE;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -13,6 +11,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -44,7 +43,8 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
 
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> consumerRecord) {
-    var kafkaHeaders = KafkaHeaderUtils.kafkaHeadersToMap(consumerRecord.headers());
+    Map<String, String> kafkaHeaders = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    kafkaHeaders.putAll(KafkaHeaderUtils.kafkaHeadersToMap(consumerRecord.headers()));
     var event = Json.decodeValue(consumerRecord.value(), InstanceIngressEvent.class);
     var context = constructContext(getTenantId(event, kafkaHeaders),
       kafkaHeaders.get(XOkapiHeaders.TOKEN), kafkaHeaders.get(XOkapiHeaders.URL),
@@ -85,14 +85,21 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
   private InstanceIngressEventHandler getInstanceIngressEventHandler(InstanceIngressEvent.EventType eventType, Context context) {
     var precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
     SnapshotService snapshotService = new SnapshotService(client);
-    if (eventType == CREATE_INSTANCE) {
-      var idStorageService = new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)));
-      return new CreateInstanceIngressEventHandler(precedingSucceedingTitlesHelper, mappingMetadataCache, idStorageService, client, context, storage, snapshotService);
-    } else if (eventType == UPDATE_INSTANCE) {
-      return new UpdateInstanceIngressEventHandler(precedingSucceedingTitlesHelper, mappingMetadataCache, client, context, storage, snapshotService);
-    } else {
-      LOGGER.warn("Can't process eventType {}", eventType);
-      throw new EventProcessingException("Can't process eventType " + eventType);
+    switch (eventType) {
+      case CREATE_INSTANCE -> {
+        var idStorageService =
+          new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)));
+        return new CreateInstanceIngressEventHandler(precedingSucceedingTitlesHelper, mappingMetadataCache,
+          idStorageService, client, context, storage, snapshotService);
+      }
+      case UPDATE_INSTANCE -> {
+        return new UpdateInstanceIngressEventHandler(precedingSucceedingTitlesHelper, mappingMetadataCache, client,
+          context, storage, snapshotService);
+      }
+      default -> {
+        LOGGER.warn("Can't process eventType {}", eventType);
+        throw new EventProcessingException("Can't process eventType " + eventType);
+      }
     }
   }
 

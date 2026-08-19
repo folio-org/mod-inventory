@@ -16,6 +16,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
+import java.util.TreeMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -67,14 +68,15 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
   }
 
   @Override
-  public Future<String> handle(KafkaConsumerRecord<String, String> record) {
+  public Future<String> handle(KafkaConsumerRecord<String, String> kafkaRecord) {
     try {
       Promise<String> promise = Promise.promise();
-      Event event = OBJECT_MAPPER.readValue(record.value(), Event.class);
+      Event event = OBJECT_MAPPER.readValue(kafkaRecord.value(), Event.class);
         @SuppressWarnings("unchecked")
-        HashMap<String, String> eventPayload =
+        Map<String, String> eventPayload =
           OBJECT_MAPPER.readValue(event.getEventPayload(), HashMap.class);
-        Map<String, String> headersMap = KafkaHeaderUtils.kafkaHeadersToMap(record.headers());
+        Map<String, String> headersMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        headersMap.putAll(KafkaHeaderUtils.kafkaHeadersToMap(kafkaRecord.headers()));
         String recordId = headersMap.get(RECORD_ID_HEADER);
         String chunkId = headersMap.get(CHUNK_ID_HEADER);
         String jobExecutionId = eventPayload.get(JOB_EXECUTION_ID_HEADER);
@@ -98,10 +100,10 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
           .onComplete(ar -> {
             if (ar.succeeded()) {
               eventPayload.remove(CURRENT_RETRY_NUMBER);
-              promise.complete(record.key());
+              promise.complete(kafkaRecord.key());
             } else {
               if (ar.cause() instanceof OptimisticLockingException) {
-                processOLError(record, promise, eventPayload, ar);
+                processOLError(kafkaRecord, promise, eventPayload, ar);
               } else {
                 eventPayload.remove(CURRENT_RETRY_NUMBER);
                 LOGGER.error("Failed to process data import event payload ", ar.cause());
@@ -111,17 +113,17 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
           });
         return promise.future();
     } catch (Exception e) {
-      LOGGER.error(format("Failed to process data import kafka record from topic %s ", record.topic()), e);
+      LOGGER.error(format("Failed to process data import kafka record from topic %s ", kafkaRecord.topic()), e);
       return Future.failedFuture(e);
     }
   }
 
-  private void ensureEventPayloadWithMappingMetadata(HashMap<String, String> eventPayload, MappingMetadataDto mappingMetadataDto) {
+  private void ensureEventPayloadWithMappingMetadata(Map<String, String> eventPayload, MappingMetadataDto mappingMetadataDto) {
     eventPayload.put(MAPPING_RULES_KEY, mappingMetadataDto.getMappingRules());
     eventPayload.put(MAPPING_PARAMS_KEY, mappingMetadataDto.getMappingParams());
   }
 
-  private void processOLError(KafkaConsumerRecord<String, String> value, Promise<String> promise, HashMap<String, String> eventPayload, AsyncResult<HoldingsRecord> ar) {
+  private void processOLError(KafkaConsumerRecord<String, String> value, Promise<String> promise, Map<String, String> eventPayload, AsyncResult<HoldingsRecord> ar) {
     int currentRetryNumber = eventPayload.get(CURRENT_RETRY_NUMBER) == null
       ? 0 : Integer.parseInt(eventPayload.get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
