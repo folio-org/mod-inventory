@@ -34,6 +34,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   private static final Logger LOG = LogManager.getLogger(AbstractLoader.class);
 
   public static final String MULTI_MATCH_IDS = "MULTI_MATCH_IDS";
+  public static final String INSTANCES_IDS = "INSTANCES_IDS";
   private static final String ERROR_LOAD_MSG = "Failed to load records cause: %s, status code: %s";
   private static final int MULTI_MATCH_LOAD_LIMIT = 90;
   private static final String ID_FIELD = "id";
