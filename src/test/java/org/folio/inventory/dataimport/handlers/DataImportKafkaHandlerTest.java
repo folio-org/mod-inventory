@@ -132,7 +132,7 @@ public class DataImportKafkaHandlerTest extends KafkaTest {
     dataImportKafkaHandler = new DataImportKafkaHandler(vertxAssistant.getVertx(), mockedStorage, client,
       new ProfileSnapshotCache(vertxAssistant.getVertx(), client, 3600),
       kafkaConfig,
-      MappingMetadataCache.getInstance(vertxAssistant.getVertx(), client),
+      MappingMetadataCache.getInstance(vertxAssistant.getVertx(), client, true),
       new ConsortiumDataCache(vertxAssistant.getVertx(), client),
       cancelledJobsIdCache);
 
