@@ -1,3 +1,6 @@
+## 22.0.3 2026-08-20
+* Fix match results not passed to subsequent matches for consortium tenants [MODINV-1400](https://folio-org.atlassian.net/browse/MODINV-1400)
+
 ## 22.0.2 2026-07-08
 * Importing Records from BNE z39.50 - record not available error (MODINV-1395) [MODINV-1396](https://folio-org.atlassian.net/browse/MODINV-1396)
 
