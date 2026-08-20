@@ -1,3 +1,6 @@
+## 22.0.4 2026-08-20
+* Imported MARC Bib with 999ff (using "Modify action") is incorrectly linked to Instance [MODINV-1410](https://folio-org.atlassian.net/browse/MODINV-1410)
+
 ## 22.0.3 2026-08-20
 * Fix match results not passed to subsequent matches for consortium tenants [MODINV-1400](https://folio-org.atlassian.net/browse/MODINV-1400)
 
