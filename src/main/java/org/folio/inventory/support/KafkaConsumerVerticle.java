@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.apache.logging.log4j.Logger;
+import org.folio.inventory.dataimport.cache.DeleteRuleFor999FieldCache;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.storage.Storage;
@@ -108,6 +109,10 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
 
   protected MappingMetadataCache getMappingMetadataCache() {
     return MappingMetadataCache.getInstance(vertx, getHttpClient());
+  }
+
+  protected DeleteRuleFor999FieldCache getDeleteRuleFor999FieldCache() {
+    return DeleteRuleFor999FieldCache.getInstance(vertx);
   }
 
   protected ProfileSnapshotCache getProfileSnapshotCache() {
