@@ -234,6 +234,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       recordMatchingDto.getFilters().add(filter);
     });
 
+    LOG.info("buildRecordsMatchingRequest:: recordMatchingDto: '{}'", recordMatchingDto);
     return recordMatchingDto;
   }
 
