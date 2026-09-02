@@ -1,117 +1,91 @@
 package org.folio.inventory.dataimport.cache;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static org.folio.HttpStatus.SC_BAD_REQUEST;
+import static org.folio.HttpStatus.SC_NOT_FOUND;
+import static org.folio.HttpStatus.SC_SERVER_ERROR;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Optional;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import java.util.UUID;
-
+import org.folio.MappingMetadataDto;
+import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.CacheLoadingException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
-import org.folio.MappingMetadataDto;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
-import com.github.tomakehurst.wiremock.matching.RegexPattern;
-import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
-
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.Json;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-
-@RunWith(VertxUnitRunner.class)
-public class MappingMetadataCacheTest {
+@ExtendWith(VertxExtension.class)
+class MappingMetadataCacheTest extends BaseWireMockTest {
 
   private static final String TENANT_ID = "diku";
-  private static final String MAPPING_METADATA_URL = "/mapping-metadata";
+  private static final String MAPPING_METADATA_URL = "/mapping-metadata/.*";
   private static final String MARC_BIB_RECORD_TYPE = "marc-bib";
 
-  private final Vertx vertx = Vertx.vertx();
-
-  private final MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx,
-    vertx.createHttpClient(), true);
-
-  @Rule
-  public WireMockRule mockServer = new WireMockRule(
-    WireMockConfiguration.wireMockConfig()
-      .dynamicPort()
-      .notifier(new Slf4jNotifier(true)));
-
-
-  MappingMetadataDto mappingMetadata = new MappingMetadataDto()
+  private final MappingMetadataDto mappingMetadata = new MappingMetadataDto()
     .withJobExecutionId(UUID.randomUUID().toString())
     .withMappingParams("params")
     .withMappingRules("rules");
+  private final Context context = EventHandlingUtil.constructContext(TENANT_ID, "token", mockServerUrl());
 
-  private Context context;
+  private MappingMetadataCache mappingMetadataCache;
 
-  @Before
-  public void setUp() {
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
-      .willReturn(WireMock.ok().withBody(Json.encode(mappingMetadata))));
+  @BeforeEach
+  void setUp(Vertx vertx) {
+    stubGetJson(MAPPING_METADATA_URL, Json.encode(mappingMetadata));
 
-    context = EventHandlingUtil.constructContext(TENANT_ID, "token", mockServer.baseUrl());
+    mappingMetadataCache = MappingMetadataCache.getInstance(vertx, vertx.createHttpClient(), true);
   }
 
   @Test
-  public void shouldReturnMappingMetadata(TestContext context) {
-    Async async = context.async();
+  void shouldReturnMappingMetadata(VertxTestContext testContext) {
+    var optionalFuture = mappingMetadataCache.get(mappingMetadata.getJobExecutionId(), context);
 
-    Future<Optional<MappingMetadataDto>> optionalFuture = mappingMetadataCache.get(mappingMetadata.getJobExecutionId(), this.context);
-
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertTrue(ar.result().isPresent());
-      MappingMetadataDto actualMappingMetadata = ar.result().get();
-      context.assertEquals(mappingMetadata.getJobExecutionId(), actualMappingMetadata.getJobExecutionId());
-      context.assertNotNull(actualMappingMetadata.getMappingParams());
-      context.assertNotNull(actualMappingMetadata.getMappingRules());
-      context.assertEquals(mappingMetadata.getMappingParams(), actualMappingMetadata.getMappingParams());
-      context.assertEquals(mappingMetadata.getMappingRules(), actualMappingMetadata.getMappingRules());
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+      assertTrue(result.isPresent());
+      MappingMetadataDto actualMappingMetadata = result.get();
+      assertEquals(mappingMetadata.getJobExecutionId(), actualMappingMetadata.getJobExecutionId());
+      assertNotNull(actualMappingMetadata.getMappingParams());
+      assertNotNull(actualMappingMetadata.getMappingRules());
+      assertEquals(mappingMetadata.getMappingParams(), actualMappingMetadata.getMappingParams());
+      assertEquals(mappingMetadata.getMappingRules(), actualMappingMetadata.getMappingRules());
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldReturnMappingMetadataByRecordType(TestContext context) {
-    Async async = context.async();
-    Future<Optional<MappingMetadataDto>> optionalFuture = mappingMetadataCache
-      .getByRecordType(mappingMetadata.getJobExecutionId(), this.context, MARC_BIB_RECORD_TYPE);
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertTrue(ar.result().isPresent());
-      MappingMetadataDto actualMappingMetadata = ar.result().get();
-      context.assertEquals(mappingMetadata.getJobExecutionId(), actualMappingMetadata.getJobExecutionId());
-      context.assertNotNull(actualMappingMetadata.getMappingParams());
-      context.assertNotNull(actualMappingMetadata.getMappingRules());
-      context.assertEquals(mappingMetadata.getMappingParams(), actualMappingMetadata.getMappingParams());
-      context.assertEquals(mappingMetadata.getMappingRules(), actualMappingMetadata.getMappingRules());
-      async.complete();
-    });
+  void shouldReturnMappingMetadataByRecordType(VertxTestContext testContext) {
+    var jobExecutionId = mappingMetadata.getJobExecutionId();
+    var optionalFuture = mappingMetadataCache.getByRecordType(jobExecutionId, context, MARC_BIB_RECORD_TYPE);
 
+    optionalFuture.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+      assertTrue(result.isPresent());
+      MappingMetadataDto actualMappingMetadata = result.get();
+      assertEquals(jobExecutionId, actualMappingMetadata.getJobExecutionId());
+      assertNotNull(actualMappingMetadata.getMappingParams());
+      assertNotNull(actualMappingMetadata.getMappingRules());
+      assertEquals(mappingMetadata.getMappingParams(), actualMappingMetadata.getMappingParams());
+      assertEquals(mappingMetadata.getMappingRules(), actualMappingMetadata.getMappingRules());
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldReturnMappingMetadataByRecordTypeBlocking() {
-    var optionalMetadata = mappingMetadataCache
-      .getByRecordTypeBlocking(mappingMetadata.getJobExecutionId(), this.context, MARC_BIB_RECORD_TYPE);
+  void shouldReturnMappingMetadataByRecordTypeBlocking() {
+    var jobExecutionId = mappingMetadata.getJobExecutionId();
+    var optionalMetadata = mappingMetadataCache.getByRecordTypeBlocking(jobExecutionId, context, MARC_BIB_RECORD_TYPE);
 
     assertTrue(optionalMetadata.isPresent());
     var actualMappingMetadata = optionalMetadata.get();
-    assertEquals(mappingMetadata.getJobExecutionId(), actualMappingMetadata.getJobExecutionId());
+    assertEquals(jobExecutionId, actualMappingMetadata.getJobExecutionId());
     assertNotNull(actualMappingMetadata.getMappingParams());
     assertNotNull(actualMappingMetadata.getMappingRules());
     assertEquals(mappingMetadata.getMappingParams(), actualMappingMetadata.getMappingParams());
@@ -119,109 +93,91 @@ public class MappingMetadataCacheTest {
   }
 
   @Test
-  public void shouldReturnNoMappingMetadataWhenGetNotFoundByRecordTypeBlocking() {
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
-      .willReturn(WireMock.notFound()));
+  void shouldReturnNoMappingMetadataWhenGetNotFoundByRecordTypeBlocking() {
+    stubGetJson(MAPPING_METADATA_URL, SC_NOT_FOUND, "");
 
     var optionalMetadata = mappingMetadataCache
-      .getByRecordTypeBlocking(mappingMetadata.getJobExecutionId(), this.context, MARC_BIB_RECORD_TYPE);
+      .getByRecordTypeBlocking(mappingMetadata.getJobExecutionId(), context, MARC_BIB_RECORD_TYPE);
 
     assertTrue(optionalMetadata.isEmpty());
   }
 
   @Test
-  public void shouldThrowExceptionOnAttemptToGetByRecordTypeBlocking() {
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
-      .willReturn(WireMock.badRequest()));
+  void shouldThrowExceptionOnAttemptToGetByRecordTypeBlocking() {
+    stubGetJson(MAPPING_METADATA_URL, SC_BAD_REQUEST, "");
     var jobId = mappingMetadata.getJobExecutionId();
 
     assertThrows(CacheLoadingException.class,
-      () -> mappingMetadataCache.getByRecordTypeBlocking(jobId, this.context, MARC_BIB_RECORD_TYPE));
+      () -> mappingMetadataCache.getByRecordTypeBlocking(jobId, context, MARC_BIB_RECORD_TYPE));
   }
 
   @Test
-  public void shouldReturnEmptyOptionalWhenGetNotFoundOnSnapshotLoading(TestContext context) {
-    Async async = context.async();
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
-      .willReturn(WireMock.notFound()));
+  void shouldReturnEmptyOptionalWhenGetNotFoundOnSnapshotLoading(VertxTestContext testContext) {
+    stubGetJson(MAPPING_METADATA_URL, SC_NOT_FOUND, "");
 
-    Future<Optional<MappingMetadataDto>> optionalFuture = mappingMetadataCache.get(mappingMetadata.getJobExecutionId(), this.context);
+    var optionalFuture = mappingMetadataCache.get(mappingMetadata.getJobExecutionId(), context);
 
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertTrue(ar.result().isEmpty());
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+      assertTrue(result.isEmpty());
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldReturnEmptyOptionalWhenGetNotFoundByRecordType(TestContext context) {
-    Async async = context.async();
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
-      .willReturn(WireMock.notFound()));
+  void shouldReturnEmptyOptionalWhenGetNotFoundByRecordType(VertxTestContext testContext) {
+    stubGetJson(MAPPING_METADATA_URL, SC_NOT_FOUND, "");
 
-    Future<Optional<MappingMetadataDto>> optionalFuture = mappingMetadataCache.getByRecordType(mappingMetadata.getJobExecutionId(),
-      this.context, MARC_BIB_RECORD_TYPE);
+    var optionalFuture = mappingMetadataCache.getByRecordType(mappingMetadata.getJobExecutionId(),
+      context, MARC_BIB_RECORD_TYPE);
 
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertTrue(ar.result().isEmpty());
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+      assertTrue(result.isEmpty());
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldReturnFailedFutureWhenGetServerErrorOnSnapshotLoading(TestContext context) {
-    Async async = context.async();
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
-      .willReturn(WireMock.serverError()));
+  void shouldReturnFailedFutureWhenGetServerErrorOnSnapshotLoading(VertxTestContext testContext) {
+    stubGetJson(MAPPING_METADATA_URL, SC_SERVER_ERROR, "");
 
-    Future<Optional<MappingMetadataDto>> optionalFuture = mappingMetadataCache.get(mappingMetadata.getJobExecutionId(), this.context);
+    var optionalFuture = mappingMetadataCache.get(mappingMetadata.getJobExecutionId(), context);
 
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.failing(err -> testContext.verify(() -> {
+      assertInstanceOf(CacheLoadingException.class, err.getCause());
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldReturnFailedFutureWhenGetServerErrorByRecordType(TestContext context) {
-    Async async = context.async();
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
-      .willReturn(WireMock.serverError()));
+  void shouldReturnFailedFutureWhenGetServerErrorByRecordType(VertxTestContext testContext) {
+    stubGetJson(MAPPING_METADATA_URL, SC_SERVER_ERROR, "");
 
-    Future<Optional<MappingMetadataDto>> optionalFuture = mappingMetadataCache.getByRecordType(mappingMetadata.getJobExecutionId(),
-      this.context, MARC_BIB_RECORD_TYPE);
+    var optionalFuture = mappingMetadataCache.getByRecordType(mappingMetadata.getJobExecutionId(),
+      context, MARC_BIB_RECORD_TYPE);
 
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.failing(err -> testContext.verify(() -> {
+      assertInstanceOf(CacheLoadingException.class, err.getCause());
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldReturnFailedFutureWhenSpecifiedProfileSnapshotIdIsNull(TestContext context) {
-    Async async = context.async();
+  void shouldReturnFailedFutureWhenSpecifiedProfileSnapshotIdIsNull(VertxTestContext testContext) {
+    var optionalFuture = mappingMetadataCache.get(null, context);
 
-    Future<Optional<MappingMetadataDto>> optionalFuture = mappingMetadataCache.get(null, this.context);
-
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.failing(err -> testContext.verify(() -> {
+      assertInstanceOf(NullPointerException.class, err);
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldReturnFailedFutureWhenSpecifiedProfileSnapshotIdIsNullByRecordType(TestContext context) {
-    Async async = context.async();
+  void shouldReturnFailedFutureWhenSpecifiedProfileSnapshotIdIsNullByRecordType(VertxTestContext testContext) {
+    var optionalFuture = mappingMetadataCache.getByRecordType(null, context, MARC_BIB_RECORD_TYPE);
 
-    Future<Optional<MappingMetadataDto>> optionalFuture =
-      mappingMetadataCache.getByRecordType(null, this.context, MARC_BIB_RECORD_TYPE);
-
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.failing(err -> testContext.verify(() -> {
+      assertInstanceOf(NullPointerException.class, err);
+      testContext.completeNow();
+    })));
   }
-
 }

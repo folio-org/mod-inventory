@@ -1,13 +1,13 @@
 package support.fakes.processors;
 
-import io.vertx.core.json.JsonObject;
-import org.folio.inventory.domain.instances.InstanceRelationship;
-import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
-import org.folio.inventory.exceptions.UnprocessableEntityException;
-import org.folio.inventory.support.http.client.Response;
-import org.folio.inventory.support.http.server.ValidationError;
-import org.folio.util.StringUtil;
+import static api.ApiTestSuite.createOkapiHttpClient;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static java.util.function.Function.identity;
+import static org.folio.inventory.support.JsonArrayHelper.toList;
+import static support.http.StorageInterfaceUrls.instanceRelationshipTypeUrl;
+import static support.http.StorageInterfaceUrls.instancesStorageUrl;
 
+import io.vertx.core.json.JsonObject;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
@@ -15,21 +15,19 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-
-import static api.ApiTestSuite.createOkapiHttpClient;
-import static api.support.http.StorageInterfaceUrls.instanceRelationshipTypeUrl;
-import static api.support.http.StorageInterfaceUrls.instancesStorageUrl;
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static java.util.function.Function.identity;
-import static org.folio.inventory.support.JsonArrayHelper.toList;
+import org.folio.inventory.domain.instances.InstanceRelationship;
+import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
+import org.folio.inventory.exceptions.UnprocessableEntityException;
+import org.folio.inventory.support.http.client.Response;
+import org.folio.inventory.support.http.server.ValidationError;
+import org.folio.util.StringUtil;
 
 public final class StorageConstraintsProcessors {
 
-  private StorageConstraintsProcessors() {
-  }
+  private StorageConstraintsProcessors() {  }
 
   public static CompletableFuture<JsonObject> instanceRelationshipsConstraints(
-    @SuppressWarnings("unused") String tenant, JsonObject oldRelationship, JsonObject newRelationship) throws MalformedURLException {
+    @SuppressWarnings("unused") String tenant, JsonObject oldRelationship, JsonObject newRelationship) {
 
     final InstanceRelationship relationship = new InstanceRelationship(newRelationship);
 
@@ -58,7 +56,7 @@ public final class StorageConstraintsProcessors {
   }
 
   public static CompletableFuture<JsonObject> instancePrecedingSucceedingTitleConstraints(
-    @SuppressWarnings("unused") String tenant, JsonObject oldRelationship, JsonObject newRelationship) throws MalformedURLException {
+    @SuppressWarnings("unused") String tenant, JsonObject oldRelationship, JsonObject newRelationship) {
 
     final PrecedingSucceedingTitle relationship = PrecedingSucceedingTitle.from(newRelationship);
 
@@ -71,7 +69,7 @@ public final class StorageConstraintsProcessors {
     return getInstanceByIds(relationship.precedingInstanceId, relationship.succeedingInstanceId)
       .thenCompose(instancesMap -> {
         if (relationship.precedingInstanceId != null
-          && !instancesMap.containsKey(relationship.precedingInstanceId)) {
+            && !instancesMap.containsKey(relationship.precedingInstanceId)) {
 
           throw new UnprocessableEntityException(new ValidationError(
             "Preceding instance does not exist", "precedingInstanceId",
@@ -79,7 +77,7 @@ public final class StorageConstraintsProcessors {
         }
 
         if (relationship.succeedingInstanceId != null
-          && !instancesMap.containsKey(relationship.succeedingInstanceId)) {
+            && !instancesMap.containsKey(relationship.succeedingInstanceId)) {
 
           throw new UnprocessableEntityException(new ValidationError(
             "Succeeding instance does not exist", "succeedingInstanceId",
@@ -90,8 +88,7 @@ public final class StorageConstraintsProcessors {
       });
   }
 
-  private static CompletableFuture<Map<String, JsonObject>> getInstanceByIds(String... ids)
-    throws MalformedURLException {
+  private static CompletableFuture<Map<String, JsonObject>> getInstanceByIds(String... ids) {
 
     final String fullQuery = String.format("?query=id==(%s)&limit=%s",
       StringUtil.urlEncode(Arrays.stream(ids)
@@ -106,7 +103,7 @@ public final class StorageConstraintsProcessors {
         .collect(Collectors.toMap(instance -> instance.getString("id"), identity())));
   }
 
-  private static CompletableFuture<Response> get(URL url) throws MalformedURLException {
+  private static CompletableFuture<Response> get(URL url) {
     return createOkapiHttpClient().get(url).toCompletableFuture();
   }
 }

@@ -2,16 +2,14 @@ package support.matchers;
 
 import static org.hamcrest.Matchers.is;
 
+import com.jayway.jsonpath.matchers.JsonPathMatchers;
+import io.vertx.core.json.JsonObject;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 
-import com.jayway.jsonpath.matchers.JsonPathMatchers;
-
-import io.vertx.core.json.JsonObject;
-
 public final class JsonObjectMatchers {
-  private JsonObjectMatchers() {}
+  private JsonObjectMatchers() { }
 
   public static <T> Matcher<JsonObject> hasJsonPath(String path, T value) {
     return encodedJsonMatches(JsonPathMatchers.hasJsonPath(path, is(value)));
@@ -20,13 +18,13 @@ public final class JsonObjectMatchers {
   private static <T> Matcher<JsonObject> encodedJsonMatches(Matcher<T> matcher) {
     return new TypeSafeMatcher<JsonObject>() {
       @Override
-      protected boolean matchesSafely(JsonObject entries) {
-        return matcher.matches(entries.encode());
+      public void describeTo(Description description) {
+        description.appendDescriptionOf(matcher);
       }
 
       @Override
-      public void describeTo(Description description) {
-        description.appendDescriptionOf(matcher);
+      protected boolean matchesSafely(JsonObject entries) {
+        return matcher.matches(entries.encode());
       }
     };
   }

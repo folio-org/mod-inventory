@@ -3,23 +3,9 @@ package org.folio.inventory.eventhandlers;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static org.hamcrest.Matchers.hasItems;
-import static org.hamcrest.junit.MatcherAssert.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
-
+import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_MATCHED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_NOT_MATCHED;
-import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.MatchDetail.MatchCriterion.EXACTLY_MATCHES;
 import static org.folio.inventory.dataimport.handlers.matching.loaders.AbstractLoader.MULTI_MATCH_IDS;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
@@ -29,7 +15,30 @@ import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
 import static org.folio.rest.jaxrs.model.ReactToType.MATCH;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItems;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import io.vertx.core.Future;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,26 +47,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
-
-import io.vertx.core.Future;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
-import org.folio.inventory.consortium.services.ConsortiumService;
-import org.folio.inventory.dataimport.handlers.matching.preloaders.PreloadingFields;
-import org.folio.processing.exceptions.MatchingException;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
-
 import org.folio.DataImportEventPayload;
 import org.folio.MappingMetadataDto;
 import org.folio.MatchDetail;
@@ -67,14 +56,18 @@ import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
+import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.loaders.InstanceLoader;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.AbstractPreloader;
+import org.folio.inventory.dataimport.handlers.matching.preloaders.PreloadingFields;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.handler.EventHandler;
+import org.folio.processing.exceptions.MatchingException;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
@@ -84,9 +77,19 @@ import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Field;
 import org.folio.rest.jaxrs.model.MatchExpression;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
-@RunWith(VertxUnitRunner.class)
-public class MatchInstanceEventHandlerUnitTest {
+@ExtendWith({VertxExtension.class, MockitoExtension.class})
+@MockitoSettings(strictness = Strictness.LENIENT)
+class MatchInstanceEventHandlerUnitTest {
 
   private static final String INSTANCE_HRID = "in0001234";
   private static final String INSTANCE_ID = "ddd266ef-07ac-4117-be13-d418b8cd6902";
@@ -94,11 +97,12 @@ public class MatchInstanceEventHandlerUnitTest {
   private static final String ID_FIELD = "id";
   private static final String MAPPING_PARAMS = "MAPPING_PARAMS";
   private static final String RELATIONS = "MATCHING_PARAMETERS_RELATIONS";
-  private static final String MATCHING_RELATIONS = "{\"item.statisticalCodeIds[]\":\"statisticalCode\",\"instance.classifications[].classificationTypeId\":\"classificationTypes\",\"instance.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"item.permanentLoanTypeId\":\"loantypes\",\"holdingsrecord.temporaryLocationId\":\"locations\",\"holdingsrecord.statisticalCodeIds[]\":\"statisticalCode\",\"instance.statusId\":\"instanceStatuses\",\"instance.natureOfContentTermIds\":\"natureOfContentTerms\",\"item.notes[].itemNoteTypeId\":\"itemNoteTypes\",\"holdingsrecord.permanentLocationId\":\"locations\",\"instance.alternativeTitles[].alternativeTitleTypeId\":\"alternativeTitleTypes\",\"holdingsrecord.illPolicyId\":\"illPolicies\",\"item.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.identifiers[].identifierTypeId\":\"identifierTypes\",\"holdingsrecord.holdingsTypeId\":\"holdingsTypes\",\"item.permanentLocationId\":\"locations\",\"instance.modeOfIssuanceId\":\"issuanceModes\",\"item.itemLevelCallNumberTypeId\":\"callNumberTypes\",\"instance.notes[].instanceNoteTypeId\":\"instanceNoteTypes\",\"instance.instanceFormatIds\":\"instanceFormats\",\"holdingsrecord.callNumberTypeId\":\"callNumberTypes\",\"holdingsrecord.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.instanceTypeId\":\"instanceTypes\",\"instance.statisticalCodeIds[]\":\"statisticalCode\",\"instancerelationship.instanceRelationshipTypeId\":\"instanceRelationshipTypes\",\"item.temporaryLoanTypeId\":\"loantypes\",\"item.temporaryLocationId\":\"locations\",\"item.materialTypeId\":\"materialTypes\",\"holdingsrecord.notes[].holdingsNoteTypeId\":\"holdingsNoteTypes\",\"instance.contributors[].contributorNameTypeId\":\"contributorNameTypes\",\"item.itemDamagedStatusId\":\"itemDamageStatuses\",\"instance.contributors[].contributorTypeId\":\"contributorTypes\"}";
-  private static final String LOCATIONS_PARAMS = "{\"initialized\":true,\"locations\":[{\"id\":\"53cf956f-c1df-410b-8bea-27f712cca7c0\",\"name\":\"Annex\",\"code\":\"KU/CC/DI/A\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257690,\"updatedDate\":1592219257690}},{\"id\":\"b241764c-1466-4e1d-a028-1a3684a5da87\",\"name\":\"Popular Reading Collection\",\"code\":\"KU/CC/DI/P\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257711,\"updatedDate\":1592219257711}}]}";
+  private static final String MATCHING_RELATIONS =
+    "{\"item.statisticalCodeIds[]\":\"statisticalCode\",\"instance.classifications[].classificationTypeId\":\"classificationTypes\",\"instance.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"item.permanentLoanTypeId\":\"loantypes\",\"holdingsrecord.temporaryLocationId\":\"locations\",\"holdingsrecord.statisticalCodeIds[]\":\"statisticalCode\",\"instance.statusId\":\"instanceStatuses\",\"instance.natureOfContentTermIds\":\"natureOfContentTerms\",\"item.notes[].itemNoteTypeId\":\"itemNoteTypes\",\"holdingsrecord.permanentLocationId\":\"locations\",\"instance.alternativeTitles[].alternativeTitleTypeId\":\"alternativeTitleTypes\",\"holdingsrecord.illPolicyId\":\"illPolicies\",\"item.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.identifiers[].identifierTypeId\":\"identifierTypes\",\"holdingsrecord.holdingsTypeId\":\"holdingsTypes\",\"item.permanentLocationId\":\"locations\",\"instance.modeOfIssuanceId\":\"issuanceModes\",\"item.itemLevelCallNumberTypeId\":\"callNumberTypes\",\"instance.notes[].instanceNoteTypeId\":\"instanceNoteTypes\",\"instance.instanceFormatIds\":\"instanceFormats\",\"holdingsrecord.callNumberTypeId\":\"callNumberTypes\",\"holdingsrecord.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.instanceTypeId\":\"instanceTypes\",\"instance.statisticalCodeIds[]\":\"statisticalCode\",\"instancerelationship.instanceRelationshipTypeId\":\"instanceRelationshipTypes\",\"item.temporaryLoanTypeId\":\"loantypes\",\"item.temporaryLocationId\":\"locations\",\"item.materialTypeId\":\"materialTypes\",\"holdingsrecord.notes[].holdingsNoteTypeId\":\"holdingsNoteTypes\",\"instance.contributors[].contributorNameTypeId\":\"contributorNameTypes\",\"item.itemDamagedStatusId\":\"itemDamageStatuses\",\"instance.contributors[].contributorTypeId\":\"contributorTypes\"}";
+  private static final String LOCATIONS_PARAMS =
+    "{\"initialized\":true,\"locations\":[{\"id\":\"53cf956f-c1df-410b-8bea-27f712cca7c0\",\"name\":\"Annex\",\"code\":\"KU/CC/DI/A\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257690,\"updatedDate\":1592219257690}},{\"id\":\"b241764c-1466-4e1d-a028-1a3684a5da87\",\"name\":\"Popular Reading Collection\",\"code\":\"KU/CC/DI/P\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257711,\"updatedDate\":1592219257711}}]}";
   private static final String CENTRAL_TENANT_ID_KEY = "CENTRAL_TENANT_ID";
   private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
-
 
   @Mock
   private Storage storage;
@@ -112,15 +116,15 @@ public class MatchInstanceEventHandlerUnitTest {
   private ConsortiumService consortiumService;
   @Mock
   private AbstractPreloader preloader;
-  private EventHandler eventHandler;
   @InjectMocks
-  private final InstanceLoader instanceLoader = new InstanceLoader(storage, preloader);
+  private InstanceLoader instanceLoader;
 
-  @Before
-  public void setUp() {
+  private EventHandler eventHandler;
+
+  @BeforeEach
+  void setUp() {
     MatchValueReaderFactory.clearReaderFactory();
     MatchValueLoaderFactory.clearLoaderFactory();
-    MockitoAnnotations.initMocks(this);
     when(marcValueReader.isEligibleForEntityType(MARC_BIBLIOGRAPHIC)).thenReturn(true);
     when(storage.getInstanceCollection(any(Context.class))).thenReturn(instanceCollection);
     when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
@@ -134,18 +138,17 @@ public class MatchInstanceEventHandlerUnitTest {
         .withMappingParams(LOCATIONS_PARAMS))));
 
     doAnswer(invocationOnMock -> CompletableFuture.completedFuture(invocationOnMock.getArgument(0)))
-            .when(preloader)
-            .preload(any(), any());
+      .when(preloader)
+      .preload(any(), any());
 
     eventHandler = new MatchInstanceEventHandler(mappingMetadataCache, consortiumService);
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.empty())).when(consortiumService).getConsortiumConfiguration(any());
+    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.empty())).when(consortiumService)
+      .getConsortiumConfiguration(any());
   }
 
   @Test
-  public void shouldMatchOnHandleEventPayload(TestContext testContext) throws UnsupportedEncodingException {
-    Async async = testContext.async();
-
+  void shouldMatchOnHandleEventPayload(VertxTestContext testContext) throws UnsupportedEncodingException {
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Instance>> result =
@@ -153,33 +156,35 @@ public class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
+        any(Consumer.class));
 
     DataImportEventPayload eventPayload = createEventPayload();
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
-      testContext.assertEquals(
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(1, updatedEventPayload.getEventsChain().size());
+      assertEquals(
         updatedEventPayload.getEventsChain(),
         singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
-      async.complete();
-    });
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldThrowExceptionWhenMatchOnLocalAndCentralTenant(TestContext testContext) throws UnsupportedEncodingException {
-    Async async = testContext.async();
-
+  void shouldThrowExceptionWhenMatchOnLocalAndCentralTenant(VertxTestContext testContext)
+    throws UnsupportedEncodingException {
     String centralTenantId = "consortium";
     String consortiumId = "consortiumId";
 
     Instance instance = new Instance(UUID.randomUUID().toString(), 5, INSTANCE_HRID, "MARC", "Wonderful", "12334");
 
     InstanceCollection instanceCollectionCentralTenant = mock(InstanceCollection.class);
-    when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(instanceCollectionCentralTenant);
+    when(storage.getInstanceCollection(
+      Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(
+      instanceCollectionCentralTenant);
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -188,7 +193,8 @@ public class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
+        any(Consumer.class));
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -197,32 +203,36 @@ public class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
+        any(Consumer.class));
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+    doAnswer(invocationOnMock -> Future.succeededFuture(
+      Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
       .when(consortiumService).getConsortiumConfiguration(any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNotNull(throwable);
-      testContext.assertTrue(throwable.getCause() instanceof MatchingException);
-      testContext.assertTrue(throwable.getMessage().contains("Found multiple entities during matching"));
-      async.complete();
-    });
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNotNull(throwable);
+      assertInstanceOf(MatchingException.class, throwable.getCause());
+      assertTrue(throwable.getMessage().contains("Found multiple entities during matching"));
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldNotThrowMultiMatchExceptionIfMatchedShadowInstanceLocallyAndSharedInstanceOnCentralTenant(TestContext testContext) throws UnsupportedEncodingException {
-    Async async = testContext.async();
-
+  void shouldNotThrowMultiMatchExceptionIfMatchedShadowInstanceLocallyAndSharedInstanceOnCentralTenant(
+    VertxTestContext testContext) throws UnsupportedEncodingException {
     String centralTenantId = "consortium";
     String consortiumId = "consortiumId";
 
-    Instance instance = new Instance(INSTANCE_ID, 5, UUID.randomUUID().toString(), "CONSORTIUM-MARC", "Wonderful", "12334");
+    Instance instance =
+      new Instance(INSTANCE_ID, 5, UUID.randomUUID().toString(), "CONSORTIUM-MARC", "Wonderful", "12334");
 
     InstanceCollection instanceCollectionCentralTenant = mock(InstanceCollection.class);
-    when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(instanceCollectionCentralTenant);
+    when(storage.getInstanceCollection(
+      Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(
+      instanceCollectionCentralTenant);
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -231,7 +241,8 @@ public class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
+        any(Consumer.class));
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -240,37 +251,39 @@ public class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
+        any(Consumer.class));
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+    doAnswer(invocationOnMock -> Future.succeededFuture(
+      Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
       .when(consortiumService).getConsortiumConfiguration(any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
-      testContext.assertEquals(
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(1, updatedEventPayload.getEventsChain().size());
+      assertEquals(
         updatedEventPayload.getEventsChain(),
         singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      testContext.assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
-      testContext.assertEquals(matchedInstanceAsJsonObject.getString("hrid"), INSTANCE_HRID);
-      async.complete();
-    });
+      assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
+      assertEquals(matchedInstanceAsJsonObject.getString("hrid"), INSTANCE_HRID);
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldMatchOnLocalAndNotMatchCentralTenant(TestContext testContext) throws UnsupportedEncodingException {
-    Async async = testContext.async();
-
+  void shouldMatchOnLocalAndNotMatchCentralTenant(VertxTestContext testContext) throws UnsupportedEncodingException {
     String centralTenantId = "consortium";
     String consortiumId = "consortiumId";
 
     InstanceCollection instanceCollectionCentralTenant = mock(InstanceCollection.class);
-    when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(instanceCollectionCentralTenant);
+    when(storage.getInstanceCollection(
+      Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(
+      instanceCollectionCentralTenant);
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -279,7 +292,8 @@ public class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
+        any(Consumer.class));
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -288,36 +302,38 @@ public class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
+        any(Consumer.class));
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+    doAnswer(invocationOnMock -> Future.succeededFuture(
+      Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
       .when(consortiumService).getConsortiumConfiguration(any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
-      testContext.assertEquals(
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(1, updatedEventPayload.getEventsChain().size());
+      assertEquals(
         updatedEventPayload.getEventsChain(),
         singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      testContext.assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
-      async.complete();
-    });
+      assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldNotMatchOnLocalAndMatchOnCentralTenant(TestContext testContext) throws UnsupportedEncodingException {
-    Async async = testContext.async();
-
+  void shouldNotMatchOnLocalAndMatchOnCentralTenant(VertxTestContext testContext) throws UnsupportedEncodingException {
     String centralTenantId = "consortium";
     String consortiumId = "consortiumId";
 
     InstanceCollection instanceCollectionCentralTenant = mock(InstanceCollection.class);
-    when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(instanceCollectionCentralTenant);
+    when(storage.getInstanceCollection(
+      Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(
+      instanceCollectionCentralTenant);
 
     Instance instance = new Instance(UUID.randomUUID().toString(), 5, INSTANCE_HRID, "MARC", "Wonderful", "12334");
 
@@ -328,7 +344,8 @@ public class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
+        any(Consumer.class));
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -337,39 +354,42 @@ public class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
+        any(Consumer.class));
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+    doAnswer(invocationOnMock -> Future.succeededFuture(
+      Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
       .when(consortiumService).getConsortiumConfiguration(any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
-      testContext.assertEquals(
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(1, updatedEventPayload.getEventsChain().size());
+      assertEquals(
         updatedEventPayload.getEventsChain(),
         singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      testContext.assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), instance.getId());
-      testContext.assertEquals(centralTenantId, updatedEventPayload.getContext().get(CENTRAL_TENANT_ID_KEY));
-      async.complete();
-    });
+      assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), instance.getId());
+      assertEquals(centralTenantId, updatedEventPayload.getContext().get(CENTRAL_TENANT_ID_KEY));
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldNotTryToMatchOnCentralTenantIfMatchingByPol(TestContext testContext) throws UnsupportedEncodingException {
-    Async async = testContext.async();
-
+  void shouldNotTryToMatchOnCentralTenantIfMatchingByPol(VertxTestContext testContext)
+    throws UnsupportedEncodingException {
     String centralTenantId = "consortium";
     String consortiumId = "consortiumId";
 
     Instance instance = new Instance(UUID.randomUUID().toString(), 5, INSTANCE_HRID, "MARC", "Wonderful", "12334");
 
     InstanceCollection instanceCollectionCentralTenant = mock(InstanceCollection.class);
-    when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(instanceCollectionCentralTenant);
+    when(storage.getInstanceCollection(
+      Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(
+      instanceCollectionCentralTenant);
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -378,7 +398,8 @@ public class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
-      .findByCql(eq(format("%s == \"%s\"", PreloadingFields.POL.getExistingMatchField(), INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("%s == \"%s\"", PreloadingFields.POL.getExistingMatchField(), INSTANCE_HRID)),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -387,39 +408,44 @@ public class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("%s == \"%s\"", PreloadingFields.POL.getExistingMatchField(), INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("%s == \"%s\"", PreloadingFields.POL.getExistingMatchField(), INSTANCE_HRID)),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+    doAnswer(invocationOnMock -> Future.succeededFuture(
+      Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
       .when(consortiumService).getConsortiumConfiguration(any());
 
-    DataImportEventPayload eventPayload = createEventPayload("instance." + PreloadingFields.POL.getExistingMatchField());
+    DataImportEventPayload eventPayload =
+      createEventPayload("instance." + PreloadingFields.POL.getExistingMatchField());
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
-      testContext.assertEquals(
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(1, updatedEventPayload.getEventsChain().size());
+      assertEquals(
         updatedEventPayload.getEventsChain(),
         singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      testContext.assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
-      verify(storage, times(0)).getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)));
-      async.complete();
-    });
+      assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
+      verify(storage, times(0)).getInstanceCollection(
+        Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)));
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldNotTryToMatchOnCentralTenantIfMatchingByVrn(TestContext testContext) throws UnsupportedEncodingException {
-    Async async = testContext.async();
-
+  void shouldNotTryToMatchOnCentralTenantIfMatchingByVrn(VertxTestContext testContext)
+    throws UnsupportedEncodingException {
     String centralTenantId = "consortium";
     String consortiumId = "consortiumId";
 
     Instance instance = new Instance(UUID.randomUUID().toString(), 5, INSTANCE_HRID, "MARC", "Wonderful", "12334");
 
     InstanceCollection instanceCollectionCentralTenant = mock(InstanceCollection.class);
-    when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(instanceCollectionCentralTenant);
+    when(storage.getInstanceCollection(
+      Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(
+      instanceCollectionCentralTenant);
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -428,7 +454,8 @@ public class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
-      .findByCql(eq(format("%s == \"%s\"", PreloadingFields.VRN.getExistingMatchField(), INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("%s == \"%s\"", PreloadingFields.VRN.getExistingMatchField(), INSTANCE_HRID)),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -437,32 +464,34 @@ public class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("%s == \"%s\"", PreloadingFields.VRN.getExistingMatchField(), INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("%s == \"%s\"", PreloadingFields.VRN.getExistingMatchField(), INSTANCE_HRID)),
+        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+    doAnswer(invocationOnMock -> Future.succeededFuture(
+      Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
       .when(consortiumService).getConsortiumConfiguration(any());
 
-    DataImportEventPayload eventPayload = createEventPayload("instance." + PreloadingFields.VRN.getExistingMatchField());
+    DataImportEventPayload eventPayload =
+      createEventPayload("instance." + PreloadingFields.VRN.getExistingMatchField());
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
-      testContext.assertEquals(
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(1, updatedEventPayload.getEventsChain().size());
+      assertEquals(
         updatedEventPayload.getEventsChain(),
         singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      testContext.assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
-      verify(storage, times(0)).getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)));
-      async.complete();
-    });
+      assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
+      verify(storage, times(0)).getInstanceCollection(
+        Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)));
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldNotMatchOnHandleEventPayload(TestContext testContext) throws UnsupportedEncodingException {
-    Async async = testContext.async();
-
+  void shouldNotMatchOnHandleEventPayload(VertxTestContext testContext) throws UnsupportedEncodingException {
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Instance>> result =
@@ -474,22 +503,21 @@ public class MatchInstanceEventHandlerUnitTest {
 
     DataImportEventPayload eventPayload = createEventPayload();
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
-      testContext.assertEquals(
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(1, updatedEventPayload.getEventsChain().size());
+      assertEquals(
         updatedEventPayload.getEventsChain(),
         singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_NOT_MATCHED.value(), updatedEventPayload.getEventType());
-      async.complete();
-    });
+      assertEquals(DI_INVENTORY_INSTANCE_NOT_MATCHED.value(), updatedEventPayload.getEventType());
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldFailOnHandleEventPayloadIfMatchedMultipleInstances(TestContext testContext) throws UnsupportedEncodingException {
-    Async async = testContext.async();
-
+  void shouldFailOnHandleEventPayloadIfMatchedMultipleInstances(VertxTestContext testContext)
+    throws UnsupportedEncodingException {
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Instance>> result =
@@ -501,16 +529,15 @@ public class MatchInstanceEventHandlerUnitTest {
 
     DataImportEventPayload eventPayload = createEventPayload();
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNotNull(throwable);
-      async.complete();
-    });
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNotNull(throwable);
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldIncludeUuidsInErrorMessageWhenFourOrFewerMatchesFound(TestContext testContext) throws UnsupportedEncodingException {
-    Async async = testContext.async();
-
+  void shouldIncludeUuidsInErrorMessageWhenFourOrFewerMatchesFound(VertxTestContext testContext)
+    throws UnsupportedEncodingException {
     String uuid1 = UUID.randomUUID().toString();
     String uuid2 = UUID.randomUUID().toString();
     Instance instance1 = new Instance(uuid1, 1, "test123", "MARC", "Test Title", "12345");
@@ -527,20 +554,19 @@ public class MatchInstanceEventHandlerUnitTest {
 
     DataImportEventPayload eventPayload = createEventPayload();
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNotNull(throwable);
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNotNull(throwable);
       String errorMessage = throwable.getCause().getMessage();
-      testContext.assertTrue(errorMessage.contains("UUIDs:"));
-      testContext.assertTrue(errorMessage.contains(uuid1));
-      testContext.assertTrue(errorMessage.contains(uuid2));
-      async.complete();
-    });
+      assertTrue(errorMessage.contains("UUIDs:"));
+      assertTrue(errorMessage.contains(uuid1));
+      assertTrue(errorMessage.contains(uuid2));
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldIncludeCountInErrorMessageWhenMoreThanFourMatchesFound(TestContext testContext) throws UnsupportedEncodingException {
-    Async async = testContext.async();
-
+  void shouldIncludeCountInErrorMessageWhenMoreThanFourMatchesFound(VertxTestContext testContext)
+    throws UnsupportedEncodingException {
     List<Instance> instances = new ArrayList<>();
     for (int i = 0; i < 5; i++) {
       instances.add(new Instance(UUID.randomUUID().toString(), 1, "test" + i, "MARC", "Test Title", "12345"));
@@ -557,18 +583,17 @@ public class MatchInstanceEventHandlerUnitTest {
 
     DataImportEventPayload eventPayload = createEventPayload();
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNotNull(throwable);
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNotNull(throwable);
       String errorMessage = throwable.getCause().getMessage();
-      testContext.assertTrue(errorMessage.contains("(5 records)"));
-      async.complete();
-    });
+      assertTrue(errorMessage.contains("(5 records)"));
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldFailOnHandleEventPayloadIfFailedCallToInventoryStorage(TestContext testContext) throws UnsupportedEncodingException {
-    Async async = testContext.async();
-
+  void shouldFailOnHandleEventPayloadIfFailedCallToInventoryStorage(VertxTestContext testContext)
+    throws UnsupportedEncodingException {
     doAnswer(ans -> {
       Consumer<Failure> callback = ans.getArgument(3);
       Failure result =
@@ -580,71 +605,68 @@ public class MatchInstanceEventHandlerUnitTest {
 
     DataImportEventPayload eventPayload = createEventPayload();
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNotNull(throwable);
-      async.complete();
-    });
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNotNull(throwable);
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldFailOnHandleEventPayloadIfExceptionThrown(TestContext testContext) throws UnsupportedEncodingException {
-    Async async = testContext.async();
-
+  void shouldFailOnHandleEventPayloadIfExceptionThrown(VertxTestContext testContext)
+    throws UnsupportedEncodingException {
     doThrow(new UnsupportedEncodingException()).when(instanceCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     DataImportEventPayload eventPayload = createEventPayload();
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNotNull(throwable);
-      async.complete();
-    });
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNotNull(throwable);
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldNotMatchOnHandleEventPayloadIfValueIsMissing(TestContext testContext) {
-    Async async = testContext.async();
-
+  void shouldNotMatchOnHandleEventPayloadIfValueIsMissing(VertxTestContext testContext) {
     when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
       .thenReturn(MissingValue.getInstance());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
-      testContext.assertEquals(
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(1, updatedEventPayload.getEventsChain().size());
+      assertEquals(
         updatedEventPayload.getEventsChain(),
         singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_NOT_MATCHED.value(), updatedEventPayload.getEventType());
-      async.complete();
-    });
+      assertEquals(DI_INVENTORY_INSTANCE_NOT_MATCHED.value(), updatedEventPayload.getEventType());
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldSetInstanceNotMatchedEventToEventPayloadOnHandleIfFailedToGetMappingMetadata(TestContext testContext) {
-    Async async = testContext.async();
+  void shouldSetInstanceNotMatchedEventToEventPayloadOnHandleIfFailedToGetMappingMetadata(
+    VertxTestContext testContext) {
     when(mappingMetadataCache.get(anyString(), any(Context.class)))
       .thenReturn(Future.failedFuture("test error"));
 
     DataImportEventPayload eventPayload = createEventPayload();
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNotNull(throwable);
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_NOT_MATCHED.value(), eventPayload.getEventType());
-      async.complete();
-    });
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNotNull(throwable);
+      assertEquals(DI_INVENTORY_INSTANCE_NOT_MATCHED.value(), eventPayload.getEventType());
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldReturnFalseOnIsEligibleIfNullCurrentNode() {
+  void shouldReturnFalseOnIsEligibleIfNullCurrentNode() {
     DataImportEventPayload eventPayload = new DataImportEventPayload();
     assertFalse(eventHandler.isEligible(eventPayload));
   }
 
   @Test
-  public void shouldReturnFalseOnIsEligibleIfCurrentNodeTypeIsNotMatchProfile() {
+  void shouldReturnFalseOnIsEligibleIfCurrentNodeTypeIsNotMatchProfile() {
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MAPPING_PROFILE));
@@ -652,7 +674,7 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   @Test
-  public void shouldReturnFalseOnIsEligibleForNotInstanceMatchProfile() {
+  void shouldReturnFalseOnIsEligibleForNotInstanceMatchProfile() {
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
@@ -662,7 +684,7 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   @Test
-  public void shouldReturnTrueOnIsEligibleForInstanceMatchProfile() {
+  void shouldReturnTrueOnIsEligibleForInstanceMatchProfile() {
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
@@ -672,8 +694,8 @@ public class MatchInstanceEventHandlerUnitTest {
   }
 
   @Test
-  public void shouldMatchWithSubMatchByInstanceOnHandleEventPayload(TestContext testContext) throws UnsupportedEncodingException {
-    Async async = testContext.async();
+  void shouldMatchWithSubMatchByInstanceOnHandleEventPayload(VertxTestContext testContext)
+    throws UnsupportedEncodingException {
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
       Success<MultipleRecords<Instance>> result =
@@ -690,23 +712,21 @@ public class MatchInstanceEventHandlerUnitTest {
     context.put(RELATIONS, MATCHING_RELATIONS);
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(1, updatedEventPayload.getEventsChain().size());
-      testContext.assertEquals(
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(1, updatedEventPayload.getEventsChain().size());
+      assertEquals(
         updatedEventPayload.getEventsChain(),
         singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
-      async.complete();
-    });
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldMatchWithSubConditionBasedOnMultiMatchResultOnHandleEventPayload(TestContext testContext)
+  void shouldMatchWithSubConditionBasedOnMultiMatchResultOnHandleEventPayload(VertxTestContext testContext)
     throws UnsupportedEncodingException {
-    Async async = testContext.async();
-
     List<String> multiMatchResult = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
     Instance expectedInstance = createInstance();
 
@@ -717,7 +737,8 @@ public class MatchInstanceEventHandlerUnitTest {
       successHandler.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, multiMatchResult.get(0), multiMatchResult.get(1))),
+      .findByCql(eq(
+          format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, multiMatchResult.get(0), multiMatchResult.get(1))),
         any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     HashMap<String, String> context = new HashMap<>();
@@ -726,26 +747,25 @@ public class MatchInstanceEventHandlerUnitTest {
     context.put(RELATIONS, MATCHING_RELATIONS);
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
 
-    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(1, processedPayload.getEventsChain().size());
-      testContext.assertEquals(
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(1, processedPayload.getEventsChain().size());
+      assertEquals(
         processedPayload.getEventsChain(),
         singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       );
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processedPayload.getEventType());
-      testContext.assertEquals(new JsonObject(processedPayload.getContext().get(INSTANCE.value())).getString(ID_FIELD), expectedInstance.getId());
-      async.complete();
-    });
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processedPayload.getEventType());
+      assertEquals(new JsonObject(processedPayload.getContext().get(INSTANCE.value())).getString(ID_FIELD),
+        expectedInstance.getId());
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldPutMultipleMatchResultToPayloadOnHandleEventPayload(TestContext testContext)
+  void shouldPutMultipleMatchResultToPayloadOnHandleEventPayload(VertxTestContext testContext)
     throws UnsupportedEncodingException {
     // Also covers the consortium case: when central tenant has shadow copies of the same instances,
     // both sides return MULTI_MATCH_IDS and no "Found multiple entities" error should be thrown.
-    Async async = testContext.async();
-
     String centralTenantId = "consortium";
     String consortiumId = "consortiumId";
     List<Instance> matchedInstances = List.of(
@@ -787,20 +807,19 @@ public class MatchInstanceEventHandlerUnitTest {
       .withContentType(MATCH_PROFILE)
       .withReactTo(MATCH)));
 
-    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(v -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(1, processedPayload.getEventsChain().size());
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processedPayload.getEventType());
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(1, processedPayload.getEventsChain().size());
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processedPayload.getEventType());
       assertThat(new JsonArray(processedPayload.getContext().get(MULTI_MATCH_IDS)),
         hasItems(matchedInstances.get(0).getId(), matchedInstances.get(1).getId()));
-      async.complete();
+      testContext.completeNow();
     }));
   }
 
   @Test
-  public void shouldReturnFailedFutureWhenFirstChildProfileIsNotMatchProfileOnHandleEventPayload(TestContext testContext)
+  void shouldReturnFailedFutureWhenFirstChildProfileIsNotMatchProfileOnHandleEventPayload(VertxTestContext testContext)
     throws UnsupportedEncodingException {
-    Async async = testContext.async();
     List<Instance> matchedInstances = List.of(
       new Instance(UUID.randomUUID().toString(), 1, "in1", "MARC", "Wonderful", "12334"),
       new Instance(UUID.randomUUID().toString(), 1, "in2", "MARC", "Wonderful", "12334"));
@@ -823,17 +842,15 @@ public class MatchInstanceEventHandlerUnitTest {
       new ProfileSnapshotWrapper().withContentType(ACTION_PROFILE).withReactTo(MATCH).withOrder(0),
       new ProfileSnapshotWrapper().withContentType(MATCH_PROFILE).withReactTo(MATCH).withOrder(1)));
 
-    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> {
-      testContext.assertNotNull(throwable);
-      async.complete();
-    });
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(() -> {
+      assertNotNull(throwable);
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldMatchWithSubConditionBasedOnMarcBibMultipleMatchResult(TestContext testContext)
+  void shouldMatchWithSubConditionBasedOnMarcBibMultipleMatchResult(VertxTestContext testContext)
     throws UnsupportedEncodingException {
-    Async async = testContext.async();
-
     List<String> marcBibMultiMatchResult = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
     Instance expectedInstance = createInstance();
 
@@ -844,7 +861,8 @@ public class MatchInstanceEventHandlerUnitTest {
       successHandler.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, marcBibMultiMatchResult.get(0), marcBibMultiMatchResult.get(1))),
+      .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, marcBibMultiMatchResult.get(0),
+          marcBibMultiMatchResult.get(1))),
         any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
     HashMap<String, String> context = new HashMap<>();
@@ -853,21 +871,20 @@ public class MatchInstanceEventHandlerUnitTest {
     context.put(RELATIONS, MATCHING_RELATIONS);
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
 
-    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(1, processedPayload.getEventsChain().size());
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processedPayload.getEventType());
-      testContext.assertEquals(expectedInstance.getId(), new JsonObject(processedPayload.getContext().get(INSTANCE.value())).getString(ID_FIELD));
-      testContext.assertNull(processedPayload.getContext().get(INSTANCES_IDS_KEY));
-      async.complete();
-    });
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(1, processedPayload.getEventsChain().size());
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processedPayload.getEventType());
+      assertEquals(expectedInstance.getId(),
+        new JsonObject(processedPayload.getContext().get(INSTANCE.value())).getString(ID_FIELD));
+      assertNull(processedPayload.getContext().get(INSTANCES_IDS_KEY));
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldKeepMultiMatchIdsInContextAfterCentralTenantCallFindsNoResultsInConsortium(TestContext testContext)
+  void shouldKeepMultiMatchIdsInContextAfterCentralTenantCallFindsNoResultsInConsortium(VertxTestContext testContext)
     throws UnsupportedEncodingException {
-    var async = testContext.async();
-
     var centralTenantId = "consortium";
     var consortiumId = "consortiumId";
     var matchedInstances = List.of(
@@ -912,21 +929,19 @@ public class MatchInstanceEventHandlerUnitTest {
       .withContentType(MATCH_PROFILE)
       .withReactTo(MATCH)));
 
-    eventHandler.handle(eventPayload).whenComplete((processed, throwable) -> testContext.verify(v -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processed.getEventType());
+    eventHandler.handle(eventPayload).whenComplete((processed, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processed.getEventType());
       // MULTI_MATCH_IDS must still be in context for the next match profile (Match 2) to scope its query
       assertThat(new JsonArray(processed.getContext().get(MULTI_MATCH_IDS)),
         hasItems(matchedInstances.get(0).getId(), matchedInstances.get(1).getId()));
-      async.complete();
+      testContext.completeNow();
     }));
   }
 
   @Test
-  public void shouldScopeSubMatchCentralQueryBySingleInstanceIdFromPreviousMatchOnConsortium(TestContext testContext)
+  void shouldScopeSubMatchCentralQueryBySingleInstanceIdFromPreviousMatchOnConsortium(VertxTestContext testContext)
     throws UnsupportedEncodingException {
-    var async = testContext.async();
-
     var centralTenantId = "consortium";
     var consortiumId = "consortiumId";
 
@@ -977,20 +992,18 @@ public class MatchInstanceEventHandlerUnitTest {
     context.put(RELATIONS, MATCHING_RELATIONS);
     var eventPayload = createEventPayload().withContext(context);
 
-    eventHandler.handle(eventPayload).whenComplete((processed, throwable) -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processed.getEventType());
-      testContext.assertEquals(INSTANCE_ID,
+    eventHandler.handle(eventPayload).whenComplete((processed, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processed.getEventType());
+      assertEquals(INSTANCE_ID,
         new JsonObject(processed.getContext().get(INSTANCE.value())).getString(ID_FIELD));
-      async.complete();
-    });
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldPreserveMultiMatchIdsScopeForCentralTenantQueryInConsortium(TestContext testContext)
+  void shouldPreserveMultiMatchIdsScopeForCentralTenantQueryInConsortium(VertxTestContext testContext)
     throws UnsupportedEncodingException {
-    var async = testContext.async();
-
     var centralTenantId = "consortium";
     var consortiumId = "consortiumId";
     var uuid1 = UUID.randomUUID().toString();
@@ -1039,20 +1052,18 @@ public class MatchInstanceEventHandlerUnitTest {
     context.put(RELATIONS, MATCHING_RELATIONS);
     var eventPayload = createEventPayload().withContext(context);
 
-    eventHandler.handle(eventPayload).whenComplete((processed, throwable) -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processed.getEventType());
-      testContext.assertEquals(INSTANCE_ID,
+    eventHandler.handle(eventPayload).whenComplete((processed, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processed.getEventType());
+      assertEquals(INSTANCE_ID,
         new JsonObject(processed.getContext().get(INSTANCE.value())).getString(ID_FIELD));
-      async.complete();
-    });
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldPreserveInstancesIdsScopeForCentralTenantQueryInConsortium(TestContext testContext)
+  void shouldPreserveInstancesIdsScopeForCentralTenantQueryInConsortium(VertxTestContext testContext)
     throws UnsupportedEncodingException {
-    var async = testContext.async();
-
     var centralTenantId = "consortium";
     var consortiumId = "consortiumId";
     var uuid1 = UUID.randomUUID().toString();
@@ -1101,13 +1112,13 @@ public class MatchInstanceEventHandlerUnitTest {
     context.put(RELATIONS, MATCHING_RELATIONS);
     var eventPayload = createEventPayload().withContext(context);
 
-    eventHandler.handle(eventPayload).whenComplete((processed, throwable) -> {
-      testContext.assertNull(throwable);
-      testContext.assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processed.getEventType());
-      testContext.assertEquals(INSTANCE_ID,
+    eventHandler.handle(eventPayload).whenComplete((processed, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processed.getEventType());
+      assertEquals(INSTANCE_ID,
         new JsonObject(processed.getContext().get(INSTANCE.value())).getString(ID_FIELD));
-      async.complete();
-    });
+      testContext.completeNow();
+    }));
   }
 
   private DataImportEventPayload createEventPayload() {
@@ -1141,5 +1152,4 @@ public class MatchInstanceEventHandlerUnitTest {
   private Instance createInstance() {
     return new Instance(INSTANCE_ID, 5, INSTANCE_HRID, "MARC", "Wonderful", "12334");
   }
-
 }

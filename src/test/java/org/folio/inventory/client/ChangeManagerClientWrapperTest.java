@@ -1,65 +1,61 @@
 package org.folio.inventory.client;
 
+import static api.ApiTestSuite.TENANT_ID;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.put;
+import static org.folio.HttpStatus.SC_CREATED;
+import static org.folio.HttpStatus.SC_OK;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_TENANT;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_TOKEN;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_URL;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+import java.util.UUID;
+import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
+import org.folio.dataimport.util.FolioHeaders;
 import org.folio.inventory.client.wrappers.ChangeManagerClientWrapper;
 import org.folio.rest.jaxrs.model.InitJobExecutionsRqDto;
 import org.folio.rest.jaxrs.model.JobExecution;
 import org.folio.rest.jaxrs.model.JobProfileInfo;
 import org.folio.rest.jaxrs.model.RawRecordsDto;
 import org.folio.rest.jaxrs.model.StatusDto;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.UUID;
+@ExtendWith(VertxExtension.class)
+class ChangeManagerClientWrapperTest extends BaseWireMockTest {
 
-import static api.ApiTestSuite.TENANT_ID;
-import static com.github.dockerjava.zerodep.shaded.org.apache.hc.core5.http.HttpStatus.SC_CREATED;
-import static com.github.dockerjava.zerodep.shaded.org.apache.hc.core5.http.HttpStatus.SC_OK;
-import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
-import static com.github.tomakehurst.wiremock.client.WireMock.put;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_TENANT;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_TOKEN;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_URL;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
+  private static final String TOKEN = "token";
+  private static final String USER_ID = "userId";
+  private static final String REQUEST_ID = "requestId";
 
-@RunWith(VertxUnitRunner.class)
-public class ChangeManagerClientWrapperTest {
-  private final Vertx vertx = Vertx.vertx();
+  private static final String JOB_EXECUTIONS_PATH = "/change-manager/jobExecutions";
+
   private ChangeManagerClientWrapper changeManagerClientWrapper;
   private RawRecordsDto stubRawRecordsDto;
   private InitJobExecutionsRqDto stubInitJobExecutionsRqDto;
   private JobExecution stubJobExecution;
   private JobProfileInfo stubJobProfileInfo;
   private StatusDto stubStatusDto;
-  private static final String TOKEN = "token";
-  private static final String USER_ID = "userId";
-  private static final String REQUEST_ID = "requestId";
 
-  @Rule
-  public WireMockRule mockServer = new WireMockRule(
-    WireMockConfiguration.wireMockConfig()
-      .dynamicPort()
-      .notifier(new Slf4jNotifier(true)));
-
-  @Before
-  public void setUp() {
-    changeManagerClientWrapper = new ChangeManagerClientWrapper(mockServer.baseUrl(), TENANT_ID, TOKEN,
-      USER_ID, REQUEST_ID, vertx.createHttpClient());
+  @BeforeEach
+  void setUp(Vertx vertx) {
+    var headers = FolioHeaders.builder()
+      .connectionUrl(WIRE_MOCK.baseUrl())
+      .token(TOKEN)
+      .tenant(TENANT_ID)
+      .userId(USER_ID)
+      .requestId(REQUEST_ID);
+    changeManagerClientWrapper = new ChangeManagerClientWrapper(headers, vertx.createHttpClient());
 
     stubRawRecordsDto = new RawRecordsDto().withId(UUID.randomUUID().toString());
     stubInitJobExecutionsRqDto = new InitJobExecutionsRqDto().withParentJobId(UUID.randomUUID().toString());
@@ -67,37 +63,42 @@ public class ChangeManagerClientWrapperTest {
     stubJobProfileInfo = new JobProfileInfo().withId(UUID.randomUUID().toString());
     stubStatusDto = new StatusDto();
 
-    WireMock.stubFor(post(new UrlPathPattern(new RegexPattern("/change-manager/jobExecutions"), true))
-      .withHeader(OKAPI_URL, equalTo(mockServer.baseUrl()))
+    WIRE_MOCK.stubFor(post(new UrlPathPattern(new RegexPattern(JOB_EXECUTIONS_PATH), true))
+      .withHeader(OKAPI_URL, equalTo(WIRE_MOCK.baseUrl()))
       .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
       .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
       .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
       .willReturn(WireMock.created()));
 
-    WireMock.stubFor(post(new UrlPathPattern(new RegexPattern("/change-manager/jobExecutions/" + stubRawRecordsDto.getId() + "/records"), true))
+    WIRE_MOCK.stubFor(post(
+      new UrlPathPattern(new RegexPattern(JOB_EXECUTIONS_PATH + "/" + stubRawRecordsDto.getId() + "/records"),
+        true))
       .withQueryParam("acceptInstanceId", equalTo("true"))
-      .withHeader(OKAPI_URL, equalTo(mockServer.baseUrl()))
+      .withHeader(OKAPI_URL, equalTo(WIRE_MOCK.baseUrl()))
       .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
       .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
       .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
       .willReturn(WireMock.created()));
 
-    WireMock.stubFor(put(new UrlPathPattern(new RegexPattern("/change-manager/jobExecutions/" + stubJobExecution.getId()), true))
-      .withHeader(OKAPI_URL, equalTo(mockServer.baseUrl()))
+    WIRE_MOCK.stubFor(
+      put(new UrlPathPattern(new RegexPattern(JOB_EXECUTIONS_PATH + "/" + stubJobExecution.getId()), true))
+        .withHeader(OKAPI_URL, equalTo(WIRE_MOCK.baseUrl()))
+        .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
+        .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
+        .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
+        .willReturn(WireMock.ok()));
+
+    WIRE_MOCK.stubFor(put(new UrlPathPattern(
+      new RegexPattern(JOB_EXECUTIONS_PATH + "/" + stubJobProfileInfo.getId() + "/jobProfile"), true))
+      .withHeader(OKAPI_URL, equalTo(WIRE_MOCK.baseUrl()))
       .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
       .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
       .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
       .willReturn(WireMock.ok()));
 
-    WireMock.stubFor(put(new UrlPathPattern(new RegexPattern("/change-manager/jobExecutions/" + stubJobProfileInfo.getId() + "/jobProfile"), true))
-      .withHeader(OKAPI_URL, equalTo(mockServer.baseUrl()))
-      .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
-      .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
-      .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
-      .willReturn(WireMock.ok()));
-
-    WireMock.stubFor(put(new UrlPathPattern(new RegexPattern("/change-manager/jobExecutions/" + stubJobExecution.getId() + "/status"), true))
-      .withHeader(OKAPI_URL, equalTo(mockServer.baseUrl()))
+    WIRE_MOCK.stubFor(put(
+      new UrlPathPattern(new RegexPattern(JOB_EXECUTIONS_PATH + "/" + stubJobExecution.getId() + "/status"), true))
+      .withHeader(OKAPI_URL, equalTo(WIRE_MOCK.baseUrl()))
       .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
       .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
       .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
@@ -105,71 +106,56 @@ public class ChangeManagerClientWrapperTest {
   }
 
   @Test
-  public void shouldPostChangeManagerJobExecutions(TestContext context) {
-    Async async = context.async();
+  void shouldPostChangeManagerJobExecutions(VertxTestContext testContext) {
+    var optionalFuture = changeManagerClientWrapper.postChangeManagerJobExecutions(stubInitJobExecutionsRqDto);
 
-    Future<HttpResponse<Buffer>> optionalFuture = changeManagerClientWrapper.postChangeManagerJobExecutions(stubInitJobExecutionsRqDto);
-
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertEquals(ar.result().statusCode(), SC_CREATED);
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+      assertEquals(SC_CREATED, result.statusCode());
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldPostChangeManagerJobExecutionsRecordsById(TestContext context) {
-    Async async = context.async();
-
-    Future<HttpResponse<Buffer>> optionalFuture = changeManagerClientWrapper
+  void shouldPostChangeManagerJobExecutionsRecordsById(VertxTestContext testContext) {
+    var optionalFuture = changeManagerClientWrapper
       .postChangeManagerJobExecutionsRecordsById(stubRawRecordsDto.getId(), true, stubRawRecordsDto);
 
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertEquals(ar.result().statusCode(), SC_CREATED);
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+      assertEquals(SC_CREATED, result.statusCode());
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldPutChangeManagerJobExecutionsById(TestContext context) {
-    Async async = context.async();
-
-    Future<HttpResponse<Buffer>> optionalFuture = changeManagerClientWrapper
+  void shouldPutChangeManagerJobExecutionsById(VertxTestContext testContext) {
+    var optionalFuture = changeManagerClientWrapper
       .putChangeManagerJobExecutionsById(stubJobExecution.getId(), stubJobExecution);
 
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertEquals(ar.result().statusCode(), SC_OK);
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+      assertEquals(SC_OK, result.statusCode());
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldPutChangeManagerJobExecutionsJobProfileById(TestContext context) {
-    Async async = context.async();
-
-    Future<HttpResponse<Buffer>> optionalFuture = changeManagerClientWrapper
+  void shouldPutChangeManagerJobExecutionsJobProfileById(VertxTestContext testContext) {
+    var optionalFuture = changeManagerClientWrapper
       .putChangeManagerJobExecutionsJobProfileById(stubJobProfileInfo.getId(), stubJobProfileInfo);
 
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertEquals(ar.result().statusCode(), SC_OK);
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+      assertEquals(SC_OK, result.statusCode());
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldPutChangeManagerJobExecutionsStatusById(TestContext context) {
-    Async async = context.async();
-
-    Future<HttpResponse<Buffer>> optionalFuture = changeManagerClientWrapper
+  void shouldPutChangeManagerJobExecutionsStatusById(VertxTestContext testContext) {
+    var optionalFuture = changeManagerClientWrapper
       .putChangeManagerJobExecutionsStatusById(stubJobExecution.getId(), stubStatusDto);
 
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertEquals(ar.result().statusCode(), SC_OK);
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+      assertEquals(SC_OK, result.statusCode());
+      testContext.completeNow();
+    })));
   }
 }

@@ -22,8 +22,8 @@ public class TextDateTimeMatcher {
         //response representation might vary from request representation
         DateTime actual = DateTime.parse(textRepresentation);
 
-        return ! actual.isBefore(start) &&   // actual must be equal or after start
-          Seconds.secondsBetween(start, actual).isLessThan(seconds);
+        return !actual.isBefore(start) &&   // actual must be equal or after start
+               Seconds.secondsBetween(start, actual).isLessThan(seconds);
       }
     };
   }

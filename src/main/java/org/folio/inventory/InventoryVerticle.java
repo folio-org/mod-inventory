@@ -14,17 +14,17 @@ import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.consortium.services.ConsortiumServiceImpl;
 import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.resources.AdminApi;
-import org.folio.inventory.resources.Holdings;
-import org.folio.inventory.resources.Instances;
+import org.folio.inventory.resources.HoldingsApi;
+import org.folio.inventory.resources.InstancesApi;
 import org.folio.inventory.resources.InstancesBatch;
 import org.folio.inventory.resources.InventoryClientFactoryImpl;
 import org.folio.inventory.resources.InventoryConfigApi;
 import org.folio.inventory.resources.IsbnUtilsApi;
-import org.folio.inventory.resources.Items;
-import org.folio.inventory.resources.ItemsByHoldingsRecordId;
+import org.folio.inventory.resources.ItemsApi;
+import org.folio.inventory.resources.ItemsByHoldingsRecordIdApi;
 import org.folio.inventory.resources.MoveApi;
 import org.folio.inventory.resources.TenantApi;
-import org.folio.inventory.resources.TenantItems;
+import org.folio.inventory.resources.TenantItemsApi;
 import org.folio.inventory.resources.UpdateOwnershipApi;
 import org.folio.inventory.storage.Storage;
 
@@ -64,17 +64,17 @@ public class InventoryVerticle extends AbstractVerticle {
     SnapshotService snapshotService = new SnapshotService(client);
 
     new AdminApi().register(router);
-    new Items(storage, client).register(router);
+    new ItemsApi(storage, client).register(router);
     new MoveApi(storage, client, consortiumService).register(router);
-    new Instances(storage, client, consortiumService).register(router);
-    new Holdings(storage, client).register(router);
+    new InstancesApi(storage, client, consortiumService).register(router);
+    new HoldingsApi(storage, client).register(router);
     new InstancesBatch(storage, client, consortiumService).register(router);
     new IsbnUtilsApi().register(router);
-    new ItemsByHoldingsRecordId(storage, client).register(router);
+    new ItemsByHoldingsRecordIdApi(storage, client).register(router);
     new InventoryConfigApi().register(router);
     new TenantApi().register(router);
     new UpdateOwnershipApi(storage, client, consortiumService, snapshotService, new InventoryClientFactoryImpl()).register(router);
-    new TenantItems(client).register(router);
+    new TenantItemsApi(client).register(router);
 
     server.requestHandler(router)
       .listen(config.getInteger("port"))

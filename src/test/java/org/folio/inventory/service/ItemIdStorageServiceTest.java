@@ -5,19 +5,19 @@ import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
 import org.folio.inventory.domain.relationship.EntityTable;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.ItemIdStorageService;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static api.ApiTestSuite.TENANT_ID;
 
-@RunWith(MockitoJUnitRunner.class)
-public class ItemIdStorageServiceTest {
+@ExtendWith(MockitoExtension.class)
+class ItemIdStorageServiceTest {
 
   @Mock
   private EntityIdStorageDaoImpl entityIdStorageDaoImpl;
@@ -25,11 +25,13 @@ public class ItemIdStorageServiceTest {
   private ItemIdStorageService itemIdStorageService;
 
   @Test
-  public void shouldReturnSavedRecordToEntity() {
+  void shouldReturnSavedRecordToEntity() {
     String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
     String itemId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
-    RecordToEntity expectedRecordToItem = RecordToEntity.builder().table(EntityTable.ITEM).recordId(recordId).entityId(itemId).build();
-    when(entityIdStorageDaoImpl.saveRecordToEntityRelationship(any(RecordToEntity.class), any())).thenReturn(Future.succeededFuture(expectedRecordToItem));
+    RecordToEntity expectedRecordToItem = RecordToEntity.builder()
+      .table(EntityTable.ITEM).recordId(recordId).entityId(itemId).build();
+    when(entityIdStorageDaoImpl.saveRecordToEntityRelationship(any(RecordToEntity.class), any()))
+      .thenReturn(Future.succeededFuture(expectedRecordToItem));
     Future<RecordToEntity> future = itemIdStorageService.store(recordId, itemId, TENANT_ID);
 
     RecordToEntity actualRecordToItem = future.result();
@@ -41,10 +43,11 @@ public class ItemIdStorageServiceTest {
   }
 
   @Test
-  public void shouldReturnFailedFuture() {
+  void shouldReturnFailedFuture() {
     String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
     String itemId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
-    when(entityIdStorageDaoImpl.saveRecordToEntityRelationship(any(RecordToEntity.class), any())).thenReturn(Future.failedFuture("failed"));
+    when(entityIdStorageDaoImpl.saveRecordToEntityRelationship(any(RecordToEntity.class), any()))
+      .thenReturn(Future.failedFuture("failed"));
     Future<RecordToEntity> future = itemIdStorageService.store(recordId, itemId, TENANT_ID);
 
     assertEquals("failed", future.cause().getMessage());

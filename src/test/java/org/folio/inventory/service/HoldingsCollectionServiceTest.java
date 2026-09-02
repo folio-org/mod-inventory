@@ -1,7 +1,9 @@
 package org.folio.inventory.service;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
@@ -15,8 +17,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
-import org.folio.rest.jaxrs.model.HoldingsRecord;
-import org.folio.rest.jaxrs.model.HoldingsRecordsSource;
 import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
@@ -28,13 +28,15 @@ import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.services.HoldingsCollectionService;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
+import org.folio.rest.jaxrs.model.HoldingsRecordsSource;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(MockitoJUnitRunner.class)
-public class HoldingsCollectionServiceTest {
+@ExtendWith(MockitoExtension.class)
+class HoldingsCollectionServiceTest {
 
   private static final String MARC_SOURCE = "MARC";
   private final HoldingsCollectionService service = new HoldingsCollectionService();
@@ -47,7 +49,7 @@ public class HoldingsCollectionServiceTest {
   private HoldingsRecordCollection holdingsRecordCollection;
 
   @Test
-  public void shouldFindSourceId() throws IOException {
+  void shouldFindSourceId() throws IOException {
     var sourceId = String.valueOf(UUID.randomUUID());
     doAnswer(invocationOnMock -> {
       HoldingsRecordsSource source = new HoldingsRecordsSource().withId(sourceId).withName(MARC_SOURCE);
@@ -63,7 +65,7 @@ public class HoldingsCollectionServiceTest {
   }
 
   @Test
-  public void shouldFindInstanceId() throws IOException {
+  void shouldFindInstanceId() throws IOException {
     var instanceId = String.valueOf(UUID.randomUUID());
     doAnswer(invocationOnMock -> {
 
@@ -81,7 +83,7 @@ public class HoldingsCollectionServiceTest {
   }
 
   @Test
-  public void shouldFailWhenExceptionByFindInstanceId() throws IOException {
+  void shouldFailWhenExceptionByFindInstanceId() throws IOException {
     doThrow(new UnsupportedEncodingException())
       .when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(), any());
 
@@ -90,7 +92,7 @@ public class HoldingsCollectionServiceTest {
   }
 
   @Test()
-  public void shouldFailWhenExceptionByFindSourceId() throws IOException {
+  void shouldFailWhenExceptionByFindSourceId() throws IOException {
     doThrow(new UnsupportedEncodingException())
       .when(holdingsRecordsSourceCollection).findByCql(anyString(), any(PagingParameters.class), any(), any());
 
@@ -99,7 +101,7 @@ public class HoldingsCollectionServiceTest {
   }
 
   @Test()
-  public void shouldFailWhenFindSourceIdFailure() throws IOException {
+  void shouldFailWhenFindSourceIdFailure() throws IOException {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(3);
       failureHandler.accept(new Failure("Internal Server Error", 500));
@@ -111,7 +113,7 @@ public class HoldingsCollectionServiceTest {
   }
 
   @Test()
-  public void shouldFailWhenFindInstanceIdFailure() throws IOException {
+  void shouldFailWhenFindInstanceIdFailure() throws IOException {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(3);
       failureHandler.accept(new Failure("Internal Server Error", 500));
@@ -123,7 +125,7 @@ public class HoldingsCollectionServiceTest {
   }
 
   @Test
-  public void shouldFailIfSourceIdNotFound() throws IOException {
+  void shouldFailIfSourceIdNotFound() throws IOException {
     doAnswer(invocationOnMock -> {
       MultipleRecords<HoldingsRecordsSource> result = new MultipleRecords<>(new ArrayList<>(), 0);
       Consumer<Success<MultipleRecords<HoldingsRecordsSource>>> successHandler = invocationOnMock.getArgument(2);
@@ -138,7 +140,7 @@ public class HoldingsCollectionServiceTest {
   }
 
   @Test
-  public void shouldFailIfInstanceIdNotFound() throws IOException {
+  void shouldFailIfInstanceIdNotFound() throws IOException {
     doAnswer(invocationOnMock -> {
       MultipleRecords<Instance> result = new MultipleRecords<>(new ArrayList<>(), 0);
       Consumer<Success<MultipleRecords<Instance>>> successHandler = invocationOnMock.getArgument(2);
@@ -152,8 +154,8 @@ public class HoldingsCollectionServiceTest {
     assertEquals(message, future.cause().getMessage());
   }
 
-  @Test(expected = Exception.class)
-  public void shouldThrowExceptionIfFindWrongRecordByHrid() throws IOException {
+  @Test
+  void shouldThrowExceptionIfFindWrongRecordByHrid() throws IOException {
     doAnswer(invocationOnMock -> {
       MultipleRecords<Instance> result = new MultipleRecords<>(new ArrayList<>(), 1);
       Consumer<Success<MultipleRecords<Instance>>> successHandler = invocationOnMock.getArgument(2);
@@ -161,11 +163,11 @@ public class HoldingsCollectionServiceTest {
       return null;
     }).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(), any());
 
-    service.findInstanceIdByHrid(instanceRecordCollection, "in00000000315");
+    assertThrows(Exception.class, () -> service.findInstanceIdByHrid(instanceRecordCollection, "in00000000315"));
   }
 
-  @Test(expected = Exception.class)
-  public void shouldThrowExceptionIfFindWrongRecordByName() throws IOException {
+  @Test
+  void shouldThrowExceptionIfFindWrongRecordByName() throws IOException {
     doAnswer(invocationOnMock -> {
       MultipleRecords<HoldingsRecordsSource> result = new MultipleRecords<>(new ArrayList<>(), 1);
       Consumer<Success<MultipleRecords<HoldingsRecordsSource>>> successHandler = invocationOnMock.getArgument(2);
@@ -173,11 +175,11 @@ public class HoldingsCollectionServiceTest {
       return null;
     }).when(holdingsRecordsSourceCollection).findByCql(anyString(), any(PagingParameters.class), any(), any());
 
-    service.findSourceIdByName(holdingsRecordsSourceCollection, MARC_SOURCE);
+    assertThrows(Exception.class, () -> service.findSourceIdByName(holdingsRecordsSourceCollection, MARC_SOURCE));
   }
 
   @Test
-  public void shouldGetHoldingsRecordById() {
+  void shouldGetHoldingsRecordById() {
     var holdingsId = UUID.randomUUID().toString();
     var instanceId = UUID.randomUUID().toString();
     doAnswer(invocationOnMock -> {
@@ -194,7 +196,7 @@ public class HoldingsCollectionServiceTest {
   }
 
   @Test
-  public void shouldFailWhenHoldingsRecordNotFoundById() {
+  void shouldFailWhenHoldingsRecordNotFoundById() {
     var holdingsId = UUID.randomUUID().toString();
     doAnswer(invocationOnMock -> {
       Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
@@ -204,12 +206,12 @@ public class HoldingsCollectionServiceTest {
 
     Future<HoldingsRecord> future = service.getById(holdingsId, holdingsRecordCollection);
     assertTrue(future.failed());
-    assertTrue(future.cause() instanceof NotFoundException);
+    assertInstanceOf(NotFoundException.class, future.cause());
     assertEquals("Can't find Holdings by id: " + holdingsId + " ", future.cause().getMessage());
   }
 
   @Test
-  public void shouldFailWhenGetByIdFailure() {
+  void shouldFailWhenGetByIdFailure() {
     var holdingsId = UUID.randomUUID().toString();
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
@@ -223,7 +225,7 @@ public class HoldingsCollectionServiceTest {
   }
 
   @Test
-  public void shouldUpdateHoldingsRecord() {
+  void shouldUpdateHoldingsRecord() {
     var holdingsId = UUID.randomUUID().toString();
     var instanceId = UUID.randomUUID().toString();
     HoldingsRecord holdingsRecord = new HoldingsRecord().withId(holdingsId).withInstanceId(instanceId);
@@ -241,7 +243,7 @@ public class HoldingsCollectionServiceTest {
   }
 
   @Test
-  public void shouldFailWhenUpdateHoldingsRecordWithConflict() {
+  void shouldFailWhenUpdateHoldingsRecordWithConflict() {
     var holdingsId = UUID.randomUUID().toString();
     HoldingsRecord holdingsRecord = new HoldingsRecord().withId(holdingsId);
 
@@ -253,12 +255,12 @@ public class HoldingsCollectionServiceTest {
 
     Future<HoldingsRecord> future = service.update(holdingsRecord, holdingsRecordCollection);
     assertTrue(future.failed());
-    assertTrue(future.cause() instanceof OptimisticLockingException);
+    assertInstanceOf(OptimisticLockingException.class, future.cause());
     assertEquals("Conflict - version mismatch", future.cause().getMessage());
   }
 
   @Test
-  public void shouldFailWhenUpdateHoldingsRecordFailure() {
+  void shouldFailWhenUpdateHoldingsRecordFailure() {
     var holdingsId = UUID.randomUUID().toString();
     HoldingsRecord holdingsRecord = new HoldingsRecord().withId(holdingsId);
 

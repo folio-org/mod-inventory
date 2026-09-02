@@ -1,12 +1,16 @@
 package org.folio.inventory.dataimport.handlers;
 
 import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
-import static org.folio.inventory.KafkaUtility.checkKafkaEventSent;
+import static support.KafkaUtility.checkKafkaEventSent;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.FAIL;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.AdditionalMatchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -18,21 +22,19 @@ import static org.mockito.Mockito.when;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.RunTestOnContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
-import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
 import lombok.SneakyThrows;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.folio.MappingMetadataDto;
-import org.folio.inventory.KafkaTest;
-import org.folio.inventory.TestUtil;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import support.KafkaTest;
+import support.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.consumers.MarcBibUpdateKafkaHandler;
@@ -47,27 +49,22 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.rest.jaxrs.model.LinkUpdateReport;
 import org.folio.rest.jaxrs.model.MarcBibUpdate;
 import org.folio.rest.jaxrs.model.Record;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(VertxUnitRunner.class)
-public class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
+@ExtendWith({VertxExtension.class, MockitoExtension.class})
+@MockitoSettings(strictness = Strictness.LENIENT)
+class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
   private static final String INVALID_INSTANCE_ID = "02e54bce-9588-11ed-a1eb-0242ac120002";
   private static final String TENANT_ID = "test";
-
-  @ClassRule
-  public static RunTestOnContext rule = new RunTestOnContext();
 
   @Mock
   private Storage mockedStorage;
@@ -77,44 +74,36 @@ public class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
   private KafkaConsumerRecord<String, String> kafkaRecord;
   @Mock
   private MappingMetadataCache mappingMetadataCache;
-  private Record record;
+  private Record marcRecord;
   private Instance instance;
   private MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler;
-  private AutoCloseable mocks;
 
-  @Before
+  @BeforeEach
   @SneakyThrows
-  public void setUp() throws IOException {
-    JsonObject mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
+  void setUp() {
     instance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
-    record = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class);
-    record.getParsedRecord().withContent(JsonObject.mapFrom(record.getParsedRecord().getContent()).encode());
+    marcRecord = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class);
+    marcRecord.getParsedRecord().withContent(JsonObject.mapFrom(marcRecord.getParsedRecord().getContent()).encode());
 
-    mocks = MockitoAnnotations.openMocks(this);
     when(mockedStorage.getInstanceCollection(any(Context.class))).thenReturn(mockedInstanceCollection);
 
-    Mockito.when(mockedInstanceCollection.findByIdAndUpdate(not(eq(INVALID_INSTANCE_ID)), any(), any()))
-        .thenReturn(instance);
+    when(mockedInstanceCollection.findByIdAndUpdate(not(eq(INVALID_INSTANCE_ID)), any(), any()))
+      .thenReturn(instance);
 
-    Mockito.when(mappingMetadataCache.getByRecordTypeBlocking(anyString(), any(Context.class), eq(MARC_BIB_RECORD_TYPE)))
+    when(mappingMetadataCache.getByRecordTypeBlocking(anyString(), any(Context.class), eq(MARC_BIB_RECORD_TYPE)))
       .thenReturn(Optional.of(new MappingMetadataDto()
-        .withMappingRules(mappingRules.encode())
+        .withMappingRules(new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH)).encode())
         .withMappingParams(Json.encode(new MappingParameters()))));
 
-    marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertxAssistant.getVertx(), 100, kafkaConfig, new InstanceUpdateDelegate(mockedStorage), mappingMetadataCache);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    mocks.close();
+    marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertxAssistant.getVertx(), 100, kafkaConfig,
+      new InstanceUpdateDelegate(mockedStorage), mappingMetadataCache);
   }
 
   @Test
-  public void shouldReturnSucceededFutureWithObtainedRecordKey(TestContext context) {
+  void shouldReturnSucceededFutureWithObtainedRecordKey(VertxTestContext testContext) {
     // given
-    Async async = context.async();
     MarcBibUpdate payload = new MarcBibUpdate()
-      .withRecord(record)
+      .withRecord(marcRecord)
       .withLinkIds(List.of(1, 2, 3))
       .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant(TENANT_ID)
@@ -128,22 +117,19 @@ public class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
     Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
-    future.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertEquals(expectedKafkaRecordKey, ar.result());
-
-      context.verify(vo -> verify(1));
-      async.complete();
-    });
+    future.onComplete(testContext.succeeding(ar -> testContext.verify(() -> {
+      assertEquals(expectedKafkaRecordKey, ar);
+      verify(1);
+      testContext.completeNow();
+    })));
   }
 
   @Test
   @SneakyThrows
-  public void shouldReturnSucceededFutureAfterHandlingOptimisticLockingError(TestContext context) {
+  void shouldReturnSucceededFutureAfterHandlingOptimisticLockingError(VertxTestContext testContext) {
     // given
-    Async async = context.async();
     MarcBibUpdate payload = new MarcBibUpdate()
-      .withRecord(record)
+      .withRecord(marcRecord)
       .withLinkIds(List.of(1, 2, 3))
       .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant(TENANT_ID)
@@ -152,29 +138,27 @@ public class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
     String expectedKafkaRecordKey = "test_key";
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(payload));
-    Mockito.when(mockedInstanceCollection.findByIdAndUpdate(not(eq(INVALID_INSTANCE_ID)), any(), any()))
+    when(mockedInstanceCollection.findByIdAndUpdate(not(eq(INVALID_INSTANCE_ID)), any(), any()))
       .thenThrow(OptimisticLockingException.class).thenReturn(instance);
 
     // when
     Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
-    future.onComplete(ar -> {
+    future.onComplete(testContext.succeeding(ar -> testContext.verify(() -> {
       verify(2);
-
-      async.complete();
-    });
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldReturnFailedFutureWhenMappingRulesNotFound(TestContext context) {
+  void shouldReturnFailedFutureWhenMappingRulesNotFound(VertxTestContext testContext) {
     // given
-    Async async = context.async();
-    Mockito.when(mappingMetadataCache.getByRecordTypeBlocking(anyString(), any(Context.class), anyString()))
+    when(mappingMetadataCache.getByRecordTypeBlocking(anyString(), any(Context.class), anyString()))
       .thenReturn(Optional.empty());
 
     MarcBibUpdate payload = new MarcBibUpdate()
-      .withRecord(record)
+      .withRecord(marcRecord)
       .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant(TENANT_ID)
       .withJobId(UUID.randomUUID().toString());
@@ -184,19 +168,18 @@ public class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
     Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
-    future.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      context.assertTrue(ar.cause().getMessage().contains("MappingParameters and mapping rules snapshots were not found by jobId"));
+    future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
+      org.junit.jupiter.api.Assertions.assertTrue(
+        cause.getMessage().contains("MappingParameters and mapping rules snapshots were not found by jobId"));
       verifyNoInteractions(mockedInstanceCollection);
       Mockito.verify(mappingMetadataCache).getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
-      async.complete();
-    });
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldReturnFailedFutureWhenPayloadCanNotBeMapped(TestContext context) {
+  void shouldReturnFailedFutureWhenPayloadCanNotBeMapped(VertxTestContext testContext) {
     // given
-    Async async = context.async();
     MarcBibUpdate payload = new MarcBibUpdate()
       .withRecord(null)
       .withType(MarcBibUpdate.Type.UPDATE)
@@ -208,21 +191,20 @@ public class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
     Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
-    future.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      context.assertTrue(ar.cause().getMessage().contains("Event message does not contain required data to update Instance by jobId"));
+    future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
+      org.junit.jupiter.api.Assertions.assertTrue(
+        cause.getMessage().contains("Event message does not contain required data to update Instance by jobId"));
       verifyNoInteractions(mockedInstanceCollection);
       verifyNoInteractions(mappingMetadataCache);
-      async.complete();
-    });
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldNotSendSuccessLinkReportEvent(TestContext context) {
+  void shouldNotSendSuccessLinkReportEvent(VertxTestContext testContext) {
     // given
-    var async = context.async();
     var payload = new MarcBibUpdate()
-      .withRecord(record)
+      .withRecord(marcRecord)
       .withLinkIds(List.of(1, 2, 3))
       .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant(TENANT_ID)
@@ -236,12 +218,10 @@ public class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
     var future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
-    future.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertEquals(expectedKafkaRecordKey, ar.result());
-    });
+    future.onComplete(testContext.succeeding(ar -> testContext.verify(
+      () -> assertEquals(expectedKafkaRecordKey, ar))));
 
-    vertxAssistant.getVertx().runOnContext(v -> {
+    vertxAssistant.getVertx().runOnContext(v -> testContext.verify(() -> {
       var reports = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName())
         .stream().map(ConsumerRecord::value).toList();
       var report = reports.stream()
@@ -249,23 +229,23 @@ public class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
         .filter(event -> payload.getJobId().equals(event.getJobId()))
         .findAny()
         .orElse(null);
-      Assert.assertNull(report);
-      async.complete();
-    });
+      assertNull(report);
+      testContext.completeNow();
+    }));
   }
 
   @Test
   @SneakyThrows
-  public void shouldSendFailedLinkReportEvent(TestContext context) {
+  void shouldSendFailedLinkReportEvent(VertxTestContext testContext) {
     // given
-    var async = context.async();
-    var instanceId = AdditionalFieldsUtil.getValueFromDataField(record, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I)
-      .orElse(null);
+    var instanceId =
+      AdditionalFieldsUtil.getValueFromDataField(marcRecord, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I)
+        .orElse(null);
 
-    record.setId(INVALID_INSTANCE_ID);
-    record.getExternalIdsHolder().setInstanceId(INVALID_INSTANCE_ID);
+    marcRecord.setId(INVALID_INSTANCE_ID);
+    marcRecord.getExternalIdsHolder().setInstanceId(INVALID_INSTANCE_ID);
     var payload = new MarcBibUpdate()
-      .withRecord(record)
+      .withRecord(marcRecord)
       .withLinkIds(List.of(1, 3))
       .withType(MarcBibUpdate.Type.UPDATE)
       .withTenant(TENANT_ID)
@@ -275,39 +255,40 @@ public class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(payload));
     when(mockedInstanceCollection.findByIdAndUpdate(eq(INVALID_INSTANCE_ID), any(), any()))
-      .thenThrow(new NotFoundException("Can't find Instance by id: " + record.getId()));
+      .thenThrow(new NotFoundException("Can't find Instance by id: " + marcRecord.getId()));
 
     // when
     var future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
 
     // then
-    future.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-    });
-    vertxAssistant.getVertx().runOnContext(v -> {
+    future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
+      // future failed as expected — no additional assertion needed here
+    })));
+    vertxAssistant.getVertx().runOnContext(v -> testContext.verify(() -> {
       var reports = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName())
         .stream().map(ConsumerRecord::value).toList();
-      Assert.assertNotNull(reports);
-      Assert.assertFalse(reports.isEmpty());
+      assertNotNull(reports);
+      assertFalse(reports.isEmpty());
       var report = reports.stream()
         .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
         .filter(event -> payload.getJobId().equals(event.getJobId()))
         .findAny()
         .orElse(null);
 
-      Assert.assertNotNull(report);
-      Assert.assertEquals(instanceId, report.getInstanceId());
-      Assert.assertEquals(FAIL, report.getStatus());
-      Assert.assertEquals(payload.getTenant(), report.getTenant());
-      Assert.assertEquals(payload.getLinkIds(), report.getLinkIds());
-      Assert.assertEquals("Can't find Instance by id: " + record.getId(), report.getFailCause());
-      async.complete();
-    });
+      assertNotNull(report);
+      assertEquals(instanceId, report.getInstanceId());
+      assertEquals(FAIL, report.getStatus());
+      assertEquals(payload.getTenant(), report.getTenant());
+      assertEquals(payload.getLinkIds(), report.getLinkIds());
+      assertEquals("Can't find Instance by id: " + marcRecord.getId(), report.getFailCause());
+      testContext.completeNow();
+    }));
   }
 
   @SneakyThrows
   private void verify(int n) {
-    Mockito.verify(mappingMetadataCache, times(n)).getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
+    Mockito.verify(mappingMetadataCache, times(n))
+      .getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
     Mockito.verify(mockedStorage, times(n)).getInstanceCollection(any());
     Mockito.verify(mockedInstanceCollection, times(n)).findByIdAndUpdate(anyString(), any(), any());
   }

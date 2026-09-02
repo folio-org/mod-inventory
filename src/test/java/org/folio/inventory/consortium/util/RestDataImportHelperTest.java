@@ -7,7 +7,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.impl.HttpResponseImpl;
 import org.folio.HttpStatus;
@@ -15,16 +14,15 @@ import org.folio.rest.client.ChangeManagerClient;
 import org.folio.rest.jaxrs.model.JobProfileInfo;
 import org.folio.rest.jaxrs.model.RawRecordsDto;
 import org.folio.rest.jaxrs.model.RecordsMetadata;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 import static io.vertx.core.buffer.Buffer.buffer;
-import static org.folio.inventory.TestUtil.buildHttpResponseWithBuffer;
+import static support.TestUtil.buildHttpResponseWithBuffer;
 import static org.folio.inventory.consortium.util.RestDataImportHelper.FIELD_JOB_EXECUTIONS;
 import static org.folio.inventory.consortium.util.RestDataImportHelper.STATUS_COMMITTED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,14 +33,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 
-@RunWith(VertxUnitRunner.class)
-public class RestDataImportHelperTest {
+class RestDataImportHelperTest {
 
   private ChangeManagerClient changeManagerClient;
   private RestDataImportHelper restDataImportHelper;
 
-  @Before
-  public void init() {
+  @BeforeEach
+  void init() {
     changeManagerClient = mock(ChangeManagerClient.class);
     restDataImportHelper = new RestDataImportHelper(mock(Vertx.class)) {
       @Override
@@ -53,8 +50,7 @@ public class RestDataImportHelperTest {
   }
 
   @Test
-  public void initJobExecutionTest() {
-
+  void initJobExecutionTest() {
     // given
     Map<String, String> kafkaHeaders = new HashMap<>();
     String expectedJobExecutionId = UUID.randomUUID().toString();
@@ -82,8 +78,7 @@ public class RestDataImportHelperTest {
   }
 
   @Test
-  public void initJobExecutionFailedInternalServerErrorTest() {
-
+  void initJobExecutionFailedInternalServerErrorTest() {
     // given
     String expectedJobExecutionId = UUID.randomUUID().toString();
     Map<String, String> kafkaHeaders = new HashMap<>();
@@ -108,8 +103,7 @@ public class RestDataImportHelperTest {
   }
 
   @Test
-  public void initJobExecutionFailedWithoutJobExecutionsArrayTest() {
-
+  void initJobExecutionFailedWithoutJobExecutionsArrayTest() {
     // given
     Map<String, String> kafkaHeaders = new HashMap<>();
     JsonObject responseBody = new JsonObject().put("jobExecutions", new JsonArray().add(""));
@@ -134,8 +128,7 @@ public class RestDataImportHelperTest {
   }
 
   @Test
-  public void initJobExecutionFailedWithJobExecutionsEmptyArrayTest() {
-
+  void initJobExecutionFailedWithJobExecutionsEmptyArrayTest() {
     // given
     String expectedJobExecutionId = UUID.randomUUID().toString();
     Map<String, String> kafkaHeaders = new HashMap<>();
@@ -160,8 +153,7 @@ public class RestDataImportHelperTest {
   }
 
   @Test
-  public void setDefaultJobProfileToJobExecutionTest() {
-
+  void setDefaultJobProfileToJobExecutionTest() {
     // given
     String expectedJobExecutionId = UUID.randomUUID().toString();
 
@@ -185,8 +177,7 @@ public class RestDataImportHelperTest {
   }
 
   @Test
-  public void setDefaultJobProfileToJobExecutionFailedInternalServerErrorTest() {
-
+  void setDefaultJobProfileToJobExecutionFailedInternalServerErrorTest() {
     // given
     String expectedJobExecutionId = UUID.randomUUID().toString();
 
@@ -211,8 +202,7 @@ public class RestDataImportHelperTest {
   }
 
   @Test
-  public void postChunkTest() {
-
+  void postChunkTest() {
     // given
     String expectedJobExecutionId = UUID.randomUUID().toString();
 
@@ -246,8 +236,7 @@ public class RestDataImportHelperTest {
   }
 
   @Test
-  public void getJobExecutionStatusByJobExecutionId() {
-
+  void getJobExecutionStatusByJobExecutionId() {
     // given
     String expectedJobExecutionId = UUID.randomUUID().toString();
 
@@ -271,8 +260,7 @@ public class RestDataImportHelperTest {
   }
 
   @Test
-  public void getJobExecutionStatusByJobExecutionIdFailedWithEmptyResponseBodyTest() {
-
+  void getJobExecutionStatusByJobExecutionIdFailedWithEmptyResponseBodyTest() {
     // given
     String expectedJobExecutionId = UUID.randomUUID().toString();
 
@@ -297,8 +285,7 @@ public class RestDataImportHelperTest {
   }
 
   @Test
-  public void getJobExecutionStatusByJobExecutionIdFailedInternalServerErrorTest() {
-
+  void getJobExecutionStatusByJobExecutionIdFailedInternalServerErrorTest() {
     // given
     String expectedJobExecutionId = UUID.randomUUID().toString();
 

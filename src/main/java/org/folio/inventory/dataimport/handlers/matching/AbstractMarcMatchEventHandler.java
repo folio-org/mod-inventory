@@ -14,6 +14,7 @@ import org.folio.DataImportEventTypes;
 import org.folio.HttpStatus;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
+import org.folio.dataimport.util.FolioHeaders;
 import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.services.ConsortiumService;
@@ -275,8 +276,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     String userId = payload.getContext().get(USER_ID_HEADER);
     String requestId = payload.getContext().get(EventHandlingUtil.OKAPI_REQUEST_ID);
     RecordsMatchingContext recordsMatchingContext = new RecordsMatchingContext();
-    recordsMatchingContext.setLocalTenantRecordsClient(new SourceStorageRecordsClientWrapper(
-      payload.getOkapiUrl(), payload.getTenant(), payload.getToken(), userId, requestId, httpClient));
+    recordsMatchingContext.setLocalTenantRecordsClient(getSourceStorageRecordsClient(payload));
 
     if (!isMatchingOnCentralTenantRequired()) {
       return Future.succeededFuture(recordsMatchingContext);
@@ -288,11 +288,21 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     return consortiumService.getConsortiumConfiguration(context).map(consortiumConfigurationOptional -> {
       consortiumConfigurationOptional.ifPresent(consortiumConfiguration -> {
         recordsMatchingContext.setCentralTenantId(consortiumConfiguration.getCentralTenantId());
-        recordsMatchingContext.setCentralTenantRecordsClient(new SourceStorageRecordsClientWrapper(
-          payload.getOkapiUrl(), consortiumConfiguration.getCentralTenantId(), payload.getToken(), userId, requestId, httpClient));
+        recordsMatchingContext.setCentralTenantRecordsClient(getSourceStorageRecordsClient(payload));
       });
       return recordsMatchingContext;
     });
+  }
+
+
+  private SourceStorageRecordsClient getSourceStorageRecordsClient(DataImportEventPayload payload) {
+    var folioHeaders = FolioHeaders.builder()
+      .connectionUrl(payload.getOkapiUrl())
+      .userId(payload.getContext().get(USER_ID_HEADER))
+      .token(payload.getToken())
+      .requestId(payload.getContext().get(EventHandlingUtil.OKAPI_REQUEST_ID))
+      .tenant(payload.getTenant());
+    return new SourceStorageRecordsClientWrapper(folioHeaders, httpClient);
   }
 
   private Future<Optional<Record>> matchRecords(RecordMatchingDto recordMatchingDto,

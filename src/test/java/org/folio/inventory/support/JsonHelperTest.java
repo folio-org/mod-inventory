@@ -1,57 +1,53 @@
 package org.folio.inventory.support;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Spy;
-import org.mockito.junit.MockitoJUnitRunner;
-
-import java.util.ArrayList;
-
 import static org.folio.inventory.support.JsonHelper.includeIfPresent;
 import static org.folio.inventory.support.JsonHelper.putNotNullValues;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
-@RunWith(MockitoJUnitRunner.class)
-public class JsonHelperTest {
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import java.util.ArrayList;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Spy;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class JsonHelperTest {
+
   @Spy
   private JsonObject representation;
 
   @Test
-  public void shouldIncludeValue() {
+  void shouldIncludeValue() {
     includeIfPresent(representation, "key", "value");
     verify(representation, times(1)).put("key", "value");
   }
 
   @Test
-  public void shouldNotIncludeIfRepresentationIsNull() {
-    try {
-      includeIfPresent(null, "key", "value");
-    } catch (Exception ex) {
-      fail("Exception is not expected");
-    }
+  void shouldNotIncludeIfRepresentationIsNull() {
+    assertDoesNotThrow(() -> includeIfPresent(null, "key", "value"));
   }
 
   @Test
-  public void shouldNotIncludeIfKeyIsNull() {
+  void shouldNotIncludeIfKeyIsNull() {
     includeIfPresent(representation, null, "value");
     verifyNoInteractions(representation);
   }
 
   @Test
-  public void shouldNotIncludeIfValueIsNull() {
+  void shouldNotIncludeIfValueIsNull() {
     includeIfPresent(representation, "key", null);
     verifyNoInteractions(representation);
   }
 
   @Test
-  public void shouldNotIncludeOnlyNullValues() {
+  void shouldNotIncludeOnlyNullValues() {
     var notNullString = "notNull";
     var key = "key";
     var rootKey = "root";

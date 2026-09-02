@@ -5,7 +5,7 @@ import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlin
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_001;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
-import static org.folio.inventory.resources.Holdings.MARC_SOURCE_ID;
+import static org.folio.inventory.resources.HoldingsApi.MARC_SOURCE_ID;
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.MoveApiUtil.createBoundWithPartsFetchClient;
 import static org.folio.inventory.support.MoveApiUtil.createBoundWithPartsStorageClient;

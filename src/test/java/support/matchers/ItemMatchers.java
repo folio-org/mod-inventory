@@ -2,12 +2,11 @@ package support.matchers;
 
 import static support.matchers.JsonObjectMatchers.hasJsonPath;
 
+import io.vertx.core.json.JsonObject;
 import org.hamcrest.Matcher;
 
-import io.vertx.core.json.JsonObject;
-
 public final class ItemMatchers {
-  private ItemMatchers() {}
+  private ItemMatchers() { }
 
   public static Matcher<JsonObject> isAvailable() {
     return hasStatus("Available");

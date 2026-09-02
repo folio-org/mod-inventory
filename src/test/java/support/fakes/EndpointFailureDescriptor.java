@@ -3,6 +3,7 @@ package support.fakes;
 import java.util.Date;
 
 public class EndpointFailureDescriptor {
+
   private Date failureExpireDate;
   private int statusCode;
   private String contentType;

@@ -10,7 +10,6 @@ import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.http.ContentType;
 import java.nio.file.Path;
 
-import org.folio.inventory.KafkaUtility;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +23,7 @@ import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.kafka.KafkaContainer;
+import org.testcontainers.utility.DockerImageName;
 
 /**
  * Integration test executed in "mvn verify" phase.
@@ -48,7 +48,7 @@ class InventoryIT {
 
   @Container
   private static final KafkaContainer KAFKA =
-      new KafkaContainer(KafkaUtility.IMAGE_NAME)
+      new KafkaContainer(DockerImageName.parse("apache/kafka-native:4.2.0"))
       .withNetwork(NETWORK)
       .withNetworkAliases("ourkafka");
 

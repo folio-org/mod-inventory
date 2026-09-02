@@ -47,7 +47,6 @@ import org.folio.inventory.dataimport.handlers.matching.MatchAuthorityEventHandl
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchInstanceEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.MatchItemEventHandler;
-import org.folio.inventory.dataimport.handlers.matching.loaders.AuthorityLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.HoldingLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.InstanceLoader;
 import org.folio.inventory.dataimport.handlers.matching.loaders.ItemLoader;
@@ -237,7 +236,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     MatchValueLoaderFactory.register(new InstanceLoader(storage, instancePreloader));
     MatchValueLoaderFactory.register(new ItemLoader(storage, itemPreloader));
     MatchValueLoaderFactory.register(new HoldingLoader(storage, holdingsPreloader));
-    MatchValueLoaderFactory.register(new AuthorityLoader(storage));
 
     MatchValueReaderFactory.register(new MarcValueReaderImpl());
     MatchValueReaderFactory.register(new StaticValueReaderImpl());

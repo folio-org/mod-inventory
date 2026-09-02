@@ -1,14 +1,5 @@
 package api;
 
-import api.support.ApiRoot;
-import api.support.ApiTests;
-import io.vertx.pgclient.PgConnectOptions;
-import org.folio.inventory.common.dao.PostgresConnectionOptions;
-import org.folio.inventory.support.http.client.Response;
-import org.junit.Test;
-
-import java.util.HashMap;
-import java.util.Map;
 import static api.ApiTestSuite.TENANT_ID;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.HttpStatus.HTTP_INTERNAL_SERVER_ERROR;
@@ -21,22 +12,27 @@ import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_USERNA
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+import io.vertx.pgclient.PgConnectOptions;
+import java.util.HashMap;
+import java.util.Map;
+import org.folio.inventory.common.dao.PostgresConnectionOptions;
+import org.folio.inventory.support.http.client.Response;
+import org.junit.jupiter.api.Test;
+import support.ApiRoot;
+import support.ApiTests;
+
 public class TenantApiTest extends ApiTests {
 
-  public static int NO_CONTENT_STATUS = HTTP_NO_CONTENT.toInt();
-  public static int INTERNAL_SERVER_ERROR_STATUS = HTTP_INTERNAL_SERVER_ERROR.toInt();
-
   @Test
-  public void shouldCreateSchemaWithTables() throws Exception {
-    final var postCompleted = okapiClient
-      .post(ApiRoot.tenant(), "{}");
+  void shouldCreateSchemaWithTables() throws Exception {
+    final var postCompleted = okapiClient.post(ApiRoot.tenant(), "{}");
 
     Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(postResponse.getStatusCode(), is(NO_CONTENT_STATUS));
+    assertThat(postResponse.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
   }
 
   @Test
-  public void shouldNotCreateSchemaWithTablesWithIncorrectConnectionOptions() throws Exception {
+  void shouldNotCreateSchemaWithTablesWithIncorrectConnectionOptions() throws Exception {
     PgConnectOptions pgConnectOptions = PostgresConnectionOptions.getConnectionOptions(TENANT_ID);
     Map<String, String> systemProperties = Map.of(DB_HOST, pgConnectOptions.getHost(),
       DB_DATABASE, pgConnectOptions.getDatabase(),
@@ -45,19 +41,17 @@ public class TenantApiTest extends ApiTests {
       DB_PASSWORD, pgConnectOptions.getPassword());
     PostgresConnectionOptions.setSystemProperties(new HashMap<>());
 
-    final var postCompleted = okapiClient
-      .post(ApiRoot.tenant(), "{}");
+    final var postCompleted = okapiClient.post(ApiRoot.tenant(), "{}");
 
     Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(postResponse.getStatusCode(), is(INTERNAL_SERVER_ERROR_STATUS));
+    assertThat(postResponse.getStatusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
 
     PostgresConnectionOptions.setSystemProperties(systemProperties);
   }
 
   @Test
-  public void shouldCreateAndDeleteSchema() throws Exception {
-    final var postCompleted = okapiClient
-      .post(ApiRoot.tenant(), "{}");
+  void shouldCreateAndDeleteSchema() throws Exception {
+    final var postCompleted = okapiClient.post(ApiRoot.tenant(), "{}");
 
     Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
     assertThat(postResponse.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
@@ -66,16 +60,15 @@ public class TenantApiTest extends ApiTests {
       .delete(ApiRoot.tenant());
 
     Response deleteResponse = deleteCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(deleteResponse.getStatusCode(), is(NO_CONTENT_STATUS));
+    assertThat(deleteResponse.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
   }
 
   @Test
-  public void shouldNotDropSchemaWithIncorrectConnectionOptions() throws Exception {
-    final var postCompleted = okapiClient
-      .post(ApiRoot.tenant(), "{}");
+  void shouldNotDropSchemaWithIncorrectConnectionOptions() throws Exception {
+    final var postCompleted = okapiClient.post(ApiRoot.tenant(), "{}");
 
     Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(postResponse.getStatusCode(), is(NO_CONTENT_STATUS));
+    assertThat(postResponse.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
 
     PgConnectOptions pgConnectOptions = PostgresConnectionOptions.getConnectionOptions(TENANT_ID);
     Map<String, String> systemProperties = Map.of(DB_HOST, pgConnectOptions.getHost(),
@@ -85,19 +78,16 @@ public class TenantApiTest extends ApiTests {
       DB_PASSWORD, pgConnectOptions.getPassword());
     PostgresConnectionOptions.setSystemProperties(Map.of(DB_HOST, "invalid", DB_PORT, "999999"));
 
-    final var deleteCompletedBefore = okapiClient
-      .delete(ApiRoot.tenant());
+    final var deleteCompletedBefore = okapiClient.delete(ApiRoot.tenant());
 
     Response deleteResponseBefore = deleteCompletedBefore.toCompletableFuture().get(10, SECONDS);
-    assertThat(deleteResponseBefore.getStatusCode(), is(INTERNAL_SERVER_ERROR_STATUS));
+    assertThat(deleteResponseBefore.getStatusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
 
     PostgresConnectionOptions.setSystemProperties(systemProperties);
 
-    final var deleteCompletedAfter = okapiClient
-      .delete(ApiRoot.tenant());
+    final var deleteCompletedAfter = okapiClient.delete(ApiRoot.tenant());
 
     Response deleteResponseAfter = deleteCompletedAfter.toCompletableFuture().get(10, SECONDS);
-    assertThat(deleteResponseAfter.getStatusCode(), is(NO_CONTENT_STATUS));
+    assertThat(deleteResponseAfter.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
   }
-
 }

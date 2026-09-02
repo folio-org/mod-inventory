@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import java.util.List;
@@ -24,26 +24,21 @@ import org.folio.inventory.storage.Storage;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.jaxrs.model.InstanceIngressEvent;
 import org.folio.rest.jaxrs.model.InstanceIngressPayload;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(VertxUnitRunner.class)
-public class InstanceIngressEventConsumerTest {
+@ExtendWith(MockitoExtension.class)
+@ExtendWith(VertxExtension.class)
+class InstanceIngressEventConsumerTest {
 
   private static final String OKAPI_URL = "http://okapi:9130";
   private static final String TOKEN = "test-token";
   private static final String TENANT_ID = "diku";
-
-  @Rule
-  public MockitoRule mockitoRule = MockitoJUnit.rule();
 
   @Mock
   private Storage storage;
@@ -57,25 +52,18 @@ public class InstanceIngressEventConsumerTest {
   @Captor
   private ArgumentCaptor<Context> contextCaptor;
 
-  private Vertx vertx;
   private InstanceIngressEventConsumer consumer;
 
-  @Before
-  public void setUp() {
-    vertx = Vertx.vertx();
+  @BeforeEach
+  void setUp(Vertx vertx) {
     when(storage.getInstanceCollection(any())).thenReturn(instanceCollection);
     when(mappingMetadataCache.getByRecordType(anyString(), any(), anyString()))
       .thenReturn(Future.succeededFuture(Optional.empty()));
     consumer = new InstanceIngressEventConsumer(vertx, storage, vertx.createHttpClient(), mappingMetadataCache);
   }
 
-  @After
-  public void tearDown() {
-    vertx.close();
-  }
-
   @Test
-  public void shouldResolveOkapiUrl_whenHeadersUseStandardCase() {
+  void shouldResolveOkapiUrl_whenHeadersUseStandardCase() {
     // arrange
     when(kafkaRecord.value()).thenReturn(Json.encode(buildUpdateEvent()));
     when(kafkaRecord.headers()).thenReturn(List.of(
@@ -93,7 +81,7 @@ public class InstanceIngressEventConsumerTest {
   }
 
   @Test
-  public void shouldResolveOkapiUrl_whenHeadersUseLowercaseNames() {
+  void shouldResolveOkapiUrl_whenHeadersUseLowercaseNames() {
     // arrange
     when(kafkaRecord.value()).thenReturn(Json.encode(buildUpdateEvent()));
     when(kafkaRecord.headers()).thenReturn(List.of(

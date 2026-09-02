@@ -9,7 +9,6 @@ import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -17,67 +16,88 @@ import static org.mockito.Mockito.when;
 
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.kafka.admin.KafkaAdminClient;
 import io.vertx.kafka.admin.NewTopic;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.apache.kafka.common.errors.TopicExistsException;
 import org.folio.inventory.services.InventoryKafkaTopic;
 import org.folio.inventory.services.InventoryKafkaTopicService;
 import org.folio.kafka.services.KafkaAdminClientService;
 import org.folio.kafka.services.KafkaTopic;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@RunWith(VertxUnitRunner.class)
-public class KafkaAdminClientServiceTest {
+@ExtendWith({VertxExtension.class, MockitoExtension.class})
+class KafkaAdminClientServiceTest {
 
-  private final String STUB_TENANT = "foo-tenant";
+  private static final String STUB_TENANT = "foo-tenant";
+  private static final Set<String> allExpectedTopics = Set.of(
+    "folio.Default.foo-tenant.DI_INVENTORY_INSTANCE_CREATED",
+    "folio.Default.foo-tenant.DI_INVENTORY_HOLDING_CREATED",
+    "folio.Default.foo-tenant.DI_INVENTORY_ITEM_CREATED",
+    "folio.Default.foo-tenant.DI_INVENTORY_INSTANCE_MATCHED",
+    "folio.Default.foo-tenant.DI_INVENTORY_HOLDING_MATCHED",
+    "folio.Default.foo-tenant.DI_INVENTORY_ITEM_MATCHED",
+    "folio.Default.foo-tenant.DI_SRS_MARC_BIB_RECORD_MATCHED",
+    "folio.Default.foo-tenant.DI_INVENTORY_INSTANCE_UPDATED",
+    "folio.Default.foo-tenant.DI_INVENTORY_HOLDING_UPDATED",
+    "folio.Default.foo-tenant.DI_INVENTORY_ITEM_UPDATED",
+    "folio.Default.foo-tenant.DI_INVENTORY_INSTANCE_NOT_MATCHED",
+    "folio.Default.foo-tenant.DI_INVENTORY_HOLDING_NOT_MATCHED",
+    "folio.Default.foo-tenant.DI_INVENTORY_ITEM_NOT_MATCHED",
+    "folio.Default.foo-tenant.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED",
+    "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_UPDATED",
+    "folio.Default.foo-tenant.DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING",
+    "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING",
+    "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING",
+    "folio.Default.foo-tenant.DI_SRS_MARC_BIB_RECORD_MODIFIED_PARTITIONS",
+    "folio.Default.foo-tenant.inventory.instance_ingress"
+  );
+
+  @Mock
   private KafkaAdminClient mockClient;
+  @Mock
   private Vertx vertx;
   @Mock
   private InventoryKafkaTopicService inventoryKafkaTopicService;
 
-  @Before
-  public void setUp() {
-    vertx = mock(Vertx.class);
-    mockClient = mock(KafkaAdminClient.class);
-    inventoryKafkaTopicService = mock(InventoryKafkaTopicService.class);
+  @BeforeEach
+  void setUp() {
     KafkaTopic[] topicObjects = {
-        new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_CREATED", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_HOLDING_CREATED", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_ITEM_CREATED", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_MATCHED", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_HOLDING_MATCHED", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_ITEM_MATCHED", 1),
-        new InventoryKafkaTopic("DI_SRS_MARC_BIB_RECORD_MATCHED", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_UPDATED", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_HOLDING_UPDATED", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_ITEM_UPDATED", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_NOT_MATCHED", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_HOLDING_NOT_MATCHED", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_ITEM_NOT_MATCHED", 1),
-        new InventoryKafkaTopic("DI_SRS_MARC_BIB_RECORD_NOT_MATCHED", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING", 1),
-        new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING", 1),
-        new InventoryKafkaTopic("DI_SRS_MARC_BIB_RECORD_MODIFIED_PARTITIONS", 1),
-        new InventoryKafkaTopic("inventory.instance_ingress", 1)
+      new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_CREATED", 1),
+      new InventoryKafkaTopic("DI_INVENTORY_HOLDING_CREATED", 1),
+      new InventoryKafkaTopic("DI_INVENTORY_ITEM_CREATED", 1),
+      new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_MATCHED", 1),
+      new InventoryKafkaTopic("DI_INVENTORY_HOLDING_MATCHED", 1),
+      new InventoryKafkaTopic("DI_INVENTORY_ITEM_MATCHED", 1),
+      new InventoryKafkaTopic("DI_SRS_MARC_BIB_RECORD_MATCHED", 1),
+      new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_UPDATED", 1),
+      new InventoryKafkaTopic("DI_INVENTORY_HOLDING_UPDATED", 1),
+      new InventoryKafkaTopic("DI_INVENTORY_ITEM_UPDATED", 1),
+      new InventoryKafkaTopic("DI_INVENTORY_INSTANCE_NOT_MATCHED", 1),
+      new InventoryKafkaTopic("DI_INVENTORY_HOLDING_NOT_MATCHED", 1),
+      new InventoryKafkaTopic("DI_INVENTORY_ITEM_NOT_MATCHED", 1),
+      new InventoryKafkaTopic("DI_SRS_MARC_BIB_RECORD_NOT_MATCHED", 1),
+      new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED", 1),
+      new InventoryKafkaTopic("DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING", 1),
+      new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING", 1),
+      new InventoryKafkaTopic("DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING", 1),
+      new InventoryKafkaTopic("DI_SRS_MARC_BIB_RECORD_MODIFIED_PARTITIONS", 1),
+      new InventoryKafkaTopic("inventory.instance_ingress", 1)
     };
-
 
     when(inventoryKafkaTopicService.createTopicObjects()).thenReturn(topicObjects);
   }
 
   @Test
-  public void shouldCreateTopicIfAlreadyExist(TestContext testContext) {
+  void shouldCreateTopicIfAlreadyExist(VertxTestContext testContext) {
     when(mockClient.createTopics(anyList()))
       .thenReturn(failedFuture(new TopicExistsException("x")))
       .thenReturn(failedFuture(new TopicExistsException("y")))
@@ -87,64 +107,67 @@ public class KafkaAdminClientServiceTest {
     when(mockClient.close()).thenReturn(succeededFuture());
 
     createKafkaTopicsAsync(mockClient)
-      .onComplete(testContext.asyncAssertSuccess(notUsed -> {
+      .onComplete(testContext.succeeding(notUsed -> testContext.verify(() -> {
         verify(mockClient, times(4)).listTopics();
         verify(mockClient, times(4)).createTopics(anyList());
         verify(mockClient, times(1)).close();
-      }));
+        testContext.completeNow();
+      })));
   }
 
   @Test
-  public void shouldFailIfExistExceptionIsPermanent(TestContext testContext) {
+  void shouldFailIfExistExceptionIsPermanent(VertxTestContext testContext) {
     when(mockClient.createTopics(anyList())).thenReturn(failedFuture(new TopicExistsException("x")));
     when(mockClient.listTopics()).thenReturn(succeededFuture(Set.of("old")));
     when(mockClient.close()).thenReturn(succeededFuture());
 
     createKafkaTopicsAsync(mockClient)
-      .onComplete(testContext.asyncAssertFailure(e -> {
+      .onComplete(testContext.failing(e -> testContext.verify(() -> {
         assertThat(e, instanceOf(TopicExistsException.class));
         verify(mockClient, times(1)).close();
-      }));
+        testContext.completeNow();
+      })));
   }
 
   @Test
-  public void shouldNotCreateTopicOnOther(TestContext testContext) {
+  void shouldNotCreateTopicOnOther(VertxTestContext testContext) {
     when(mockClient.createTopics(anyList())).thenReturn(failedFuture(new RuntimeException("err msg")));
     when(mockClient.listTopics()).thenReturn(succeededFuture(Set.of("old")));
     when(mockClient.close()).thenReturn(succeededFuture());
 
     createKafkaTopicsAsync(mockClient)
-      .onComplete(testContext.asyncAssertFailure(cause -> {
-          testContext.assertEquals("err msg", cause.getMessage());
+      .onComplete(testContext.failing(cause -> testContext.verify(() -> {
+          org.junit.jupiter.api.Assertions.assertEquals("err msg", cause.getMessage());
           verify(mockClient, times(1)).close();
+          testContext.completeNow();
         }
-      ));
+      )));
   }
 
   @Test
-  public void shouldCreateTopicIfNotExist(TestContext testContext) {
+  void shouldCreateTopicIfNotExist(VertxTestContext testContext) {
     when(mockClient.createTopics(anyList())).thenReturn(succeededFuture());
     when(mockClient.listTopics()).thenReturn(succeededFuture(Set.of("old")));
     when(mockClient.close()).thenReturn(succeededFuture());
 
     createKafkaTopicsAsync(mockClient)
-      .onComplete(testContext.asyncAssertSuccess(notUsed -> {
+      .onComplete(testContext.succeeding(notUsed -> testContext.verify(() -> {
 
-        @SuppressWarnings("unchecked")
-        final ArgumentCaptor<List<NewTopic>> createTopicsCaptor = forClass(List.class);
+        @SuppressWarnings("unchecked") final ArgumentCaptor<List<NewTopic>> createTopicsCaptor = forClass(List.class);
 
         verify(mockClient, times(1)).createTopics(createTopicsCaptor.capture());
         verify(mockClient, times(1)).close();
 
         // Only these items are expected, so implicitly checks size of list
         assertThat(getTopicNames(createTopicsCaptor), containsInAnyOrder(allExpectedTopics.toArray()));
-      }));
+        testContext.completeNow();
+      })));
   }
 
   private List<String> getTopicNames(ArgumentCaptor<List<NewTopic>> createTopicsCaptor) {
-    return createTopicsCaptor.getAllValues().get(0).stream()
+    return createTopicsCaptor.getAllValues().getFirst().stream()
       .map(NewTopic::getName)
-      .collect(Collectors.toList());
+      .toList();
   }
 
   private Future<Void> createKafkaTopicsAsync(KafkaAdminClient client) {
@@ -155,27 +178,4 @@ public class KafkaAdminClientServiceTest {
         .createKafkaTopics(inventoryKafkaTopicService.createTopicObjects(), STUB_TENANT);
     }
   }
-
-  private final Set<String> allExpectedTopics = Set.of(
-      "folio.Default.foo-tenant.DI_INVENTORY_INSTANCE_CREATED",
-      "folio.Default.foo-tenant.DI_INVENTORY_HOLDING_CREATED",
-      "folio.Default.foo-tenant.DI_INVENTORY_ITEM_CREATED",
-      "folio.Default.foo-tenant.DI_INVENTORY_INSTANCE_MATCHED",
-      "folio.Default.foo-tenant.DI_INVENTORY_HOLDING_MATCHED",
-      "folio.Default.foo-tenant.DI_INVENTORY_ITEM_MATCHED",
-      "folio.Default.foo-tenant.DI_SRS_MARC_BIB_RECORD_MATCHED",
-      "folio.Default.foo-tenant.DI_INVENTORY_INSTANCE_UPDATED",
-      "folio.Default.foo-tenant.DI_INVENTORY_HOLDING_UPDATED",
-      "folio.Default.foo-tenant.DI_INVENTORY_ITEM_UPDATED",
-      "folio.Default.foo-tenant.DI_INVENTORY_INSTANCE_NOT_MATCHED",
-      "folio.Default.foo-tenant.DI_INVENTORY_HOLDING_NOT_MATCHED",
-      "folio.Default.foo-tenant.DI_INVENTORY_ITEM_NOT_MATCHED",
-      "folio.Default.foo-tenant.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED",
-      "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_UPDATED",
-      "folio.Default.foo-tenant.DI_INVENTORY_HOLDINGS_CREATED_READY_FOR_POST_PROCESSING",
-      "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_CREATED_READY_FOR_POST_PROCESSING",
-      "folio.Default.foo-tenant.DI_INVENTORY_AUTHORITY_UPDATED_READY_FOR_POST_PROCESSING",
-      "folio.Default.foo-tenant.DI_SRS_MARC_BIB_RECORD_MODIFIED_PARTITIONS",
-      "folio.Default.foo-tenant.inventory.instance_ingress"
-  );
 }

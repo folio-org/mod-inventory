@@ -2,25 +2,22 @@ package org.folio.inventory.support;
 
 import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
 import static org.folio.inventory.support.JsonHelper.getNestedProperty;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vertx.core.json.JsonObject;
+import java.util.UUID;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.Status;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.Test;
 
-import java.util.UUID;
-
-@RunWith(JUnit4.class)
-public class ItemUtilTest {
+class ItemUtilTest {
 
   @Test
-  public void shouldReturnItemAsMappingResultRepresentation() {
+  void shouldReturnItemAsMappingResultRepresentation() {
     // given
     Item item = new Item(UUID.randomUUID().toString(), "2", UUID.randomUUID().toString(),
       new Status(AVAILABLE), UUID.randomUUID().toString(), UUID.randomUUID().toString(), null)
@@ -45,7 +42,7 @@ public class ItemUtilTest {
   }
 
   @Test
-  public void shouldMapNestedFieldsAndParseVersionAndPassThroughOtherFields() {
+  void shouldMapNestedFieldsAndParseVersionAndPassThroughOtherFields() {
     // given
     JsonObject patchJson = new JsonObject()
       .put("_version", "7")
@@ -72,15 +69,15 @@ public class ItemUtilTest {
     assertEquals("123456", result.getString("barcode"));
     assertEquals("keep-as-is", result.getString("notes"));
 
-    Assert.assertNull(result.getValue("materialType"));
-    Assert.assertNull(result.getValue("permanentLoanType"));
-    Assert.assertNull(result.getValue("temporaryLoanType"));
-    Assert.assertNull(result.getValue("permanentLocation"));
-    Assert.assertNull(result.getValue("temporaryLocation"));
+    assertNull(result.getValue("materialType"));
+    assertNull(result.getValue("permanentLoanType"));
+    assertNull(result.getValue("temporaryLoanType"));
+    assertNull(result.getValue("permanentLocation"));
+    assertNull(result.getValue("temporaryLocation"));
   }
 
   @Test
-  public void shouldSetVersionNullWhenPatchVersionIsNull() {
+  void shouldSetVersionNullWhenPatchVersionIsNull() {
     // given
     JsonObject patchJson = new JsonObject()
       .put("_version", (Object) null);
@@ -89,12 +86,12 @@ public class ItemUtilTest {
     JsonObject result = ItemUtil.patchToStorageJson(patchJson);
 
     // then
-    Assert.assertTrue(result.containsKey("_version"));
-    Assert.assertNull(result.getValue("_version"));
+    assertTrue(result.containsKey("_version"));
+    assertNull(result.getValue("_version"));
   }
 
   @Test
-  public void shouldRemoveAllReadOnlyFieldsFromJson() {
+  void shouldRemoveAllReadOnlyFieldsFromJson() {
     // given
     JsonObject itemJson = new JsonObject()
       .put("title", "Some title")
@@ -129,7 +126,7 @@ public class ItemUtilTest {
   }
 
   @Test
-  public void shouldNotFailWhenReadOnlyFieldsAreMissing() {
+  void shouldNotFailWhenReadOnlyFieldsAreMissing() {
     // given
     JsonObject itemJson = new JsonObject()
       .put("barcode", "b")

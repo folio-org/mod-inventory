@@ -4,18 +4,17 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.List;
 import java.util.UUID;
 import lombok.SneakyThrows;
+import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.domain.instances.Instance;
@@ -23,14 +22,13 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
  * Tests for the private {@code modifyInstance} method in
  * {@link ExternalStorageModuleInstanceCollection}, exercised indirectly through
  * {@link ExternalStorageModuleInstanceCollection#findByIdAndUpdate}.
  */
-class ExternalStorageModuleInstanceCollectionTest {
+class ExternalStorageModuleInstanceCollectionTest extends BaseWireMockTest {
 
   private static final String TENANT = "test_tenant";
   private static final String TOKEN = "test_token";
@@ -41,11 +39,6 @@ class ExternalStorageModuleInstanceCollectionTest {
 
   private static final VertxAssistant vertxAssistant = new VertxAssistant();
 
-  @RegisterExtension
-  static WireMockExtension wireMock = WireMockExtension.newInstance()
-    .options(wireMockConfig().dynamicPort())
-    .build();
-
   @BeforeAll
   static void beforeAll() {
     vertxAssistant.start();
@@ -55,10 +48,6 @@ class ExternalStorageModuleInstanceCollectionTest {
   static void afterAll() {
     vertxAssistant.stop();
   }
-
-  // ---------------------------------------------------------------------------
-  // Tests for modifyInstance – tested indirectly via findByIdAndUpdate
-  // ---------------------------------------------------------------------------
 
   /**
    * Both ID and source must always be taken from the existing instance,
@@ -213,17 +202,26 @@ class ExternalStorageModuleInstanceCollectionTest {
   private InstanceCollection createCollection() {
     return vertxAssistant.createUsingVertx(vertx ->
       new ExternalStorageModuleInstanceCollection(
-        wireMock.baseUrl(), TENANT, TOKEN, USER_ID, REQUEST_ID,
+        WIRE_MOCK.baseUrl(), TENANT, TOKEN, USER_ID, REQUEST_ID,
         vertx.createHttpClient()));
   }
 
   private Context createContext() {
     return new Context() {
-      @Override public String getTenantId()      { return TENANT; }
-      @Override public String getToken()         { return TOKEN; }
-      @Override public String getOkapiLocation() { return wireMock.baseUrl(); }
-      @Override public String getUserId()        { return USER_ID; }
-      @Override public String getRequestId()     { return REQUEST_ID; }
+      @Override
+      public String getTenantId() { return TENANT; }
+
+      @Override
+      public String getToken() { return TOKEN; }
+
+      @Override
+      public String getOkapiLocation() { return WIRE_MOCK.baseUrl(); }
+
+      @Override
+      public String getUserId() { return USER_ID; }
+
+      @Override
+      public String getRequestId() { return REQUEST_ID; }
     };
   }
 
@@ -257,7 +255,7 @@ class ExternalStorageModuleInstanceCollectionTest {
   }
 
   private void stubGet(JsonObject responseBody) {
-    wireMock.stubFor(get(urlPathMatching(INSTANCE_PATH_PATTERN))
+    WIRE_MOCK.stubFor(get(urlPathMatching(INSTANCE_PATH_PATTERN))
       .willReturn(aResponse()
         .withStatus(200)
         .withHeader("Content-Type", "application/json")
@@ -284,9 +282,8 @@ class ExternalStorageModuleInstanceCollectionTest {
   }
 
   private void stubPut() {
-    wireMock.stubFor(put(urlPathMatching(INSTANCE_PATH_PATTERN))
+    WIRE_MOCK.stubFor(put(urlPathMatching(INSTANCE_PATH_PATTERN))
       .willReturn(aResponse().withStatus(204)));
   }
-
 }
 

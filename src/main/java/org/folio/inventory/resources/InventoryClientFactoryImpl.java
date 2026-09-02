@@ -4,6 +4,7 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.ext.web.RoutingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.dataimport.util.FolioHeaders;
 import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.WebContext;
@@ -12,6 +13,7 @@ import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.MoveApiUtil;
 
 import java.net.MalformedURLException;
+import org.folio.rest.client.SourceStorageRecordsClient;
 
 /**
  * Default implementation of the InventoryClientFactory.
@@ -33,8 +35,13 @@ public class InventoryClientFactoryImpl implements InventoryClientFactory {
 
   @Override
   public SourceStorageRecordsClientWrapper createSourceStorageRecordsClient(Context context, HttpClient client) {
-    return new SourceStorageRecordsClientWrapper(
-      context.getOkapiLocation(), context.getTenantId(), context.getToken(), context.getUserId(), context.getRequestId(), client);
+    var folioHeaders = FolioHeaders.builder()
+      .connectionUrl(context.getOkapiLocation())
+      .userId(context.getUserId())
+      .token(context.getToken())
+      .requestId(context.getRequestId())
+      .tenant(context.getTenantId());
+    return new SourceStorageRecordsClientWrapper(folioHeaders, client);
   }
 
   @Override

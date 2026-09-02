@@ -1,33 +1,28 @@
 package api;
 
-import api.support.ApiRoot;
-import api.support.ApiTests;
+import support.ApiRoot;
+import support.ApiTests;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonObject;
-import junitparams.JUnitParamsRunner;
 import lombok.SneakyThrows;
 
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
 import org.folio.inventory.support.http.client.Response;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import java.net.MalformedURLException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
+import org.junit.jupiter.api.Test;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class InventoryConfigApiTest extends ApiTests {
+
   private static final InventoryConfiguration config = new InventoryConfigurationImpl();
 
   @SneakyThrows
   @Test
-  public void shouldReturnInstanceBlockedFieldsConfig() {
+  void shouldReturnInstanceBlockedFieldsConfig() {
     final var getCompleted = okapiClient.get(ApiRoot.instanceBlockedFieldsConfig());
 
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
@@ -42,7 +37,7 @@ public class InventoryConfigApiTest extends ApiTests {
 
   @SneakyThrows
   @Test
-  public void shouldReturnHoldingsBlockedFieldsConfig() {
+  void shouldReturnHoldingsBlockedFieldsConfig() {
     final var getCompleted = okapiClient.get(ApiRoot.holdingsBlockedFieldsConfig());
 
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);

@@ -1,56 +1,39 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
+import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
+import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
+import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
+import static org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler.ACTION_HAS_NO_MAPPING_MSG;
+import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.folio.ActionProfile;
-import org.folio.DataImportEventPayload;
-import org.folio.processing.value.ListValue;
-import org.folio.rest.jaxrs.model.HoldingsRecord;
-import org.folio.JobProfile;
-import org.folio.MappingProfile;
-import org.folio.inventory.common.Context;
-import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.common.domain.Failure;
-import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
-import org.folio.inventory.consortium.entities.SharingInstance;
-import org.folio.inventory.dataimport.HoldingWriterFactory;
-import org.folio.inventory.dataimport.HoldingsMapperFactory;
-import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.entities.PartialError;
-import org.folio.inventory.consortium.services.ConsortiumServiceImpl;
-import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
-import org.folio.inventory.domain.HoldingsRecordCollection;
-import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.domain.instances.InstanceCollection;
-import org.folio.inventory.domain.relationship.RecordToEntity;
-import org.folio.inventory.services.IdStorageService;
-import org.folio.inventory.storage.Storage;
-import org.folio.processing.mapping.MappingManager;
-import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
-import org.folio.processing.mapping.mapper.reader.Reader;
-import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
-import org.folio.processing.value.StringValue;
-import org.folio.rest.jaxrs.model.EntityType;
-import org.folio.rest.jaxrs.model.ExternalIdsHolder;
-import org.folio.rest.jaxrs.model.MappingDetail;
-import org.folio.MappingMetadataDto;
-import org.folio.rest.jaxrs.model.MappingRule;
-import org.folio.rest.jaxrs.model.ParsedRecord;
-import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
-import org.folio.rest.jaxrs.model.Record;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -63,44 +46,104 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+import org.folio.ActionProfile;
+import org.folio.DataImportEventPayload;
+import org.folio.JobProfile;
+import org.folio.MappingMetadataDto;
+import org.folio.MappingProfile;
+import org.folio.inventory.common.Context;
+import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
+import org.folio.inventory.consortium.entities.SharingInstance;
+import org.folio.inventory.consortium.services.ConsortiumServiceImpl;
+import org.folio.inventory.dataimport.HoldingWriterFactory;
+import org.folio.inventory.dataimport.HoldingsMapperFactory;
+import org.folio.inventory.dataimport.cache.MappingMetadataCache;
+import org.folio.inventory.dataimport.entities.PartialError;
+import org.folio.inventory.dataimport.services.OrderHelperServiceImpl;
+import org.folio.inventory.domain.HoldingsRecordCollection;
+import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.domain.relationship.RecordToEntity;
+import org.folio.inventory.services.IdStorageService;
+import org.folio.inventory.storage.Storage;
+import org.folio.processing.mapping.MappingManager;
+import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.processing.mapping.mapper.reader.Reader;
+import org.folio.processing.mapping.mapper.reader.record.marc.MarcBibReaderFactory;
+import org.folio.processing.value.ListValue;
+import org.folio.processing.value.StringValue;
+import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.ExternalIdsHolder;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
+import org.folio.rest.jaxrs.model.MappingDetail;
+import org.folio.rest.jaxrs.model.MappingRule;
+import org.folio.rest.jaxrs.model.ParsedRecord;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.Record;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.Spy;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
-import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
-import static org.folio.ActionProfile.FolioRecord.INSTANCE;
-import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
-import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
-import static org.folio.inventory.dataimport.handlers.actions.CreateHoldingEventHandler.ACTION_HAS_NO_MAPPING_MSG;
-import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
-import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.junit.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
+class CreateHoldingEventHandlerTest {
 
-public class CreateHoldingEventHandlerTest {
-
-  private static final String PARSED_CONTENT_WITH_INSTANCE_ID = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"945\":{\"subfields\":[{\"a\":\"OM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"AM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"asdf\"},{\"h\":\"fcd64ce1-6995-48f0-840e-89ffa2288371\"}],\"ind1\":\" \",\"ind2\":\" \"}}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } }]}";
-  private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID = "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"945\":{\"subfields\":[{\"a\":\"OM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"AM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"asdf\"},{\"h\":\"fcd64ce1-6995-48f0-840e-89ffa2288371\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+  private static final String PARSED_CONTENT_WITH_INSTANCE_ID =
+    "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"945\":{\"subfields\":[{\"a\":\"OM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"AM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"asdf\"},{\"h\":\"fcd64ce1-6995-48f0-840e-89ffa2288371\"}],\"ind1\":\" \",\"ind2\":\" \"}}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } }]}";
+  private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID =
+    "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"945\":{\"subfields\":[{\"a\":\"OM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"AM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"asdf\"},{\"h\":\"fcd64ce1-6995-48f0-840e-89ffa2288371\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
   private static final String FOLIO_SOURCE_ID = "f32d531e-df79-46b3-8932-cdd35f7a2264";
   private static final String RECORD_ID = UUID.randomUUID().toString();
   private static final String ITEM_ID = UUID.randomUUID().toString();
   private static final String ERRORS = "ERRORS";
+  private static final String PERMANENT_LOCATION_ID = UUID.randomUUID().toString();
+
+  @Mock
   private static Reader fakeReader;
-  private static final String permanentLocationId = UUID.randomUUID().toString();
+
+  private final JobProfile jobProfile = new JobProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Create MARC Bibs")
+    .withDataType(JobProfile.DataType.MARC);
+  private final ActionProfile actionProfile = new ActionProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Create preliminary Item")
+    .withAction(ActionProfile.Action.CREATE)
+    .withFolioRecord(HOLDINGS);
+  private final MappingProfile mappingProfile = new MappingProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Prelim item from MARC")
+    .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
+    .withExistingRecordType(EntityType.HOLDINGS)
+    .withMappingDetails(new MappingDetail()
+      .withMappingFields(Collections.singletonList(
+        new MappingRule().withName("permanentLocationId").withPath("permanentLocationId").withValue("945$h")
+          .withEnabled("true"))));
+  private final ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+    .withId(UUID.randomUUID().toString())
+    .withProfileId(jobProfile.getId())
+    .withContentType(JOB_PROFILE)
+    .withContent(jobProfile)
+    .withChildSnapshotWrappers(Collections.singletonList(
+      new ProfileSnapshotWrapper()
+        .withProfileId(actionProfile.getId())
+        .withContentType(ACTION_PROFILE)
+        .withContent(actionProfile)
+        .withChildSnapshotWrappers(Collections.singletonList(
+          new ProfileSnapshotWrapper()
+            .withProfileId(mappingProfile.getId())
+            .withContentType(MAPPING_PROFILE)
+            .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
+
   @Mock
   private Storage storage;
   @Mock
@@ -118,57 +161,24 @@ public class CreateHoldingEventHandlerTest {
   @Spy
   private MarcBibReaderFactory fakeReaderFactory = new MarcBibReaderFactory();
 
-  private JobProfile jobProfile = new JobProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Create MARC Bibs")
-    .withDataType(JobProfile.DataType.MARC);
-
-  private ActionProfile actionProfile = new ActionProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Create preliminary Item")
-    .withAction(ActionProfile.Action.CREATE)
-    .withFolioRecord(HOLDINGS);
-
-  private MappingProfile mappingProfile = new MappingProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Prelim item from MARC")
-    .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
-    .withExistingRecordType(EntityType.HOLDINGS)
-    .withMappingDetails(new MappingDetail()
-      .withMappingFields(Collections.singletonList(
-        new MappingRule().withName("permanentLocationId").withPath("permanentLocationId").withValue("945$h").withEnabled("true"))));
-
-  private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-    .withId(UUID.randomUUID().toString())
-    .withProfileId(jobProfile.getId())
-    .withContentType(JOB_PROFILE)
-    .withContent(jobProfile)
-    .withChildSnapshotWrappers(Collections.singletonList(
-      new ProfileSnapshotWrapper()
-        .withProfileId(actionProfile.getId())
-        .withContentType(ACTION_PROFILE)
-        .withContent(actionProfile)
-        .withChildSnapshotWrappers(Collections.singletonList(
-          new ProfileSnapshotWrapper()
-            .withProfileId(mappingProfile.getId())
-            .withContentType(MAPPING_PROFILE)
-            .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
-
   private CreateHoldingEventHandler createHoldingEventHandler;
 
-  @Before
-  public void setUp() throws IOException {
-    MockitoAnnotations.initMocks(this);
+  @BeforeEach
+  void setUp() throws IOException {
     MappingManager.clearReaderFactories();
-    createHoldingEventHandler = new CreateHoldingEventHandler(storage, mappingMetadataCache, holdingsIdStorageService, orderHelperService, consortiumServiceImpl);
+    createHoldingEventHandler =
+      new CreateHoldingEventHandler(storage, mappingMetadataCache, holdingsIdStorageService, orderHelperService,
+        consortiumServiceImpl);
     doAnswer(invocationOnMock -> {
-      MultipleRecords result = new MultipleRecords<>(new ArrayList<>(), 0);
-      Consumer<Success<MultipleRecords>> successHandler = invocationOnMock.getArgument(2);
+      var result = new MultipleRecords<>(new ArrayList<>(), 0);
+      Consumer<Success<MultipleRecords<?>>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(result));
       return null;
-    }).when(holdingsRecordsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    }).when(holdingsRecordsCollection)
+      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.empty())).when(consortiumServiceImpl).getConsortiumConfiguration(any());
+    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.empty())).when(consortiumServiceImpl)
+      .getConsortiumConfiguration(any());
 
     doAnswer(invocationOnMock -> {
       HoldingsRecord holdingsRecord = invocationOnMock.getArgument(0);
@@ -187,9 +197,9 @@ public class CreateHoldingEventHandlerTest {
         .withMappingRules(new JsonObject().encode())
         .withMappingParams(Json.encode(new MappingParameters())))));
 
-    when(orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(any(), any(), any())).thenReturn(Future.succeededFuture());
-    fakeReader = mock(Reader.class);
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
+    when(orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(any(), any(), any())).thenReturn(
+      Future.succeededFuture());
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(PERMANENT_LOCATION_ID));
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceCollection);
@@ -200,14 +210,15 @@ public class CreateHoldingEventHandlerTest {
   }
 
   @Test
-  public void shouldProcessEvent() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  void shouldProcessEvent() throws IOException, InterruptedException, ExecutionException, TimeoutException {
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
-    context.put(INSTANCE.value(), new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(),
+      new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
     context.put(ERRORS, Json.encode(new PartialError(null, "testError")));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -220,27 +231,30 @@ public class CreateHoldingEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    JsonObject holding = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getJsonObject(0);
+    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    JsonObject holding =
+      new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getJsonObject(0);
     JsonArray errors = new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS));
-    Assert.assertEquals(0, errors.size());
-    Assert.assertNotNull(holding.getString("id"));
-    Assert.assertEquals(instanceId, holding.getString("instanceId"));
-    Assert.assertEquals(permanentLocationId, holding.getString("permanentLocationId"));
-    Assert.assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
+    assertEquals(0, errors.size());
+    assertNotNull(holding.getString("id"));
+    assertEquals(instanceId, holding.getString("instanceId"));
+    assertEquals(PERMANENT_LOCATION_ID, holding.getString("permanentLocationId"));
+    assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
   }
 
   @Test
-  public void shouldProcessEventAndCreateShadowInstanceIfConsortiumEnabledAndInstanceNotExistAtLocalStorage() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  void shouldProcessEventAndCreateShadowInstanceIfConsortiumEnabledAndInstanceNotExistAtLocalStorage()
+    throws IOException, InterruptedException, ExecutionException, TimeoutException {
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
 
-    payloadContext.put(INSTANCE.value(), new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
-    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(INSTANCE.value(),
+      new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
     payloadContext.put(ERRORS, Json.encode(new PartialError(null, "testError")));
 
     String localTenant = "tenant";
@@ -259,7 +273,8 @@ public class CreateHoldingEventHandlerTest {
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+    doAnswer(invocationOnMock -> Future.succeededFuture(
+      Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
       .when(consortiumServiceImpl).getConsortiumConfiguration(any());
 
     doAnswer(invocationOnMock -> {
@@ -279,32 +294,38 @@ public class CreateHoldingEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
-    verify(consortiumServiceImpl).getConsortiumConfiguration(argThat(context -> context.getTenantId().equals(localTenant)));
+    verify(consortiumServiceImpl).getConsortiumConfiguration(
+      argThat(context -> context.getTenantId().equals(localTenant)));
 
-    verify(consortiumServiceImpl).createShadowInstance(argThat(context -> context.getTenantId().equals(localTenant)), eq(instanceId),
-      argThat((consortiumCredentials -> consortiumCredentials.getCentralTenantId().equals(centralTenantId) && consortiumCredentials.getConsortiumId().equals(consortiumId))));
+    verify(consortiumServiceImpl).createShadowInstance(argThat(context -> context.getTenantId().equals(localTenant)),
+      eq(instanceId),
+      argThat((consortiumCredentials -> consortiumCredentials.getCentralTenantId().equals(centralTenantId)
+                                        && consortiumCredentials.getConsortiumId().equals(consortiumId))));
 
-    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    JsonObject holding = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getJsonObject(0);
+    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    JsonObject holding =
+      new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getJsonObject(0);
     JsonArray errors = new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS));
-    Assert.assertEquals(0, errors.size());
-    Assert.assertNotNull(holding.getString("id"));
-    Assert.assertEquals(instanceId, holding.getString("instanceId"));
-    Assert.assertEquals(permanentLocationId, holding.getString("permanentLocationId"));
-    Assert.assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
+    assertEquals(0, errors.size());
+    assertNotNull(holding.getString("id"));
+    assertEquals(instanceId, holding.getString("instanceId"));
+    assertEquals(PERMANENT_LOCATION_ID, holding.getString("permanentLocationId"));
+    assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
   }
 
   @Test
-  public void shouldProcessEventAndNotCreateShadowInstanceIfConsortiumEnabledAndInstanceExistAtLocalStorage() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  void shouldProcessEventAndNotCreateShadowInstanceIfConsortiumEnabledAndInstanceExistAtLocalStorage()
+    throws IOException, InterruptedException, ExecutionException, TimeoutException {
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
 
-    payloadContext.put(INSTANCE.value(), new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
-    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(INSTANCE.value(),
+      new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
     payloadContext.put(ERRORS, Json.encode(new PartialError(null, "testError")));
 
     String localTenant = "tenant";
@@ -323,7 +344,8 @@ public class CreateHoldingEventHandlerTest {
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+    doAnswer(invocationOnMock -> Future.succeededFuture(
+      Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
       .when(consortiumServiceImpl).getConsortiumConfiguration(any());
 
     doAnswer(invocationOnMock -> {
@@ -335,40 +357,47 @@ public class CreateHoldingEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
-    verify(consortiumServiceImpl).getConsortiumConfiguration(argThat(context -> context.getTenantId().equals(localTenant)));
+    verify(consortiumServiceImpl).getConsortiumConfiguration(
+      argThat(context -> context.getTenantId().equals(localTenant)));
 
     verify(consortiumServiceImpl, times(0)).createShadowInstance(any(), any(), any());
 
-    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    JsonObject holding = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getJsonObject(0);
+    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    JsonObject holding =
+      new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getJsonObject(0);
     JsonArray errors = new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS));
-    Assert.assertEquals(0, errors.size());
-    Assert.assertNotNull(holding.getString("id"));
-    Assert.assertEquals(instanceId, holding.getString("instanceId"));
-    Assert.assertEquals(permanentLocationId, holding.getString("permanentLocationId"));
-    Assert.assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
+    assertEquals(0, errors.size());
+    assertNotNull(holding.getString("id"));
+    assertEquals(instanceId, holding.getString("instanceId"));
+    assertEquals(PERMANENT_LOCATION_ID, holding.getString("permanentLocationId"));
+    assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
   }
 
   @Test
-  public void shouldProcessEventAndReturnPartialErrorsInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  void shouldProcessEventAndReturnPartialErrorsInContext()
+    throws IOException, InterruptedException, ExecutionException, TimeoutException {
     String errorMsg = "testError";
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(errorMsg, 400));
       return null;
-    }).when(holdingsRecordsCollection).add(argThat(holdingsRecord -> holdingsRecord.getPermanentLocationId().equals(permanentLocationId)), any(), any());
+    }).when(holdingsRecordsCollection)
+      .add(argThat(holdingsRecord -> holdingsRecord.getPermanentLocationId().equals(PERMANENT_LOCATION_ID)), any(),
+        any());
 
-    List<String> locations = List.of(permanentLocationId, UUID.randomUUID().toString());
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()), StringValue.of(locations.get(1)));
+    List<String> locations = List.of(PERMANENT_LOCATION_ID, UUID.randomUUID().toString());
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()),
+      StringValue.of(locations.get(1)));
 
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
-    context.put(INSTANCE.value(), new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(),
+      new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
@@ -380,28 +409,31 @@ public class CreateHoldingEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonArray holdings = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonArray errors = new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS));
-    Assert.assertEquals(1, holdings.size());
-    Assert.assertEquals(1, errors.size());
+    assertEquals(1, holdings.size());
+    assertEquals(1, errors.size());
     JsonObject partialError = errors.getJsonObject(0);
-    Assert.assertEquals(errorMsg, partialError.getString("error"));
-    Assert.assertEquals(ITEM_ID, partialError.getString("id"));
+    assertEquals(errorMsg, partialError.getString("error"));
+    assertEquals(ITEM_ID, partialError.getString("id"));
   }
 
   @Test
-  public void shouldProcessEventAndCreateMultipleHoldings() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    List<String> locations = List.of(permanentLocationId, UUID.randomUUID().toString());
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()), StringValue.of(locations.get(1)));
+  void shouldProcessEventAndCreateMultipleHoldings()
+    throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    List<String> locations = List.of(PERMANENT_LOCATION_ID, UUID.randomUUID().toString());
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()),
+      StringValue.of(locations.get(1)));
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
-    context.put(INSTANCE.value(), new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(),
+      new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
@@ -413,25 +445,27 @@ public class CreateHoldingEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonArray holdingsList = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    Assert.assertEquals(2, holdingsList.size());
+    assertEquals(2, holdingsList.size());
 
     for (int i = 0; i < holdingsList.size(); i++) {
       JsonObject holdingsAsJson = holdingsList.getJsonObject(i);
-      Assert.assertNotNull(holdingsAsJson.getString("id"));
-      Assert.assertEquals(instanceId, holdingsAsJson.getString("instanceId"));
-      Assert.assertEquals(locations.get(i), holdingsAsJson.getString("permanentLocationId"));
-      Assert.assertEquals(FOLIO_SOURCE_ID, holdingsAsJson.getString("sourceId"));
+      assertNotNull(holdingsAsJson.getString("id"));
+      assertEquals(instanceId, holdingsAsJson.getString("instanceId"));
+      assertEquals(locations.get(i), holdingsAsJson.getString("permanentLocationId"));
+      assertEquals(FOLIO_SOURCE_ID, holdingsAsJson.getString("sourceId"));
     }
   }
 
   @Test
-  public void shouldProcessEventAndCreateMultipleHoldingsAndPopulatePartialErrorsForFailedHoldings() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  void shouldProcessEventAndCreateMultipleHoldingsAndPopulatePartialErrorsForFailedHoldings()
+    throws IOException, InterruptedException, ExecutionException, TimeoutException {
     String permanentLocationId2 = UUID.randomUUID().toString();
 
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId), StringValue.of(permanentLocationId2));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(PERMANENT_LOCATION_ID),
+      StringValue.of(permanentLocationId2));
 
     String testError = "testError";
 
@@ -439,15 +473,18 @@ public class CreateHoldingEventHandlerTest {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(testError, 400));
       return null;
-    }).when(holdingsRecordsCollection).add(argThat(holdingsRecord -> holdingsRecord.getPermanentLocationId().equals(permanentLocationId2)), any(), any());
+    }).when(holdingsRecordsCollection)
+      .add(argThat(holdingsRecord -> holdingsRecord.getPermanentLocationId().equals(permanentLocationId2)), any(),
+        any());
 
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
-    context.put(INSTANCE.value(), new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(),
+      new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
@@ -466,35 +503,36 @@ public class CreateHoldingEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonArray holdingsList = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    Assert.assertEquals(1, holdingsList.size());
+    assertEquals(1, holdingsList.size());
     JsonArray errors = new JsonArray(actualDataImportEventPayload.getContext().get(ERRORS));
-    Assert.assertEquals(1, errors.size());
+    assertEquals(1, errors.size());
     JsonObject partialError = errors.getJsonObject(0);
-    Assert.assertEquals(testError, partialError.getString("error"));
-    Assert.assertNotEquals(ITEM_ID, partialError.getString("id"));
+    assertEquals(testError, partialError.getString("error"));
+    assertNotEquals(ITEM_ID, partialError.getString("id"));
 
     holdingsList.forEach(holdings -> {
       JsonObject holdingsAsJson = (JsonObject) holdings;
-      Assert.assertNotNull(holdingsAsJson.getString("id"));
-      Assert.assertEquals(instanceId, holdingsAsJson.getString("instanceId"));
-      Assert.assertEquals(permanentLocationId, holdingsAsJson.getString("permanentLocationId"));
-      Assert.assertEquals(FOLIO_SOURCE_ID, holdingsAsJson.getString("sourceId"));
+      assertNotNull(holdingsAsJson.getString("id"));
+      assertEquals(instanceId, holdingsAsJson.getString("instanceId"));
+      assertEquals(PERMANENT_LOCATION_ID, holdingsAsJson.getString("permanentLocationId"));
+      assertEquals(FOLIO_SOURCE_ID, holdingsAsJson.getString("sourceId"));
     });
   }
 
   @Test
-  public void shouldProcessEventIfInstanceIdIsNotExistsInInstanceInContextButExistsInMarcBibliographicParsedRecords() throws InterruptedException, ExecutionException, TimeoutException {
+  void shouldProcessEventIfInstanceIdIsNotExistsInInstanceInContextButExistsInMarcBibliographicParsedRecords()
+    throws InterruptedException, ExecutionException, TimeoutException {
     String expectedInstanceId = UUID.randomUUID().toString();
     JsonObject instanceAsJson = new JsonObject().put("id", expectedInstanceId);
 
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
 
     HashMap<String, String> context = new HashMap<>();
     context.put(INSTANCE.value(), instanceAsJson.encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
@@ -506,21 +544,23 @@ public class CreateHoldingEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    JsonObject holding = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getJsonObject(0);
-    Assert.assertNotNull(holding.getString("id"));
-    Assert.assertEquals(expectedInstanceId, holding.getString("instanceId"));
-    Assert.assertEquals(permanentLocationId, holding.getString("permanentLocationId"));
-    Assert.assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
+    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    JsonObject holding =
+      new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getJsonObject(0);
+    assertNotNull(holding.getString("id"));
+    assertEquals(expectedInstanceId, holding.getString("instanceId"));
+    assertEquals(PERMANENT_LOCATION_ID, holding.getString("permanentLocationId"));
+    assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
   }
 
   @Test
-  public void shouldProcessEventIfInstanceIdIsEmptyInInstanceInContextButExistsInMarcBibliographicParsedRecords() throws InterruptedException, ExecutionException, TimeoutException {
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+  void shouldProcessEventIfInstanceIdIsEmptyInInstanceInContextButExistsInMarcBibliographicParsedRecords()
+    throws InterruptedException, ExecutionException, TimeoutException {
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
 
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
@@ -532,25 +572,28 @@ public class CreateHoldingEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
-    JsonObject holding = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getJsonObject(0);
-    Assert.assertNotNull(holding.getString("id"));
-    Assert.assertEquals(permanentLocationId, holding.getString("permanentLocationId"));
-    Assert.assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
+    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    JsonObject holding =
+      new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value())).getJsonObject(0);
+    assertNotNull(holding.getString("id"));
+    assertEquals(PERMANENT_LOCATION_ID, holding.getString("permanentLocationId"));
+    assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
   }
 
   @Test
-  public void shouldProcessEventIfPermanentLocationIdIsNotExistsInContext() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  void shouldProcessEventIfPermanentLocationIdIsNotExistsInContext()
+    throws IOException, InterruptedException, ExecutionException, TimeoutException {
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(""));
 
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 8, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
-    context.put(INSTANCE.value(), new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(),
+      new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
@@ -562,14 +605,14 @@ public class CreateHoldingEventHandlerTest {
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
-    Assert.assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
+    assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
+    assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     JsonArray holdings = new JsonArray(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
     assertEquals(1, holdings.size());
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfNoHoldingsSuccessfullyCreated() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  @Test
+  void shouldNotProcessEventIfNoHoldingsSuccessfullyCreated() throws IOException {
     String errorMsg = "testError";
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
@@ -577,16 +620,18 @@ public class CreateHoldingEventHandlerTest {
       return null;
     }).when(holdingsRecordsCollection).add(any(), any(), any());
 
-    List<String> locations = List.of(permanentLocationId, UUID.randomUUID().toString());
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()), StringValue.of(locations.get(1)));
+    List<String> locations = List.of(PERMANENT_LOCATION_ID, UUID.randomUUID().toString());
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(locations.getFirst()),
+      StringValue.of(locations.get(1)));
 
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
-    context.put(INSTANCE.value(), new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(),
+      new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
@@ -596,11 +641,11 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
+    assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.MILLISECONDS));
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventEvenIfDuplicatedInventoryStorageErrorExists() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  @Test
+  void shouldNotProcessEventEvenIfDuplicatedInventoryStorageErrorExists() throws IOException {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(UNIQUE_ID_ERROR_MESSAGE, 400));
@@ -610,10 +655,11 @@ public class CreateHoldingEventHandlerTest {
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 5, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
-    context.put(INSTANCE.value(), new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(),
+      new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
@@ -623,16 +669,17 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.SECONDS);
+    assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndNotExistsInParsedRecords() throws InterruptedException, ExecutionException, TimeoutException  {
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITHOUT_INSTANCE_ID));
+  @Test
+  void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndNotExistsInParsedRecords() {
+    Record marcRecord =
+      new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITHOUT_INSTANCE_ID));
 
     HashMap<String, String> context = new HashMap<>();
     context.put(INSTANCE.value(), new JsonObject().encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
@@ -642,17 +689,17 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
+    assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.MILLISECONDS));
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndMarcBibliographicNotExists() throws InterruptedException, ExecutionException, TimeoutException {
+  @Test
+  void shouldNotProcessEventIfInstanceIdIsNotExistsInInstanceInContextAndMarcBibliographicNotExists() {
     String instanceId = String.valueOf(UUID.randomUUID());
-    Record record = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
+    Record marcRecord = new Record().withExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
 
     HashMap<String, String> context = new HashMap<>();
     context.put(INSTANCE.value(), new JsonObject().encode());
-    context.put("InvalidField", JsonObject.mapFrom(record).encode());
+    context.put("InvalidField", JsonObject.mapFrom(marcRecord).encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
@@ -662,16 +709,17 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
+    assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.MILLISECONDS));
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfNoContextMarcBibliographic() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  @Test
+  void shouldNotProcessEventIfNoContextMarcBibliographic() throws IOException {
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 9, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
     HashMap<String, String> context = new HashMap<>();
-    context.put("InvalidField", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put("InvalidField",
+      new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
@@ -680,11 +728,11 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
+    assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.MILLISECONDS));
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfContextIsNull() throws InterruptedException, ExecutionException, TimeoutException {
+  @Test
+  void shouldNotProcessEventIfContextIsNull() {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(null)
@@ -692,11 +740,11 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
+    assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.MILLISECONDS));
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfContextIsEmpty() throws InterruptedException, ExecutionException, TimeoutException {
+  @Test
+  void shouldNotProcessEventIfContextIsEmpty() {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(new HashMap<>())
@@ -704,12 +752,12 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
+    assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.MILLISECONDS));
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventIfHoldingRecordIsInvalid() throws IOException, InterruptedException, ExecutionException, TimeoutException {
-    MappingProfile mappingProfile = new MappingProfile()
+  @Test
+  void shouldNotProcessEventIfHoldingRecordIsInvalid() throws IOException {
+    MappingProfile marcToHoldingsMapping = new MappingProfile()
       .withId(UUID.randomUUID().toString())
       .withName("Prelim item from MARC")
       .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
@@ -719,7 +767,7 @@ public class CreateHoldingEventHandlerTest {
           new MappingRule().withPath("permanentLocationId").withValue("permanentLocationExpression"),
           new MappingRule().withPath("invalidField").withValue("invalidFieldValue"))));
 
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+    ProfileSnapshotWrapper profileSnapshot = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withProfileId(jobProfile.getId())
       .withContentType(JOB_PROFILE)
@@ -731,34 +779,37 @@ public class CreateHoldingEventHandlerTest {
           .withContent(actionProfile)
           .withChildSnapshotWrappers(Collections.singletonList(
             new ProfileSnapshotWrapper()
-              .withProfileId(mappingProfile.getId())
+              .withProfileId(marcToHoldingsMapping.getId())
               .withContentType(MAPPING_PROFILE)
-              .withContent(JsonObject.mapFrom(mappingProfile).getMap())))));
+              .withContent(JsonObject.mapFrom(marcToHoldingsMapping).getMap())))));
 
-    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(UUID.randomUUID().toString()), StringValue.of(UUID.randomUUID().toString()));
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(UUID.randomUUID().toString()),
+      StringValue.of(UUID.randomUUID().toString()));
 
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 7, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
-    context.put(INSTANCE.value(), new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(INSTANCE.value(),
+      new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(instance)).encode());
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
+      .withProfileSnapshot(profileSnapshot)
       .withJobExecutionId(UUID.randomUUID().toString())
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
+      .withCurrentNode(profileSnapshot.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
+    assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.MILLISECONDS));
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldNotProcessEventWhenRecordToHoldingsFutureFails() throws ExecutionException, InterruptedException, TimeoutException {
-    when(holdingsIdStorageService.store(any(), any(), any())).thenReturn(Future.failedFuture(new RuntimeException("Something wrong with database!")));
+  @Test
+  void shouldNotProcessEventWhenRecordToHoldingsFutureFails() {
+    when(holdingsIdStorageService.store(any(), any(), any())).thenReturn(
+      Future.failedFuture(new RuntimeException("Something wrong with database!")));
 
     String expectedHoldingId = UUID.randomUUID().toString();
     JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId);
@@ -773,14 +824,14 @@ public class CreateHoldingEventHandlerTest {
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.SECONDS);
+    assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
   }
 
   @Test
-  public void shouldReturnFailedFutureIfCurrentActionProfileHasNoMappingProfile() {
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+  void shouldReturnFailedFutureIfCurrentActionProfileHasNoMappingProfile() {
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
@@ -791,20 +842,22 @@ public class CreateHoldingEventHandlerTest {
 
     CompletableFuture<DataImportEventPayload> future = createHoldingEventHandler.handle(dataImportEventPayload);
 
-    ExecutionException exception = Assert.assertThrows(ExecutionException.class, future::get);
-    Assert.assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
+    ExecutionException exception = assertThrows(ExecutionException.class, future::get);
+    assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
   }
 
   @Test
-  public void shouldNotCreateSingleHoldingIfMappedStatisticalCodeIdIsInvalid() {
+  void shouldNotCreateSingleHoldingIfMappedStatisticalCodeIdIsInvalid() {
     MappingProfile invalidStatCodeMappingProfile = new MappingProfile()
       .withId(UUID.randomUUID().toString())
       .withIncomingRecordType(EntityType.MARC_BIBLIOGRAPHIC)
       .withExistingRecordType(EntityType.HOLDINGS)
       .withMappingDetails(new MappingDetail()
         .withMappingFields(Lists.newArrayList(
-          new MappingRule().withName("permanentLocationId").withPath("permanentLocationId").withValue("KU/CC/DI/M").withEnabled("true"),
-          new MappingRule().withName("statisticalCodeId").withPath("statisticalCodeIds[]").withValue("990$a").withEnabled("true").withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
+          new MappingRule().withName("permanentLocationId").withPath("permanentLocationId").withValue("KU/CC/DI/M")
+            .withEnabled("true"),
+          new MappingRule().withName("statisticalCodeId").withPath("statisticalCodeIds[]").withValue("990$a")
+            .withEnabled("true").withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
 
     ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
@@ -824,14 +877,15 @@ public class CreateHoldingEventHandlerTest {
 
     // reader returns permanentLocationId, then invalid statistical code string
     when(fakeReader.read(any(MappingRule.class))).thenReturn(
-      StringValue.of(permanentLocationId),
+      StringValue.of(PERMANENT_LOCATION_ID),
       ListValue.of(List.of("ebookss"))
     );
 
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 1, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
-    Record incomingRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    Record incomingRecord =
+      new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
     context.put(INSTANCE.value(), Json.encode(instance));
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
@@ -852,7 +906,7 @@ public class CreateHoldingEventHandlerTest {
   }
 
   @Test
-  public void shouldCreateMultipleHoldingsAndReturnPartialErrorsForHoldingWithInvalidStatisticalCode()
+  void shouldCreateMultipleHoldingsAndReturnPartialErrorsForHoldingWithInvalidStatisticalCode()
     throws ExecutionException, InterruptedException, TimeoutException {
 
     MappingProfile invalidStatCodeMappingProfile = new MappingProfile()
@@ -861,8 +915,10 @@ public class CreateHoldingEventHandlerTest {
       .withExistingRecordType(EntityType.HOLDINGS)
       .withMappingDetails(new MappingDetail()
         .withMappingFields(Lists.newArrayList(
-          new MappingRule().withName("permanentLocationId").withPath("holdings.permanentLocationId").withValue("945$h").withEnabled("true"),
-          new MappingRule().withName("statisticalCodeId").withPath("holdings.statisticalCodeIds[]").withValue("990$a").withEnabled("true").withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
+          new MappingRule().withName("permanentLocationId").withPath("holdings.permanentLocationId").withValue("945$h")
+            .withEnabled("true"),
+          new MappingRule().withName("statisticalCodeId").withPath("holdings.statisticalCodeIds[]").withValue("990$a")
+            .withEnabled("true").withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
 
     ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
@@ -897,7 +953,8 @@ public class CreateHoldingEventHandlerTest {
     String instanceId = String.valueOf(UUID.randomUUID());
     Instance instance = new Instance(instanceId, 1, String.valueOf(UUID.randomUUID()),
       String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()), String.valueOf(UUID.randomUUID()));
-    Record incomingRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    Record incomingRecord =
+      new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
     context.put(INSTANCE.value(), Json.encode(instance));
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
@@ -940,10 +997,10 @@ public class CreateHoldingEventHandlerTest {
   }
 
   @Test
-  public void isEligibleShouldReturnTrue() {
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+  void isEligibleShouldReturnTrue() {
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
@@ -953,7 +1010,7 @@ public class CreateHoldingEventHandlerTest {
   }
 
   @Test
-  public void isEligibleShouldReturnFalseIfCurrentNodeIsEmpty() {
+  void isEligibleShouldReturnFalseIfCurrentNodeIsEmpty() {
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
@@ -963,9 +1020,8 @@ public class CreateHoldingEventHandlerTest {
   }
 
   @Test
-  public void isEligibleShouldReturnFalseIfCurrentNodeIsNotActionProfile() {
-
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+  void isEligibleShouldReturnFalseIfCurrentNodeIsNotActionProfile() {
+    ProfileSnapshotWrapper holdingProfile = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withProfileId(jobProfile.getId())
       .withContentType(JOB_PROFILE)
@@ -973,45 +1029,45 @@ public class CreateHoldingEventHandlerTest {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(new HashMap<>())
-      .withCurrentNode(profileSnapshotWrapper);
+      .withCurrentNode(holdingProfile);
     assertFalse(createHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
-  public void isEligibleShouldReturnFalseIfActionIsNotCreate() {
-    ActionProfile actionProfile = new ActionProfile()
+  void isEligibleShouldReturnFalseIfActionIsNotCreate() {
+    ActionProfile createHoldingsProfile = new ActionProfile()
       .withId(UUID.randomUUID().toString())
       .withName("Create preliminary Item")
       .withAction(ActionProfile.Action.DELETE)
       .withFolioRecord(HOLDINGS);
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+    ProfileSnapshotWrapper actionProfileSnapshot = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
-      .withProfileId(actionProfile.getId())
+      .withProfileId(createHoldingsProfile.getId())
       .withContentType(JOB_PROFILE)
-      .withContent(actionProfile);
+      .withContent(createHoldingsProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(new HashMap<>())
-      .withCurrentNode(profileSnapshotWrapper);
+      .withCurrentNode(actionProfileSnapshot);
     assertFalse(createHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
-  public void isEligibleShouldReturnFalseIfRecordIsNotHoldings() {
-    ActionProfile actionProfile = new ActionProfile()
+  void isEligibleShouldReturnFalseIfRecordIsNotHoldings() {
+    ActionProfile createInstanceProfile = new ActionProfile()
       .withId(UUID.randomUUID().toString())
       .withName("Create preliminary Item")
       .withAction(ActionProfile.Action.CREATE)
       .withFolioRecord(ActionProfile.FolioRecord.INSTANCE);
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+    ProfileSnapshotWrapper actionProfileSnapshot = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
-      .withProfileId(actionProfile.getId())
+      .withProfileId(createInstanceProfile.getId())
       .withContentType(JOB_PROFILE)
-      .withContent(actionProfile);
+      .withContent(createInstanceProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withContext(new HashMap<>())
-      .withCurrentNode(profileSnapshotWrapper);
+      .withCurrentNode(actionProfileSnapshot);
     assertFalse(createHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 }

@@ -1,25 +1,25 @@
 package org.folio.inventory.dataimport.util;
 
-import org.junit.Test;
-import io.vertx.core.json.JsonObject;
-import java.util.Optional;
-import org.folio.rest.jaxrs.model.ParsedRecord;
-import org.folio.inventory.dataimport.util.ParsedRecordUtil.AdditionalSubfields;
-import org.folio.rest.jaxrs.model.Record;
-
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class ParsedRecordUtilTest {
+import io.vertx.core.json.JsonObject;
+import java.util.Optional;
+import org.folio.inventory.dataimport.util.ParsedRecordUtil.AdditionalSubfields;
+import org.folio.rest.jaxrs.model.ParsedRecord;
+import org.folio.rest.jaxrs.model.Record;
+import org.junit.jupiter.api.Test;
+
+class ParsedRecordUtilTest {
 
   @Test
-  public void shouldNormalizeParsedRecordContent() {
+  void shouldNormalizeParsedRecordContent() {
     // given
     String content = "{\"leader\":\"01240cvs a2200397   4500\",\"fields\":[{\"001\":\"value\"}]}";
     ParsedRecord parsedRecord = new ParsedRecord().withContent(content);
@@ -33,7 +33,7 @@ public class ParsedRecordUtilTest {
   }
 
   @Test
-  public void shouldReturnEmptyOptionalWhenLeaderIsNull() {
+  void shouldReturnEmptyOptionalWhenLeaderIsNull() {
     // given
     String content = "{\"fields\":[{\"001\":\"value\"}]}";
     ParsedRecord parsedRecord = new ParsedRecord().withContent(content);
@@ -46,7 +46,7 @@ public class ParsedRecordUtilTest {
   }
 
   @Test
-  public void shouldReturnEmptyOptionalWhenLeaderIsShorterThanExpected() {
+  void shouldReturnEmptyOptionalWhenLeaderIsShorterThanExpected() {
     // given
     String content = "{\"leader\":\"short\",\"fields\":[{\"001\":\"value\"}]}";
     ParsedRecord parsedRecord = new ParsedRecord().withContent(content);
@@ -59,7 +59,7 @@ public class ParsedRecordUtilTest {
   }
 
   @Test
-  public void shouldReturnLeaderStatusWhenLeaderIsValid() {
+  void shouldReturnLeaderStatusWhenLeaderIsValid() {
     // given
     String content = "{\"leader\":\"01240cvs a2200397   4500\",\"fields\":[{\"001\":\"value\"}]}";
     ParsedRecord parsedRecord = new ParsedRecord().withContent(content);
@@ -73,7 +73,7 @@ public class ParsedRecordUtilTest {
   }
 
   @Test
-  public void shouldUpdateLeaderStatusWhenLeaderIsValid() {
+  void shouldUpdateLeaderStatusWhenLeaderIsValid() {
     // given
     String content = "{\"leader\":\"01240cvs a2200397   4500\",\"fields\":[{\"001\":\"value\"}]}";
     ParsedRecord parsedRecord = new ParsedRecord().withContent(content);
@@ -91,7 +91,7 @@ public class ParsedRecordUtilTest {
   }
 
   @Test
-  public void shouldNotUpdateLeaderStatusWhenLeaderIsNull() {
+  void shouldNotUpdateLeaderStatusWhenLeaderIsNull() {
     // given
     String content = "{\"fields\":[{\"001\":\"value\"}]}";
     ParsedRecord parsedRecord = new ParsedRecord().withContent(content);
@@ -106,7 +106,7 @@ public class ParsedRecordUtilTest {
   }
 
   @Test
-  public void shouldNotUpdateLeaderStatusWhenLeaderIsShorterThanExpected() {
+  void shouldNotUpdateLeaderStatusWhenLeaderIsShorterThanExpected() {
     // given
     String content = "{\"leader\":\"short\",\"fields\":[{\"001\":\"value\"}]}";
     ParsedRecord parsedRecord = new ParsedRecord().withContent(content);
@@ -121,9 +121,10 @@ public class ParsedRecordUtilTest {
   }
 
   @Test
-  public void shouldGetAdditionalSubfieldValue() {
+  void shouldGetAdditionalSubfieldValue() {
     // given
-    String content = "{\"fields\":[{\"999\":{\"ind1\":\"f\",\"ind2\":\"f\",\"subfields\":[{\"h\":\"valueH\"},{\"b\":\"valueB\"}]}}]}";
+    String content =
+      "{\"fields\":[{\"999\":{\"ind1\":\"f\",\"ind2\":\"f\",\"subfields\":[{\"h\":\"valueH\"},{\"b\":\"valueB\"}]}}]}";
     ParsedRecord parsedRecord = new ParsedRecord().withContent(content);
     AdditionalSubfields additionalSubfield = AdditionalSubfields.H;
 
@@ -135,7 +136,7 @@ public class ParsedRecordUtilTest {
   }
 
   @Test
-  public void shouldGetAdditionalSubfieldValueWhenFieldNotFound() {
+  void shouldGetAdditionalSubfieldValueWhenFieldNotFound() {
     // given
     String content = "{\"fields\":[{\"999\":{\"ind1\":\"f\",\"ind2\":\"f\",\"subfields\":[{\"b\":\"valueB\"}]}}]}";
     ParsedRecord parsedRecord = new ParsedRecord().withContent(content);
@@ -149,7 +150,7 @@ public class ParsedRecordUtilTest {
   }
 
   @Test
-  public void shouldGetAdditionalSubfieldValueWhenFieldsIsNull() {
+  void shouldGetAdditionalSubfieldValueWhenFieldsIsNull() {
     // given
     String content = "{\"fields\":null}";
     ParsedRecord parsedRecord = new ParsedRecord().withContent(content);
@@ -163,9 +164,10 @@ public class ParsedRecordUtilTest {
   }
 
   @Test
-  public void shouldReturnControlFieldValueWhenFieldExists() {
+  void shouldReturnControlFieldValueWhenFieldExists() {
     // given
-    String content = "{\"leader\":\"01240cvs a2200397   4500\",\"fields\":[{\"001\":\"value001\"},{\"003\":\"value003\"}]}";
+    String content =
+      "{\"leader\":\"01240cvs a2200397   4500\",\"fields\":[{\"001\":\"value001\"},{\"003\":\"value003\"}]}";
     ParsedRecord parsedRecord = new ParsedRecord().withContent(content);
     Record srsRecord = new Record().withParsedRecord(parsedRecord);
 
@@ -177,9 +179,10 @@ public class ParsedRecordUtilTest {
   }
 
   @Test
-  public void shouldReturnNullWhenFieldDoesNotExist() {
+  void shouldReturnNullWhenFieldDoesNotExist() {
     // given
-    String content = "{\"leader\":\"01240cvs a2200397   4500\",\"fields\":[{\"001\":\"value001\"},{\"003\":\"value003\"}]}";
+    String content =
+      "{\"leader\":\"01240cvs a2200397   4500\",\"fields\":[{\"001\":\"value001\"},{\"003\":\"value003\"}]}";
     ParsedRecord parsedRecord = new ParsedRecord().withContent(content);
     Record srsRecord = new Record().withParsedRecord(parsedRecord);
 
@@ -191,7 +194,7 @@ public class ParsedRecordUtilTest {
   }
 
   @Test
-  public void shouldReturnNullWhenParsedRecordIsNull() {
+  void shouldReturnNullWhenParsedRecordIsNull() {
     // given
     Record srsRecord = new Record().withParsedRecord(null);
 
@@ -203,7 +206,7 @@ public class ParsedRecordUtilTest {
   }
 
   @Test
-  public void shouldReturnNullWhenContentIsNull() {
+  void shouldReturnNullWhenContentIsNull() {
     // given
     ParsedRecord parsedRecord = new ParsedRecord().withContent(null);
     Record srsRecord = new Record().withParsedRecord(parsedRecord);
@@ -216,7 +219,7 @@ public class ParsedRecordUtilTest {
   }
 
   @Test
-  public void shouldReturnNullWhenContentIsInvalidJson() {
+  void shouldReturnNullWhenContentIsInvalidJson() {
     // given
     ParsedRecord parsedRecord = new ParsedRecord().withContent("invalid json");
     Record srsRecord = new Record().withParsedRecord(parsedRecord);

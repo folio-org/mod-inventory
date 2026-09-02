@@ -1,24 +1,24 @@
 package org.folio.inventory.dataimport.consumers;
 
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.folio.inventory.KafkaTest;
-import org.folio.inventory.MarcBibUpdateConsumerVerticle;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(VertxUnitRunner.class)
-public class MarcBibUpdateConsumerVerticleTest extends KafkaTest {
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+import support.KafkaTest;
+import org.folio.inventory.MarcBibUpdateConsumerVerticle;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+@ExtendWith(VertxExtension.class)
+class MarcBibUpdateConsumerVerticleTest extends KafkaTest {
 
   @Test
-  public void shouldDeployVerticle(TestContext context) {
-    Async async = context.async();
+  void shouldDeployVerticle(VertxTestContext testContext) {
     vertxAssistant.getVertx()
       .deployVerticle(MarcBibUpdateConsumerVerticle.class.getName(), deploymentOptions)
-      .onComplete(ar -> {
-        context.assertTrue(ar.succeeded());
-        async.complete();
-      });
+      .onComplete(ar -> testContext.verify(() -> {
+        assertTrue(ar.succeeded());
+        testContext.completeNow();
+      }));
   }
 }

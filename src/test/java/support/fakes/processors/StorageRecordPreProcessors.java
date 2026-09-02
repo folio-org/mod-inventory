@@ -1,24 +1,22 @@
 package support.fakes.processors;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
+import static org.folio.inventory.support.JsonHelper.getNestedProperty;
+
 import api.ApiTestSuite;
-import api.support.http.StorageInterfaceUrls;
 import io.vertx.core.json.JsonObject;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-
-import java.net.MalformedURLException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicLong;
-
-import static java.util.concurrent.CompletableFuture.completedFuture;
-import static org.folio.inventory.support.JsonHelper.getNestedProperty;
+import support.http.StorageInterfaceUrls;
 
 public final class StorageRecordPreProcessors {
   private static final AtomicLong hridSequence = new AtomicLong(1L);
@@ -47,7 +45,7 @@ public final class StorageRecordPreProcessors {
 
     CompletableFuture<JsonObject> holdings = completedFuture(new JsonObject());
     if (StringUtils.isBlank(newItem.getString(TEMPORARY_LOCATION_PROPERTY))
-      && StringUtils.isBlank(newItem.getString(PERMANENT_LOCATION_PROPERTY))) {
+        && StringUtils.isBlank(newItem.getString(PERMANENT_LOCATION_PROPERTY))) {
 
       holdings = findHoldingForItem(tenant, newItem);
     }
@@ -118,8 +116,8 @@ public final class StorageRecordPreProcessors {
 
       if (!Objects.equals(oldStatus, newStatus)) {
         JsonObject newStatusObject = newItem.containsKey("status")
-          ? newItem.getJsonObject("status")
-          : new JsonObject();
+                                     ? newItem.getJsonObject("status")
+                                     : new JsonObject();
 
         newStatusObject = newStatusObject.put("date",
           DateTime.now(DateTimeZone.UTC)
@@ -132,24 +130,7 @@ public final class StorageRecordPreProcessors {
     });
   }
 
-  private static CompletableFuture<JsonObject> getHoldingById(String tenant, String id) {
-    if (StringUtils.isBlank(id)) {
-      return completedFuture(new JsonObject());
-    }
-
-    try {
-      return ApiTestSuite.createOkapiHttpClient(tenant).get(
-        StorageInterfaceUrls.holdingStorageUrl("?query=id=" + id))
-        .thenApply(
-          response -> response.getJson().getJsonArray("holdingsRecords").getJsonObject(0))
-        .toCompletableFuture();
-    } catch (MalformedURLException ex) {
-      return CompletableFuture.failedFuture(ex);
-    }
-  }
-
-  public static RecordPreProcessor setHridProcessor(
-    String hridPrefix) {
+  public static RecordPreProcessor setHridProcessor(String hridPrefix) {
 
     return (tenant, oldEntity, newEntity) -> {
       if (StringUtils.isBlank(newEntity.getString("hrid"))) {
@@ -160,6 +141,18 @@ public final class StorageRecordPreProcessors {
 
       return completedFuture(newEntity);
     };
+  }
+
+  private static CompletableFuture<JsonObject> getHoldingById(String tenant, String id) {
+    if (StringUtils.isBlank(id)) {
+      return completedFuture(new JsonObject());
+    }
+
+    return ApiTestSuite.createOkapiHttpClient(tenant).get(
+        StorageInterfaceUrls.holdingStorageUrl("?query=id=" + id))
+      .thenApply(
+        response -> response.getJson().getJsonArray("holdingsRecords").getJsonObject(0))
+      .toCompletableFuture();
   }
 
   private static CompletableFuture<JsonObject> findHoldingForItem(String tenant, JsonObject item) {

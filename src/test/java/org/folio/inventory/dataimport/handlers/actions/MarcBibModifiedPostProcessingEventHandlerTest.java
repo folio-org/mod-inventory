@@ -1,14 +1,41 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import static org.folio.ActionProfile.Action.MODIFY;
+import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
+import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
+import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
+import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
+import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
-import org.folio.inventory.TestUtil;
+import support.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
@@ -22,47 +49,21 @@ import org.folio.inventory.support.http.client.Response;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.AdditionalInfo;
 import org.folio.rest.jaxrs.model.MappingDetail;
-import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 import org.hamcrest.Matchers;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
-
-import static org.folio.ActionProfile.Action.MODIFY;
-import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
-import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
-import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
-import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
-import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
-import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.when;
-
-@RunWith(MockitoJUnitRunner.class)
-public class MarcBibModifiedPostProcessingEventHandlerTest {
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
+class MarcBibModifiedPostProcessingEventHandlerTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
@@ -71,6 +72,29 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
   private static final String OKAPI_URL = "http://localhost";
   private static final String TENANT_ID = "diku";
   private static final String CENTRAL_TENANT_ID = "centralTenantId";
+
+  private final ActionProfile actionProfile = new ActionProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Update item-SR")
+    .withAction(MODIFY)
+    .withFolioRecord(ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC);
+
+  private final MappingProfile mappingProfile = new MappingProfile()
+    .withId(UUID.randomUUID().toString())
+    .withName("Modify MARC bib")
+    .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
+    .withExistingRecordType(MARC_BIBLIOGRAPHIC)
+    .withMappingDetails(new MappingDetail());
+
+  private final ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+    .withProfileId(actionProfile.getId())
+    .withContentType(ACTION_PROFILE)
+    .withContent(JsonObject.mapFrom(actionProfile).getMap())
+    .withChildSnapshotWrappers(Collections.singletonList(
+      new ProfileSnapshotWrapper()
+        .withProfileId(mappingProfile.getId())
+        .withContentType(MAPPING_PROFILE)
+        .withContent(JsonObject.mapFrom(mappingProfile).getMap())));
 
   @Mock
   private Storage mockedStorage;
@@ -81,40 +105,16 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
   @Mock
   private MappingMetadataCache mappingMetadataCache;
 
-  private JsonObject mappingRules;
-  private Record record;
+  private Record marcRecord;
   private Instance existingInstance;
+
   private MarcBibModifiedPostProcessingEventHandler marcBibModifiedEventHandler;
 
-  private ActionProfile actionProfile = new ActionProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Update item-SR")
-    .withAction(MODIFY)
-    .withFolioRecord(ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC);
-
-  private MappingProfile mappingProfile = new MappingProfile()
-    .withId(UUID.randomUUID().toString())
-    .withName("Modify MARC bib")
-    .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
-    .withExistingRecordType(MARC_BIBLIOGRAPHIC)
-    .withMappingDetails(new MappingDetail());
-
-  private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
-    .withProfileId(actionProfile.getId())
-    .withContentType(ACTION_PROFILE)
-    .withContent(JsonObject.mapFrom(actionProfile).getMap())
-    .withChildSnapshotWrappers(Collections.singletonList(
-      new ProfileSnapshotWrapper()
-        .withProfileId(mappingProfile.getId())
-        .withContentType(MAPPING_PROFILE)
-        .withContent(JsonObject.mapFrom(mappingProfile).getMap())));
-
-  @Before
-  public void setUp() throws IOException {
-    mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
+  @BeforeEach
+  void setUp() {
     existingInstance = Instance.fromJson(new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH)));
-    record = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class);
-    record.getParsedRecord().withContent(JsonObject.mapFrom(record.getParsedRecord().getContent()).encode());
+    marcRecord = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class);
+    marcRecord.getParsedRecord().withContent(JsonObject.mapFrom(marcRecord.getParsedRecord().getContent()).encode());
 
     when(mockedStorage.getInstanceCollection(any(Context.class))).thenReturn(mockedInstanceCollection);
 
@@ -137,20 +137,24 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
       return null;
     }).when(mockedInstanceCollection).update(any(Instance.class), any(Consumer.class), any(Consumer.class));
 
-    Mockito.when(mappingMetadataCache.get(anyString(), any(Context.class)))
+    when(mappingMetadataCache.get(anyString(), any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
-        .withMappingRules(mappingRules.encode())
+        .withMappingRules(new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH)).encode())
         .withMappingParams(Json.encode(new MappingParameters())))));
 
-    PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(ctxt -> mockedOkapiHttpClient);
-    marcBibModifiedEventHandler = new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(mockedStorage), precedingSucceedingTitlesHelper, mappingMetadataCache);
+    PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper =
+      new PrecedingSucceedingTitlesHelper(ctxt -> mockedOkapiHttpClient);
+    marcBibModifiedEventHandler =
+      new MarcBibModifiedPostProcessingEventHandler(new InstanceUpdateDelegate(mockedStorage),
+        precedingSucceedingTitlesHelper, mappingMetadataCache);
   }
 
   @Test
-  public void shouldUpdateInstanceAtCentralTenantIfCentralTenantIdExistsInContext() throws InterruptedException, ExecutionException, TimeoutException {
+  void shouldUpdateInstanceAtCentralTenantIfCentralTenantIdExistsInContext()
+    throws InterruptedException, ExecutionException, TimeoutException {
     // given
     HashMap<String, String> payloadContext = new HashMap<>();
-    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
     payloadContext.put("CENTRAL_TENANT_ID", CENTRAL_TENANT_ID);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -159,7 +163,7 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
       .withContext(payloadContext)
       .withTenant(TENANT_ID)
       .withOkapiUrl(OKAPI_URL)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifiedEventHandler.handle(dataImportEventPayload);
@@ -169,33 +173,38 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
     Instance updatedInstance = Instance.fromJson(instanceJson);
 
     // then
-    Mockito.verify(mappingMetadataCache).get(eq(dataImportEventPayload.getJobExecutionId()), argThat(context -> context.getTenantId().equals(TENANT_ID)));
-    Mockito.verify(mockedStorage).getInstanceCollection(argThat(context -> context.getTenantId().equals(CENTRAL_TENANT_ID)));
-    Assert.assertEquals(existingInstance.getId(), instanceJson.getString("id"));
-    Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
-    Assert.assertNotNull(updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
-    Assert.assertNotNull(updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst().get());
-    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().get(0));
-    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf", updatedInstance.getNatureOfContentTermIds().get(0));
-    Assert.assertNotNull(updatedInstance.getSubjects());
-    Assert.assertEquals(1, updatedInstance.getSubjects().size());
-    assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
-    Assert.assertNotNull(updatedInstance.getNotes());
-    Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
+    verify(mappingMetadataCache).get(eq(dataImportEventPayload.getJobExecutionId()),
+      argThat(context -> context.getTenantId().equals(TENANT_ID)));
+    verify(mockedStorage).getInstanceCollection(argThat(context -> context.getTenantId().equals(CENTRAL_TENANT_ID)));
+    assertEquals(existingInstance.getId(), instanceJson.getString("id"));
+    assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
+    assertNotNull(
+      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
+    assertNotNull(
+      updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst()
+        .get());
+    assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().getFirst());
+    assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf",
+      updatedInstance.getNatureOfContentTermIds().getFirst());
+    assertNotNull(updatedInstance.getSubjects());
+    assertEquals(1, updatedInstance.getSubjects().size());
+    assertThat(updatedInstance.getSubjects().getFirst().getValue(), Matchers.containsString("additional subfield"));
+    assertNotNull(updatedInstance.getNotes());
+    assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note);
   }
 
   @Test
-  public void shouldUpdateInstance() throws InterruptedException, ExecutionException, TimeoutException {
+  void shouldUpdateInstance() throws InterruptedException, ExecutionException, TimeoutException {
     // given
     HashMap<String, String> payloadContext = new HashMap<>();
-    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withOkapiUrl(OKAPI_URL)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifiedEventHandler.handle(dataImportEventPayload);
@@ -205,21 +214,26 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
     Instance updatedInstance = Instance.fromJson(instanceJson);
 
     // then
-    Assert.assertEquals(existingInstance.getId(), instanceJson.getString("id"));
-    Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
-    Assert.assertNotNull(updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
-    Assert.assertNotNull(updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst().get());
-    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().get(0));
-    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf", updatedInstance.getNatureOfContentTermIds().get(0));
-    Assert.assertNotNull(updatedInstance.getSubjects());
-    Assert.assertEquals(1, updatedInstance.getSubjects().size());
-    assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
-    Assert.assertNotNull(updatedInstance.getNotes());
-    Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
+    assertEquals(existingInstance.getId(), instanceJson.getString("id"));
+    assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
+    assertNotNull(
+      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
+    assertNotNull(
+      updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst()
+        .get());
+    assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().getFirst());
+    assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf",
+      updatedInstance.getNatureOfContentTermIds().getFirst());
+    assertNotNull(updatedInstance.getSubjects());
+    assertEquals(1, updatedInstance.getSubjects().size());
+    assertThat(updatedInstance.getSubjects().getFirst().getValue(), Matchers.containsString("additional subfield"));
+    assertNotNull(updatedInstance.getNotes());
+    assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note);
   }
 
   @Test
-  public void shouldUpdateInstanceWithDiscoverySuppressedAndNotSetStaffSuppressed() throws InterruptedException, ExecutionException, TimeoutException, IOException {
+  void shouldUpdateInstanceWithDiscoverySuppressedAndNotSetStaffSuppressed()
+    throws InterruptedException, ExecutionException, TimeoutException {
     // given
     HashMap<String, String> payloadContext = new HashMap<>();
     Record discoverySuppressedRecord = Json.decodeValue(TestUtil.readFileFromPath(RECORD_PATH), Record.class)
@@ -240,7 +254,7 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withOkapiUrl(OKAPI_URL)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifiedEventHandler.handle(dataImportEventPayload);
@@ -250,51 +264,57 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
     Instance updatedInstance = Instance.fromJson(instanceJson);
 
     // then
-    Assert.assertEquals(existingInstance.getId(), instanceJson.getString("id"));
-    Assert.assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
-    Assert.assertNotNull(updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
-    Assert.assertNotNull(updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst().get());
-    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().get(0));
-    Assert.assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf", updatedInstance.getNatureOfContentTermIds().get(0));
-    Assert.assertTrue(updatedInstance.getDiscoverySuppress());
-    Assert.assertFalse(updatedInstance.getStaffSuppress());
-    Assert.assertNotNull(updatedInstance.getSubjects());
-    Assert.assertEquals(1, updatedInstance.getSubjects().size());
-    assertThat(updatedInstance.getSubjects().get(0).getValue(), Matchers.containsString("additional subfield"));
-    Assert.assertNotNull(updatedInstance.getNotes());
-    Assert.assertEquals("Adding a note", updatedInstance.getNotes().get(0).note);
+    assertEquals(existingInstance.getId(), instanceJson.getString("id"));
+    assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
+    assertNotNull(
+      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
+    assertNotNull(
+      updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst()
+        .get());
+    assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().getFirst());
+    assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf",
+      updatedInstance.getNatureOfContentTermIds().getFirst());
+    assertTrue(updatedInstance.getDiscoverySuppress());
+    assertFalse(updatedInstance.getStaffSuppress());
+    assertNotNull(updatedInstance.getSubjects());
+    assertEquals(1, updatedInstance.getSubjects().size());
+    assertThat(updatedInstance.getSubjects().getFirst().getValue(), Matchers.containsString("additional subfield"));
+    assertNotNull(updatedInstance.getNotes());
+    assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note);
   }
 
-
-  @Test(expected = ExecutionException.class)
-  public void shouldNotUpdateInstanceIfOLErrorExist() throws InterruptedException, ExecutionException, TimeoutException {
+  @Test
+  void shouldNotUpdateInstanceIfOLErrorExist() {
     HashMap<String, String> payloadContext = new HashMap<>();
-    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withOkapiUrl(OKAPI_URL)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure("Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
+      failureHandler.accept(new Failure(
+        "Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
+        409));
       return null;
     }).when(mockedInstanceCollection).update(any(), any(), any());
 
     CompletableFuture<DataImportEventPayload> future = marcBibModifiedEventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.SECONDS);
+    assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
   }
 
   @Test
-  public void shouldRemovePrecedingTitlesOnInstanceUpdateWhenIncomingRecordHasNot() throws InterruptedException, ExecutionException, TimeoutException {
+  void shouldRemovePrecedingTitlesOnInstanceUpdateWhenIncomingRecordHasNot()
+    throws InterruptedException, ExecutionException {
     // given
     JsonArray precedingTitlesJson = new JsonArray().add(new JsonObject()
       .put(PrecedingSucceedingTitle.TITLE_KEY, "Butterflies in the snow"));
 
-    Instance existingInstance = Instance.fromJson(new JsonObject()
+    Instance originalInstance = Instance.fromJson(new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put(Instance.TITLE_KEY, "Jewish life")
       .put(Instance.PRECEDING_TITLES_KEY, precedingTitlesJson));
@@ -305,104 +325,103 @@ public class MarcBibModifiedPostProcessingEventHandlerTest {
 
     doAnswer(invocationOnMock -> {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
-      successHandler.accept(new Success<>(existingInstance));
+      successHandler.accept(new Success<>(originalInstance));
       return null;
     }).when(mockedInstanceCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
 
     HashMap<String, String> payloadContext = new HashMap<>();
-    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(payloadContext)
       .withOkapiUrl(OKAPI_URL)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifiedEventHandler.handle(dataImportEventPayload);
 
     // then
     DataImportEventPayload eventPayload = future.get();
-    Assert.assertNotNull(eventPayload);
+    assertNotNull(eventPayload);
     Instance updatedInstance = Instance.fromJson(new JsonObject(eventPayload.getContext().get(INSTANCE.value())));
-    Assert.assertNotNull(existingInstance.getPrecedingTitles());
-    Assert.assertEquals(existingInstance.getId(), updatedInstance.getId());
-    Assert.assertTrue(updatedInstance.getPrecedingTitles().isEmpty());
+    assertNotNull(originalInstance.getPrecedingTitles());
+    assertEquals(originalInstance.getId(), updatedInstance.getId());
+    assertTrue(updatedInstance.getPrecedingTitles().isEmpty());
   }
 
   @Test
-  public void shouldReturnCompletedFutureWhenParsedContentHasNoInstanceId() {
+  void shouldReturnCompletedFutureWhenParsedContentHasNoInstanceId() {
     //given
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent("{}"));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent("{}"));
 
     HashMap<String, String> payloadContext = new HashMap<>();
-    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType("DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING")
       .withContext(payloadContext)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifiedEventHandler.handle(dataImportEventPayload);
 
     // then
-    future.whenComplete((payload, throwable) -> Assert.assertNull(throwable));
+    future.whenComplete((payload, throwable) -> assertNull(throwable));
   }
 
-  @Test(expected = ExecutionException.class)
-  public void shouldReturnFailedFutureWhenHasNoMarcRecord()
-    throws InterruptedException, ExecutionException, TimeoutException {
+  @Test
+  void shouldReturnFailedFutureWhenHasNoMarcRecord() {
     // given
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value())
       .withContext(new HashMap<>())
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifiedEventHandler.handle(dataImportEventPayload);
 
     // then
-    future.get(5, TimeUnit.SECONDS);
+    assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
   }
 
   @Test
-  public void shouldReturnTrueWhenHandlerIsEligibleForProfileAndEvent() {
+  void shouldReturnTrueWhenHandlerIsEligibleForProfileAndEvent() {
     // given
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType("DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING")
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().get(0));
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     // when
     boolean isEligible = marcBibModifiedEventHandler.isEligible(dataImportEventPayload);
 
     //then
-    Assert.assertTrue(isEligible);
+    assertTrue(isEligible);
   }
 
   @Test
-  public void shouldReturnFalseWhenHandlerIsNotEligibleForProfile() {
+  void shouldReturnFalseWhenHandlerIsNotEligibleForProfile() {
     // given
-    ActionProfile actionProfile = new ActionProfile()
+    ActionProfile instanceProfile = new ActionProfile()
       .withId(UUID.randomUUID().toString())
       .withName("Create instance")
       .withAction(ActionProfile.Action.CREATE)
       .withFolioRecord(ActionProfile.FolioRecord.INSTANCE);
 
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+    ProfileSnapshotWrapper instanceProfileSnapshot = new ProfileSnapshotWrapper()
       .withContentType(ACTION_PROFILE)
-      .withContent(actionProfile);
+      .withContent(instanceProfile);
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
-      .withCurrentNode(profileSnapshotWrapper);
+      .withCurrentNode(instanceProfileSnapshot);
 
     // when
     boolean isEligible = marcBibModifiedEventHandler.isEligible(dataImportEventPayload);
 
     //then
-    Assert.assertFalse(isEligible);
+    assertFalse(isEligible);
   }
 
   private Response getOkResponse(String body) {

@@ -25,6 +25,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.HttpStatus;
+import org.folio.dataimport.util.FolioHeaders;
 import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.client.wrappers.SourceStorageSnapshotsClientWrapper;
 import org.folio.inventory.common.Context;
@@ -250,11 +251,24 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   public SourceStorageRecordsClient getSourceStorageRecordsClient(String okapiUrl, String token, String tenantId, String userId, String requestId) {
-    return new SourceStorageRecordsClientWrapper(okapiUrl, tenantId, token, userId, requestId, getHttpClient());
+    var folioHeaders = FolioHeaders.builder()
+      .connectionUrl(okapiUrl)
+      .userId(userId)
+      .token(token)
+      .requestId(requestId)
+      .tenant(tenantId);
+    return new SourceStorageRecordsClientWrapper(folioHeaders, httpClient);
   }
 
-  public SourceStorageSnapshotsClient getSourceStorageSnapshotsClient(String okapiUrl, String token, String tenantId, String userId, String requestId) {
-    return new SourceStorageSnapshotsClientWrapper(okapiUrl, tenantId, token, userId, requestId, getHttpClient());
+  public SourceStorageSnapshotsClient getSourceStorageSnapshotsClient(String okapiUrl, String token,
+                                                                      String tenantId, String userId, String requestId) {
+    var folioHeaders = FolioHeaders.builder()
+      .connectionUrl(okapiUrl)
+      .userId(userId)
+      .token(token)
+      .requestId(requestId)
+      .tenant(tenantId);
+    return new SourceStorageSnapshotsClientWrapper(folioHeaders, httpClient);
   }
 
   private Record encodeParsedRecordContent(Record srcRecord) {

@@ -1,34 +1,36 @@
 package org.folio.inventory.consortium.util;
 
 import static org.folio.inventory.consortium.util.MarcRecordUtil.removeFieldFromMarcRecord;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import org.folio.ParsedRecord;
 import org.folio.Record;
-import org.folio.inventory.TestUtil;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import support.TestUtil;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-@RunWith(VertxUnitRunner.class)
-public class MarcRecordUtilTest {
+class MarcRecordUtilTest {
+
   private static final String PARSED_MARC_RECORD_PATH = "src/test/resources/marc/parsedRecordWith9Subfield.json";
-  private static final String PARSED_CONTENT_WITHOUT_9_SUBFIELDS = "{\"fields\":[{\"001\":\"ybp7406411\"},{\"245\":{\"subfields\":[{\"a\":\"title\"},{\"b\":\"remainder_of_title\"},{\"c\":\"state_of_responsibility\"},{\"f\":\"inclusive_dates\"},{\"g\":\"bulk_dates\"},{\"h\":\"medium\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"245\":{\"subfields\":[{\"a\":\"title\"},{\"b\":\"remainder_of_title\"},{\"c\":\"state_of_responsibility\"},{\"f\":\"inclusive_dates\"},{\"g\":\"bulk_dates\"},{\"h\":\"medium\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"248\":{\"subfields\":[{\"a\":\"title\"},{\"b\":\"remainder_of_title\"},{\"c\":\"state_of_responsibility\"},{\"f\":\"inclusive_dates\"},{\"g\":\"bulk_dates\"},{\"h\":\"medium\"},{\"9\":\"e84e4dd4-9d27-4f42-8fda-408d78c7f7ee\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"700\":{\"subfields\":[{\"a\":\"personal_name_1\"},{\"b\":\"numeration_1\"},{\"9\":\"3f2923d3-6f8e-41a6-94e1-09eaf32872e0\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"700\":{\"subfields\":[{\"a\":\"personal_name_2\"},{\"b\":\"numeration_2\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+  private static final String PARSED_CONTENT_WITHOUT_9_SUBFIELDS =
+    "{\"fields\":[{\"001\":\"ybp7406411\"},{\"245\":{\"subfields\":[{\"a\":\"title\"},{\"b\":\"remainder_of_title\"},{\"c\":\"state_of_responsibility\"},{\"f\":\"inclusive_dates\"},{\"g\":\"bulk_dates\"},{\"h\":\"medium\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"245\":{\"subfields\":[{\"a\":\"title\"},{\"b\":\"remainder_of_title\"},{\"c\":\"state_of_responsibility\"},{\"f\":\"inclusive_dates\"},{\"g\":\"bulk_dates\"},{\"h\":\"medium\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"248\":{\"subfields\":[{\"a\":\"title\"},{\"b\":\"remainder_of_title\"},{\"c\":\"state_of_responsibility\"},{\"f\":\"inclusive_dates\"},{\"g\":\"bulk_dates\"},{\"h\":\"medium\"},{\"9\":\"e84e4dd4-9d27-4f42-8fda-408d78c7f7ee\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"700\":{\"subfields\":[{\"a\":\"personal_name_1\"},{\"b\":\"numeration_1\"},{\"9\":\"3f2923d3-6f8e-41a6-94e1-09eaf32872e0\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"700\":{\"subfields\":[{\"a\":\"personal_name_2\"},{\"b\":\"numeration_2\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
   private static final String UUID_1 = "e84e4dd4-9d27-4f42-8fda-408d78c7f7ee";
   private static final String UUID_3 = "7e11b935-2b3a-4e79-8e57-5cde4561a2a8";
-  private Record marcRecord;
-  private static final String fieldTagToRemove = "001";
+  private static final String FIELD_TAG_TO_REMOVE = "001";
 
-  @Before
-  public void setUp() {
+  private Record marcRecord;
+
+  @BeforeEach
+  void setUp() {
     marcRecord = new Record();
     marcRecord.setParsedRecord(new ParsedRecord());
     ParsedRecord parsedRecord = marcRecord.getParsedRecord();
@@ -45,7 +47,7 @@ public class MarcRecordUtilTest {
   }
 
   @Test
-  public void shouldRemove9subfieldsThatContainValue() throws IOException {
+  void shouldRemove9subfieldsThatContainValue() throws IOException {
     // given
     String recordId = UUID.randomUUID().toString();
 
@@ -53,38 +55,36 @@ public class MarcRecordUtilTest {
     ParsedRecord parsedRecord = new ParsedRecord();
     String leader = new JsonObject(parsedRecordContent).getString("leader");
     parsedRecord.setContent(parsedRecordContent);
-    Record record = new Record().withId(recordId).withParsedRecord(parsedRecord);
+    Record testRecord = new Record().withId(recordId).withParsedRecord(parsedRecord);
     // when
-    MarcRecordUtil.removeSubfieldsThatContainsValues(record, List.of("245", "700"), '9', List.of(UUID_1, UUID_3));
+    MarcRecordUtil.removeSubfieldsThatContainsValues(testRecord, List.of("245", "700"), '9', List.of(UUID_1, UUID_3));
     // then
     JsonObject content = new JsonObject(parsedRecord.getContent().toString());
     JsonArray fields = content.getJsonArray("fields");
     String newLeader = content.getString("leader");
-    Assert.assertNotEquals(leader, newLeader);
-    Assert.assertFalse(fields.isEmpty());
+    assertNotEquals(leader, newLeader);
+    assertFalse(fields.isEmpty());
     content.remove("leader");
-    Assert.assertEquals(PARSED_CONTENT_WITHOUT_9_SUBFIELDS, content.encode());
+    assertEquals(PARSED_CONTENT_WITHOUT_9_SUBFIELDS, content.encode());
   }
 
   @Test
-  public void shouldNotThrowExceptionIfNullMarcRecordDuringRemoveOfSubfield() throws IOException {
+  void shouldNotThrowExceptionIfNullMarcRecordDuringRemoveOfSubfield() {
     // given
     String recordId = UUID.randomUUID().toString();
 
     ParsedRecord parsedRecord = new ParsedRecord();
     parsedRecord.setContent("null");
-    Record record = new Record().withId(recordId).withParsedRecord(parsedRecord);
+    Record testRecord = new Record().withId(recordId).withParsedRecord(parsedRecord);
     // when
-    try {
-      MarcRecordUtil.removeSubfieldsThatContainsValues(record, List.of("245", "700"), '9', List.of(UUID_1, UUID_3));
-    } catch (Exception e) {
-      Assert.fail("Exception thrown");
-    }
+    assertDoesNotThrow(() -> {
+      MarcRecordUtil.removeSubfieldsThatContainsValues(testRecord, List.of("245", "700"), '9', List.of(UUID_1, UUID_3));
+    }, "Exception thrown");
   }
 
   @Test
-  public void removeFieldFromMarcRecord_Remove001Field() {
-    Record updatedRecord = removeFieldFromMarcRecord(marcRecord, fieldTagToRemove);
+  void removeFieldFromMarcRecord_Remove001Field() {
+    Record updatedRecord = removeFieldFromMarcRecord(marcRecord, FIELD_TAG_TO_REMOVE);
 
     JsonObject content = JsonObject.mapFrom(updatedRecord.getParsedRecord().getContent());
     JsonArray fields = content.getJsonArray("fields");
@@ -93,29 +93,31 @@ public class MarcRecordUtilTest {
 
     for (int i = 0; i < fields.size(); i++) {
       JsonObject field = fields.getJsonObject(i);
-      assertFalse(field.containsKey(fieldTagToRemove));
+      assertFalse(field.containsKey(FIELD_TAG_TO_REMOVE));
     }
   }
 
   @Test
-  public void isSubfieldExistReturnsTrue() {
-    var marcJson = "{\"leader\":\"00000cam a2200000 a 4500\",\"fields\":[{\"100\":{\"subfields\":[{\"a\":\"John Doe\"},{\"9\":\"test\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+  void isSubfieldExistReturnsTrue() {
+    var marcJson =
+      "{\"leader\":\"00000cam a2200000 a 4500\",\"fields\":[{\"100\":{\"subfields\":[{\"a\":\"John Doe\"},{\"9\":\"test\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
     var recordWith9 = new Record();
     var parsedRecord = new ParsedRecord();
     parsedRecord.setContent(marcJson);
     recordWith9.setParsedRecord(parsedRecord);
     var result = MarcRecordUtil.isSubfieldExist(recordWith9, '9');
-    Assert.assertTrue(result);
+    assertTrue(result);
   }
 
   @Test
-  public void isSubfieldExistReturnsFalse() {
-    var marcJson = "{\"leader\":\"00000cam a2200000 a 4500\",\"fields\":[{\"100\":{\"subfields\":[{\"a\":\"John Doe\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+  void isSubfieldExistReturnsFalse() {
+    var marcJson =
+      "{\"leader\":\"00000cam a2200000 a 4500\",\"fields\":[{\"100\":{\"subfields\":[{\"a\":\"John Doe\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
     var recordWithout9 = new Record();
     var parsedRecord = new ParsedRecord();
     parsedRecord.setContent(marcJson);
     recordWithout9.setParsedRecord(parsedRecord);
     var result = MarcRecordUtil.isSubfieldExist(recordWithout9, '9');
-    Assert.assertFalse(result);
+    assertFalse(result);
   }
 }

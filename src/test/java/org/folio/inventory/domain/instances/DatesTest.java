@@ -1,35 +1,31 @@
 package org.folio.inventory.domain.instances;
 
-import io.vertx.core.json.JsonObject;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
-import junitparams.converters.Nullable;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import java.util.UUID;
-
 import static org.folio.inventory.domain.instances.Dates.convertToDates;
 import static org.folio.inventory.domain.instances.Dates.datesToJson;
 import static org.folio.inventory.domain.instances.Dates.retrieveDatesFromJson;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@RunWith(JUnitParamsRunner.class)
-public class DatesTest {
+import io.vertx.core.json.JsonObject;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
-  @Parameters({
+class DatesTest {
+
+  @ParameterizedTest
+  @CsvSource(nullValues = "null", value = {
     "1, 1990, 2002",
     "1, 1990, null",
     "1, null, 2022",
     "null, 1990, 2002",
     "null, 1990, null",
   })
-  @Test
-  public void shouldCreateDatesFromJson(@Nullable String dateTypeId, @Nullable String date1, @Nullable String date2) {
+  void shouldCreateDatesFromJson(String dateTypeId, String date1, String date2) {
     var dates = convertToDates(datesJson(dateTypeId, date1, date2));
 
     assertThat(dates.getDateTypeId(), is(dateTypeId));
@@ -38,24 +34,24 @@ public class DatesTest {
   }
 
   @Test
-  public void shouldNotCreateDatesFromJsonWhenJsonIsNull() {
+  void shouldNotCreateDatesFromJsonWhenJsonIsNull() {
     assertThat(convertToDates(null), nullValue());
   }
 
   @Test
-  public void shouldNotCreateDatesFromJsonWhenAllFieldsAreNull() {
+  void shouldNotCreateDatesFromJsonWhenAllFieldsAreNull() {
     assertThat(convertToDates(datesJson(null, null, null)), nullValue());
   }
 
-  @Parameters({
+  @ParameterizedTest
+  @CsvSource(nullValues = "null", value = {
     "1, 1990, 2002",
     "1, 1990, null",
     "1, null, 2022",
     "null, 1990, 2002",
     "null, 1990, null",
   })
-  @Test
-  public void shouldConvertDatesToJson(@Nullable String dateTypeId, @Nullable String date1, @Nullable String date2) {
+  void shouldConvertDatesToJson(String dateTypeId, String date1, String date2) {
     var json = datesToJson(new Dates(dateTypeId, date1, date2));
 
     assertThat(json.getString("dateTypeId"), is(dateTypeId));
@@ -64,17 +60,17 @@ public class DatesTest {
   }
 
   @Test
-  public void shouldNotConvertDatesToJsonWhenItIsNull() {
+  void shouldNotConvertDatesToJsonWhenItIsNull() {
     assertThat(datesToJson(null), nullValue());
   }
 
   @Test
-  public void shouldNotConvertDatesToJsonWhenAllFieldsAreNull() {
+  void shouldNotConvertDatesToJsonWhenAllFieldsAreNull() {
     assertThat(datesToJson(new Dates(null, null, null)), nullValue());
   }
 
   @Test
-  public void shouldRetrieveDatesFromInstanceJson() {
+  void shouldRetrieveDatesFromInstanceJson() {
     JsonObject instanceAsJson = new JsonObject();
     instanceAsJson.put("id", UUID.randomUUID());
     JsonObject datesObject = new JsonObject();
@@ -88,7 +84,7 @@ public class DatesTest {
   }
 
   @Test
-  public void shouldRetrieveDatesFromInstanceJsonFromJsonForStorageObject() {
+  void shouldRetrieveDatesFromInstanceJsonFromJsonForStorageObject() {
     JsonObject instanceAsJson = new JsonObject();
     instanceAsJson.put("id", UUID.randomUUID());
     JsonObject datesObject = new JsonObject();

@@ -12,6 +12,7 @@ import org.folio.DataImportEventPayload;
 import org.folio.HttpStatus;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
+import org.folio.dataimport.util.FolioHeaders;
 import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.DeleteRuleFor999FieldCache;
@@ -311,8 +312,13 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
   }
 
   public SourceStorageRecordsClient getSourceStorageRecordsClient(Context context) {
-    return new SourceStorageRecordsClientWrapper(context.getOkapiLocation(), context.getTenantId(),
-      context.getToken(), context.getUserId(), context.getRequestId(), client);
+    var folioHeaders = FolioHeaders.builder()
+      .connectionUrl(context.getOkapiLocation())
+      .userId(context.getUserId())
+      .token(context.getToken())
+      .requestId(context.getRequestId())
+      .tenant(context.getTenantId());
+    return new SourceStorageRecordsClientWrapper(folioHeaders, client);
   }
 
   private void preparePayload(DataImportEventPayload dataImportEventPayload) {
