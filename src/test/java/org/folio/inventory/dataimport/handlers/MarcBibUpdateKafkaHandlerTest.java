@@ -113,15 +113,15 @@ class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(payload));
 
-    // when
-    Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
-
-    // then
-    future.onComplete(testContext.succeeding(ar -> testContext.verify(() -> {
-      assertEquals(expectedKafkaRecordKey, ar);
-      verify(1);
-      testContext.completeNow();
-    })));
+    // when + then
+    vertxAssistant.getVertx().runOnContext(v -> {
+      Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+      future.onComplete(testContext.succeeding(ar -> testContext.verify(() -> {
+        assertEquals(expectedKafkaRecordKey, ar);
+        verify(1);
+        testContext.completeNow();
+      })));
+    });
   }
 
   @Test
@@ -141,14 +141,14 @@ class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
     when(mockedInstanceCollection.findByIdAndUpdate(not(eq(INVALID_INSTANCE_ID)), any(), any()))
       .thenThrow(OptimisticLockingException.class).thenReturn(instance);
 
-    // when
-    Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
-
-    // then
-    future.onComplete(testContext.succeeding(ar -> testContext.verify(() -> {
-      verify(2);
-      testContext.completeNow();
-    })));
+    // when + then
+    vertxAssistant.getVertx().runOnContext(v -> {
+      Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+      future.onComplete(testContext.succeeding(ar -> testContext.verify(() -> {
+        verify(2);
+        testContext.completeNow();
+      })));
+    });
   }
 
   @Test
@@ -164,17 +164,17 @@ class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
       .withJobId(UUID.randomUUID().toString());
     when(kafkaRecord.value()).thenReturn(Json.encode(payload));
 
-    // when
-    Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
-
-    // then
-    future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
-      org.junit.jupiter.api.Assertions.assertTrue(
-        cause.getMessage().contains("MappingParameters and mapping rules snapshots were not found by jobId"));
-      verifyNoInteractions(mockedInstanceCollection);
-      Mockito.verify(mappingMetadataCache).getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
-      testContext.completeNow();
-    })));
+    // when + then
+    vertxAssistant.getVertx().runOnContext(v -> {
+      Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+      future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
+        org.junit.jupiter.api.Assertions.assertTrue(
+          cause.getMessage().contains("MappingParameters and mapping rules snapshots were not found by jobId"));
+        verifyNoInteractions(mockedInstanceCollection);
+        Mockito.verify(mappingMetadataCache).getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
+        testContext.completeNow();
+      })));
+    });
   }
 
   @Test
@@ -214,24 +214,22 @@ class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
     when(kafkaRecord.key()).thenReturn(expectedKafkaRecordKey);
     when(kafkaRecord.value()).thenReturn(Json.encode(payload));
 
-    // when
-    var future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
-
-    // then
-    future.onComplete(testContext.succeeding(ar -> testContext.verify(
-      () -> assertEquals(expectedKafkaRecordKey, ar))));
-
-    vertxAssistant.getVertx().runOnContext(v -> testContext.verify(() -> {
-      var reports = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName())
-        .stream().map(ConsumerRecord::value).toList();
-      var report = reports.stream()
-        .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
-        .filter(event -> payload.getJobId().equals(event.getJobId()))
-        .findAny()
-        .orElse(null);
-      assertNull(report);
-      testContext.completeNow();
-    }));
+    // when + then
+    vertxAssistant.getVertx().runOnContext(v -> {
+      var future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+      future.onComplete(testContext.succeeding(ar -> testContext.verify(() -> {
+        assertEquals(expectedKafkaRecordKey, ar);
+        var reports = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName())
+          .stream().map(ConsumerRecord::value).toList();
+        var report = reports.stream()
+          .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
+          .filter(event -> payload.getJobId().equals(event.getJobId()))
+          .findAny()
+          .orElse(null);
+        assertNull(report);
+        testContext.completeNow();
+      })));
+    });
   }
 
   @Test
@@ -257,32 +255,31 @@ class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
     when(mockedInstanceCollection.findByIdAndUpdate(eq(INVALID_INSTANCE_ID), any(), any()))
       .thenThrow(new NotFoundException("Can't find Instance by id: " + marcRecord.getId()));
 
-    // when
-    var future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
-
-    // then
-    future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
-      // future failed as expected — no additional assertion needed here
-    })));
-    vertxAssistant.getVertx().runOnContext(v -> testContext.verify(() -> {
-      var reports = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName())
-        .stream().map(ConsumerRecord::value).toList();
-      assertNotNull(reports);
-      assertFalse(reports.isEmpty());
-      var report = reports.stream()
-        .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
-        .filter(event -> payload.getJobId().equals(event.getJobId()))
-        .findAny()
-        .orElse(null);
-
-      assertNotNull(report);
-      assertEquals(instanceId, report.getInstanceId());
-      assertEquals(FAIL, report.getStatus());
-      assertEquals(payload.getTenant(), report.getTenant());
-      assertEquals(payload.getLinkIds(), report.getLinkIds());
-      assertEquals("Can't find Instance by id: " + marcRecord.getId(), report.getFailCause());
-      testContext.completeNow();
-    }));
+    // when + then
+    vertxAssistant.getVertx().runOnContext(v -> {
+      var future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+      future.onComplete(testContext.failing(cause -> {
+        // sendEventToKafka() runs after promise.fail(); delay to let the Kafka I/O thread deliver
+        // the message to the broker before the consumer polls.
+        vertxAssistant.getVertx().setTimer(1000, timerId -> testContext.verify(() -> {
+          var reports = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName())
+            .stream().map(ConsumerRecord::value).toList();
+          assertFalse(reports.isEmpty());
+          var report = reports.stream()
+            .map(value -> new JsonObject(value).mapTo(LinkUpdateReport.class))
+            .filter(event -> payload.getJobId().equals(event.getJobId()))
+            .findAny()
+            .orElse(null);
+          assertNotNull(report);
+          assertEquals(instanceId, report.getInstanceId());
+          assertEquals(FAIL, report.getStatus());
+          assertEquals(payload.getTenant(), report.getTenant());
+          assertEquals(payload.getLinkIds(), report.getLinkIds());
+          assertEquals("Can't find Instance by id: " + marcRecord.getId(), report.getFailCause());
+          testContext.completeNow();
+        }));
+      }));
+    });
   }
 
   @SneakyThrows

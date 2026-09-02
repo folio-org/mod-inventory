@@ -137,7 +137,7 @@ class ConsortiumServiceTest extends BaseWireMockTest {
     consortiumService.createShadowInstance(context, instanceId.toString(),
         new ConsortiumConfiguration(centralTenantId, consortiumId))
       .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
-        WireMock.verify(
+        WIRE_MOCK.verify(
           WireMock.postRequestedFor(WireMock.urlEqualTo("/consortia/" + consortiumId + "/sharing/instances"))
             .withHeader(XOkapiHeaders.TENANT, equalTo(centralTenantId))
             .withHeader(XOkapiHeaders.TOKEN, equalTo(token))

@@ -3,7 +3,6 @@ package org.folio.inventory.dataimport.handlers.actions;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
-import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static io.vertx.core.buffer.Buffer.buffer;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.completedStage;
@@ -495,7 +494,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
-    verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
+    WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
   @Test
@@ -574,7 +573,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     }));
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(),
       argThat(this::verifyParsedContentSerialization));
-    verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
+    WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
   @Test
@@ -649,7 +648,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
       return r.getState() == Record.State.ACTUAL && r.getAdditionalInfo().getSuppressDiscovery() &&
              !r.getDeleted() && leader.isPresent() && !leader.get().equals(LEADER_STATUS_DELETED);
     }));
-    verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
+    WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
   @Test
@@ -817,7 +816,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
       snapshotCaptor.capture());
     assertEquals(consortiumTenant, contextCaptorForSnapshot.getValue().getTenantId());
     assertEquals(marcRecord.getSnapshotId(), snapshotCaptor.getValue().getJobExecutionId());
-    verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
+    WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
   @Test
@@ -1513,7 +1512,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     assertEquals(MARC_INSTANCE_SOURCE, createdInstance.getString("source"));
     assertTrue(actualDataImportEventPayload.getContext().containsKey(MARC_BIB_RECORD_CREATED));
     assertTrue(Boolean.parseBoolean(actualDataImportEventPayload.getContext().get(MARC_BIB_RECORD_CREATED)));
-    verify(0, getRequestedFor(new UrlPathPattern(new RegexPattern(SOURCE_RECORDS_PATH + "/.{36}"), true)));
+    WIRE_MOCK.verify(0, getRequestedFor(new UrlPathPattern(new RegexPattern(SOURCE_RECORDS_PATH + "/.{36}"), true)));
 
     verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
     assertNotNull(recordId, recordCaptor.getValue().getMatchedId());
@@ -1587,7 +1586,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
     verify(sourceStorageClient, times(0)).postSourceStorageRecords(any(), any());
-    verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
+    WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
   @Test
@@ -1658,7 +1657,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     verify(sourceStorageClient, times(1))
       .postSourceStorageRecords(argThat(r -> r.getMatchedId() != null && r.getId() != null));
     verify(sourceStorageClient, times(0)).putSourceStorageRecordsGenerationById(any(), any());
-    verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
+    WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
   @Test
@@ -1733,7 +1732,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
-    verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
+    WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
   @Test
@@ -1807,7 +1806,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     assertThat(createdInstance.getString("discoverySuppress"), is("true"));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
-    verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
+    WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
   @Test
@@ -2088,7 +2087,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     var updatedBibContent = new JsonObject(updatedBib).getJsonObject("parsedRecord").getString("content");
     assertThat(updatedBibContent, is(expectedParsedContent));
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
-    verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
+    WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
 
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
     assertThat(recordCaptor.getValue().getParsedRecord().getContent().toString(), containsString(authorityId));

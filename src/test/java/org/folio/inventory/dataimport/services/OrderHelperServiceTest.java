@@ -150,7 +150,7 @@ class OrderHelperServiceTest extends BaseWireMockTest {
       EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(),
         dataImportEventPayload.getOkapiUrl());
 
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
+    WIRE_MOCK.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
     orderHelperService = new OrderHelperServiceImpl(new ProfileSnapshotCache(vertx, client, 3600));
@@ -243,7 +243,7 @@ class OrderHelperServiceTest extends BaseWireMockTest {
       EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(),
         dataImportEventPayload.getOkapiUrl());
 
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
+    WIRE_MOCK.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
     orderHelperService = new OrderHelperServiceImpl(new ProfileSnapshotCache(vertx, client, 3600));
@@ -334,7 +334,7 @@ class OrderHelperServiceTest extends BaseWireMockTest {
       EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(),
         dataImportEventPayload.getOkapiUrl());
 
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
+    WIRE_MOCK.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
     orderHelperService = new OrderHelperServiceImpl(new ProfileSnapshotCache(vertx, client, 3600));

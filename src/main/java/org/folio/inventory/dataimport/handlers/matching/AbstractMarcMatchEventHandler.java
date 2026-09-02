@@ -288,7 +288,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     return consortiumService.getConsortiumConfiguration(context).map(consortiumConfigurationOptional -> {
       consortiumConfigurationOptional.ifPresent(consortiumConfiguration -> {
         recordsMatchingContext.setCentralTenantId(consortiumConfiguration.getCentralTenantId());
-        recordsMatchingContext.setCentralTenantRecordsClient(getSourceStorageRecordsClient(payload));
+        recordsMatchingContext.setCentralTenantRecordsClient(
+          getSourceStorageRecordsClient(payload, consortiumConfiguration.getCentralTenantId()));
       });
       return recordsMatchingContext;
     });
@@ -296,12 +297,16 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
 
   private SourceStorageRecordsClient getSourceStorageRecordsClient(DataImportEventPayload payload) {
+    return getSourceStorageRecordsClient(payload, payload.getTenant());
+  }
+
+  private SourceStorageRecordsClient getSourceStorageRecordsClient(DataImportEventPayload payload, String tenantId) {
     var folioHeaders = FolioHeaders.builder()
       .connectionUrl(payload.getOkapiUrl())
       .userId(payload.getContext().get(USER_ID_HEADER))
       .token(payload.getToken())
       .requestId(payload.getContext().get(EventHandlingUtil.OKAPI_REQUEST_ID))
-      .tenant(payload.getTenant());
+      .tenant(tenantId);
     return new SourceStorageRecordsClientWrapper(folioHeaders, httpClient);
   }
 

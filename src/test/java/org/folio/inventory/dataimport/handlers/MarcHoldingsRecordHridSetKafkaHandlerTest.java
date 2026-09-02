@@ -99,7 +99,7 @@ class MarcHoldingsRecordHridSetKafkaHandlerTest extends BaseWireMockTest {
     MappingParameters mappingParameters = new MappingParameters();
     mappingParameters.withHoldingsTypes(holdings);
 
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
+    WIRE_MOCK.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(new MappingMetadataDto()
         .withMappingParams(Json.encode(mappingParameters))
         .withMappingRules(new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH)).encode())))));
