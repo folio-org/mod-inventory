@@ -15,7 +15,7 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.inventory.common.dao.EventIdStorageDaoImpl;
+import org.folio.inventory.common.dao.EventIdStorageDao;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler;
 import org.folio.inventory.consortium.entities.SharingInstanceEventType;
@@ -46,7 +46,7 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
     HttpClient httpClient = vertx.createHttpClient();
     Storage storage = Storage.basedUpon(config, httpClient);
     SharedInstanceEventIdStorageServiceImpl sharedInstanceEventIdStorageService =
-      new SharedInstanceEventIdStorageServiceImpl(new EventIdStorageDaoImpl(new PostgresClientFactory(vertx)));
+      new SharedInstanceEventIdStorageServiceImpl(new EventIdStorageDao(new PostgresClientFactory(vertx)));
     ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx,
       httpClient, storage, kafkaConfig, sharedInstanceEventIdStorageService);
 

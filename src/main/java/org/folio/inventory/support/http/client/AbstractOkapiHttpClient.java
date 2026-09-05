@@ -1,5 +1,6 @@
 package org.folio.inventory.support.http.client;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import java.net.URL;
 import java.util.Map;
 import java.util.Optional;
@@ -32,13 +33,10 @@ public abstract class AbstractOkapiHttpClient {
     this.headers = createHeadersMap();
   }
 
-  public Map<String, String> getHeaders() {
-    return headers;
-  }
-
   private Map<String, String> createHeadersMap() {
     return Stream.of(
-        Map.entry(HttpHeaders.ACCEPT, Optional.of("application/json, text/plain")),
+        Map.entry(HttpHeaders.ACCEPT, Optional.of(HttpHeaderValues.APPLICATION_JSON.concat(",")
+          .concat(HttpHeaderValues.TEXT_PLAIN).toString())),
         Map.entry(XOkapiHeaders.URL, Optional.ofNullable(this.okapiUrl).map(URL::toString)),
         Map.entry(XOkapiHeaders.TENANT, Optional.ofNullable(this.tenantId)),
         Map.entry(XOkapiHeaders.TOKEN, Optional.ofNullable(this.token)),

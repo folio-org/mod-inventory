@@ -4,7 +4,6 @@ import static api.ApiTestSuite.ID_FOR_FAILURE;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
-import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -15,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static support.fixtures.InstanceFixture.smallAngryPlanet;
 
 import api.ApiTestSuite;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.json.JsonObject;
 import java.util.Arrays;
 import java.util.List;
@@ -61,7 +61,7 @@ public class ItemsApiMoveTest extends ApiTests {
 
     assertThat(moveItemsResponse.statusCode(), is(200));
     assertThat(toList(moveItemsResponse.getJson(), "nonUpdatedIds"), hasSize(0));
-    assertThat(moveItemsResponse.contentType(), containsString(APPLICATION_JSON));
+    assertThat(moveItemsResponse.contentType(), containsString(HttpHeaderValues.APPLICATION_JSON.toString()));
 
     final var firstUpdatedItem = itemsClient.getById(firstItem.getId()).getJson();
     final var secondUpdatedItem = itemsClient.getById(secondItem.getId()).getJson();
@@ -90,7 +90,7 @@ public class ItemsApiMoveTest extends ApiTests {
     final var moveItemsResponse = moveItems(newHoldingsId, nonExistentItemId, item.getId());
 
     assertThat(moveItemsResponse.statusCode(), is(200));
-    assertThat(moveItemsResponse.contentType(), containsString(APPLICATION_JSON));
+    assertThat(moveItemsResponse.contentType(), containsString(HttpHeaderValues.APPLICATION_JSON.toString()));
 
     final var notFoundIds = toListOfStrings(moveItemsResponse.getJson(),
       "nonUpdatedIds");
@@ -108,7 +108,7 @@ public class ItemsApiMoveTest extends ApiTests {
     final var moveItemsResponse = moveItems(null, UUID.randomUUID());
 
     assertThat(moveItemsResponse.statusCode(), is(422));
-    assertThat(moveItemsResponse.contentType(), containsString(APPLICATION_JSON));
+    assertThat(moveItemsResponse.contentType(), containsString(HttpHeaderValues.APPLICATION_JSON.toString()));
 
     assertThat(moveItemsResponse.body(), containsString("errors"));
     assertThat(moveItemsResponse.body(), containsString("toHoldingsRecordId"));
@@ -120,7 +120,7 @@ public class ItemsApiMoveTest extends ApiTests {
     final var moveItemsResponse = moveItems(UUID.randomUUID(), List.of());
 
     assertThat(moveItemsResponse.statusCode(), is(422));
-    assertThat(moveItemsResponse.contentType(), containsString(APPLICATION_JSON));
+    assertThat(moveItemsResponse.contentType(), containsString(HttpHeaderValues.APPLICATION_JSON.toString()));
 
     assertThat(moveItemsResponse.body(), containsString("errors"));
     assertThat(moveItemsResponse.body(), containsString("itemIds"));
@@ -143,7 +143,7 @@ public class ItemsApiMoveTest extends ApiTests {
     final var moveItemsResponse = moveItems(nonExistentHoldingsId, item);
 
     assertThat(moveItemsResponse.statusCode(), is(422));
-    assertThat(moveItemsResponse.contentType(), containsString(APPLICATION_JSON));
+    assertThat(moveItemsResponse.contentType(), containsString(HttpHeaderValues.APPLICATION_JSON.toString()));
 
     assertThat(moveItemsResponse.body(), containsString("errors"));
     assertThat(moveItemsResponse.body(), containsString(nonExistentHoldingsId.toString()));
@@ -201,7 +201,7 @@ public class ItemsApiMoveTest extends ApiTests {
     assertThat(nonUpdatedIdsIds.getFirst(), equalTo(ID_FOR_FAILURE.toString()));
 
     assertThat(moveItemsResponse.statusCode(), is(200));
-    assertThat(moveItemsResponse.contentType(), containsString(APPLICATION_JSON));
+    assertThat(moveItemsResponse.contentType(), containsString(HttpHeaderValues.APPLICATION_JSON.toString()));
 
     final var firstItemUpdated = itemsClient.getById(firstItem.getId()).getJson();
 

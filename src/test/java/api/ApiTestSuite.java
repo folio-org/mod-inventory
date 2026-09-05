@@ -7,6 +7,7 @@ import api.instance.InstanceRelationshipsTest;
 import api.instance.InstancesApiTest;
 import api.instance.PrecedingSucceedingTitlesApiTest;
 import api.isbns.IsbnUtilsApiTest;
+import api.items.ItemAllowedStatusesSchemaTest;
 import api.items.ItemsApiMoveTest;
 import api.items.ItemsApiTest;
 import api.items.ItemsUpdateOwnershipApiTest;
@@ -48,16 +49,22 @@ import support.PgPoolContainer;
 import support.fakes.FakeOkapi;
 import support.http.ResourceClient;
 
+
 @Suite
 @SelectClasses({
-  InstancesApiTest.class,
-  ItemsApiTest.class,
-  IsbnUtilsApiTest.class,
-  PrecedingSucceedingTitlesApiTest.class,
-  InstanceRelationshipsTest.class,
+  AdminApiTest.class,
+  BoundWithTest.class,
+  HoldingsApiMoveTest.class,
   HoldingsApiTest.class,
-  MarkItemWithdrawnApiTest.class,
+  HoldingsUpdateOwnershipApiTest.class,
+  InstanceRelationshipsTest.class,
+  InstancesApiTest.class,
+  InventoryConfigApiTest.class,
+  IsbnUtilsApiTest.class,
+  ItemAllowedStatusesSchemaTest.class,
   ItemsApiMoveTest.class,
+  ItemsApiTest.class,
+  ItemsUpdateOwnershipApiTest.class,
   MarkItemInProcessApiTest.class,
   MarkItemInProcessNonRequestableApiTest.class,
   MarkItemIntellectualItemApiTest.class,
@@ -66,13 +73,9 @@ import support.http.ResourceClient;
   MarkItemRestrictedApiTest.class,
   MarkItemUnavailableApiTest.class,
   MarkItemUnknownApiTest.class,
-  HoldingsApiMoveTest.class,
-  BoundWithTest.class,
+  MarkItemWithdrawnApiTest.class,
+  PrecedingSucceedingTitlesApiTest.class,
   TenantApiTest.class,
-  AdminApiTest.class,
-  InventoryConfigApiTest.class,
-  HoldingsUpdateOwnershipApiTest.class,
-  ItemsUpdateOwnershipApiTest.class,
   TenantItemApiTest.class
 })
 public class ApiTestSuite {
@@ -513,3 +516,4 @@ public class ApiTestSuite {
     }
   }
 }
+

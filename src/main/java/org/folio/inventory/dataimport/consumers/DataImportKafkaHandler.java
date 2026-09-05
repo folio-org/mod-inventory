@@ -26,7 +26,7 @@ import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.inventory.client.InstanceLinkClient;
 import org.folio.inventory.client.OrdersClient;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
+import org.folio.inventory.common.dao.EntityIdStorageDao;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 import org.folio.inventory.consortium.services.ConsortiumService;
@@ -263,16 +263,16 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
 
     EventManager.registerEventHandler(new MatchAuthorityEventHandler(mappingMetadataCache, consortiumService));
     EventManager.registerEventHandler(new CreateItemEventHandler(storage, mappingMetadataCache,
-      new ItemIdStorageService(new EntityIdStorageDaoImpl(postgresClientFactory)), orderHelperService));
+      new ItemIdStorageService(new EntityIdStorageDao(postgresClientFactory)), orderHelperService));
     EventManager.registerEventHandler(new CreateHoldingEventHandler(storage, mappingMetadataCache,
-      new HoldingsIdStorageService(new EntityIdStorageDaoImpl(postgresClientFactory)), orderHelperService,
+      new HoldingsIdStorageService(new EntityIdStorageDao(postgresClientFactory)), orderHelperService,
       consortiumService));
     EventManager.registerEventHandler(
       new CreateInstanceEventHandler(storage, precedingSucceedingTitlesHelper, mappingMetadataCache,
-        new InstanceIdStorageService(new EntityIdStorageDaoImpl(postgresClientFactory)), orderHelperService,
+        new InstanceIdStorageService(new EntityIdStorageDao(postgresClientFactory)), orderHelperService,
         snapshotService, client));
     EventManager.registerEventHandler(new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache,
-      new HoldingsIdStorageService(new EntityIdStorageDaoImpl(postgresClientFactory)), new HoldingsCollectionService(),
+      new HoldingsIdStorageService(new EntityIdStorageDao(postgresClientFactory)), new HoldingsCollectionService(),
       consortiumService));
     EventManager.registerEventHandler(new UpdateMarcHoldingsEventHandler(storage, mappingMetadataCache,
       new KafkaEventPublisher(kafkaConfig, vertx, 100)));

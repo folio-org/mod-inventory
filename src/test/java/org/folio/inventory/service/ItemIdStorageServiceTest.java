@@ -6,7 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import io.vertx.core.Future;
-import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
+import org.folio.inventory.common.dao.EntityIdStorageDao;
 import org.folio.inventory.domain.relationship.EntityTable;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.ItemIdStorageService;
@@ -20,7 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ItemIdStorageServiceTest {
 
   @Mock
-  private EntityIdStorageDaoImpl entityIdStorageDaoImpl;
+  private EntityIdStorageDao entityIdStorageDao;
   @InjectMocks
   private ItemIdStorageService itemIdStorageService;
 
@@ -30,7 +30,7 @@ class ItemIdStorageServiceTest {
     String itemId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
     RecordToEntity expectedRecordToItem = RecordToEntity.builder()
       .table(EntityTable.ITEM).recordId(recordId).entityId(itemId).build();
-    when(entityIdStorageDaoImpl.saveRecordToEntityRelationship(any(RecordToEntity.class), any()))
+    when(entityIdStorageDao.saveRecordToEntityRelationship(any(RecordToEntity.class), any()))
       .thenReturn(Future.succeededFuture(expectedRecordToItem));
     Future<RecordToEntity> future = itemIdStorageService.store(recordId, itemId, TENANT_ID);
 
@@ -48,7 +48,7 @@ class ItemIdStorageServiceTest {
   void shouldReturnFailedFuture() {
     String recordId = "567859ad-505a-400d-a699-0028a1fdbf84";
     String itemId = "4d4545df-b5ba-4031-a031-70b1c1b2fc5d";
-    when(entityIdStorageDaoImpl.saveRecordToEntityRelationship(any(RecordToEntity.class), any()))
+    when(entityIdStorageDao.saveRecordToEntityRelationship(any(RecordToEntity.class), any()))
       .thenReturn(Future.failedFuture("failed"));
     Future<RecordToEntity> future = itemIdStorageService.store(recordId, itemId, TENANT_ID);
 

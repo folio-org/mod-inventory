@@ -1,8 +1,8 @@
 package org.folio.inventory.support.http.server;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
-import org.folio.inventory.support.http.ContentType;
 
 public class ClientErrorResponse {
   private ClientErrorResponse() { }
@@ -18,7 +18,7 @@ public class ClientErrorResponse {
 
   public static void badRequest(HttpServerResponse response, String reason) {
     response.setStatusCode(400);
-    response.putHeader(HttpHeaders.CONTENT_TYPE, ContentType.TEXT_PLAIN);
+    response.putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN.toString());
     response.end(reason);
   }
 
@@ -29,7 +29,7 @@ public class ClientErrorResponse {
 
   public static void optimisticLocking(HttpServerResponse response, String reason) {
     response.setStatusCode(409);
-    response.putHeader(HttpHeaders.CONTENT_TYPE, ContentType.TEXT_PLAIN);
+    response.putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.TEXT_PLAIN.toString());
     response.end(reason);
   }
 }

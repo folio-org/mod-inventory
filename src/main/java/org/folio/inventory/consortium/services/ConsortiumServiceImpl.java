@@ -2,8 +2,8 @@ package org.folio.inventory.consortium.services;
 
 import static org.folio.inventory.consortium.util.ConsortiumUtil.createOkapiHttpClient;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
-import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpHeaders;
@@ -67,7 +67,8 @@ public class ConsortiumServiceImpl implements ConsortiumService {
       sharingInstance.getInstanceIdentifier(), sharingInstance.getSourceTenantId(),
       sharingInstance.getTargetTenantId());
 
-    Map<String, String> headers = Map.of(HttpHeaders.CONTENT_TYPE.toString(), APPLICATION_JSON);
+    Map<String, String> headers = Map.of(HttpHeaders.CONTENT_TYPE.toString(),
+      HttpHeaderValues.APPLICATION_JSON.toString());
     CompletableFuture<SharingInstance> completableFuture = createOkapiHttpClient(context, httpClient)
       .thenCompose(client ->
         client.post(context.getOkapiLocation() + String.format(SHARE_INSTANCE_ENDPOINT, consortiumId),

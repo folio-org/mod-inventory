@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
+import org.folio.inventory.common.dao.EntityIdStorageDao;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
@@ -89,7 +89,7 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
     switch (eventType) {
       case CREATE_INSTANCE -> {
         var idStorageService =
-          new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)));
+          new InstanceIdStorageService(new EntityIdStorageDao(new PostgresClientFactory(vertx)));
         return new CreateInstanceIngressEventHandler(precedingSucceedingTitlesHelper, mappingMetadataCache,
           idStorageService, client, context, storage, snapshotService);
       }

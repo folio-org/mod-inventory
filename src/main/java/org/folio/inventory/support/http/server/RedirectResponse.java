@@ -1,9 +1,7 @@
 package org.folio.inventory.support.http.server;
 
-import static javax.ws.rs.core.HttpHeaders.LOCATION;
-import static org.folio.inventory.client.util.ClientWrapperUtil.APPLICATION_JSON;
-import static org.folio.inventory.client.util.ClientWrapperUtil.CONTENT_TYPE;
-
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerResponse;
@@ -51,8 +49,8 @@ public final class RedirectResponse {
 
   private static void locationResponse(HttpServerResponse response, String url,
                                        JsonObject body, int status) {
-    response.headers().set(LOCATION, url);
-    response.headers().set(CONTENT_TYPE, APPLICATION_JSON);
+    response.headers().set(HttpHeaderNames.LOCATION, url);
+    response.headers().set(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
     response.setStatusCode(status);
     response.end(Buffer.buffer(body.encodePrettily()));
   }

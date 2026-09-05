@@ -22,7 +22,11 @@ import org.folio.rest.jaxrs.model.StatusDto;
  */
 public class ChangeManagerClientWrapper extends ChangeManagerClient {
 
-  private static final String CHANGE_MANAGER_JOB_EXECUTIONS = "/change-manager/jobExecutions/";
+  private static final String JOBS_PATH = "/change-manager/jobExecutions";
+  private static final String JOB_BY_ID_PATH = JOBS_PATH + "/%s";
+  private static final String JOB_PROFILE_PATH = JOB_BY_ID_PATH + "/jobProfile";
+  private static final String JOB_STATUS_PATH = JOB_BY_ID_PATH + "/status";
+  private static final String JOB_RECORDS_PATH = JOB_BY_ID_PATH + "/records";
 
   private final WebClient webClient;
   private final FolioHeaders folioHeaders;
@@ -38,7 +42,7 @@ public class ChangeManagerClientWrapper extends ChangeManagerClient {
 
   @Override
   public Future<HttpResponse<Buffer>> postChangeManagerJobExecutions(InitJobExecutionsRqDto initJobExecutionsRqDto) {
-    return createRequest(HttpMethod.POST, "/change-manager/jobExecutions", folioHeaders, webClient)
+    return createRequest(HttpMethod.POST, JOBS_PATH, folioHeaders, webClient)
       .sendBuffer(getBuffer(initJobExecutionsRqDto));
   }
 
@@ -47,27 +51,26 @@ public class ChangeManagerClientWrapper extends ChangeManagerClient {
                                                                                 RawRecordsDto rawRecordsDto) {
     String queryParams = "?" + "acceptInstanceId=" + acceptInstanceId;
 
-    return createRequest(HttpMethod.POST, CHANGE_MANAGER_JOB_EXECUTIONS + id + "/records" + queryParams,
-      folioHeaders, webClient)
+    return createRequest(HttpMethod.POST, JOB_RECORDS_PATH.formatted(id) + queryParams, folioHeaders, webClient)
       .sendBuffer(getBuffer(rawRecordsDto));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putChangeManagerJobExecutionsById(String id, JobExecution jobExecution) {
-    return createRequest(HttpMethod.PUT, CHANGE_MANAGER_JOB_EXECUTIONS + id, folioHeaders, webClient)
+    return createRequest(HttpMethod.PUT, JOB_BY_ID_PATH.formatted(id), folioHeaders, webClient)
       .sendBuffer(getBuffer(jobExecution));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putChangeManagerJobExecutionsJobProfileById(String id,
                                                                                   JobProfileInfo jobProfileInfo) {
-    return createRequest(HttpMethod.PUT, CHANGE_MANAGER_JOB_EXECUTIONS + id + "/jobProfile", folioHeaders, webClient)
+    return createRequest(HttpMethod.PUT, JOB_PROFILE_PATH.formatted(id), folioHeaders, webClient)
       .sendBuffer(getBuffer(jobProfileInfo));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putChangeManagerJobExecutionsStatusById(String id, StatusDto statusDto) {
-    return createRequest(HttpMethod.PUT, CHANGE_MANAGER_JOB_EXECUTIONS + id + "/status", folioHeaders, webClient)
+    return createRequest(HttpMethod.PUT, JOB_STATUS_PATH.formatted(id), folioHeaders, webClient)
       .sendBuffer(getBuffer(statusDto));
   }
 }

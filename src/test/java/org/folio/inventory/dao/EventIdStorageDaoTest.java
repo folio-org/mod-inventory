@@ -12,7 +12,6 @@ import java.net.ConnectException;
 import java.util.HashMap;
 import java.util.UUID;
 import org.folio.inventory.common.dao.EventIdStorageDao;
-import org.folio.inventory.common.dao.EventIdStorageDaoImpl;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.common.dao.PostgresConnectionOptions;
 import org.folio.inventory.domain.relationship.EventTable;
@@ -26,14 +25,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import support.PgPoolContainer;
 
 @ExtendWith(VertxExtension.class)
-class EventIdStorageDaoImplTest {
+class EventIdStorageDaoTest {
 
   private static final String UNIQUE_VIOLATION_SQL_STATE = "23505";
   private static final String EVENT_ID = UUID.randomUUID().toString();
   private static boolean runningOnOwn;
 
   private final PostgresClientFactory postgresClientFactory = new PostgresClientFactory(Vertx.vertx());
-  private final EventIdStorageDao eventIdStorageDao = new EventIdStorageDaoImpl(postgresClientFactory);
+  private final EventIdStorageDao eventIdStorageDao = new EventIdStorageDao(postgresClientFactory);
 
   @BeforeAll
   static void setUp() {

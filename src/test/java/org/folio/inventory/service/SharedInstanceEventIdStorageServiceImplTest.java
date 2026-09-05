@@ -7,7 +7,7 @@ import static org.mockito.Mockito.when;
 
 import io.vertx.core.Future;
 import java.util.UUID;
-import org.folio.inventory.common.dao.EventIdStorageDaoImpl;
+import org.folio.inventory.common.dao.EventIdStorageDao;
 import org.folio.inventory.domain.relationship.EventTable;
 import org.folio.inventory.domain.relationship.EventToEntity;
 import org.folio.inventory.services.SharedInstanceEventIdStorageServiceImpl;
@@ -24,14 +24,14 @@ class SharedInstanceEventIdStorageServiceImplTest {
   private static final String EVENT_ID = UUID.randomUUID().toString();
 
   @Mock
-  private EventIdStorageDaoImpl eventIdStorageDaoImpl;
+  private EventIdStorageDao eventIdStorageDao;
   @InjectMocks
   private SharedInstanceEventIdStorageServiceImpl sharedInstanceEventIdStorageService;
 
   @Test
   void shouldReturnSavedEventId() {
     EventToEntity eventToEntity = EventToEntity.builder().table(EventTable.SHARED_INSTANCE).eventId(EVENT_ID).build();
-    when(eventIdStorageDaoImpl.storeEvent(any(EventToEntity.class), any()))
+    when(eventIdStorageDao.storeEvent(any(EventToEntity.class), any()))
       .thenReturn(Future.succeededFuture(EVENT_ID));
     Future<String> future = sharedInstanceEventIdStorageService.store(EVENT_ID, TENANT_ID);
 
@@ -41,7 +41,7 @@ class SharedInstanceEventIdStorageServiceImplTest {
 
   @Test
   void shouldReturnFailedFuture() {
-    when(eventIdStorageDaoImpl.storeEvent(any(EventToEntity.class), any()))
+    when(eventIdStorageDao.storeEvent(any(EventToEntity.class), any()))
       .thenReturn(Future.failedFuture(new DuplicateEventException("Testing Error Message")));
     Future<String> future = sharedInstanceEventIdStorageService.store(EVENT_ID, TENANT_ID);
 

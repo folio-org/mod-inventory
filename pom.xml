@@ -516,13 +516,7 @@
         <version>${maven-surefire-plugin.version}</version>
         <configuration>
           <useSystemClassLoader>false</useSystemClassLoader>
-          <excludes>
-            <exclude>**/api/**Examples.class</exclude>
-          </excludes>
           <includes>
-            <include>**/api/ApiTestSuite.class</include>
-            <include>**/org/folio/inventory/storage/external/*Examples.class</include>
-            <include>**/org/folio/inventory/storage/external/failure/*Examples.class</include>
             <include>org/folio/inventory/**</include>
           </includes>
         </configuration>
@@ -537,6 +531,11 @@
               <goal>integration-test</goal>
               <goal>verify</goal>
             </goals>
+            <configuration>
+              <includes>
+                <include>**/api/ApiTestSuite.class</include>
+              </includes>
+            </configuration>
           </execution>
         </executions>
       </plugin>

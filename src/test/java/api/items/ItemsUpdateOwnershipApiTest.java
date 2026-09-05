@@ -16,7 +16,6 @@ import static org.folio.inventory.support.ItemUtil.HOLDINGS_RECORD_ID;
 import static org.folio.inventory.support.ItemUtil.PERMANENT_LOCATION_ID_KEY;
 import static org.folio.inventory.support.ItemUtil.TEMPORARY_LOCATION_ID_KEY;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
-import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -29,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static support.fixtures.InstanceFixture.smallAngryPlanet;
 
 import api.ApiTestSuite;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -116,7 +116,8 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(200));
     assertThat(toList(postItemsUpdateOwnershipResponse.getJson(), "notUpdatedEntities"), hasSize(0));
-    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
+    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(
+      HttpHeaderValues.APPLICATION_JSON.toString()));
 
     final var sourceFirstUpdatedItem = itemsClient.getById(firstItem.getId());
     final var sourceSecondUpdatedItem = itemsClient.getById(secondItem.getId());
@@ -224,7 +225,8 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
     assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(400));
-    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
+    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(
+      HttpHeaderValues.APPLICATION_JSON.toString()));
 
     JsonArray notUpdatedEntitiesIds = postItemsUpdateOwnershipResponse.getJson()
       .getJsonArray("notUpdatedEntities");
@@ -283,7 +285,8 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
     assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(400));
-    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
+    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(
+      HttpHeaderValues.APPLICATION_JSON.toString()));
 
     JsonArray notFoundIds = postItemsUpdateOwnershipResponse.getJson()
       .getJsonArray("notUpdatedEntities");
@@ -425,7 +428,8 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
     assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(422));
-    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
+    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(
+      HttpHeaderValues.APPLICATION_JSON.toString()));
 
     assertThat(postItemsUpdateOwnershipResponse.body(), containsString("errors"));
     assertThat(postItemsUpdateOwnershipResponse.body(), containsString("toHoldingsRecordId"));
@@ -440,7 +444,8 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
     assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(422));
-    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
+    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(
+      HttpHeaderValues.APPLICATION_JSON.toString()));
 
     assertThat(postItemsUpdateOwnershipResponse.body(), containsString("errors"));
     assertThat(postItemsUpdateOwnershipResponse.body(), containsString("itemIds"));
@@ -455,7 +460,8 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
     assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(422));
-    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
+    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(
+      HttpHeaderValues.APPLICATION_JSON.toString()));
 
     assertThat(postItemsUpdateOwnershipResponse.body(), containsString("errors"));
     assertThat(postItemsUpdateOwnershipResponse.body(), containsString("targetTenantId"));

@@ -1,5 +1,6 @@
 package org.folio.inventory.support.http.server;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
@@ -8,7 +9,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.Collections;
 import java.util.List;
-import org.folio.inventory.support.http.ContentType;
 
 public class JsonResponse {
 
@@ -80,7 +80,7 @@ public class JsonResponse {
 
     response.setStatusCode(statusCode);
     response.putHeader(HttpHeaders.CONTENT_TYPE, String.format("%s; charset=utf-8",
-      ContentType.APPLICATION_JSON));
+      HttpHeaderValues.APPLICATION_JSON.toString()));
 
     response.putHeader(HttpHeaders.CONTENT_LENGTH, Integer.toString(buffer.length()));
 

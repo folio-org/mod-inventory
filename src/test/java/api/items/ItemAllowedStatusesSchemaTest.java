@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
  * and the {@link ItemStatusName} enum, otherwise item won't pass validation
  * and will be rejected.
  */
-class ItemAllowedStatusesSchemaTest {
+public class ItemAllowedStatusesSchemaTest {
 
   @Test
   void schemaAndEnumIsConsistent() throws IOException {

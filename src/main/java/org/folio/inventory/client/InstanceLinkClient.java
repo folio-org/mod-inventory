@@ -1,5 +1,9 @@
 package org.folio.inventory.client;
 
+import static org.folio.HttpStatus.SC_NOT_FOUND;
+import static org.folio.HttpStatus.SC_NO_CONTENT;
+import static org.folio.HttpStatus.SC_OK;
+
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
@@ -10,15 +14,17 @@ import java.util.function.Function;
 import lombok.SneakyThrows;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.HttpStatus;
 import org.folio.InstanceLinkDtoCollection;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.exceptions.InstanceLinksException;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 
 public class InstanceLinkClient {
+
   private static final Logger LOGGER = LogManager.getLogger(InstanceLinkClient.class);
-  private static final String LINKS_API_PREFIX = "/links/instances/";
+
+  private static final String LINKS_PATH = "/links/instances";
+  private static final String LINKS_INSTANCE_PATH = LINKS_PATH + "/%s";
 
   private final WebClient webClient;
   private final Function<Context, OkapiHttpClient> okapiHttpClientCreator;
@@ -30,26 +36,24 @@ public class InstanceLinkClient {
 
   public CompletableFuture<Optional<InstanceLinkDtoCollection>> getLinksByInstanceId(String instanceId,
                                                                                      Context context) {
-    LOGGER.trace("getLinksByInstanceId: okapi url: {}, tenantId: {}, instanceId: {}",
-      context.getOkapiLocation(), context.getTenantId(), instanceId);
-    OkapiHttpClient client = okapiHttpClientCreator.apply(context);
-    String url = context.getOkapiLocation() + LINKS_API_PREFIX + instanceId;
+    LOGGER.trace("getLinksByInstanceId: instanceId: {}", instanceId);
+    var client = okapiHttpClientCreator.apply(context);
+    var url = context.getOkapiLocation() + LINKS_INSTANCE_PATH.formatted(instanceId);
     return client.get(url)
       .toCompletableFuture()
       .thenCompose(httpResponse -> {
-        if (httpResponse.statusCode() == HttpStatus.HTTP_OK.toInt()) {
+        if (httpResponse.statusCode() == SC_OK) {
           LOGGER.info("getLinksByInstanceId: InstanceLinkDtoCollection loaded for instanceId '{}'", instanceId);
-          InstanceLinkDtoCollection dto = Json.decodeValue(httpResponse.body(), InstanceLinkDtoCollection.class);
+          var dto = Json.decodeValue(httpResponse.body(), InstanceLinkDtoCollection.class);
           return CompletableFuture.completedFuture(Optional.of(dto));
-        } else if (httpResponse.statusCode() == HttpStatus.HTTP_NOT_FOUND.toInt()) {
+        } else if (httpResponse.statusCode() == SC_NOT_FOUND) {
           LOGGER.warn("getLinksByInstanceId: InstanceLinkDtoCollection not found for instanceId '{}'", instanceId);
           return CompletableFuture.completedFuture(Optional.empty());
         } else {
-          String message =
-            String.format("getLinksByInstanceId: Error for instanceId '%s', status code: %d, response: %s",
-              instanceId,
-              httpResponse.statusCode(),
-              httpResponse.body());
+          var message = String.format("getLinksByInstanceId: Error for instanceId '%s', status code: %d, response: %s",
+            instanceId,
+            httpResponse.statusCode(),
+            httpResponse.body());
           LOGGER.warn(message);
           return CompletableFuture.failedFuture(new InstanceLinksException(message));
         }
@@ -59,14 +63,13 @@ public class InstanceLinkClient {
   public CompletableFuture<Void> updateInstanceLinks(String instanceId,
                                                      InstanceLinkDtoCollection instanceLinkCollection,
                                                      Context context) {
-    LOGGER.trace("updateInstanceLinks: okapi url: {}, tenantId: {}, instanceId: {}",
-      context.getOkapiLocation(), context.getTenantId(), instanceId);
+    LOGGER.trace("updateInstanceLinks: instanceId: {}", instanceId);
     var client = okapiHttpClientCreator.apply(context);
-    var url = context.getOkapiLocation() + LINKS_API_PREFIX + instanceId;
+    var url = context.getOkapiLocation() + LINKS_INSTANCE_PATH.formatted(instanceId);
     return client.put(url, JsonObject.mapFrom(instanceLinkCollection))
       .toCompletableFuture()
       .thenAccept(httpResponse -> {
-        if (httpResponse.statusCode() == HttpStatus.HTTP_NO_CONTENT.toInt()) {
+        if (httpResponse.statusCode() == SC_NO_CONTENT) {
           LOGGER.info("updateInstanceLinks: InstanceLinkDtoCollection updated for instanceId '{}'", instanceId);
         } else {
           var message =

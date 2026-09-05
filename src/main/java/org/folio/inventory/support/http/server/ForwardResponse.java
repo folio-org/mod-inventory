@@ -3,11 +3,11 @@ package org.folio.inventory.support.http.server;
 import static io.vertx.core.http.HttpHeaders.CONTENT_LENGTH;
 import static io.vertx.core.http.HttpHeaders.CONTENT_TYPE;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.domain.Failure;
-import org.folio.inventory.support.http.ContentType;
 import org.folio.inventory.support.http.client.Response;
 
 public class ForwardResponse {
@@ -20,7 +20,7 @@ public class ForwardResponse {
 
   public static void forward(HttpServerResponse forwardTo, Failure forwardFrom) {
     forward(forwardTo, forwardFrom.reason(), forwardFrom.statusCode(),
-      ContentType.TEXT_PLAIN);
+      HttpHeaderValues.TEXT_PLAIN.toString());
   }
 
   public static void forward(HttpServerResponse forwardTo,

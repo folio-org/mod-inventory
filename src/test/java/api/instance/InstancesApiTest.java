@@ -39,6 +39,7 @@ import static support.fixtures.InstanceFixture.uprooted;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
 import api.ApiTestSuite;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -54,7 +55,6 @@ import org.folio.inventory.domain.instances.Dates;
 import org.folio.inventory.domain.instances.Subject;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.inventory.support.http.ContentType;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.util.PercentCodec;
@@ -393,7 +393,7 @@ public class InstancesApiTest extends ApiTests {
     Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(postResponse.statusCode(), is(400));
-    assertThat(postResponse.contentType(), is(ContentType.TEXT_PLAIN));
+    assertThat(postResponse.contentType(), is(HttpHeaderValues.TEXT_PLAIN.toString()));
     assertThat(postResponse.location(), is(nullValue()));
     assertThat(postResponse.body(), is("Title must be provided for an instance"));
   }
@@ -649,7 +649,7 @@ public class InstancesApiTest extends ApiTests {
     Response putResponse = updateInstance(instance);
     assertThat(putResponse.statusCode(), is(409));
     assertThat(putResponse.body(), is("Optimistic Locking"));
-    assertThat(putResponse.contentType(), is(ContentType.TEXT_PLAIN));
+    assertThat(putResponse.contentType(), is(HttpHeaderValues.TEXT_PLAIN.toString()));
   }
 
   @Test

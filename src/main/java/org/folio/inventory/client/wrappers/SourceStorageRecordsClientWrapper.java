@@ -19,7 +19,12 @@ import org.folio.util.PercentCodec;
  * Wrapper class for SourceStorageRecordsClient to handle POST and PUT HTTP requests with x-okapi-user-id header.
  */
 public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClient {
-  private static final String SOURCE_STORAGE_RECORDS = "/source-storage/records/";
+
+  private static final String RECORDS_PATH = "/source-storage/records";
+  private static final String RECORD_BY_ID_PATH = RECORDS_PATH + "/%s";
+  private static final String RECORD_GENERATION_PATH = RECORD_BY_ID_PATH + "/generation";
+  private static final String RECORD_SUPPRESSION_PATH = RECORD_BY_ID_PATH + "/suppress-from-discovery";
+
   private final WebClient webClient;
   private final FolioHeaders folioHeaders;
 
@@ -34,19 +39,19 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
 
   @Override
   public Future<HttpResponse<Buffer>> postSourceStorageRecords(Record aRecord) {
-    return createRequest(POST, "/source-storage/records", folioHeaders, webClient)
+    return createRequest(POST, RECORDS_PATH, folioHeaders, webClient)
       .sendBuffer(getBuffer(aRecord));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putSourceStorageRecordsById(String id, Record aRecord) {
-    return createRequest(PUT, SOURCE_STORAGE_RECORDS + id, folioHeaders, webClient)
+    return createRequest(PUT, RECORD_BY_ID_PATH.formatted(id), folioHeaders, webClient)
       .sendBuffer(getBuffer(aRecord));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putSourceStorageRecordsGenerationById(String id, Record aRecord) {
-    return createRequest(PUT, SOURCE_STORAGE_RECORDS + id + "/generation", folioHeaders, webClient)
+    return createRequest(PUT, RECORD_GENERATION_PATH.formatted(id), folioHeaders, webClient)
       .sendBuffer(getBuffer(aRecord));
   }
 
@@ -63,8 +68,7 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
     queryParams.append("suppress=");
     queryParams.append(suppress);
 
-    return createRequest(PUT, SOURCE_STORAGE_RECORDS + id + "/suppress-from-discovery" + queryParams,
-      folioHeaders, webClient)
+    return createRequest(PUT, RECORD_SUPPRESSION_PATH.formatted(id) + queryParams, folioHeaders, webClient)
       .send();
   }
 }

@@ -2,13 +2,13 @@ package org.folio.inventory.dataimport.services;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static io.vertx.core.http.HttpHeaders.CONTENT_TYPE;
-import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.matching.RegexPattern;
 import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
@@ -64,7 +64,7 @@ class ConsortiumServiceTest extends BaseWireMockTest {
 
     WIRE_MOCK.stubFor(
       WireMock.post(new UrlPathPattern(new RegexPattern("/consortia/" + consortiumId + "/sharing/instances"), true))
-        .withHeader(CONTENT_TYPE.toString(), equalTo(APPLICATION_JSON))
+        .withHeader(CONTENT_TYPE.toString(), equalTo(HttpHeaderValues.APPLICATION_JSON.toString()))
         .willReturn(WireMock.created().withBody(Json.encode(sharingInstance))));
   }
 

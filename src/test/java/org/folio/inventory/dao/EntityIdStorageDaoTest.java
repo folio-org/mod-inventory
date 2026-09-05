@@ -11,7 +11,6 @@ import java.net.ConnectException;
 import java.util.HashMap;
 import java.util.UUID;
 import org.folio.inventory.common.dao.EntityIdStorageDao;
-import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.common.dao.PostgresConnectionOptions;
 import org.folio.inventory.domain.relationship.EntityTable;
@@ -25,7 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import support.PgPoolContainer;
 
 @ExtendWith(VertxExtension.class)
-class EntityIdStorageDaoImplTest {
+class EntityIdStorageDaoTest {
 
   private static final String RECORD_ID = UUID.randomUUID().toString();
   private static final String INSTANCE_ID = UUID.randomUUID().toString();
@@ -34,7 +33,7 @@ class EntityIdStorageDaoImplTest {
   private static boolean runningOnOwn;
 
   private final PostgresClientFactory postgresClientFactory = new PostgresClientFactory(Vertx.vertx());
-  private final EntityIdStorageDao entityIdStorageDao = new EntityIdStorageDaoImpl(postgresClientFactory);
+  private final EntityIdStorageDao entityIdStorageDao = new EntityIdStorageDao(postgresClientFactory);
 
   @BeforeAll
   static void setUp() {

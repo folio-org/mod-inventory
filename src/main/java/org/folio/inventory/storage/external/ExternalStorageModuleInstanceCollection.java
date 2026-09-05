@@ -3,8 +3,8 @@ package org.folio.inventory.storage.external;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.BooleanUtils.isNotTrue;
 import static org.apache.commons.lang3.BooleanUtils.isTrue;
-import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonArray;
@@ -166,7 +166,7 @@ class ExternalStorageModuleInstanceCollection
     String contentHeaderValue = response.contentType();
     return statusCode == HttpStatus.SC_CREATED
            || (statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR
-               && APPLICATION_JSON.equals(contentHeaderValue));
+               && HttpHeaderValues.APPLICATION_JSON.toString().equals(contentHeaderValue));
   }
 
   private Instance modifyInstance(JsonObject existing, JsonObject incoming) {

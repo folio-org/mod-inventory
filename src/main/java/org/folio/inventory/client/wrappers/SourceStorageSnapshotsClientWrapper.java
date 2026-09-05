@@ -17,6 +17,10 @@ import org.folio.rest.jaxrs.model.Snapshot;
  * Wrapper class for SourceStorageSnapshotsClient to handle POST and PUT HTTP requests with x-okapi-user-id and x-okapi-request-id headers.
  */
 public class SourceStorageSnapshotsClientWrapper extends SourceStorageSnapshotsClient {
+
+  private static final String SNAPSHOTS_PATH = "/source-storage/snapshots";
+  private static final String SNAPSHOT_BY_ID_PATH = SNAPSHOTS_PATH + "/%s";
+
   private final WebClient webClient;
   private final FolioHeaders folioHeaders;
 
@@ -31,14 +35,14 @@ public class SourceStorageSnapshotsClientWrapper extends SourceStorageSnapshotsC
 
   @Override
   public Future<HttpResponse<Buffer>> postSourceStorageSnapshots(Snapshot snapshot) {
-    return createRequest(HttpMethod.POST, "/source-storage/snapshots", folioHeaders, webClient)
+    return createRequest(HttpMethod.POST, SNAPSHOTS_PATH, folioHeaders, webClient)
       .sendBuffer(getBuffer(snapshot));
   }
 
   @Override
   public Future<HttpResponse<Buffer>> putSourceStorageSnapshotsByJobExecutionId(String jobExecutionId,
                                                                                 Snapshot snapshot) {
-    return createRequest(HttpMethod.PUT, "/source-storage/snapshots/" + jobExecutionId, folioHeaders, webClient)
+    return createRequest(HttpMethod.PUT, SNAPSHOT_BY_ID_PATH.formatted(jobExecutionId), folioHeaders, webClient)
       .sendBuffer(getBuffer(snapshot));
   }
 }

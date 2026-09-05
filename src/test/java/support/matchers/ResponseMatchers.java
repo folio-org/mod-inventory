@@ -1,10 +1,10 @@
 package support.matchers;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.Objects;
-import org.folio.inventory.support.http.ContentType;
 import org.folio.inventory.support.http.client.Response;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -75,6 +75,6 @@ public class ResponseMatchers {
   }
 
   private static boolean isJsonContent(Response response) {
-    return response.contentType().startsWith(ContentType.APPLICATION_JSON);
+    return response.contentType().startsWith(HttpHeaderValues.APPLICATION_JSON.toString());
   }
 }

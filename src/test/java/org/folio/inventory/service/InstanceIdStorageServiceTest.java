@@ -7,7 +7,7 @@ import static org.mockito.Mockito.when;
 
 import io.vertx.core.Future;
 import java.util.UUID;
-import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
+import org.folio.inventory.common.dao.EntityIdStorageDao;
 import org.folio.inventory.domain.relationship.EntityTable;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.InstanceIdStorageService;
@@ -23,7 +23,7 @@ class InstanceIdStorageServiceTest {
   private static final String INSTANCE_ID = UUID.randomUUID().toString();
 
   @Mock
-  private EntityIdStorageDaoImpl entityIdStorageDaoImpl;
+  private EntityIdStorageDao entityIdStorageDao;
   @InjectMocks
   private InstanceIdStorageService instanceIdStorageService;
 
@@ -31,7 +31,7 @@ class InstanceIdStorageServiceTest {
   void shouldReturnSavedRecordToEntity() {
     RecordToEntity expectedRecordToInstance = RecordToEntity.builder()
       .table(EntityTable.INSTANCE).recordId(RECORD_ID).entityId(INSTANCE_ID).build();
-    when(entityIdStorageDaoImpl.saveRecordToEntityRelationship(any(RecordToEntity.class), any()))
+    when(entityIdStorageDao.saveRecordToEntityRelationship(any(RecordToEntity.class), any()))
       .thenReturn(Future.succeededFuture(expectedRecordToInstance));
     Future<RecordToEntity> future = instanceIdStorageService.store(RECORD_ID, INSTANCE_ID, TENANT_ID);
 
@@ -47,7 +47,7 @@ class InstanceIdStorageServiceTest {
 
   @Test
   void shouldReturnFailedFuture() {
-    when(entityIdStorageDaoImpl.saveRecordToEntityRelationship(any(RecordToEntity.class), any()))
+    when(entityIdStorageDao.saveRecordToEntityRelationship(any(RecordToEntity.class), any()))
       .thenReturn(Future.failedFuture("failed"));
     Future<RecordToEntity> future = instanceIdStorageService.store(RECORD_ID, INSTANCE_ID, TENANT_ID);
 
