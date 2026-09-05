@@ -33,7 +33,7 @@ class ItemUtilTest {
     assertEquals(item.id, actualItemJson.getString("id"));
     assertEquals(item.getVersion(), actualItemJson.getString("_version"));
     assertEquals(item.getHoldingId(), actualItemJson.getString("holdingsRecordId"));
-    assertEquals(item.getStatus().getName().value(), getNestedProperty(actualItemJson, "status", "name"));
+    assertEquals(item.getStatus().name().value(), getNestedProperty(actualItemJson, "status", "name"));
     assertEquals(item.getMaterialTypeId(), getNestedProperty(actualItemJson, "materialType", "id"));
     assertEquals(item.getPermanentLoanTypeId(), getNestedProperty(actualItemJson, "permanentLoanType", "id"));
     assertEquals(item.getTemporaryLoanTypeId(), getNestedProperty(actualItemJson, "temporaryLoanType", "id"));
@@ -80,7 +80,7 @@ class ItemUtilTest {
   void shouldSetVersionNullWhenPatchVersionIsNull() {
     // given
     JsonObject patchJson = new JsonObject()
-      .put("_version", (Object) null);
+      .put("_version", null);
 
     // when
     JsonObject result = ItemUtil.patchToStorageJson(patchJson);

@@ -5,14 +5,13 @@ import io.vertx.core.ThreadingModel;
 import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.lang.invoke.MethodHandles;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class VertxAssistant {
   private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
@@ -88,11 +87,11 @@ public class VertxAssistant {
       .setInstances(verticleInstancesNumber);
 
     vertx.deployVerticle(verticleSupplier, options)
-        .onSuccess(result -> {
-          long elapsedTime = System.currentTimeMillis() - startTime;
-          log.info("{} deployed in {} milliseconds", verticleClass, elapsedTime);
-          deployed.complete(result);
-        }).onFailure(deployed::completeExceptionally);
+      .onSuccess(result -> {
+        long elapsedTime = System.currentTimeMillis() - startTime;
+        log.info("{} deployed in {} milliseconds", verticleClass, elapsedTime);
+        deployed.complete(result);
+      }).onFailure(deployed::completeExceptionally);
   }
 
   public void undeployVerticle(String deploymentId,

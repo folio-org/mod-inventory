@@ -8,8 +8,12 @@ import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -35,7 +39,6 @@ import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
-import support.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
@@ -60,6 +63,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import support.TestUtil;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -179,7 +183,7 @@ class MarcBibModifiedPostProcessingEventHandlerTest {
     assertEquals(existingInstance.getId(), instanceJson.getString("id"));
     assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     assertNotNull(
-      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
+      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value())).findFirst().get());
     assertNotNull(
       updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst()
         .get());
@@ -190,7 +194,7 @@ class MarcBibModifiedPostProcessingEventHandlerTest {
     assertEquals(1, updatedInstance.getSubjects().size());
     assertThat(updatedInstance.getSubjects().getFirst().getValue(), Matchers.containsString("additional subfield"));
     assertNotNull(updatedInstance.getNotes());
-    assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note);
+    assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note());
   }
 
   @Test
@@ -217,7 +221,7 @@ class MarcBibModifiedPostProcessingEventHandlerTest {
     assertEquals(existingInstance.getId(), instanceJson.getString("id"));
     assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     assertNotNull(
-      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
+      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value())).findFirst().get());
     assertNotNull(
       updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst()
         .get());
@@ -228,7 +232,7 @@ class MarcBibModifiedPostProcessingEventHandlerTest {
     assertEquals(1, updatedInstance.getSubjects().size());
     assertThat(updatedInstance.getSubjects().getFirst().getValue(), Matchers.containsString("additional subfield"));
     assertNotNull(updatedInstance.getNotes());
-    assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note);
+    assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note());
   }
 
   @Test
@@ -267,7 +271,7 @@ class MarcBibModifiedPostProcessingEventHandlerTest {
     assertEquals(existingInstance.getId(), instanceJson.getString("id"));
     assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     assertNotNull(
-      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
+      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value())).findFirst().get());
     assertNotNull(
       updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst()
         .get());
@@ -280,7 +284,7 @@ class MarcBibModifiedPostProcessingEventHandlerTest {
     assertEquals(1, updatedInstance.getSubjects().size());
     assertThat(updatedInstance.getSubjects().getFirst().getValue(), Matchers.containsString("additional subfield"));
     assertNotNull(updatedInstance.getNotes());
-    assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note);
+    assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note());
   }
 
   @Test

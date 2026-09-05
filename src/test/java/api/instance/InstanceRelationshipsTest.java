@@ -98,8 +98,8 @@ public class InstanceRelationshipsTest extends ApiTests {
     Response response = instancesClient
       .attemptGetMany("title=(\"super\" or \"sub\"", expectedCount);
 
-    assertThat(response.getStatusCode(), is(500));
-    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.statusCode(), is(500));
+    assertThat(response.contentType(), is("application/json"));
     assertThat(response.getJson(), is(expectedErrorResponse));
   }
 
@@ -140,8 +140,8 @@ public class InstanceRelationshipsTest extends ApiTests {
     Response response = instancesClient
       .attemptGetMany("title=(\"preceding\" or \"succeeding\"", expectedCount);
 
-    assertThat(response.getStatusCode(), is(500));
-    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.statusCode(), is(500));
+    assertThat(response.contentType(), is("application/json"));
     assertThat(response.getJson(), is(expectedErrorResponse));
   }
 
@@ -303,8 +303,8 @@ public class InstanceRelationshipsTest extends ApiTests {
 
     Response response = instancesClient.attemptToReplace(nodId, newNod);
 
-    assertThat(response.getStatusCode(), is(500));
-    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.statusCode(), is(500));
+    assertThat(response.contentType(), is("application/json"));
     assertThat(response.getJson(), is(expectedErrorResponse));
   }
 
@@ -337,8 +337,8 @@ public class InstanceRelationshipsTest extends ApiTests {
 
     Response response = instancesClient.attemptToReplace(nodId, newNod);
 
-    assertThat(response.getStatusCode(), is(500));
-    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.statusCode(), is(500));
+    assertThat(response.contentType(), is("application/json"));
     assertThat(response.getJson(), is(expectedErrorResponse));
   }
 
@@ -382,8 +382,8 @@ public class InstanceRelationshipsTest extends ApiTests {
 
     Response response = instancesClient.attemptToReplace(nodId, newNod);
 
-    assertThat(response.getStatusCode(), is(500));
-    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.statusCode(), is(500));
+    assertThat(response.contentType(), is("application/json"));
     assertThat(response.getJson(), is(expectedErrorResponse));
   }
 
@@ -419,8 +419,8 @@ public class InstanceRelationshipsTest extends ApiTests {
 
     Response response = instancesClient.attemptToReplace(nodId, newNod);
 
-    assertThat(response.getStatusCode(), is(500));
-    assertThat(response.getContentType(), is("application/json"));
+    assertThat(response.statusCode(), is(500));
+    assertThat(response.contentType(), is("application/json"));
     assertThat(response.getJson(), is(expectedErrorResponse));
   }
 
@@ -483,8 +483,8 @@ public class InstanceRelationshipsTest extends ApiTests {
     Response createInstance = instancesClient.attemptToCreate(nod(UUID.randomUUID())
       .put(PARENT_INSTANCES, new JsonArray().add(parentRelationship)));
 
-    assertThat(createInstance.getStatusCode(), is(400));
-    assertThat(createInstance.getBody(),
+    assertThat(createInstance.statusCode(), is(400));
+    assertThat(createInstance.body(),
       is("One instance is local and one is shared. To be linked, both instances must be local or shared."));
   }
 

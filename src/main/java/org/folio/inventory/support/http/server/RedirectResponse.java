@@ -1,13 +1,13 @@
 package org.folio.inventory.support.http.server;
 
+import static javax.ws.rs.core.HttpHeaders.LOCATION;
+import static org.folio.inventory.client.util.ClientWrapperUtil.APPLICATION_JSON;
+import static org.folio.inventory.client.util.ClientWrapperUtil.CONTENT_TYPE;
+
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
-
-import static javax.ws.rs.core.HttpHeaders.LOCATION;
-import static org.folio.inventory.client.util.ClientWrapperUtil.APPLICATION_JSON;
-import static org.folio.inventory.client.util.ClientWrapperUtil.CONTENT_TYPE;
 
 public final class RedirectResponse {
 
@@ -39,16 +39,6 @@ public final class RedirectResponse {
   }
 
   /**
-   * Ends up response with ACCEPTED(202) status and writes "Location" header to the response body before ending.
-   *
-   * @param response http server response
-   * @param location value to put to "Location" header
-   */
-  public static void accepted(HttpServerResponse response, String location) {
-    locationResponse(response, location, HttpResponseStatus.ACCEPTED.code());
-  }
-
-  /**
    * Ends up response with INTERNAL_SERVER_ERROR(500) status and writes response body before ending.
    *
    * @param response http server response
@@ -57,16 +47,6 @@ public final class RedirectResponse {
   public static void serverError(HttpServerResponse response, Buffer body) {
     response.setStatusCode(HttpResponseStatus.INTERNAL_SERVER_ERROR.code());
     response.end(body);
-  }
-
-  private static void locationResponse(
-    HttpServerResponse response,
-    String url,
-    int status) {
-
-    response.headers().add("Location", url);
-    response.setStatusCode(status);
-    response.end();
   }
 
   private static void locationResponse(HttpServerResponse response, String url,

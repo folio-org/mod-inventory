@@ -1,65 +1,62 @@
 package org.folio.inventory.support.http.client;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.CompletionStage;
-import java.util.function.Consumer;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Consumer;
 import org.folio.HttpHeaders;
 import org.folio.inventory.common.WebContext;
 
 public class OkapiHttpClient extends AbstractOkapiHttpClient {
 
+  static Map<Vertx, WebClient> webClients = new HashMap<>();
   private final WebClient webClient;
 
-  static Map<Vertx,WebClient> webClients = new HashMap<>();
-
-  static WebClient getWebClient(Vertx vertx) {
-    return webClients.computeIfAbsent(vertx, WebClient::create);
-  }
-
-  /** HTTP client that calls via Okapi
+  /**
+   * HTTP client that calls via Okapi
    *
-   * @param vertx Vert.x handle
-   * @param okapiUrl Okapi URL (java.net.URL)
-   * @param tenantId Okapi tenantId - ignored if blank/empty
-   * @param token - Okapi token - ignored if blank/empty
-   * @param userId - Folio User ID - ignored if blank/empty
-   * @param requestId - Okapi Request ID - ignored if null
+   * @param vertx            Vert.x handle
+   * @param okapiUrl         Okapi URL (java.net.URL)
+   * @param tenantId         Okapi tenantId - ignored if blank/empty
+   * @param token            - Okapi token - ignored if blank/empty
+   * @param userId           - Folio User ID - ignored if blank/empty
+   * @param requestId        - Okapi Request ID - ignored if null
    * @param exceptionHandler - exceptionHandler (for POST only, not PUT??)
    */
   public OkapiHttpClient(Vertx vertx, URL okapiUrl, String tenantId,
-    String token, String userId, String requestId, Consumer<Throwable> exceptionHandler) {
+                         String token, String userId, String requestId, Consumer<Throwable> exceptionHandler) {
     this(getWebClient(vertx), okapiUrl, tenantId, token, userId, requestId, exceptionHandler);
   }
 
   public OkapiHttpClient(WebClient webClient, WebContext context,
-    Consumer<Throwable> exceptionHandler) throws MalformedURLException {
+                         Consumer<Throwable> exceptionHandler) throws MalformedURLException {
 
     this(webClient, new URL(context.getOkapiLocation()),
       context.getTenantId(), context.getToken(), context.getUserId(),
       context.getRequestId(), exceptionHandler);
   }
 
-  /** HTTP client that calls via Okapi
+  /**
+   * HTTP client that calls via Okapi
    *
-   * @param webClient web client to use for HTTP requests
-   * @param okapiUrl Okapi URL (java.net.URL)
-   * @param tenantId Okapi tenantId - ignored if blank/empty
-   * @param token - Okapi token - ignored if blank/empty
-   * @param userId - Folio User ID - ignored if blank/empty
-   * @param requestId - Okapi Request ID - ignored if null
+   * @param webClient        web client to use for HTTP requests
+   * @param okapiUrl         Okapi URL (java.net.URL)
+   * @param tenantId         Okapi tenantId - ignored if blank/empty
+   * @param token            - Okapi token - ignored if blank/empty
+   * @param userId           - Folio User ID - ignored if blank/empty
+   * @param requestId        - Okapi Request ID - ignored if null
    * @param exceptionHandler - exceptionHandler (for POST only, not PUT??)
    */
   public OkapiHttpClient(WebClient webClient, URL okapiUrl, String tenantId,
-    String token, String userId, String requestId, Consumer<Throwable> exceptionHandler) {
+                         String token, String userId, String requestId, Consumer<Throwable> exceptionHandler) {
 
     super(okapiUrl, tenantId, userId, token, requestId, exceptionHandler);
     this.webClient = webClient;
@@ -83,8 +80,8 @@ public class OkapiHttpClient extends AbstractOkapiHttpClient {
   public CompletionStage<Response> post(String url, String body) {
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.postAbs(url));
     final var buffer = body != null
-      ? Buffer.buffer(body)
-      : Buffer.buffer();
+                       ? Buffer.buffer(body)
+                       : Buffer.buffer();
     return request.sendBuffer(buffer)
       .map(OkapiHttpClient::mapResponse)
       .toCompletionStage();
@@ -96,8 +93,8 @@ public class OkapiHttpClient extends AbstractOkapiHttpClient {
       request.putHeader(headerEntry.getKey(), headerEntry.getValue());
     }
     final var buffer = body != null
-      ? Buffer.buffer(body)
-      : Buffer.buffer();
+                       ? Buffer.buffer(body)
+                       : Buffer.buffer();
     return request.sendBuffer(buffer)
       .map(OkapiHttpClient::mapResponse)
       .toCompletionStage();
@@ -149,6 +146,10 @@ public class OkapiHttpClient extends AbstractOkapiHttpClient {
     return request.send()
       .map(OkapiHttpClient::mapResponse)
       .toCompletionStage();
+  }
+
+  static WebClient getWebClient(Vertx vertx) {
+    return webClients.computeIfAbsent(vertx, WebClient::create);
   }
 
   private HttpRequest<Buffer> withStandardHeaders(HttpRequest<Buffer> request) {

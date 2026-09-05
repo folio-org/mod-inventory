@@ -1,11 +1,11 @@
 package org.folio.inventory.validation.status;
 
+import java.util.EnumMap;
 import org.folio.inventory.domain.items.ItemStatusName;
 
-import java.util.EnumMap;
-
 public class TargetItemStatusValidators {
-  private static final EnumMap<ItemStatusName, AbstractTargetItemStatusValidator> validators = new EnumMap<>(ItemStatusName.class);
+  private static final EnumMap<ItemStatusName, AbstractTargetItemStatusValidator> validators =
+    new EnumMap<>(ItemStatusName.class);
 
   public TargetItemStatusValidators() {
     validators.put(ItemStatusName.IN_PROCESS, new InProcessTargetItemStatusValidator());

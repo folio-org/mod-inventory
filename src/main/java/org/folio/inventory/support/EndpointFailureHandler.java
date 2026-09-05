@@ -3,8 +3,9 @@ package org.folio.inventory.support;
 import static org.folio.inventory.support.http.server.ForwardResponse.forward;
 import static org.folio.inventory.support.http.server.JsonResponse.unprocessableEntity;
 
+import io.vertx.ext.web.RoutingContext;
 import java.util.function.Function;
-
+import lombok.experimental.UtilityClass;
 import org.folio.inventory.exceptions.AbstractInventoryException;
 import org.folio.inventory.exceptions.BadRequestException;
 import org.folio.inventory.exceptions.ExternalResourceFetchException;
@@ -14,33 +15,20 @@ import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.ext.web.RoutingContext;
-
-public final class EndpointFailureHandler {
-
-  public static <T> void handleFailure(AsyncResult<T> result, RoutingContext context) {
-    if (result.succeeded()) {
-      return;
-    }
-
-    handleFailure(result.cause(), context);
-  }
+@UtilityClass
+public class EndpointFailureHandler {
 
   public static void handleFailure(Throwable failure, RoutingContext context) {
     final Throwable failureToHandle = getKnownException(failure);
 
-    if (failureToHandle instanceof UnprocessableEntityException) {
-      UnprocessableEntityException validationFailure =
-        (UnprocessableEntityException) failureToHandle;
-
+    if (failureToHandle instanceof UnprocessableEntityException validationFailure) {
       unprocessableEntity(context.response(), validationFailure.getMessage(),
         validationFailure.getPropertyName(), validationFailure.getPropertyValue());
     } else if (failureToHandle instanceof NotFoundException) {
       ClientErrorResponse.notFound(context.response(), failureToHandle.getMessage());
     } else if (failureToHandle instanceof ExternalResourceFetchException
-        || failureToHandle instanceof InternalServerErrorException
-        || failureToHandle instanceof BadRequestException) {
+               || failureToHandle instanceof InternalServerErrorException
+               || failureToHandle instanceof BadRequestException) {
       final AbstractInventoryException exceptionToForward =
         (AbstractInventoryException) failureToHandle;
 

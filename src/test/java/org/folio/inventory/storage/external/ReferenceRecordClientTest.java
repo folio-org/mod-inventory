@@ -8,7 +8,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import support.ControlledVocabularyPreparation;
+import java.net.URI;
 import java.net.URL;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -17,6 +17,7 @@ import org.hamcrest.Description;
 import org.hamcrest.TypeSafeMatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import support.ControlledVocabularyPreparation;
 
 class ReferenceRecordClientTest extends AbstractExternalStorageTest {
 
@@ -28,8 +29,8 @@ class ReferenceRecordClientTest extends AbstractExternalStorageTest {
   void before() {
     final var okapiHttpClient = createOkapiHttpClient();
 
-    URL materialTypesUrl = new URL(
-      String.format("%s/%s", getStorageAddress(), "/material-types"));
+    URL materialTypesUrl = new URI(
+      String.format("%s/%s", getStorageAddress(), "/material-types")).toURL();
 
     CollectionResourceClient collectionResourceClient = new CollectionResourceClient(
       okapiHttpClient, materialTypesUrl);
@@ -39,10 +40,10 @@ class ReferenceRecordClientTest extends AbstractExternalStorageTest {
     CompletableFuture<Void> allDeleted = new CompletableFuture<>();
 
     collectionResourceClient.delete(response -> {
-      if (response.getStatusCode() == 204) {
+      if (response.statusCode() == 204) {
         allDeleted.complete(null);
       } else {
-        allDeleted.completeExceptionally(new Exception(response.getBody()));
+        allDeleted.completeExceptionally(new Exception(response.body()));
       }
     });
 
@@ -62,11 +63,11 @@ class ReferenceRecordClientTest extends AbstractExternalStorageTest {
 
     waitForCompletion(recordFuture);
 
-    ReferenceRecord record = recordFuture.join();
+    ReferenceRecord referenceRecord = recordFuture.join();
 
-    assertThat(record, is(notNullValue()));
-    assertThat(record.id, is(bookId));
-    assertThat(record.name, is("Book"));
+    assertThat(referenceRecord, is(notNullValue()));
+    assertThat(referenceRecord.id(), is(bookId));
+    assertThat(referenceRecord.name(), is("Book"));
   }
 
   @Test
@@ -97,6 +98,7 @@ class ReferenceRecordClientTest extends AbstractExternalStorageTest {
 
     private final Class<? extends Throwable> type;
     private final String expectedMessage;
+
     CauseMatcher(Class<? extends Throwable> type, String expectedMessage) {
       this.type = type;
       this.expectedMessage = expectedMessage;

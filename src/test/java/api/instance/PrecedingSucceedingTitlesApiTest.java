@@ -306,7 +306,7 @@ public class PrecedingSucceedingTitlesApiTest extends ApiTests {
 
     // Fetch the created instance because POST response body does not include all data for the preceding/succeeding titles fields
     Response getResponse = instancesClient.getById(createdInstance.getId());
-    assertThat(getResponse.getStatusCode(), is(200));
+    assertThat(getResponse.statusCode(), is(200));
     JsonArray actualPrecedingTitles = getResponse.getJson().getJsonArray("precedingTitles");
     JsonObject actualPrecedingTitle1 = getRecordById(actualPrecedingTitles, nodPrecedingTitleId);
     JsonObject actualPrecedingTitle2 = getRecordById(actualPrecedingTitles, uprootedPrecedingTitleId);
@@ -341,7 +341,7 @@ public class PrecedingSucceedingTitlesApiTest extends ApiTests {
     IndividualResource createdInstance = instancesClient.create(smallAngryPlanetJson);
 
     Response getResponse = instancesClient.getById(createdInstance.getId());
-    assertThat(getResponse.getStatusCode(), is(200));
+    assertThat(getResponse.statusCode(), is(200));
     JsonArray actualSucceedingTitles = getResponse.getJson().getJsonArray("succeedingTitles");
     JsonObject actualSucceedingTitle1 = getRecordById(actualSucceedingTitles, nodPrecedingTitleId);
     JsonObject actualSucceedingTitle2 = getRecordById(actualSucceedingTitles, uprootedPrecedingTitleId);
@@ -478,7 +478,7 @@ public class PrecedingSucceedingTitlesApiTest extends ApiTests {
     IndividualResource createdInstance = instancesClient.create(smallAngryPlanetJson);
 
     Response getResponse = instancesClient.getById(createdInstance.getId());
-    assertThat(getResponse.getStatusCode(), is(200));
+    assertThat(getResponse.statusCode(), is(200));
     JsonArray actualPrecedingTitles = getResponse.getJson().getJsonArray("precedingTitles");
     JsonObject actualPrecedingTitle1 = getRecordById(actualPrecedingTitles, nodPrecedingTitleId);
     JsonObject actualPrecedingTitle2 = getRecordById(actualPrecedingTitles, unconnectedPrecedingTitleId);

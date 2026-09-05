@@ -13,5 +13,4 @@ public interface IdStorageService {
    * @return future with {@link RecordToEntity}.
    */
   Future<RecordToEntity> store(String recordId, String entityId, String tenantId);
-
 }

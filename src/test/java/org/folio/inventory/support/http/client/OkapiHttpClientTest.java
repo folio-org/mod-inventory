@@ -73,10 +73,10 @@ class OkapiHttpClientTest extends BaseWireMockTest {
 
     final var response = postCompleted.toCompletableFuture().get(2, SECONDS);
 
-    assertThat(response.getStatusCode(), is(HTTP_CREATED.toInt()));
+    assertThat(response.statusCode(), is(HTTP_CREATED.toInt()));
     assertThat(response.getJson().getString("message"), is("hello"));
-    assertThat(response.getContentType(), is(APPLICATION_JSON.getMimeType()));
-    assertThat(response.getLocation(), is(locationResponseHeader));
+    assertThat(response.contentType(), is(APPLICATION_JSON.getMimeType()));
+    assertThat(response.location(), is(locationResponseHeader));
   }
 
   @SneakyThrows
@@ -98,10 +98,10 @@ class OkapiHttpClientTest extends BaseWireMockTest {
 
     final var response = postCompleted.toCompletableFuture().get(2, SECONDS);
 
-    assertThat(response.getStatusCode(), is(HTTP_CREATED.toInt()));
+    assertThat(response.statusCode(), is(HTTP_CREATED.toInt()));
     assertThat(response.getJson().getString("message"), is("hello"));
-    assertThat(response.getContentType(), is(APPLICATION_JSON.getMimeType()));
-    assertThat(response.getLocation(), is(locationResponseHeader));
+    assertThat(response.contentType(), is(APPLICATION_JSON.getMimeType()));
+    assertThat(response.location(), is(locationResponseHeader));
   }
 
   @Test
@@ -118,10 +118,10 @@ class OkapiHttpClientTest extends BaseWireMockTest {
 
     final Response response = getCompleted.toCompletableFuture().get(2, SECONDS);
 
-    assertThat(response.getStatusCode(), is(HTTP_OK.toInt()));
+    assertThat(response.statusCode(), is(HTTP_OK.toInt()));
     assertThat(response.getJson().getString("message"), is("hello"));
-    assertThat(response.getContentType(), is(APPLICATION_JSON.getMimeType()));
-    assertThat(response.getLocation(), is(locationResponseHeader));
+    assertThat(response.contentType(), is(APPLICATION_JSON.getMimeType()));
+    assertThat(response.location(), is(locationResponseHeader));
   }
 
   @Test
@@ -138,8 +138,8 @@ class OkapiHttpClientTest extends BaseWireMockTest {
 
     final Response response = postCompleted.toCompletableFuture().get(2, SECONDS);
 
-    assertThat(response.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
-    assertThat(response.getBody(), is(emptyOrNullString()));
+    assertThat(response.statusCode(), is(HTTP_NO_CONTENT.toInt()));
+    assertThat(response.body(), is(emptyOrNullString()));
   }
 
   @Test
@@ -154,8 +154,8 @@ class OkapiHttpClientTest extends BaseWireMockTest {
 
     final Response response = deleteCompleted.toCompletableFuture().get(2, SECONDS);
 
-    assertThat(response.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
-    assertThat(response.getBody(), is(emptyOrNullString()));
+    assertThat(response.statusCode(), is(HTTP_NO_CONTENT.toInt()));
+    assertThat(response.body(), is(emptyOrNullString()));
   }
 
   private MappingBuilder matchingFolioHeaders(MappingBuilder mappingBuilder) {

@@ -12,7 +12,8 @@ public class InternalServerErrorException extends AbstractInventoryException {
   public InternalServerErrorException(String reason) {
     super("Internal server exception:", reason, HttpStatus.SC_INTERNAL_SERVER_ERROR, ContentType.TEXT_PLAIN);
   }
-  public InternalServerErrorException(Failure failure){
-    super("Internal server exception:", failure.getReason(), failure.getStatusCode(), ContentType.TEXT_PLAIN);
+
+  public InternalServerErrorException(Failure failure) {
+    super("Internal server exception:", failure.reason(), failure.statusCode(), ContentType.TEXT_PLAIN);
   }
 }

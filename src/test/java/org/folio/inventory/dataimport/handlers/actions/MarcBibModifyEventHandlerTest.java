@@ -47,7 +47,6 @@ import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
-import support.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
@@ -78,6 +77,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import support.TestUtil;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -234,7 +234,7 @@ class MarcBibModifyEventHandlerTest {
     assertEquals(existingInstance.getId(), instanceJson.getString("id"));
     assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     assertNotNull(
-      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
+      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value())).findFirst().get());
     assertNotNull(
       updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst()
         .get());
@@ -244,7 +244,7 @@ class MarcBibModifyEventHandlerTest {
     assertEquals(1, updatedInstance.getSubjects().size());
     assertThat(updatedInstance.getSubjects().getFirst().getValue(), Matchers.containsString("additional subfield"));
     assertNotNull(updatedInstance.getNotes());
-    assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note);
+    assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note());
 
     verify(mockedInstanceCollection).update(any(), any(), any());
     verify(sourceStorageClient).putSourceStorageRecordsById(eq(marcRecord.getId()),
@@ -333,7 +333,7 @@ class MarcBibModifyEventHandlerTest {
     assertEquals(existingInstance.getId(), instanceJson.getString("id"));
     assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     assertNotNull(
-      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
+      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value())).findFirst().get());
     assertNotNull(
       updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst()
         .get());
@@ -343,7 +343,7 @@ class MarcBibModifyEventHandlerTest {
     assertEquals(1, updatedInstance.getSubjects().size());
     assertThat(updatedInstance.getSubjects().getFirst().getValue(), Matchers.containsString("additional subfield"));
     assertNotNull(updatedInstance.getNotes());
-    assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note);
+    assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note());
 
     verify(marcBibModifyEventHandler).getSourceStorageRecordsClient(
       argThat(context -> context.getTenantId().equals(CENTRAL_TENANT_ID)));
@@ -405,7 +405,7 @@ class MarcBibModifyEventHandlerTest {
     assertEquals(existingInstance.getId(), instanceJson.getString("id"));
     assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
     assertNotNull(
-      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value)).findFirst().get());
+      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value())).findFirst().get());
     assertNotNull(
       updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst()
         .get());
@@ -415,7 +415,7 @@ class MarcBibModifyEventHandlerTest {
     assertEquals(1, updatedInstance.getSubjects().size());
     assertThat(updatedInstance.getSubjects().getFirst().getValue(), Matchers.containsString("additional subfield"));
     assertNotNull(updatedInstance.getNotes());
-    assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note);
+    assertEquals("Adding a note", updatedInstance.getNotes().getFirst().note());
 
     verify(mockedInstanceCollection, times(2)).update(any(), any(), any());
     verify(sourceStorageClient).putSourceStorageRecordsById(eq(marcRecord.getId()),

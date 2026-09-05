@@ -139,7 +139,7 @@ public class ApiTestSuite {
 
   @AfterSuite
   @SneakyThrows
-  public static void after(){
+  public static void after() {
     stopInventoryVerticle();
     stopFakeModules();
     stopPostgresqlContainer();

@@ -16,10 +16,20 @@ import static org.folio.inventory.validation.ItemStatusValidator.itemHasCorrectS
 import static org.folio.inventory.validation.ItemsValidator.claimedReturnedMarkedAsMissing;
 import static org.folio.inventory.validation.ItemsValidator.hridChanged;
 
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.handler.BodyHandler;
 import java.io.UnsupportedEncodingException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.time.Clock;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -36,7 +46,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebContext;
@@ -69,22 +78,14 @@ import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.SuccessResponse;
 import org.folio.inventory.support.http.server.ValidationError;
 import org.folio.inventory.validation.ItemsValidator;
+import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.util.StringUtil;
-
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.handler.BodyHandler;
-
 
 public class ItemsApi extends AbstractInventoryResource {
   private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
   private static final String RELATIVE_ITEMS_PATH = "/inventory/items";
-  private static final String RELATIVE_ITEMS_PATH_ID = RELATIVE_ITEMS_PATH+"/:id";
+  private static final String RELATIVE_ITEMS_PATH_ID = RELATIVE_ITEMS_PATH + "/:id";
   private static final String INSTANCE_ID_PROPERTY = "instanceId";
 
   private static final String BOUND_WITH_PARTS_PATH = "/inventory-storage/bound-with-parts";
@@ -122,6 +123,220 @@ public class ItemsApi extends AbstractInventoryResource {
       .forEach(itemStatusUrl -> registerMarkItemAsHandler(itemStatusUrl.get(), router));
   }
 
+  protected void respondWithManyItems(
+    RoutingContext routingContext,
+    WebContext context,
+    MultipleRecords<Item> wrappedItems) {
+    List<String> itemIds = wrappedItems.records().stream().map(Item::getId).collect(Collectors.toList());
+    if (itemIds.isEmpty()) {
+      JsonResponse.success(routingContext.response(),
+        new ItemRepresentation().toJson(wrappedItems));
+      return;
+    }
+
+    CollectionResourceClient holdingsClient;
+    CollectionResourceClient instancesClient;
+    CollectionResourceClient materialTypesClient;
+    CollectionResourceClient loanTypesClient;
+    CollectionResourceClient locationsClient;
+
+    try {
+      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+      holdingsClient = createHoldingsClient(okapiClient, context);
+      instancesClient = createInstancesClient(okapiClient, context);
+      materialTypesClient = createMaterialTypesClient(okapiClient, context);
+      loanTypesClient = createLoanTypesClient(okapiClient, context);
+      locationsClient = createLocationsClient(okapiClient, context);
+    } catch (MalformedURLException | URISyntaxException e) {
+      invalidOkapiUrlResponse(routingContext, context);
+
+      return;
+    }
+
+    ArrayList<CompletableFuture<Response>> allMaterialTypeFutures = new ArrayList<>();
+    ArrayList<CompletableFuture<Response>> allLoanTypeFutures = new ArrayList<>();
+    ArrayList<CompletableFuture<Response>> allLocationsFutures = new ArrayList<>();
+    ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
+
+    List<String> holdingsIds = wrappedItems.records().stream()
+      .map(Item::getHoldingId)
+      .filter(Objects::nonNull)
+      .distinct()
+      .collect(Collectors.toList());
+
+    CompletableFuture<Response> holdingsFetched =
+      new CompletableFuture<>();
+
+    String holdingsQuery = multipleRecordsCqlQuery(holdingsIds);
+
+    holdingsClient.retrieveMany(holdingsQuery, holdingsIds.size(), 0,
+      holdingsFetched::complete);
+
+    holdingsFetched.thenAccept(holdingsResponse -> {
+      if (holdingsResponse.statusCode() != 200) {
+        ServerErrorResponse.internalError(routingContext.response(),
+          String.format("Holdings request (%s) failed %s: %s",
+            holdingsQuery, holdingsResponse.statusCode(),
+            holdingsResponse.body()));
+      }
+
+      final List<JsonObject> holdings = JsonArrayHelper.toList(
+        holdingsResponse.getJson().getJsonArray("holdingsRecords"));
+
+      List<String> instanceIds = holdings.stream()
+        .map(holding -> holding.getString(INSTANCE_ID_PROPERTY))
+        .filter(Objects::nonNull)
+        .distinct()
+        .collect(Collectors.toList());
+
+      CompletableFuture<Response> instancesFetched =
+        new CompletableFuture<>();
+
+      String instancesQuery = multipleRecordsCqlQuery(instanceIds);
+
+      instancesClient.retrieveMany(instancesQuery, instanceIds.size(), 0,
+        instancesFetched::complete);
+
+      instancesFetched.thenAccept(instancesResponse -> {
+        if (instancesResponse.statusCode() != 200) {
+          ServerErrorResponse.internalError(routingContext.response(),
+            String.format("Instances request (%s) failed %s: %s",
+              instancesQuery, instancesResponse.statusCode(),
+              instancesResponse.body()));
+        }
+
+        final List<JsonObject> instances = JsonArrayHelper.toList(
+          instancesResponse.getJson().getJsonArray("instances"));
+
+        List<String> materialTypeIds = wrappedItems.records().stream()
+          .map(Item::getMaterialTypeId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+
+        materialTypeIds.forEach(id -> {
+          CompletableFuture<Response> newFuture = new CompletableFuture<>();
+
+          allFutures.add(newFuture);
+          allMaterialTypeFutures.add(newFuture);
+
+          materialTypesClient.get(id, newFuture::complete);
+        });
+
+        List<String> permanentLoanTypeIds = wrappedItems.records().stream()
+          .map(Item::getPermanentLoanTypeId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+
+        List<String> temporaryLoanTypeIds = wrappedItems.records().stream()
+          .map(Item::getTemporaryLoanTypeId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+
+        Stream.concat(permanentLoanTypeIds.stream(), temporaryLoanTypeIds.stream())
+          .distinct()
+          .forEach(id -> {
+
+            CompletableFuture<Response> newFuture = new CompletableFuture<>();
+
+            allFutures.add(newFuture);
+            allLoanTypeFutures.add(newFuture);
+
+            loanTypesClient.get(id, newFuture::complete);
+          });
+
+        List<String> effectiveLocationIds = wrappedItems.records().stream()
+          .map(Item::getEffectiveLocationId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+
+        List<String> permanentLocationIds = wrappedItems.records().stream()
+          .map(Item::getPermanentLocationId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+
+        List<String> temporaryLocationIds = wrappedItems.records().stream()
+          .map(Item::getTemporaryLocationId)
+          .filter(Objects::nonNull)
+          .distinct()
+          .collect(Collectors.toList());
+
+        Stream.concat(Stream.concat(permanentLocationIds.stream(), temporaryLocationIds.stream()),
+            effectiveLocationIds.stream())
+          .distinct()
+          .forEach(id -> {
+
+            CompletableFuture<Response> newFuture = new CompletableFuture<>();
+
+            allFutures.add(newFuture);
+            allLocationsFutures.add(newFuture);
+
+            locationsClient.get(id, newFuture::complete);
+          });
+
+        CompletableFuture<Response> boundWithPartsFuture =
+          getBoundWithPartsForMultipleItemsFuture(wrappedItems, routingContext);
+
+        allFutures.add(boundWithPartsFuture);
+
+        CompletableFuture<Void> allDoneFuture = allOf(allFutures);
+
+        allDoneFuture.thenAccept(v -> {
+          log.info("GET all items: all futures completed");
+
+          try {
+
+            Map<String, JsonObject> foundMaterialTypes
+              = allMaterialTypeFutures.stream()
+              .map(CompletableFuture::join)
+              .filter(response -> response.statusCode() == 200)
+              .map(Response::getJson)
+              .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
+
+            Map<String, JsonObject> foundLoanTypes
+              = allLoanTypeFutures.stream()
+              .map(CompletableFuture::join)
+              .filter(response -> response.statusCode() == 200)
+              .map(Response::getJson)
+              .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
+
+            Map<String, JsonObject> foundLocations
+              = allLocationsFutures.stream()
+              .map(CompletableFuture::join)
+              .filter(response -> response.statusCode() == 200)
+              .map(Response::getJson)
+              .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
+
+            setBoundWithFlagsOnItems(wrappedItems, boundWithPartsFuture);
+
+            JsonResponse.success(routingContext.response(),
+              new ItemRepresentation()
+                .toJson(wrappedItems, holdings, instances, foundMaterialTypes,
+                  foundLoanTypes, foundLocations));
+          } catch (Exception e) {
+            ServerErrorResponse.internalError(routingContext.response(), e.toString());
+          }
+        });
+      });
+    });
+  }
+
+  List<CirculationNote> updateCirculationNotes(List<CirculationNote> oldNotes,
+                                               List<CirculationNote> newNotes, User user) {
+    Map<String, CirculationNote> oldNoteList = oldNotes
+      .stream()
+      .collect(Collectors.toMap(CirculationNote::id, Function.identity()));
+
+    return newNotes
+      .stream()
+      .map(note -> updateCirculationNoteIfChanged(note, user, oldNoteList))
+      .collect(Collectors.toList());
+  }
+
   private void registerMarkItemAsHandler(String itemStatusUrl, Router router) {
     router.post(RELATIVE_ITEMS_PATH_ID + itemStatusUrl)
       .handler(handle(this::markItemAsTargetStatus));
@@ -132,8 +347,8 @@ public class ItemsApi extends AbstractInventoryResource {
 
     final var itemStatusName = ItemStatusUrl.getItemStatusNameForUrl(routingContext.request().uri());
     if (itemStatusName.isEmpty()) {
-      log.error("Item status for url $URL$ not found.".replace("$URL$", routingContext.request().uri()),
-        new Exception());
+      return failedFuture(
+        new IllegalArgumentException("Item status for url " + routingContext.request().uri() + " not found."));
     }
 
     final MoveItemIntoStatusService moveItemIntoStatusService = new MoveItemIntoStatusService(storage
@@ -151,24 +366,23 @@ public class ItemsApi extends AbstractInventoryResource {
 
     PagingParameters pagingParameters = PagingParameters.from(context);
 
-    if(pagingParameters == null) {
+    if (pagingParameters == null) {
       ClientErrorResponse.badRequest(routingContext.response(),
         "limit and offset must be numeric when supplied");
 
       return;
     }
 
-    if(search == null) {
+    if (search == null) {
       storage.getItemCollection(context).findAll(
         pagingParameters,
-        success -> respondWithManyItems(routingContext, context, success.getResult()),
+        success -> respondWithManyItems(routingContext, context, success.result()),
         FailureResponseConsumer.serverError(routingContext.response()));
-    }
-    else {
+    } else {
       try {
         storage.getItemCollection(context).findByCql(search,
           pagingParameters, success ->
-            respondWithManyItems(routingContext, context, success.getResult()),
+            respondWithManyItems(routingContext, context, success.result()),
           FailureResponseConsumer.serverError(routingContext.response()));
       } catch (UnsupportedEncodingException e) {
         ServerErrorResponse.internalError(routingContext.response(), e.toString());
@@ -184,17 +398,16 @@ public class ItemsApi extends AbstractInventoryResource {
 
     PagingParameters pagingParameters = PagingParameters.from(cqlQueryRequestDto);
 
-    if(search == null) {
+    if (search == null) {
       storage.getItemCollection(context).findAll(
-              pagingParameters,
-              success -> respondWithManyItems(routingContext, context, success.getResult()),
-              FailureResponseConsumer.serverError(routingContext.response()));
-    }
-    else {
+        pagingParameters,
+        success -> respondWithManyItems(routingContext, context, success.result()),
+        FailureResponseConsumer.serverError(routingContext.response()));
+    } else {
       storage.getItemCollection(context).retrieveByCqlBody(cqlQueryRequestDto,
-              success ->
-                      respondWithManyItems(routingContext, context, success.getResult()),
-              FailureResponseConsumer.serverError(routingContext.response()));
+        success ->
+          respondWithManyItems(routingContext, context, success.result()),
+        FailureResponseConsumer.serverError(routingContext.response()));
     }
   }
 
@@ -218,7 +431,7 @@ public class ItemsApi extends AbstractInventoryResource {
       return;
     }
 
-    Item newItem = null;
+    Item newItem;
     try {
       newItem = ItemUtil.jsonToItem(item);
     } catch (Exception e) {
@@ -229,16 +442,15 @@ public class ItemsApi extends AbstractInventoryResource {
     ItemCollection itemCollection = storage.getItemCollection(context);
     UserCollection userCollection = storage.getUserCollection(context);
 
-    if(newItem.getBarcode() != null) {
+    if (newItem.getBarcode() != null) {
       try {
         Item finalNewItem = newItem;
         itemCollection.findByCql(CqlHelper.barcodeIs(newItem.getBarcode()),
           PagingParameters.defaults(), findResult -> {
 
-            if(findResult.getResult().records.isEmpty()) {
+            if (findResult.result().records().isEmpty()) {
               findUserAndAddItem(routingContext, context, finalNewItem, userCollection, itemCollection);
-            }
-            else {
+            } else {
               ClientErrorResponse.badRequest(routingContext.response(),
                 String.format("Barcode must be unique, %s is already assigned to another item",
                   finalNewItem.getBarcode()));
@@ -247,8 +459,7 @@ public class ItemsApi extends AbstractInventoryResource {
       } catch (UnsupportedEncodingException e) {
         ServerErrorResponse.internalError(routingContext.response(), e.toString());
       }
-    }
-    else {
+    } else {
       findUserAndAddItem(routingContext, context, newItem, userCollection, itemCollection);
     }
   }
@@ -283,7 +494,7 @@ public class ItemsApi extends AbstractInventoryResource {
 
     Item finalNewItem = newItem;
     getItemFuture
-      .thenApply(Success::getResult)
+      .thenApply(Success::result)
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
       .thenCompose(oldItem -> hridChanged(oldItem, finalNewItem))
       .thenCompose(oldItem -> claimedReturnedMarkedAsMissing(oldItem, finalNewItem))
@@ -323,7 +534,7 @@ public class ItemsApi extends AbstractInventoryResource {
       FailureResponseConsumer.serverError(routingContext.response()));
 
     getItemFuture
-      .thenApply(Success::getResult)
+      .thenApply(Success::result)
       .thenCompose(ItemsValidator::refuseWhenItemNotFound)
       .thenCompose(oldItem -> hridChanged(oldItem, patchRequest))
       .thenCompose(oldItem -> claimedReturnedMarkedAsMissing(oldItem, patchRequest))
@@ -360,8 +571,7 @@ public class ItemsApi extends AbstractInventoryResource {
     try {
       OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
       itemsStorageClient = createItemsStorageClient(okapiClient, context);
-    }
-    catch (MalformedURLException e) {
+    } catch (MalformedURLException | URISyntaxException e) {
       invalidOkapiUrlResponse(routingContext, context);
 
       return;
@@ -370,10 +580,9 @@ public class ItemsApi extends AbstractInventoryResource {
     String id = routingContext.request().getParam("id");
 
     itemsStorageClient.delete(id, response -> {
-      if(response.getStatusCode() == 204) {
+      if (response.statusCode() == 204) {
         SuccessResponse.noContent(routingContext.response());
-      }
-      else {
+      } else {
         ForwardResponse.forward(routingContext.response(), response);
       }
     });
@@ -385,218 +594,14 @@ public class ItemsApi extends AbstractInventoryResource {
     storage.getItemCollection(context).findById(
       routingContext.request().getParam("id"),
       (Success<Item> itemResponse) -> {
-        Item item = itemResponse.getResult();
+        Item item = itemResponse.result();
 
-        if(item != null) {
+        if (item != null) {
           respondWithItemRepresentation(item, STATUS_SUCCESS, routingContext, context);
-        }
-        else {
+        } else {
           ClientErrorResponse.notFound(routingContext.response());
         }
       }, FailureResponseConsumer.serverError(routingContext.response()));
-  }
-
-  protected void respondWithManyItems(
-    RoutingContext routingContext,
-    WebContext context,
-    MultipleRecords<Item> wrappedItems) {
-    List<String> itemIds = wrappedItems.records.stream().map(Item::getId).collect(Collectors.toList());
-    if (itemIds.isEmpty()) {
-      JsonResponse.success(routingContext.response(),
-        new ItemRepresentation().toJson(wrappedItems));
-      return;
-    }
-
-    CollectionResourceClient holdingsClient;
-    CollectionResourceClient instancesClient;
-    CollectionResourceClient materialTypesClient;
-    CollectionResourceClient loanTypesClient;
-    CollectionResourceClient locationsClient;
-
-    try {
-      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
-      holdingsClient = createHoldingsClient(okapiClient, context);
-      instancesClient = createInstancesClient(okapiClient, context);
-      materialTypesClient = createMaterialTypesClient(okapiClient, context);
-      loanTypesClient = createLoanTypesClient(okapiClient, context);
-      locationsClient = createLocationsClient(okapiClient, context);
-    }
-    catch (MalformedURLException e) {
-      invalidOkapiUrlResponse(routingContext, context);
-
-      return;
-    }
-
-    ArrayList<CompletableFuture<Response>> allMaterialTypeFutures = new ArrayList<>();
-    ArrayList<CompletableFuture<Response>> allLoanTypeFutures = new ArrayList<>();
-    ArrayList<CompletableFuture<Response>> allLocationsFutures = new ArrayList<>();
-    ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
-
-    List<String> holdingsIds = wrappedItems.records.stream()
-      .map(Item::getHoldingId)
-      .filter(Objects::nonNull)
-      .distinct()
-      .collect(Collectors.toList());
-
-    CompletableFuture<Response> holdingsFetched =
-      new CompletableFuture<>();
-
-    String holdingsQuery = multipleRecordsCqlQuery(holdingsIds);
-
-    holdingsClient.retrieveMany(holdingsQuery, holdingsIds.size(), 0,
-      holdingsFetched::complete);
-
-    holdingsFetched.thenAccept(holdingsResponse -> {
-      if (holdingsResponse.getStatusCode() != 200) {
-        ServerErrorResponse.internalError(routingContext.response(),
-          String.format("Holdings request (%s) failed %s: %s",
-            holdingsQuery, holdingsResponse.getStatusCode(),
-            holdingsResponse.getBody()));
-      }
-
-      final List<JsonObject> holdings = JsonArrayHelper.toList(
-        holdingsResponse.getJson().getJsonArray("holdingsRecords"));
-
-      List<String> instanceIds = holdings.stream()
-        .map(holding -> holding.getString(INSTANCE_ID_PROPERTY))
-        .filter(Objects::nonNull)
-        .distinct()
-        .collect(Collectors.toList());
-
-      CompletableFuture<Response> instancesFetched =
-        new CompletableFuture<>();
-
-      String instancesQuery = multipleRecordsCqlQuery(instanceIds);
-
-      instancesClient.retrieveMany(instancesQuery, instanceIds.size(), 0,
-        instancesFetched::complete);
-
-      instancesFetched.thenAccept(instancesResponse -> {
-        if (instancesResponse.getStatusCode() != 200) {
-          ServerErrorResponse.internalError(routingContext.response(),
-            String.format("Instances request (%s) failed %s: %s",
-              instancesQuery, instancesResponse.getStatusCode(),
-              instancesResponse.getBody()));
-        }
-
-        final List<JsonObject> instances = JsonArrayHelper.toList(
-          instancesResponse.getJson().getJsonArray("instances"));
-
-        List<String> materialTypeIds = wrappedItems.records.stream()
-          .map(Item::getMaterialTypeId)
-          .filter(Objects::nonNull)
-          .distinct()
-          .collect(Collectors.toList());
-
-        materialTypeIds.forEach(id -> {
-          CompletableFuture<Response> newFuture = new CompletableFuture<>();
-
-          allFutures.add(newFuture);
-          allMaterialTypeFutures.add(newFuture);
-
-          materialTypesClient.get(id, newFuture::complete);
-        });
-
-        List<String> permanentLoanTypeIds = wrappedItems.records.stream()
-          .map(Item::getPermanentLoanTypeId)
-          .filter(Objects::nonNull)
-          .distinct()
-          .collect(Collectors.toList());
-
-        List<String> temporaryLoanTypeIds = wrappedItems.records.stream()
-          .map(Item::getTemporaryLoanTypeId)
-          .filter(Objects::nonNull)
-          .distinct()
-          .collect(Collectors.toList());
-
-        Stream.concat(permanentLoanTypeIds.stream(), temporaryLoanTypeIds.stream())
-          .distinct()
-          .forEach(id -> {
-
-            CompletableFuture<Response> newFuture = new CompletableFuture<>();
-
-            allFutures.add(newFuture);
-            allLoanTypeFutures.add(newFuture);
-
-            loanTypesClient.get(id, newFuture::complete);
-          });
-
-        List<String> effectiveLocationIds = wrappedItems.records.stream()
-          .map(Item::getEffectiveLocationId)
-          .filter(Objects::nonNull)
-          .distinct()
-          .collect(Collectors.toList());
-
-        List<String> permanentLocationIds = wrappedItems.records.stream()
-          .map(Item::getPermanentLocationId)
-          .filter(Objects::nonNull)
-          .distinct()
-          .collect(Collectors.toList());
-
-        List<String> temporaryLocationIds = wrappedItems.records.stream()
-          .map(Item::getTemporaryLocationId)
-          .filter(Objects::nonNull)
-          .distinct()
-          .collect(Collectors.toList());
-
-        Stream.concat(Stream.concat(permanentLocationIds.stream(), temporaryLocationIds.stream()), effectiveLocationIds.stream())
-          .distinct()
-          .forEach(id -> {
-
-            CompletableFuture<Response> newFuture = new CompletableFuture<>();
-
-            allFutures.add(newFuture);
-            allLocationsFutures.add(newFuture);
-
-            locationsClient.get(id, newFuture::complete);
-          });
-
-        CompletableFuture<Response> boundWithPartsFuture =
-          getBoundWithPartsForMultipleItemsFuture(wrappedItems, routingContext);
-
-        allFutures.add(boundWithPartsFuture);
-
-        CompletableFuture<Void> allDoneFuture = allOf(allFutures);
-
-        allDoneFuture.thenAccept(v -> {
-          log.info("GET all items: all futures completed");
-
-          try {
-
-            Map<String, JsonObject> foundMaterialTypes
-              = allMaterialTypeFutures.stream()
-              .map(CompletableFuture::join)
-              .filter(response -> response.getStatusCode() == 200)
-              .map(Response::getJson)
-              .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
-
-            Map<String, JsonObject> foundLoanTypes
-              = allLoanTypeFutures.stream()
-              .map(CompletableFuture::join)
-              .filter(response -> response.getStatusCode() == 200)
-              .map(Response::getJson)
-              .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
-
-            Map<String, JsonObject> foundLocations
-              = allLocationsFutures.stream()
-              .map(CompletableFuture::join)
-              .filter(response -> response.getStatusCode() == 200)
-              .map(Response::getJson)
-              .collect(Collectors.toMap(r -> r.getString("id"), r -> r));
-
-            setBoundWithFlagsOnItems(wrappedItems, boundWithPartsFuture);
-
-            JsonResponse.success(routingContext.response(),
-              new ItemRepresentation()
-                .toJson(wrappedItems, holdings, instances, foundMaterialTypes,
-                  foundLoanTypes, foundLocations));
-
-          } catch (Exception e) {
-            ServerErrorResponse.internalError(routingContext.response(), e.toString());
-          }
-        });
-      });
-    });
   }
 
   private OkapiHttpClient createHttpClient(
@@ -606,14 +611,14 @@ public class ItemsApi extends AbstractInventoryResource {
 
     return new OkapiHttpClient(WebClient.wrap(client), context,
       exception -> ServerErrorResponse.internalError(routingContext.response(),
-      String.format("Failed to contact storage module: %s",
-        exception.toString())));
+        String.format("Failed to contact storage module: %s",
+          exception.toString())));
   }
 
   private CollectionResourceClient createItemsStorageClient(
     OkapiHttpClient client,
     WebContext context)
-    throws MalformedURLException {
+    throws MalformedURLException, URISyntaxException {
 
     return createCollectionResourceClient(client, context,
       "/item-storage/items");
@@ -622,7 +627,7 @@ public class ItemsApi extends AbstractInventoryResource {
   private CollectionResourceClient createHoldingsClient(
     OkapiHttpClient client,
     WebContext context)
-    throws MalformedURLException {
+    throws MalformedURLException, URISyntaxException {
 
     return createCollectionResourceClient(client, context,
       "/holdings-storage/holdings");
@@ -631,7 +636,7 @@ public class ItemsApi extends AbstractInventoryResource {
   private CollectionResourceClient createInstancesClient(
     OkapiHttpClient client,
     WebContext context)
-    throws MalformedURLException {
+    throws MalformedURLException, URISyntaxException {
 
     return createCollectionResourceClient(client, context,
       "/instance-storage/instances");
@@ -640,7 +645,7 @@ public class ItemsApi extends AbstractInventoryResource {
   private CollectionResourceClient createMaterialTypesClient(
     OkapiHttpClient client,
     WebContext context)
-    throws MalformedURLException {
+    throws MalformedURLException, URISyntaxException {
 
     return createCollectionResourceClient(client, context, "/material-types");
   }
@@ -648,7 +653,7 @@ public class ItemsApi extends AbstractInventoryResource {
   private CollectionResourceClient createLoanTypesClient(
     OkapiHttpClient client,
     WebContext context)
-    throws MalformedURLException {
+    throws MalformedURLException, URISyntaxException {
 
     return createCollectionResourceClient(client, context, "/loan-types");
   }
@@ -656,7 +661,7 @@ public class ItemsApi extends AbstractInventoryResource {
   private CollectionResourceClient createLocationsClient(
     OkapiHttpClient client,
     WebContext context)
-    throws MalformedURLException {
+    throws MalformedURLException, URISyntaxException {
 
     return createCollectionResourceClient(client, context, "/locations");
   }
@@ -664,7 +669,7 @@ public class ItemsApi extends AbstractInventoryResource {
   private CollectionResourceClient createBoundWithPartsClient(
     OkapiHttpClient client,
     WebContext webContext)
-    throws MalformedURLException {
+    throws MalformedURLException, URISyntaxException {
     return createCollectionResourceClient(client, webContext, BOUND_WITH_PARTS_PATH);
   }
 
@@ -672,10 +677,10 @@ public class ItemsApi extends AbstractInventoryResource {
     OkapiHttpClient client,
     WebContext context,
     String rootPath)
-    throws MalformedURLException {
+    throws MalformedURLException, URISyntaxException {
 
     return new CollectionResourceClient(client,
-      new URL(context.getOkapiLocation() + rootPath));
+      new URI(context.getOkapiLocation() + rootPath).toURL());
   }
 
   private JsonObject referenceRecordFrom(
@@ -683,11 +688,11 @@ public class ItemsApi extends AbstractInventoryResource {
     CompletableFuture<Response> requestFuture) {
 
     return id != null
-      && requestFuture != null
-      && requestFuture.join() != null
-      && requestFuture.join().getStatusCode() == 200
-      ? requestFuture.join().getJson()
-      : null;
+           && requestFuture != null
+           && requestFuture.join() != null
+           && requestFuture.join().statusCode() == 200
+           ? requestFuture.join().getJson()
+           : null;
   }
 
   private void findUserAndAddItem(
@@ -699,7 +704,7 @@ public class ItemsApi extends AbstractInventoryResource {
 
     String userId = webContext.getUserId();
     userCollection.findById(userId,
-      success -> addItem(routingContext, webContext, newItem, success.getResult(), itemCollection),
+      success -> addItem(routingContext, webContext, newItem, success.result(), itemCollection),
       failure -> addItem(routingContext, webContext, newItem, null, itemCollection));
   }
 
@@ -714,18 +719,17 @@ public class ItemsApi extends AbstractInventoryResource {
       .stream()
       .map(note -> note.withId(UUID.randomUUID().toString()))
       .map(note -> note.withSource(user))
-      .map(note -> note.withDate(dateTimeFormatter.format(ZonedDateTime.now())))
+      .map(note -> note.withDate(dateTimeFormatter.format(ZonedDateTime.now(Clock.systemDefaultZone()))))
       .collect(Collectors.toList());
 
     itemCollection.add(newItem.withCirculationNotes(notes), success -> {
-      Item item = success.getResult();
+      Item item = success.result();
       respondWithItemRepresentation(item, STATUS_CREATED, routingContext, webContext);
     }, FailureResponseConsumer.serverError(routingContext.response()));
   }
 
-  private void respondWithItemRepresentation (
-          Item item, int responseStatus, RoutingContext routingContext, WebContext webContext)
-  {
+  private void respondWithItemRepresentation(
+    Item item, int responseStatus, RoutingContext routingContext, WebContext webContext) {
     CollectionResourceClient holdingsClient;
     CollectionResourceClient instancesClient;
     CollectionResourceClient materialTypesClient;
@@ -741,24 +745,23 @@ public class ItemsApi extends AbstractInventoryResource {
       loanTypesClient = createLoanTypesClient(okapiClient, webContext);
       locationsClient = createLocationsClient(okapiClient, webContext);
       boundWithPartsClient = createBoundWithPartsClient(okapiClient, webContext);
-    }
-    catch (MalformedURLException e) {
+    } catch (MalformedURLException | URISyntaxException e) {
       invalidOkapiUrlResponse(routingContext, webContext);
       return;
     }
     holdingsClient.get(item.getHoldingId(), (Response holdingResponse) -> {
-      final JsonObject holding = holdingResponse.getStatusCode() == 200
-        ? holdingResponse.getJson()
-        : null;
+      final JsonObject holding = holdingResponse.statusCode() == 200
+                                 ? holdingResponse.getJson()
+                                 : null;
 
-      String instanceId = holdingResponse.getStatusCode() == 200
-        ? holdingResponse.getJson().getString(INSTANCE_ID_PROPERTY)
-        : null;
+      String instanceId = holdingResponse.statusCode() == 200
+                          ? holdingResponse.getJson().getString(INSTANCE_ID_PROPERTY)
+                          : null;
 
       instancesClient.get(instanceId, (Response instanceResponse) -> {
-        final JsonObject instance = instanceResponse.getStatusCode() == 200
-          ? instanceResponse.getJson()
-          : null;
+        final JsonObject instance = instanceResponse.statusCode() == 200
+                                    ? instanceResponse.getJson()
+                                    : null;
 
         ArrayList<CompletableFuture<Response>> allFutures = new ArrayList<>();
 
@@ -781,7 +784,7 @@ public class ItemsApi extends AbstractInventoryResource {
           item.getEffectiveLocationId(), locationsClient, allFutures);
 
         allFutures.add(
-          setBoundWithTitlesOnItem( item,
+          setBoundWithTitlesOnItem(item,
             boundWithPartsClient, routingContext));
 
         CompletableFuture<Void> allDoneFuture = allOf(allFutures);
@@ -800,10 +803,10 @@ public class ItemsApi extends AbstractInventoryResource {
               effectiveLocationFuture);
 
             switch (responseStatus) {
-              case STATUS_CREATED :
+              case STATUS_CREATED:
                 JsonResponse.created(routingContext.response(), representation);
                 break;
-              case STATUS_SUCCESS :
+              case STATUS_SUCCESS:
                 JsonResponse.success(routingContext.response(), representation);
                 break;
               default:
@@ -831,14 +834,13 @@ public class ItemsApi extends AbstractInventoryResource {
 
     CompletableFuture<Response> newFuture = new CompletableFuture<>();
 
-    if(id != null) {
+    if (id != null) {
       allFutures.add(newFuture);
 
       client.get(id, newFuture::complete);
 
       return newFuture;
-    }
-    else {
+    } else {
       return null;
     }
   }
@@ -873,25 +875,25 @@ public class ItemsApi extends AbstractInventoryResource {
       referenceRecordFrom(item.getEffectiveLocationId(), effectiveLocationFuture);
 
     return new ItemRepresentation()
-        .toJson(item,
-          holding,
-          instance,
-          foundMaterialType,
-          foundPermanentLoanType,
-          foundTemporaryLoanType,
-          foundPermanentLocation,
-          foundTemporaryLocation,
-          foundEffectiveLocation);
+      .toJson(item,
+        holding,
+        instance,
+        foundMaterialType,
+        foundPermanentLoanType,
+        foundTemporaryLoanType,
+        foundPermanentLocation,
+        foundTemporaryLocation,
+        foundEffectiveLocation);
   }
 
   private boolean hasSameBarcode(Item updatedItem, Item foundItem) {
     return updatedItem.getBarcode() == null
-      || Objects.equals(foundItem.getBarcode(), updatedItem.getBarcode());
+           || Objects.equals(foundItem.getBarcode(), updatedItem.getBarcode());
   }
 
   private boolean hasSameBarcode(JsonObject patchedItem, Item foundItem) {
     return patchedItem.getString(Item.BARCODE_KEY) == null
-      || Objects.equals(foundItem.getBarcode(), patchedItem.getString(Item.BARCODE_KEY));
+           || Objects.equals(foundItem.getBarcode(), patchedItem.getString(Item.BARCODE_KEY));
   }
 
   private void findUserAndUpdateItem(
@@ -901,9 +903,9 @@ public class ItemsApi extends AbstractInventoryResource {
     UserCollection userCollection,
     ItemCollection itemCollection) {
 
-    String userId = routingContext.request().getHeader("X-Okapi-User-Id");
+    String userId = routingContext.request().getHeader(XOkapiHeaders.USER_ID);
     userCollection.findById(userId,
-      success -> updateItem(routingContext, newItem, oldItem, success.getResult(), itemCollection),
+      success -> updateItem(routingContext, newItem, oldItem, success.result(), itemCollection),
       failure -> updateItem(routingContext, newItem, oldItem, null, itemCollection));
   }
 
@@ -914,9 +916,9 @@ public class ItemsApi extends AbstractInventoryResource {
     UserCollection userCollection,
     ItemCollection itemCollection) {
 
-    String userId = routingContext.request().getHeader("X-Okapi-User-Id");
+    String userId = routingContext.request().getHeader(XOkapiHeaders.USER_ID);
     userCollection.findById(userId,
-      success -> updateItem(routingContext, patchJson, oldItem, success.getResult(), itemCollection),
+      success -> updateItem(routingContext, patchJson, oldItem, success.result(), itemCollection),
       failure -> updateItem(routingContext, patchJson, oldItem, null, itemCollection));
   }
 
@@ -961,18 +963,6 @@ public class ItemsApi extends AbstractInventoryResource {
       failure -> ForwardResponse.forward(routingContext.response(), failure));
   }
 
-  List<CirculationNote> updateCirculationNotes(List<CirculationNote> oldNotes,
-    List<CirculationNote> newNotes, User user) {
-    Map<String, CirculationNote> oldNoteList = oldNotes
-      .stream()
-      .collect(Collectors.toMap(CirculationNote::getId, Function.identity()));
-
-    return newNotes
-      .stream()
-      .map(note -> updateCirculationNoteIfChanged(note, user, oldNoteList))
-      .collect(Collectors.toList());
-  }
-
   private void checkForNonUniqueBarcode(
     RoutingContext routingContext,
     Item newItem,
@@ -985,12 +975,11 @@ public class ItemsApi extends AbstractInventoryResource {
       CqlHelper.barcodeIs(newItem.getBarcode()) + " and id<>" + newItem.id,
       PagingParameters.defaults(), it -> {
 
-        List<Item> items = it.getResult().records;
+        List<Item> items = it.result().records();
 
-        if(items.isEmpty()) {
+        if (items.isEmpty()) {
           findUserAndUpdateItem(routingContext, newItem, oldItem, userCollection, itemCollection);
-        }
-        else {
+        } else {
           ClientErrorResponse.badRequest(routingContext.response(),
             String.format("Barcode must be unique, %s is already assigned to another item",
               newItem.getBarcode()));
@@ -1012,12 +1001,11 @@ public class ItemsApi extends AbstractInventoryResource {
       CqlHelper.barcodeIs(newBarcode) + " and id<>" + itemId,
       PagingParameters.defaults(), it -> {
 
-        List<Item> items = it.getResult().records;
+        List<Item> items = it.result().records();
 
-        if(items.isEmpty()) {
+        if (items.isEmpty()) {
           findUserAndUpdateItem(routingContext, patchedItem, oldItem, userCollection, itemCollection);
-        }
-        else {
+        } else {
           ClientErrorResponse.badRequest(routingContext.response(),
             String.format("Barcode must be unique, %s is already assigned to another item",
               newBarcode));
@@ -1027,27 +1015,27 @@ public class ItemsApi extends AbstractInventoryResource {
 
   private CirculationNote updateCirculationNoteIfChanged(CirculationNote newNote,
                                                          User user, Map<String, CirculationNote> oldNotes) {
-    String noteId = newNote.getId();
+    String noteId = newNote.id();
 
     if (noteId == null) {
       return newNote.withId(UUID.randomUUID().toString())
         .withSource(user)
-        .withDate(dateTimeFormatter.format(ZonedDateTime.now()));
+        .withDate(dateTimeFormatter.format(ZonedDateTime.now(Clock.systemDefaultZone())));
     } else if (circulationNoteChanged(newNote, oldNotes.get(noteId))) {
       return newNote.withSource(user)
-        .withDate(dateTimeFormatter.format(ZonedDateTime.now()));
+        .withDate(dateTimeFormatter.format(ZonedDateTime.now(Clock.systemDefaultZone())));
     } else {
       return newNote;
     }
   }
 
   private boolean circulationNoteChanged(CirculationNote newNote, CirculationNote oldNote) {
-    if (!newNote.getNoteType().equals(oldNote.getNoteType())) {
+    if (!newNote.noteType().equals(oldNote.noteType())) {
       return true;
-    } else if (!newNote.getNote().equals(oldNote.getNote())) {
+    } else if (!newNote.note().equals(oldNote.note())) {
       return true;
     } else {
-      return !newNote.getStaffOnly().equals(oldNote.getStaffOnly());
+      return !newNote.staffOnly().equals(oldNote.staffOnly());
     }
   }
 
@@ -1056,26 +1044,26 @@ public class ItemsApi extends AbstractInventoryResource {
    * and builds a list of bound-with titles that is set on the provided Item.
    * The method will mutate the argument 'item'.
    *
-   * @param item The Item to set bound-with titles on
+   * @param item                 The Item to set bound-with titles on
    * @param boundWithPartsClient Client for retrieving bound-with parts from storage
-  */
+   */
   private CompletableFuture<Response> setBoundWithTitlesOnItem(
     Item item,
     CollectionResourceClient boundWithPartsClient,
     RoutingContext routingContext
   ) {
-    return getBoundWithPartsForItemFuture( item, boundWithPartsClient )
+    return getBoundWithPartsForItemFuture(item, boundWithPartsClient)
       .thenCompose(
         partsResponse -> {
           JsonArray boundWithParts =
-            partsResponse.getJson().getJsonArray(BOUND_WITH_PARTS_COLLECTION );
-          if ( boundWithParts.isEmpty() ) {
-            item.withIsBoundWith( false );
-            return CompletableFuture.completedFuture( null );
+            partsResponse.getJson().getJsonArray(BOUND_WITH_PARTS_COLLECTION);
+          if (boundWithParts.isEmpty()) {
+            item.withIsBoundWith(false);
+            return CompletableFuture.completedFuture(null);
           } else {
             List<JsonObject> boundWithPartList = boundWithParts
               .stream()
-              .map(part -> (JsonObject) part)
+              .map(JsonObject.class::cast)
               .collect(Collectors.toList());
 
             return joinWithHoldings(boundWithPartList, routingContext)
@@ -1100,19 +1088,19 @@ public class ItemsApi extends AbstractInventoryResource {
    * Constructs a JSON array of boundWithTitles containing Instance and
    * holdingsRecord information
    *
-   * @param boundWithParts The sort order to be used for the array
+   * @param boundWithParts  The sort order to be used for the array
    * @param holdingsRecords The holdings records that should populate the array
-   * @param instances The Instances that should populate the array
+   * @param instances       The Instances that should populate the array
    * @return JSON array of boundWithTitles
    */
-  private JsonArray buildBoundWithTitlesArray (
-      JsonArray boundWithParts, List<JsonObject> holdingsRecords, List<JsonObject> instances) {
+  private JsonArray buildBoundWithTitlesArray(
+    JsonArray boundWithParts, List<JsonObject> holdingsRecords, List<JsonObject> instances) {
 
     JsonArray boundWithTitles = new JsonArray();
 
     final var instancesByIdMap = new HashMap<String, JsonObject>();
-    instances.forEach( instance ->
-      instancesByIdMap.put( instance.getString( "id" ), instance ));
+    instances.forEach(instance ->
+      instancesByIdMap.put(instance.getString("id"), instance));
 
     final var holdingsRecordsByIdMap = new HashMap<String, JsonObject>();
     holdingsRecords.forEach(holdingsRecord ->
@@ -1125,14 +1113,14 @@ public class ItemsApi extends AbstractInventoryResource {
       var holdingsRecordId = ((JsonObject) boundWithPart).getString(HOLDINGS_RECORD_ID);
       var holdingsRecord = holdingsRecordsByIdMap.get(holdingsRecordId);
       String instanceId = holdingsRecord.getString(INSTANCE_ID_PROPERTY);
-      briefHoldingsRecord.put( "id", holdingsRecord.getString( "id" ) );
-      briefHoldingsRecord.put( "hrid", holdingsRecord.getString( "hrid" ) );
-      briefInstance.put( "id", instanceId );
-      briefInstance.put( "title", instancesByIdMap.get( instanceId ).getString( "title" ) );
-      briefInstance.put( "hrid", instancesByIdMap.get( instanceId ).getString( "hrid" ) );
-      boundWithTitle.put( "briefHoldingsRecord", briefHoldingsRecord );
-      boundWithTitle.put( "briefInstance", briefInstance );
-      boundWithTitles.add( boundWithTitle );
+      briefHoldingsRecord.put("id", holdingsRecord.getString("id"));
+      briefHoldingsRecord.put("hrid", holdingsRecord.getString("hrid"));
+      briefInstance.put("id", instanceId);
+      briefInstance.put("title", instancesByIdMap.get(instanceId).getString("title"));
+      briefInstance.put("hrid", instancesByIdMap.get(instanceId).getString("hrid"));
+      boundWithTitle.put("briefHoldingsRecord", briefHoldingsRecord);
+      boundWithTitle.put("briefInstance", briefInstance);
+      boundWithTitles.add(boundWithTitle);
     });
     return boundWithTitles;
   }
@@ -1167,9 +1155,10 @@ public class ItemsApi extends AbstractInventoryResource {
    * the primary key - by FOLIO convention named "id" - of the master entities.
    * The master entities are looked up at the provided API path and
    * by the provided property name.
-   * @param referencingEntities Detail entities with a foreign key property.
-   * @param referencingPropertyName Name of the foreign key property.
-   * @param referencedApiPath The API path to the master entities.
+   *
+   * @param referencingEntities      Detail entities with a foreign key property.
+   * @param referencingPropertyName  Name of the foreign key property.
+   * @param referencedApiPath        The API path to the master entities.
    * @param referencedCollectionName Property name of the master entity array.
    * @return List of master entities.
    */
@@ -1183,7 +1172,7 @@ public class ItemsApi extends AbstractInventoryResource {
     List<String> referencedIds = referencingEntities
       .stream()
       .map(o -> o.getString(referencingPropertyName))
-      .collect( Collectors.toList());
+      .collect(Collectors.toList());
 
     MultipleRecordsFetchClient partitionedRequestsClient =
       buildPartitionedFetchClient(
@@ -1191,7 +1180,7 @@ public class ItemsApi extends AbstractInventoryResource {
         referencedCollectionName,
         routingContext);
 
-    return partitionedRequestsClient.find(referencedIds,this::cqlMatchAnyByIds);
+    return partitionedRequestsClient.find(referencedIds, this::cqlMatchAnyByIds);
   }
 
   private CqlQuery cqlMatchAnyByIds(List<String> ids) {
@@ -1206,45 +1195,45 @@ public class ItemsApi extends AbstractInventoryResource {
     String apiPath,
     String collectionPropertyName,
     RoutingContext routingContext) {
-      WebContext webContext = new WebContext(routingContext);
+    WebContext webContext = new WebContext(routingContext);
 
-      CollectionResourceClient baseClient = null;
-      try {
-        URL api = new URL(webContext.getOkapiLocation() + apiPath);
-        baseClient =
-          new CollectionResourceClient(
-            createHttpClient(routingContext, webContext), api);
-      } catch (MalformedURLException mue) {
-        log.error(
-          String.format(
-            "Could not create CollectionResourceClient due to malformed URL %s%s",
-            webContext.getOkapiLocation(), apiPath));
-      }
-      return MultipleRecordsFetchClient.builder()
-        .withCollectionPropertyName(collectionPropertyName)
-        .withExpectedStatus(200)
-        .withCollectionResourceClient(baseClient)
-        .build();
+    CollectionResourceClient baseClient = null;
+    try {
+      URL api = new URI(webContext.getOkapiLocation() + apiPath).toURL();
+      baseClient =
+        new CollectionResourceClient(
+          createHttpClient(routingContext, webContext), api);
+    } catch (MalformedURLException | URISyntaxException mue) {
+      log.error(
+        String.format(
+          "Could not create CollectionResourceClient due to malformed URL %s%s",
+          webContext.getOkapiLocation(), apiPath));
+    }
+    return MultipleRecordsFetchClient.builder()
+      .withCollectionPropertyName(collectionPropertyName)
+      .withExpectedStatus(200)
+      .withCollectionResourceClient(baseClient)
+      .build();
   }
 
   private static CompletableFuture<Response> getBoundWithPartsForItemFuture(
-      Item item,
-      CollectionResourceClient boundWithPartsClient) {
+    Item item,
+    CollectionResourceClient boundWithPartsClient) {
 
     var boundWithPartsByItemIdQuery =
-        "itemId==" + StringUtil.cqlEncode(item.getId()) + " sortBy metadata.createdDate";
+      "itemId==" + StringUtil.cqlEncode(item.getId()) + " sortBy metadata.createdDate";
 
     return boundWithPartsClient.getMany(
-        boundWithPartsByItemIdQuery,
-        1000,
-        0);
+      boundWithPartsByItemIdQuery,
+      1000,
+      0);
   }
 
   private void setBoundWithFlagsOnItems(MultipleRecords<Item> wrappedItems,
                                         CompletableFuture<Response> boundWithPartsFuture) {
 
     Response response = boundWithPartsFuture.join();
-    if (response != null && response.hasBody() && response.getStatusCode()==200) {
+    if (response != null && response.hasBody() && response.statusCode() == 200) {
       JsonArray boundWithParts = response.getJson().getJsonArray(BOUND_WITH_PARTS_COLLECTION);
       if (boundWithParts != null && !boundWithParts.isEmpty()) {
         Set<String> boundWithItemIds = boundWithParts
@@ -1252,7 +1241,7 @@ public class ItemsApi extends AbstractInventoryResource {
           .map(o -> ((JsonObject) o).getString("itemId"))
           .collect(Collectors.toSet());
 
-        for (Item item : wrappedItems.records) {
+        for (Item item : wrappedItems.records()) {
           if (boundWithItemIds.contains(item.getId())) {
             item.withIsBoundWith(true);
           }
@@ -1260,15 +1249,14 @@ public class ItemsApi extends AbstractInventoryResource {
       }
     } else {
       log.error("Failed to retrieve bound-with parts, status code: {}",
-        () -> response != null ? response.getStatusCode() : "null response");
+        () -> response != null ? response.statusCode() : "null response");
     }
   }
 
   private CompletableFuture<Response> getBoundWithPartsForMultipleItemsFuture(
     MultipleRecords<Item> wrappedItems,
-    RoutingContext routingContext)
-  {
-    List<String> itemIds = wrappedItems.records.stream()
+    RoutingContext routingContext) {
+    List<String> itemIds = wrappedItems.records().stream()
       .map(Item::getId)
       .collect(Collectors.toList());
 
@@ -1278,17 +1266,16 @@ public class ItemsApi extends AbstractInventoryResource {
         BOUND_WITH_PARTS_COLLECTION,
         routingContext);
     return partitionedRequestsClient
-      .find(itemIds,this::cqlMatchAnyByItemIds)
+      .find(itemIds, this::cqlMatchAnyByItemIds)
       .thenApply(parts -> {
         JsonArray array = new JsonArray();
         JsonObject result = new JsonObject().put(BOUND_WITH_PARTS_COLLECTION, array);
         for (JsonObject o : parts) {
           array.add(o);
         }
-        return new Response(200,result.encodePrettily(), "application/json", BOUND_WITH_PARTS_PATH);
+        return new Response(200, result.encodePrettily(), "application/json", BOUND_WITH_PARTS_PATH);
       });
   }
-
 }
 
 

@@ -44,9 +44,9 @@ public class CollectionResourceRepository {
   }
 
   private CompletableFuture<Response> handleResponse(Response response,
-    int expectedStatusCode) {
+                                                     int expectedStatusCode) {
 
-    if (response.getStatusCode() != expectedStatusCode) {
+    if (response.statusCode() != expectedStatusCode) {
       final CompletableFuture<Response> failed = new CompletableFuture<>();
       failed.completeExceptionally(new ExternalResourceFetchException(response));
 

@@ -77,11 +77,14 @@ public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
 
   @Override
   public void start(Promise<Void> startPromise) {
-    EventManager.registerKafkaEventPublisher(getKafkaConfig(), vertx, getMaxDistributionNumber(MAX_DISTRIBUTION_PROPERTY));
+    EventManager.registerKafkaEventPublisher(getKafkaConfig(), vertx,
+      getMaxDistributionNumber(MAX_DISTRIBUTION_PROPERTY));
     var consortiumDataCache = new ConsortiumDataCache(vertx, getHttpClient());
 
-    var dataImportKafkaHandler = new DataImportKafkaHandler(vertx, getStorage(), getHttpClient(), getProfileSnapshotCache(),
-      getKafkaConfig(), getMappingMetadataCache(), getDeleteRuleFor999FieldCache(), consortiumDataCache, cancelledJobsIdsCache);
+    var dataImportKafkaHandler =
+      new DataImportKafkaHandler(vertx, getStorage(), getHttpClient(), getProfileSnapshotCache(),
+        getKafkaConfig(), getMappingMetadataCache(), getDeleteRuleFor999FieldCache(), consortiumDataCache,
+        cancelledJobsIdsCache);
 
     var futures = EVENT_TYPES.stream()
       .map(type -> super.createConsumer(type.value(), LOAD_LIMIT_PROPERTY))
@@ -99,5 +102,4 @@ public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
   protected Logger getLogger() {
     return LOGGER;
   }
-
 }

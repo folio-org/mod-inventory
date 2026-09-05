@@ -58,7 +58,7 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
   private static final String ID = "id";
 
   @BeforeEach
-  void initConsortia() throws Exception {
+  void initConsortia() {
     createConsortiumTenant();
   }
 
@@ -114,9 +114,9 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(200));
+    assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(200));
     assertThat(toList(postItemsUpdateOwnershipResponse.getJson(), "notUpdatedEntities"), hasSize(0));
-    assertThat(postItemsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     final var sourceFirstUpdatedItem = itemsClient.getById(firstItem.getId());
     final var sourceSecondUpdatedItem = itemsClient.getById(secondItem.getId());
@@ -138,8 +138,8 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
       .findFirst()
       .orElseThrow();
 
-    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceFirstUpdatedItem.getStatusCode()));
-    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceSecondUpdatedItem.getStatusCode()));
+    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceFirstUpdatedItem.statusCode()));
+    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceSecondUpdatedItem.statusCode()));
     assertTrue(targetTenantItemsIds.contains(firstItem.getId().toString()));
     assertTrue(targetTenantItemsIds.contains(secondItem.getId().toString()));
     assertTrue(targetTenantHoldingsIds.contains(targetHoldingId.toString()));
@@ -192,8 +192,8 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     holdingsStorageClient.disableFailureEmulation();
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(500));
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("Error loading inventory holdings"));
+    assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(500));
+    assertThat(postItemsUpdateOwnershipResponse.body(), containsString("Error loading inventory holdings"));
   }
 
   @Test
@@ -223,8 +223,8 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(400));
-    assertThat(postItemsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(400));
+    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     JsonArray notUpdatedEntitiesIds = postItemsUpdateOwnershipResponse.getJson()
       .getJsonArray("notUpdatedEntities");
@@ -241,7 +241,7 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     JsonObject targetTenantItem1 = targetHoldingsRecordItems.getFirst();
 
-    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceUpdatedItem.getStatusCode()));
+    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceUpdatedItem.statusCode()));
     assertThat(targetTenantItem1.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
   }
 
@@ -282,8 +282,8 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(400));
-    assertThat(postItemsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(400));
+    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     JsonArray notFoundIds = postItemsUpdateOwnershipResponse.getJson()
       .getJsonArray("notUpdatedEntities");
@@ -302,9 +302,9 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     final var sourceSecondUpdatedItem = itemsClient.getById(secondItem.getId());
 
-    assertThat(HttpStatus.SC_OK, is(sourceFirstUpdatedItem.getStatusCode()));
+    assertThat(HttpStatus.SC_OK, is(sourceFirstUpdatedItem.statusCode()));
 
-    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceSecondUpdatedItem.getStatusCode()));
+    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceSecondUpdatedItem.statusCode()));
     assertThat(targetTenantItem.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
     assertEquals(secondItem.getId().toString(), targetTenantItem.getString(ID));
     assertNotEquals(itemHrId, targetTenantItem.getString("hrid"));
@@ -345,7 +345,7 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     collegeItemsClient.disableFailureEmulation();
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(400));
+    assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(400));
     JsonArray notUpdatedEntitiesIds = postItemsUpdateOwnershipResponse.getJson()
       .getJsonArray("notUpdatedEntities");
 
@@ -361,7 +361,7 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     JsonObject targetTenantItem1 = targetHoldingsRecordItems.getFirst();
 
-    assertThat(HttpStatus.SC_OK, is(sourceFirstUpdatedItem.getStatusCode()));
+    assertThat(HttpStatus.SC_OK, is(sourceFirstUpdatedItem.statusCode()));
     assertThat(targetTenantItem1.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
   }
 
@@ -400,7 +400,7 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     collegeItemsClient.disableFailureEmulation();
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(400));
+    assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(400));
     JsonArray notUpdatedEntitiesIds = postItemsUpdateOwnershipResponse.getJson()
       .getJsonArray("notUpdatedEntities");
 
@@ -414,7 +414,7 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
       collegeItemsClient.getMany(format("holdingsRecordId=%s", createHoldingsRecord2), 100);
     assertEquals(0, targetHoldingsRecordItems.size());
 
-    assertThat(HttpStatus.SC_OK, is(sourceFirstUpdatedItem.getStatusCode()));
+    assertThat(HttpStatus.SC_OK, is(sourceFirstUpdatedItem.statusCode()));
   }
 
   @Test
@@ -424,12 +424,12 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(422));
-    assertThat(postItemsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(422));
+    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("errors"));
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("toHoldingsRecordId"));
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("toHoldingsRecordId is a required field"));
+    assertThat(postItemsUpdateOwnershipResponse.body(), containsString("errors"));
+    assertThat(postItemsUpdateOwnershipResponse.body(), containsString("toHoldingsRecordId"));
+    assertThat(postItemsUpdateOwnershipResponse.body(), containsString("toHoldingsRecordId is a required field"));
   }
 
   @Test
@@ -439,12 +439,12 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(422));
-    assertThat(postItemsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(422));
+    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("errors"));
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("itemIds"));
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("itemIds is a required field"));
+    assertThat(postItemsUpdateOwnershipResponse.body(), containsString("errors"));
+    assertThat(postItemsUpdateOwnershipResponse.body(), containsString("itemIds"));
+    assertThat(postItemsUpdateOwnershipResponse.body(), containsString("itemIds is a required field"));
   }
 
   @Test
@@ -454,12 +454,12 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(422));
-    assertThat(postItemsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(422));
+    assertThat(postItemsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("errors"));
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("targetTenantId"));
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("targetTenantId is a required field"));
+    assertThat(postItemsUpdateOwnershipResponse.body(), containsString("errors"));
+    assertThat(postItemsUpdateOwnershipResponse.body(), containsString("targetTenantId"));
+    assertThat(postItemsUpdateOwnershipResponse.body(), containsString("targetTenantId is a required field"));
   }
 
   @Test
@@ -485,8 +485,8 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(404));
-    assertThat(postItemsUpdateOwnershipResponse.getBody(),
+    assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(404));
+    assertThat(postItemsUpdateOwnershipResponse.body(),
       equalTo(format(HOLDINGS_RECORD_NOT_FOUND, nonExistentHoldingsId, COLLEGE_TENANT_ID)));
   }
 
@@ -500,8 +500,8 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(400));
-    assertThat(postItemsUpdateOwnershipResponse.getBody(), containsString("tenant is not in consortia"));
+    assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(400));
+    assertThat(postItemsUpdateOwnershipResponse.body(), containsString("tenant is not in consortia"));
     createConsortiumTenant();
   }
 
@@ -521,8 +521,8 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(400));
-    assertThat(postItemsUpdateOwnershipResponse.getBody(),
+    assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(400));
+    assertThat(postItemsUpdateOwnershipResponse.body(),
       equalTo(String.format(INSTANCE_RELATED_TO_HOLDINGS_RECORD_NOT_SHARED, instanceId, createHoldingsRecord2)));
   }
 
@@ -564,7 +564,7 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     Response postItemsUpdateOwnershipResponse = updateItemsOwnership(itemsUpdateOwnershipRequestBody);
 
-    assertThat(postItemsUpdateOwnershipResponse.getStatusCode(), is(400));
+    assertThat(postItemsUpdateOwnershipResponse.statusCode(), is(400));
 
     JsonArray notUpdatedEntitiesIds = postItemsUpdateOwnershipResponse.getJson()
       .getJsonArray("notUpdatedEntities");
@@ -583,10 +583,10 @@ public class ItemsUpdateOwnershipApiTest extends ApiTests {
 
     final var sourceSecondUpdatedItem = itemsClient.getById(secondItem.getId());
 
-    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceFirstUpdatedItem.getStatusCode()));
+    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceFirstUpdatedItem.statusCode()));
     assertThat(targetTenantItem1.getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord2.toString()));
 
-    assertThat(HttpStatus.SC_OK, is(sourceSecondUpdatedItem.getStatusCode()));
+    assertThat(HttpStatus.SC_OK, is(sourceSecondUpdatedItem.statusCode()));
   }
 
   @SneakyThrows

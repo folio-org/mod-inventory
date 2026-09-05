@@ -21,16 +21,6 @@ public enum InstanceSource {
     this.value = value;
   }
 
-  @JsonValue
-  public String getValue() {
-    return value;
-  }
-
-  @Override
-  public String toString() {
-    return String.valueOf(value);
-  }
-
   @JsonCreator
   public static InstanceSource fromValue(String value) {
     for (InstanceSource b : InstanceSource.values()) {
@@ -41,4 +31,13 @@ public enum InstanceSource {
     throw new IllegalArgumentException("Unexpected value '" + value + "'");
   }
 
+  @JsonValue
+  public String getValue() {
+    return value;
+  }
+
+  @Override
+  public String toString() {
+    return String.valueOf(value);
+  }
 }

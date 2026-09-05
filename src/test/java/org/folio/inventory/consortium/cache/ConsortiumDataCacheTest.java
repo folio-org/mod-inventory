@@ -60,8 +60,8 @@ class ConsortiumDataCacheTest extends BaseWireMockTest {
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
       assertTrue(result.isPresent());
       ConsortiumConfiguration consortiumConfig = result.get();
-      assertEquals(expectedCentralTenantId, consortiumConfig.getCentralTenantId());
-      assertEquals(expectedConsortiumId, consortiumConfig.getConsortiumId());
+      assertEquals(expectedCentralTenantId, consortiumConfig.centralTenantId());
+      assertEquals(expectedConsortiumId, consortiumConfig.consortiumId());
       testContext.completeNow();
     })));
   }

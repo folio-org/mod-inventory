@@ -29,6 +29,9 @@ public abstract class KafkaTest extends BaseWireMockTest {
 
   @BeforeAll
   public static void beforeAll() {
+    // Reduce metadata refresh interval so pattern-subscribed consumers discover newly-created
+    // topics quickly in tests rather than waiting the default 30 s.
+    System.setProperty(KafkaConfig.KAFKA_CONSUMER_METADATA_MAX_AGE_CONFIG, "1000");
     vertxAssistant = new VertxAssistant();
     vertxAssistant.start();
 

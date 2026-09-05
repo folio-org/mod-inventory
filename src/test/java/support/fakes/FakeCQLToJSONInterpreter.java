@@ -18,7 +18,6 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.inventory.storage.external.AbstractExternalStorageTest;
 
 public class FakeCQLToJSONInterpreter {
 

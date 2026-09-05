@@ -1,9 +1,8 @@
 package org.folio.inventory.rest.impl;
 
+import io.vertx.pgclient.PgConnectOptions;
 import java.sql.Connection;
 import java.sql.SQLException;
-
-import io.vertx.pgclient.PgConnectOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.dao.PostgresConnectionOptions;

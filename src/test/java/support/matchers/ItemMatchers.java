@@ -8,10 +8,6 @@ import org.hamcrest.Matcher;
 public final class ItemMatchers {
   private ItemMatchers() { }
 
-  public static Matcher<JsonObject> isAvailable() {
-    return hasStatus("Available");
-  }
-
   public static Matcher<JsonObject> isInProcess() {
     return hasStatus("In process");
   }

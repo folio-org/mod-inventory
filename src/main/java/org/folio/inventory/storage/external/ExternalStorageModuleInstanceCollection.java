@@ -57,24 +57,8 @@ class ExternalStorageModuleInstanceCollection
   }
 
   @Override
-  protected JsonObject mapToRequest(Instance instance) {
-    return instance.getJsonForStorage();
-  }
-
-  @Override
-  protected Instance mapFromJson(JsonObject instanceFromServer) {
-    return Instance.fromJson(instanceFromServer)
-      .setMetadata(new Metadata(instanceFromServer.getJsonObject("metadata")));
-  }
-
-  @Override
-  protected String getId(Instance instance) {
-    return instance.getId();
-  }
-
-  @Override
   public void addBatch(List<Instance> items,
-    Consumer<Success<BatchResult<Instance>>> resultCallback, Consumer<Failure> failureCallback) {
+                       Consumer<Success<BatchResult<Instance>>> resultCallback, Consumer<Failure> failureCallback) {
 
     List<JsonObject> jsonList = items.stream()
       .map(this::mapToRequest)
@@ -113,10 +97,10 @@ class ExternalStorageModuleInstanceCollection
             resultCallback.accept(new Success<>(batchResult));
           } catch (Exception e) {
             LOGGER.error("Failed to parse successful batch response", e);
-            failureCallback.accept(new Failure(e.getMessage(), response.getStatusCode()));
+            failureCallback.accept(new Failure(e.getMessage(), response.statusCode()));
           }
         } else {
-          failureCallback.accept(new Failure(response.getBody(), response.getStatusCode()));
+          failureCallback.accept(new Failure(response.body(), response.statusCode()));
         }
       })
       .onFailure(error -> {
@@ -125,29 +109,21 @@ class ExternalStorageModuleInstanceCollection
       });
   }
 
-  private boolean isBatchResponse(Response response) {
-    int statusCode = response.getStatusCode();
-    String contentHeaderValue = response.getContentType();
-    return statusCode == HttpStatus.SC_CREATED
-                                    || (statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR
-                                        && APPLICATION_JSON.equals(contentHeaderValue));
-  }
-
   @Override
   public Instance findByIdAndUpdate(String id, JsonObject instance, Context inventoryContext) throws Exception {
     SynchronousHttpClient client = getSynchronousHttpClient(inventoryContext);
     var url = individualRecordLocation(id);
     var response = client.get(url);
-    var responseBody = response.getBody();
+    var responseBody = response.body();
 
-    if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+    if (response.statusCode() == HttpStatus.SC_NOT_FOUND) {
       LOGGER.warn("Instance not found by id - {} : {}", id, responseBody);
       throw new NotFoundException(format("Instance not found by id - %s : %s", id, responseBody));
-    } else if (response.getStatusCode() != HttpStatus.SC_OK) {
+    } else if (response.statusCode() != HttpStatus.SC_OK) {
       LOGGER.warn("Failed to fetch Instance by id - {} : {}, {}",
-        id, responseBody, response.getStatusCode());
+        id, responseBody, response.statusCode());
       throw new ExternalResourceFetchException("Failed to fetch Instance record",
-        responseBody, response.getStatusCode(), null);
+        responseBody, response.statusCode(), null);
     }
 
     var existingInstance = new JsonObject(responseBody);
@@ -155,10 +131,10 @@ class ExternalStorageModuleInstanceCollection
     var modifiedInstance = mapToRequest(modified);
 
     response = client.put(url, modifiedInstance);
-    var statusCode = response.getStatusCode();
+    var statusCode = response.statusCode();
     if (statusCode != HttpStatus.SC_NO_CONTENT) {
       var errorMessage = format("Failed to update Instance by id : %s, error : %s, status code %s",
-        id, response.getBody(), response.getStatusCode());
+        id, response.body(), response.statusCode());
       LOGGER.error(errorMessage);
 
       if (statusCode == HttpStatus.SC_CONFLICT) {
@@ -167,6 +143,30 @@ class ExternalStorageModuleInstanceCollection
       throw new InternalServerErrorException(errorMessage);
     }
     return modified;
+  }
+
+  @Override
+  protected JsonObject mapToRequest(Instance instance) {
+    return instance.getJsonForStorage();
+  }
+
+  @Override
+  protected Instance mapFromJson(JsonObject instanceFromServer) {
+    return Instance.fromJson(instanceFromServer)
+      .setMetadata(new Metadata(instanceFromServer.getJsonObject("metadata")));
+  }
+
+  @Override
+  protected String getId(Instance instance) {
+    return instance.getId();
+  }
+
+  private boolean isBatchResponse(Response response) {
+    int statusCode = response.statusCode();
+    String contentHeaderValue = response.contentType();
+    return statusCode == HttpStatus.SC_CREATED
+           || (statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR
+               && APPLICATION_JSON.equals(contentHeaderValue));
   }
 
   private Instance modifyInstance(JsonObject existing, JsonObject incoming) {
@@ -186,7 +186,9 @@ class ExternalStorageModuleInstanceCollection
 
   private SynchronousHttpClient getSynchronousHttpClient(Context context) throws MalformedURLException {
     if (httpClient == null) {
-      httpClient = new SynchronousHttpClient(URI.create(context.getOkapiLocation()).toURL(), tenant, token, context.getUserId(), null, null);
+      httpClient =
+        new SynchronousHttpClient(URI.create(context.getOkapiLocation()).toURL(), tenant, token, context.getUserId(),
+          null, null);
     }
 
     return httpClient;

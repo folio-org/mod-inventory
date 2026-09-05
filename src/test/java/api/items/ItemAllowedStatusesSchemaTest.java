@@ -1,15 +1,13 @@
 package api.items;
 
-import static java.nio.file.Files.readAllBytes;
 import static java.nio.file.Paths.get;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -55,8 +53,7 @@ class ItemAllowedStatusesSchemaTest {
   }
 
   private Set<String> getSchemaAllowedItemStatuses() throws IOException {
-    final String itemJson = new String(readAllBytes(get("ramls/item.json")),
-      StandardCharsets.UTF_8);
+    final String itemJson = Files.readString(get("ramls/item.json"));
 
     final JsonObject itemSchema = new JsonObject(itemJson);
 
@@ -65,7 +62,7 @@ class ItemAllowedStatusesSchemaTest {
       .getJsonObject("name").getJsonArray("enum");
 
     return allowedStatuses.stream()
-      .map(element -> (String) element)
+      .map(String.class::cast)
       .collect(Collectors.toSet());
   }
 

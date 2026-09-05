@@ -79,7 +79,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -116,7 +115,6 @@ class MatchItemEventHandlerUnitTest {
   void setUp() {
     MatchValueReaderFactory.clearReaderFactory();
     MatchValueLoaderFactory.clearLoaderFactory();
-    MockitoAnnotations.initMocks(this);
     when(marcValueReader.isEligibleForEntityType(MARC_BIBLIOGRAPHIC)).thenReturn(true);
     when(storage.getItemCollection(any(Context.class))).thenReturn(itemCollection);
     when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))

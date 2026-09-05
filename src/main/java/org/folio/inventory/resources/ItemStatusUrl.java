@@ -1,18 +1,20 @@
 package org.folio.inventory.resources;
 
-import org.folio.inventory.domain.items.ItemStatusName;
-
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import lombok.experimental.UtilityClass;
+import org.folio.inventory.domain.items.ItemStatusName;
 
+@UtilityClass
 public class ItemStatusUrl {
+
   private static final Map<ItemStatusName, String> itemStatusNameUrlMap;
   private static final Map<String, ItemStatusName> urlItemStatusNameMap;
 
   static {
-    itemStatusNameUrlMap = new HashMap<>();
+    itemStatusNameUrlMap = new EnumMap<>(ItemStatusName.class);
 
     itemStatusNameUrlMap.put(ItemStatusName.IN_PROCESS, "/mark-in-process");
     itemStatusNameUrlMap.put(ItemStatusName.IN_PROCESS_NON_REQUESTABLE, "/mark-in-process-non-requestable");
@@ -24,7 +26,8 @@ public class ItemStatusUrl {
     itemStatusNameUrlMap.put(ItemStatusName.UNKNOWN, "/mark-unknown");
     itemStatusNameUrlMap.put(ItemStatusName.WITHDRAWN, "/mark-withdrawn");
 
-    urlItemStatusNameMap = itemStatusNameUrlMap.entrySet().stream().collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
+    urlItemStatusNameMap =
+      itemStatusNameUrlMap.entrySet().stream().collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
   }
 
   public static Optional<String> getUrlForItemStatusName(ItemStatusName itemStatusName) {

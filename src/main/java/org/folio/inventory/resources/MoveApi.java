@@ -13,15 +13,18 @@ import static org.folio.inventory.support.http.server.JsonResponse.unprocessable
 import static org.folio.inventory.validation.MoveValidator.holdingsMoveHasRequiredFields;
 import static org.folio.inventory.validation.MoveValidator.itemsMoveHasRequiredFields;
 
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.consortium.services.ConsortiumService;
@@ -36,22 +39,17 @@ import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.MoveApiUtil;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
-
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.BodyHandler;
 import org.folio.inventory.support.http.server.ValidationError;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 
 public class MoveApi extends AbstractInventoryResource {
-  private static final Logger LOGGER = LogManager.getLogger(MethodHandles.lookup().lookupClass());
   public static final String TO_HOLDINGS_RECORD_ID = "toHoldingsRecordId";
   public static final String TO_INSTANCE_ID = "toInstanceId";
   public static final String ITEM_IDS = "itemIds";
   public static final String HOLDINGS_RECORD_IDS = "holdingsRecordIds";
-  private final ConsortiumService consortiumService;
+  private static final Logger LOGGER = LogManager.getLogger(MethodHandles.lookup().lookupClass());
   private static final String INSTANCE_NOT_FOUND = "Instance with id=%s not found";
+  private final ConsortiumService consortiumService;
 
   public MoveApi(final Storage storage, final HttpClient client, ConsortiumService consortiumService) {
     super(storage, client);
@@ -76,7 +74,7 @@ public class MoveApi extends AbstractInventoryResource {
     final var validationError = itemsMoveHasRequiredFields(itemsMoveJsonRequest);
 
     if (validationError.isPresent()) {
-      LOGGER.warn("moveItems:: Validation error: {}", validationError.get().message);
+      LOGGER.warn("moveItems:: Validation error: {}", validationError.get().message());
       unprocessableEntity(routingContext.response(), validationError.get());
       return;
     }
@@ -89,7 +87,8 @@ public class MoveApi extends AbstractInventoryResource {
       .thenAccept(holding -> {
         if (holding != null) {
           try {
-            final var itemsStorageClient = createItemStorageClient(createHttpClient(client, routingContext, context), context);
+            final var itemsStorageClient =
+              createItemStorageClient(createHttpClient(client, routingContext, context), context);
             final var itemsFetchClient = createItemsFetchClient(itemsStorageClient);
 
             itemsFetchClient.find(itemIdsToUpdate, MoveApiUtil::fetchByIdCql)
@@ -111,11 +110,12 @@ public class MoveApi extends AbstractInventoryResource {
           unprocessableEntity(routingContext.response(), format("Holding with id=%s not found", toHoldingsRecordId));
         }
       })
-    .exceptionally(e -> {
-      LOGGER.error("moveItems:: Failed to complete move items operation for holdingsRecordId {}", toHoldingsRecordId, e);
-      ServerErrorResponse.internalError(routingContext.response(), e);
-      return null;
-    });
+      .exceptionally(e -> {
+        LOGGER.error("moveItems:: Failed to complete move items operation for holdingsRecordId {}", toHoldingsRecordId,
+          e);
+        ServerErrorResponse.internalError(routingContext.response(), e);
+        return null;
+      });
   }
 
   private void moveHoldings(RoutingContext routingContext) {
@@ -125,13 +125,14 @@ public class MoveApi extends AbstractInventoryResource {
 
     Optional<ValidationError> validationError = holdingsMoveHasRequiredFields(holdingsMoveJsonRequest);
     if (validationError.isPresent()) {
-      LOGGER.warn("moveHoldings:: Validation error: {}", validationError.get().message);
+      LOGGER.warn("moveHoldings:: Validation error: {}", validationError.get().message());
       unprocessableEntity(routingContext.response(), validationError.get());
       return;
     }
 
     String toInstanceId = holdingsMoveJsonRequest.getString(TO_INSTANCE_ID);
-    List<String> holdingsRecordsIdsToUpdate = toListOfStrings(holdingsMoveJsonRequest.getJsonArray(HOLDINGS_RECORD_IDS));
+    List<String> holdingsRecordsIdsToUpdate =
+      toListOfStrings(holdingsMoveJsonRequest.getJsonArray(HOLDINGS_RECORD_IDS));
 
     LOGGER.info("moveHoldings:: Attempting to move {} holdings records to instanceId {}",
       holdingsRecordsIdsToUpdate.size(), toInstanceId);
@@ -156,15 +157,18 @@ public class MoveApi extends AbstractInventoryResource {
       })
       .thenAccept(foundInstance -> {
         if (foundInstance == null) {
-          LOGGER.warn("moveHoldings:: Instance {} not found locally or in consortium. Aborting move operation.", toInstanceId);
+          LOGGER.warn("moveHoldings:: Instance {} not found locally or in consortium. Aborting move operation.",
+            toInstanceId);
           throw new BadRequestException(format(INSTANCE_NOT_FOUND, toInstanceId));
         }
-        LOGGER.info("moveHoldings:: Target instance {} found. Proceeding to update holdings records.", foundInstance.getId());
+        LOGGER.info("moveHoldings:: Target instance {} found. Proceeding to update holdings records.",
+          foundInstance.getId());
         updateHoldingsForInstance(routingContext, context, foundInstance, holdingsRecordsIdsToUpdate);
       })
       .exceptionally(e -> {
         if (e.getCause() instanceof BadRequestException) {
-          LOGGER.error("moveHoldings:: Bad request while attempting to move holdings to instanceId {}: {}", toInstanceId, e.getCause().getMessage());
+          LOGGER.error("moveHoldings:: Bad request while attempting to move holdings to instanceId {}: {}",
+            toInstanceId, e.getCause().getMessage());
           unprocessableEntity(routingContext.response(), e.getCause().getMessage());
         } else {
           LOGGER.error("moveHoldings:: Failed to complete move holdings operation for instanceId {}", toInstanceId, e);
@@ -174,29 +178,36 @@ public class MoveApi extends AbstractInventoryResource {
       });
   }
 
-  private void updateHoldingsForInstance(RoutingContext routingContext, WebContext context, Instance instance, List<String> holdingsRecordsIdsToUpdate) {
+  private void updateHoldingsForInstance(RoutingContext routingContext, WebContext context, Instance instance,
+                                         List<String> holdingsRecordsIdsToUpdate) {
     LOGGER.info("updateHoldingsForInstance:: Preparing to update {} holdings records to point to instanceId {}.",
       holdingsRecordsIdsToUpdate.size(), instance.getId());
     try {
-      CollectionResourceClient holdingsStorageClient = createHoldingsStorageClient(createHttpClient(client, routingContext, context), context);
+      CollectionResourceClient holdingsStorageClient =
+        createHoldingsStorageClient(createHttpClient(client, routingContext, context), context);
       MultipleRecordsFetchClient holdingsRecordFetchClient = createHoldingsRecordsFetchClient(holdingsStorageClient);
 
-      LOGGER.info("updateHoldingsForInstance:: Fetching {} holdings records to be moved.", holdingsRecordsIdsToUpdate.size());
+      LOGGER.info("updateHoldingsForInstance:: Fetching {} holdings records to be moved.",
+        holdingsRecordsIdsToUpdate.size());
 
       holdingsRecordFetchClient.find(holdingsRecordsIdsToUpdate, MoveApiUtil::fetchByIdCql)
         .thenAccept(jsons -> {
-          LOGGER.info("updateHoldingsForInstance:: Found {} of {} holdings records. Preparing to update their instanceId to {}.",
+          LOGGER.info(
+            "updateHoldingsForInstance:: Found {} of {} holdings records. Preparing to update their instanceId to {}.",
             jsons.size(), holdingsRecordsIdsToUpdate.size(), instance.getId());
 
           if (jsons.isEmpty() && !holdingsRecordsIdsToUpdate.isEmpty()) {
-            LOGGER.warn("updateHoldingsForInstance:: None of the requested holdings records [{}] were found for moving.", holdingsRecordsIdsToUpdate);
+            LOGGER.warn(
+              "updateHoldingsForInstance:: None of the requested holdings records [{}] were found for moving.",
+              holdingsRecordsIdsToUpdate);
           }
 
           List<HoldingsRecord> holdingsRecordsToUpdate = updateInstanceIdForHoldings(instance.getId(), jsons);
           updateHoldings(routingContext, context, holdingsRecordsIdsToUpdate, holdingsRecordsToUpdate);
         })
         .exceptionally(e -> {
-          LOGGER.error("updateHoldingsForInstance:: Failed to fetch holdings records for moving. IDs: {}", holdingsRecordsIdsToUpdate, e);
+          LOGGER.error("updateHoldingsForInstance:: Failed to fetch holdings records for moving. IDs: {}",
+            holdingsRecordsIdsToUpdate, e);
           ServerErrorResponse.internalError(routingContext.response(), e);
           return null;
         });
@@ -213,23 +224,25 @@ public class MoveApi extends AbstractInventoryResource {
       .thenCompose(consortiumConfig -> {
         if (consortiumConfig.isPresent()) {
           LOGGER.info("findInstanceInConsortium:: Tenant is part of consortium '{}'. Searching in central tenant '{}'.",
-            consortiumConfig.get().getConsortiumId(), consortiumConfig.get().getCentralTenantId());
+            consortiumConfig.get().consortiumId(), consortiumConfig.get().centralTenantId());
 
           Context centralTenantContext = constructContext(
-            consortiumConfig.get().getCentralTenantId(), context.getToken(), context.getOkapiLocation(),
+            consortiumConfig.get().centralTenantId(), context.getToken(), context.getOkapiLocation(),
             context.getUserId(), context.getRequestId()
           );
           return storage.getInstanceCollection(centralTenantContext).findById(toInstanceId)
             .thenApply(sharedInstance -> {
               if (sharedInstance != null) {
-                LOGGER.info("findInstanceInConsortium:: Successfully found shared instance {} in central tenant.", toInstanceId);
+                LOGGER.info("findInstanceInConsortium:: Successfully found shared instance {} in central tenant.",
+                  toInstanceId);
               } else {
                 LOGGER.info("findInstanceInConsortium:: Instance {} was not found in central tenant.", toInstanceId);
               }
               return sharedInstance;
             });
         }
-        LOGGER.info("findInstanceInConsortium:: Tenant is not part of a consortium. Skipping search in central tenant.");
+        LOGGER.info(
+          "findInstanceInConsortium:: Tenant is not part of a consortium. Skipping search in central tenant.");
         return CompletableFuture.completedFuture(null);
       });
   }
@@ -239,7 +252,7 @@ public class MoveApi extends AbstractInventoryResource {
    * for each item.
    *
    * @param toHoldingsRecordId the id of the holdings record to which items will be moved
-   * @param jsons the list of items in JSON format to be updated
+   * @param jsons              the list of items in JSON format to be updated
    * @return a list of Item objects with updated holdingId and order fields
    */
   private List<Item> updateItemFields(String toHoldingsRecordId, List<JsonObject> jsons) {
@@ -250,7 +263,8 @@ public class MoveApi extends AbstractInventoryResource {
       .toList();
   }
 
-  private void updateItems(RoutingContext routingContext, WebContext context, List<String> idsToUpdate, List<Item> itemsToUpdate) {
+  private void updateItems(RoutingContext routingContext, WebContext context, List<String> idsToUpdate,
+                           List<Item> itemsToUpdate) {
     ItemCollection storageItemCollection = storage.getItemCollection(context);
 
     List<CompletableFuture<Item>> updates = itemsToUpdate.stream()
@@ -276,7 +290,7 @@ public class MoveApi extends AbstractInventoryResource {
   }
 
   private void updateHoldings(RoutingContext routingContext, WebContext context, List<String> idsToUpdate,
-      List<HoldingsRecord> holdingsToUpdate) {
+                              List<HoldingsRecord> holdingsToUpdate) {
     HoldingsRecordCollection storageHoldingsRecordsCollection = storage.getHoldingsRecordCollection(context);
 
     List<CompletableFuture<HoldingsRecord>> updateFutures = holdingsToUpdate.stream()

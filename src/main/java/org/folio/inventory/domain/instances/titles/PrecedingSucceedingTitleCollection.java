@@ -7,7 +7,8 @@ public class PrecedingSucceedingTitleCollection {
   private final List<PrecedingSucceedingTitle> precedingSucceedingTitles;
   private final int totalRecords;
 
-  public PrecedingSucceedingTitleCollection(List<PrecedingSucceedingTitle> precedingSucceedingTitles, int totalRecords) {
+  public PrecedingSucceedingTitleCollection(List<PrecedingSucceedingTitle> precedingSucceedingTitles,
+                                            int totalRecords) {
     this.precedingSucceedingTitles = precedingSucceedingTitles;
     this.totalRecords = totalRecords;
   }

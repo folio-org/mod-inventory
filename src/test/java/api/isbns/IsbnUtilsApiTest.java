@@ -10,8 +10,6 @@ import static org.folio.inventory.resources.IsbnUtilsApi.VALIDATOR_MISSING_REQUI
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-import support.ApiRoot;
-import support.ApiTests;
 import io.vertx.core.json.JsonObject;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -19,6 +17,8 @@ import lombok.SneakyThrows;
 import org.folio.inventory.resources.IsbnUtilsApi;
 import org.folio.inventory.support.http.client.Response;
 import org.junit.jupiter.api.Test;
+import support.ApiRoot;
+import support.ApiTests;
 
 public class IsbnUtilsApiTest extends ApiTests {
 
@@ -196,14 +196,14 @@ public class IsbnUtilsApiTest extends ApiTests {
   }
 
   private void checkThatResultIsExpected(Response conversionResponse, String expectedCode) {
-    assertThat(conversionResponse.getStatusCode(), is(200));
+    assertThat(conversionResponse.statusCode(), is(200));
     JsonObject result = conversionResponse.getJson();
     assertThat(result.getString(ISBN_PARAM), is(expectedCode));
   }
 
   private void checkErrorResponse(Response conversionResponse, String message) {
-    assertThat(conversionResponse.getStatusCode(), is(400));
-    assertThat(conversionResponse.getBody(), is(message));
+    assertThat(conversionResponse.statusCode(), is(400));
+    assertThat(conversionResponse.body(), is(message));
   }
 
   @SneakyThrows
@@ -212,7 +212,7 @@ public class IsbnUtilsApiTest extends ApiTests {
 
     Response validateGetResponse = validateGetCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(validateGetResponse.getStatusCode(), is(200));
+    assertThat(validateGetResponse.statusCode(), is(200));
     JsonObject result = validateGetResponse.getJson();
     assertThat(result.getBoolean(IsbnUtilsApi.IS_VALID), is(isValid));
   }

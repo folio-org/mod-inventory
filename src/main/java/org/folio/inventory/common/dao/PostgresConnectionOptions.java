@@ -1,29 +1,23 @@
 package org.folio.inventory.common.dao;
 
+import static java.lang.String.format;
+
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.ClientSSLOptions;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.SslMode;
 import io.vertx.sqlclient.PoolOptions;
-import lombok.Setter;
-import org.apache.commons.lang3.StringUtils;
-
-import static java.lang.String.format;
-
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Utility class to get connection properties used to connect to Postgres DB.
  */
 public class PostgresConnectionOptions {
-  private static final String DEFAULT_SCHEMA_PROPERTY = "search_path";
-  private static final String DEFAULT_IDLE_TIMEOUT = "60000";
-  private static final String DEFAULT_MAX_POOL_SIZE = "5";
-  private static final String MODULE_NAME = "mod_inventory";
-
   public static final String DB_HOST = "DB_HOST";
   public static final String DB_PORT = "DB_PORT";
   public static final String DB_DATABASE = "DB_DATABASE";
@@ -32,10 +26,13 @@ public class PostgresConnectionOptions {
   public static final String DB_MAXPOOLSIZE = "DB_MAXPOOLSIZE";
   public static final String DB_SERVER_PEM = "DB_SERVER_PEM";
   public static final String DB_IDLETIMEOUT = "DB_IDLETIMEOUT";
-
+  private static final String DEFAULT_SCHEMA_PROPERTY = "search_path";
+  private static final String DEFAULT_IDLE_TIMEOUT = "60000";
+  private static final String DEFAULT_MAX_POOL_SIZE = "5";
+  private static final String MODULE_NAME = "mod_inventory";
   /**
    * -- SETTER --
-   *  For test usage only.
+   * For test usage only.
    *
    * @param newSystemProperties Map of system properties to set.
    */
@@ -90,12 +87,15 @@ public class PostgresConnectionOptions {
   public static PoolOptions getPoolOptions() {
     return new PoolOptions()
       .setMaxSize(PostgresConnectionOptions.getMaxPoolSize())
-      .setIdleTimeout(Integer.parseInt(StringUtils.isNotBlank(getSystemProperty(DB_IDLETIMEOUT)) ? getSystemProperty(DB_IDLETIMEOUT) : DEFAULT_IDLE_TIMEOUT))
+      .setIdleTimeout(Integer.parseInt(
+        StringUtils.isNotBlank(getSystemProperty(DB_IDLETIMEOUT)) ? getSystemProperty(DB_IDLETIMEOUT)
+                                                                  : DEFAULT_IDLE_TIMEOUT))
       .setIdleTimeoutUnit(TimeUnit.MILLISECONDS);
   }
 
   public static Integer getMaxPoolSize() {
-    return Integer.parseInt(getSystemProperty(DB_MAXPOOLSIZE) != null ? getSystemProperty(DB_MAXPOOLSIZE) : DEFAULT_MAX_POOL_SIZE);
+    return Integer.parseInt(
+      getSystemProperty(DB_MAXPOOLSIZE) != null ? getSystemProperty(DB_MAXPOOLSIZE) : DEFAULT_MAX_POOL_SIZE);
   }
 
   public static String getSystemProperty(String key) {
@@ -111,5 +111,4 @@ public class PostgresConnectionOptions {
   public static String convertToPsqlStandard(String tenantId) {
     return format("%s_%s", tenantId.toLowerCase(), MODULE_NAME);
   }
-
 }

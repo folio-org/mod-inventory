@@ -1,11 +1,10 @@
 package org.folio.inventory.dataimport.entities;
 
 import io.vertx.core.json.JsonObject;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Interface for storing intermediate results of the Item(errors and successful) Handler's processing between runs if Optimistic Locking reveals.
@@ -14,7 +13,7 @@ import java.util.List;
  */
 @Getter
 @Setter
-public class OlItemAccumulativeResults{
+public class OlItemAccumulativeResults {
 
   private List<JsonObject> resultedSuccessItems;
   private List<PartialError> resultedErrorItems;

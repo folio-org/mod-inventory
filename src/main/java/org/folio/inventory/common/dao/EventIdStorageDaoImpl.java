@@ -4,19 +4,20 @@ import io.vertx.core.Future;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
+import java.time.Clock;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.domain.relationship.EventTable;
 import org.folio.inventory.domain.relationship.EventToEntity;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.UUID;
-
 public class EventIdStorageDaoImpl implements EventIdStorageDao {
   private static final Logger LOGGER = LogManager.getLogger(EventIdStorageDaoImpl.class);
 
-  private static final String INSERT_FUNCTION = "INSERT INTO {schemaName}.{tableName} VALUES ($1::uuid, $2::timestamptz) RETURNING *;";
+  private static final String INSERT_FUNCTION =
+    "INSERT INTO {schemaName}.{tableName} VALUES ($1::uuid, $2::timestamptz) RETURNING *;";
 
   private final PostgresClientFactory postgresClientFactory;
 
@@ -32,7 +33,7 @@ public class EventIdStorageDaoImpl implements EventIdStorageDao {
 
     LOGGER.info("Trying to save event to {} with eventId = {}", tableName, eventId);
     String sql = prepareQuery(eventTable);
-    OffsetDateTime currentDateTime = OffsetDateTime.now().toInstant().atOffset(ZoneOffset.UTC);
+    OffsetDateTime currentDateTime = OffsetDateTime.now(Clock.systemDefaultZone()).toInstant().atOffset(ZoneOffset.UTC);
     Tuple tuple = Tuple.of(eventId, currentDateTime);
 
     return postgresClientFactory.execute(sql, tuple, tenantId)

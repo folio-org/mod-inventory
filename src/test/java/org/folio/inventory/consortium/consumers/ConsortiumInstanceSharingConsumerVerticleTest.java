@@ -5,9 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.folio.inventory.ConsortiumInstanceSharingConsumerVerticle;
-import support.KafkaTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import support.KafkaTest;
 
 @ExtendWith(VertxExtension.class)
 class ConsortiumInstanceSharingConsumerVerticleTest extends KafkaTest {

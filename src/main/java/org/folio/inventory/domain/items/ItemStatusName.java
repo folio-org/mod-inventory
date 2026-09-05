@@ -28,13 +28,19 @@ public enum ItemStatusName {
   UNKNOWN("Unknown"),
   WITHDRAWN("Withdrawn");
 
-
-
   private static final Map<String, ItemStatusName> VALUE_TO_INSTANCE_MAP = initValueToInstanceMap();
   private final String value;
 
   ItemStatusName(String value) {
     this.value = value;
+  }
+
+  public static ItemStatusName forName(String value) {
+    return VALUE_TO_INSTANCE_MAP.get(value);
+  }
+
+  public static boolean isStatusCorrect(String value) {
+    return VALUE_TO_INSTANCE_MAP.containsKey(value);
   }
 
   @Override
@@ -44,14 +50,6 @@ public enum ItemStatusName {
 
   public String value() {
     return this.value;
-  }
-
-  public static ItemStatusName forName(String value) {
-    return VALUE_TO_INSTANCE_MAP.get(value);
-  }
-
-  public static boolean isStatusCorrect(String value) {
-    return VALUE_TO_INSTANCE_MAP.containsKey(value);
   }
 
   private static Map<String, ItemStatusName> initValueToInstanceMap() {

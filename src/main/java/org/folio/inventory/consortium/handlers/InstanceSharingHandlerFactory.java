@@ -8,12 +8,12 @@ import org.folio.inventory.storage.Storage;
 public enum InstanceSharingHandlerFactory {
   FOLIO, MARC;
 
-  public static InstanceSharingHandler getInstanceSharingHandler(InstanceSharingHandlerFactory instanceSharingHandlerType,
-                                                                 InstanceOperationsHelper instanceOperationsHelper, Storage storage,
-                                                                 Vertx vertx, HttpClient httpClient) {
+  public static InstanceSharingHandler getInstanceSharingHandler(
+    InstanceSharingHandlerFactory instanceSharingHandlerType,
+    InstanceOperationsHelper instanceOperationsHelper, Storage storage,
+    Vertx vertx, HttpClient httpClient) {
     return instanceSharingHandlerType == FOLIO ?
-      new FolioInstanceSharingHandlerImpl(instanceOperationsHelper) :
-      new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient);
+           new FolioInstanceSharingHandlerImpl(instanceOperationsHelper) :
+           new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient);
   }
-
 }

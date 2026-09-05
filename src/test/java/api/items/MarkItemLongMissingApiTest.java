@@ -1,6 +1,5 @@
 package api.items;
 
-import static support.fixtures.InstanceFixture.smallAngryPlanet;
 import static org.folio.inventory.domain.items.CirculationNote.NOTE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
@@ -8,15 +7,12 @@ import static org.folio.inventory.domain.items.Item.CIRCULATION_NOTES_KEY;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static support.fixtures.InstanceFixture.smallAngryPlanet;
 import static support.matchers.ItemMatchers.isLongMissing;
 import static support.matchers.RequestMatchers.hasStatus;
 import static support.matchers.RequestMatchers.isOpenNotYetFilled;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
-import support.ApiTests;
-import support.builders.HoldingRequestBuilder;
-import support.builders.ItemRequestBuilder;
-import support.dto.Request;
 import io.vertx.core.json.JsonObject;
 import java.util.UUID;
 import org.folio.inventory.support.http.client.IndividualResource;
@@ -27,6 +23,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import support.ApiTests;
+import support.builders.HoldingRequestBuilder;
+import support.builders.ItemRequestBuilder;
+import support.dto.Request;
 
 public class MarkItemLongMissingApiTest extends ApiTests {
   private IndividualResource holdingsRecord;
@@ -64,7 +64,7 @@ public class MarkItemLongMissingApiTest extends ApiTests {
       .canCirculate());
     final Response response = markItemLongMissing(createdItem);
 
-    assertEquals(200, response.getStatusCode());
+    assertEquals(200, response.statusCode());
     assertThat(response.getJson(), isLongMissing());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isLongMissing());
   }
@@ -83,7 +83,7 @@ public class MarkItemLongMissingApiTest extends ApiTests {
 
   @Test
   void shouldNotMarkItemLongMissingThatCannotBeFound() {
-    assertThat(markItemFixture.markLongMissing(UUID.randomUUID()).getStatusCode(),
+    assertThat(markItemFixture.markLongMissing(UUID.randomUUID()).statusCode(),
       is(404));
   }
 

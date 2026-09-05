@@ -1,20 +1,18 @@
 package org.folio.inventory.services;
 
+import io.vertx.core.json.JsonObject;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CqlQuery;
 import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
-
-import io.vertx.core.json.JsonObject;
 
 public class InstanceRelationshipsService {
   private final MultipleRecordsFetchClient relationshipsFetchClient;
   private final MultipleRecordsFetchClient precedingSucceedingFetchClient;
 
   public InstanceRelationshipsService(CollectionResourceClient relationshipsClient,
-    CollectionResourceClient precedingSucceedingTitleClient) {
+                                      CollectionResourceClient precedingSucceedingTitleClient) {
 
     this.relationshipsFetchClient =
       createInstanceRelationshipsFetchClient(relationshipsClient);

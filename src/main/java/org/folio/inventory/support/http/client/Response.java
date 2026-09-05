@@ -1,22 +1,14 @@
 package org.folio.inventory.support.http.client;
 
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpClientResponse;
-
 import static io.vertx.core.http.HttpHeaders.CONTENT_TYPE;
 
-public class Response {
-  protected final String body;
-  private final int statusCode;
-  private final String contentType;
-  private final String location;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpClientResponse;
+import io.vertx.core.json.JsonObject;
 
+public record Response(String body, int statusCode, String contentType, String location) {
   public Response(int statusCode, String body, String contentType, String location) {
-    this.statusCode = statusCode;
-    this.body = body;
-    this.contentType = contentType;
-    this.location = location;
+    this(body, statusCode, contentType, location);
   }
 
   public static Response from(HttpClientResponse response, Buffer body) {
@@ -27,34 +19,17 @@ public class Response {
   }
 
   public boolean hasBody() {
-    return getBody() != null && !getBody().trim().equals("");
-  }
-
-  public int getStatusCode() {
-    return statusCode;
-  }
-
-  public String getBody() {
-    return body;
+    return body() != null && !body().trim().isEmpty();
   }
 
   public JsonObject getJson() {
-    String body = getBody();
+    String body = body();
 
-    if(hasBody()) {
+    if (hasBody()) {
       return new JsonObject(body);
-    }
-    else {
+    } else {
       return new JsonObject();
     }
-  }
-
-  public String getContentType() {
-    return contentType;
-  }
-
-  public String getLocation() {
-    return this.location;
   }
 
   private static String convertNullToEmpty(String text) {

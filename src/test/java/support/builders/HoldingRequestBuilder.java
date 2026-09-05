@@ -103,14 +103,6 @@ public class HoldingRequestBuilder extends AbstractBuilder {
     return withPermanentLocation(UUID.fromString(ApiTestSuite.getMainLibraryLocation()));
   }
 
-  public HoldingRequestBuilder temporarilyInMezzanine() {
-    return withTemporaryLocation(UUID.fromString(ApiTestSuite.getMezzanineDisplayCaseLocation()));
-  }
-
-  public HoldingRequestBuilder withNoTemporaryLocation() {
-    return withTemporaryLocation(null);
-  }
-
   public HoldingRequestBuilder forInstance(UUID instanceId) {
     return new HoldingRequestBuilder(
       instanceId,
@@ -252,21 +244,6 @@ public class HoldingRequestBuilder extends AbstractBuilder {
       permanentLocationId,
       this.temporaryLocationId,
       callNumber,
-      this.callNumberSuffix,
-      this.callNumberPrefix,
-      this.callNumberTypeId,
-      this.additionalCallNumbers,
-      this.sourceId,
-      this.administrativeNotes,
-      this.hrId);
-  }
-
-  private HoldingRequestBuilder withTemporaryLocation(UUID temporaryLocationId) {
-    return new HoldingRequestBuilder(
-      this.instanceId,
-      this.permanentLocationId,
-      temporaryLocationId,
-      this.callNumber,
       this.callNumberSuffix,
       this.callNumberPrefix,
       this.callNumberTypeId,

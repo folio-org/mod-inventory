@@ -17,12 +17,12 @@ import org.folio.inventory.common.dao.PostgresConnectionOptions;
 import org.folio.inventory.domain.relationship.EntityTable;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.resources.TenantApi;
-import support.PgPoolContainer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import support.PgPoolContainer;
 
 @ExtendWith(VertxExtension.class)
 class EntityIdStorageDaoImplTest {

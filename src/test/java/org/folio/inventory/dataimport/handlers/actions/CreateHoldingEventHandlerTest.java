@@ -299,8 +299,8 @@ class CreateHoldingEventHandlerTest {
 
     verify(consortiumServiceImpl).createShadowInstance(argThat(context -> context.getTenantId().equals(localTenant)),
       eq(instanceId),
-      argThat((consortiumCredentials -> consortiumCredentials.getCentralTenantId().equals(centralTenantId)
-                                        && consortiumCredentials.getConsortiumId().equals(consortiumId))));
+      argThat((consortiumCredentials -> consortiumCredentials.centralTenantId().equals(centralTenantId)
+                                        && consortiumCredentials.consortiumId().equals(consortiumId))));
 
     assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));

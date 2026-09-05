@@ -2,14 +2,13 @@ package org.folio.inventory.dataimport.util;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.folio.inventory.dataimport.entities.PartialError;
-import org.folio.inventory.domain.instances.Instance;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.folio.inventory.dataimport.entities.PartialError;
+import org.folio.inventory.domain.instances.Instance;
 
 /**
  * Util for detailed validation different entities.
@@ -26,6 +25,7 @@ public class ValidationUtil {
    * Validate fields inside the Instance entity. Validation based on checking if specific fields were mapped as UUIDs.
    * If not - then the list with errors will be returned.
    * Example: "Value 'invalid not UUID value' is not a UUID for someFieldName field"
+   *
    * @param instance target Instance for validation
    * @return ArrayList with errors when the needed fields are NOT as UUID.
    */
@@ -66,6 +66,7 @@ public class ValidationUtil {
   /**
    * Validates that all provided statistical code IDs are valid UUIDs.
    * Returns an error message for each invalid entry.
+   *
    * @param ids list of statistical code IDs to validate
    * @return list of error messages; empty if all IDs are valid UUIDs
    */
@@ -77,7 +78,7 @@ public class ValidationUtil {
 
   private static void validateStatisticalCodeIds(List<String> errorMessages, List<String> ids) {
     List<String> invalidIds = ids.stream()
-      .filter(id -> !isUUID(id))
+      .filter(id -> !isUuid(id))
       .toList();
 
     if (!invalidIds.isEmpty()) {
@@ -90,11 +91,11 @@ public class ValidationUtil {
 
   private static void validateField(List<String> errorMessages, List<String> values, String fieldName) {
     values.stream()
-      .filter(value -> !isUUID(value))
+      .filter(value -> !isUuid(value))
       .forEach(value -> errorMessages.add(String.format("Value '%s' is not a UUID for %s field", value, fieldName)));
   }
 
-  private static boolean isUUID(String value) {
+  private static boolean isUuid(String value) {
     try {
       UUID.fromString(value);
       return true;
@@ -106,8 +107,8 @@ public class ValidationUtil {
   private static List<String> validateHoldingStatisticalCodeIds(JsonObject holdingAsJson) {
     JsonArray statCodeIdsArray = holdingAsJson.getJsonArray(STATISTICAL_CODE_IDS_FIELD);
     List<String> statCodeIds = statCodeIdsArray != null
-      ? statCodeIdsArray.stream().map(Object::toString).toList()
-      : List.of();
+                               ? statCodeIdsArray.stream().map(Object::toString).toList()
+                               : List.of();
     return validateStatisticalCodeIds(statCodeIds);
   }
 }

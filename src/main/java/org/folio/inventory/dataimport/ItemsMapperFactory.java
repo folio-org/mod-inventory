@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport;
 
+import java.util.LinkedHashMap;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.processing.mapping.mapper.Mapper;
@@ -7,10 +8,7 @@ import org.folio.processing.mapping.mapper.mappers.ItemMapper;
 import org.folio.processing.mapping.mapper.mappers.MapperFactory;
 import org.folio.processing.mapping.mapper.reader.Reader;
 import org.folio.processing.mapping.mapper.writer.Writer;
-import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.ProfileType;
-
-import java.util.LinkedHashMap;
 
 public class ItemsMapperFactory implements MapperFactory {
 
@@ -26,6 +24,6 @@ public class ItemsMapperFactory implements MapperFactory {
     LinkedHashMap<String, String> map = (LinkedHashMap<String, String>) eventPayload.getCurrentNode().getContent();
     String existingRecordType = map.get(EXISTING_RECORD_TYPE);
     return (ProfileType.MAPPING_PROFILE.equals(eventPayload.getCurrentNode().getContentType()))
-      && (existingRecordType.equals(ActionProfile.FolioRecord.ITEM.value()));
+           && (existingRecordType.equals(ActionProfile.FolioRecord.ITEM.value()));
   }
 }

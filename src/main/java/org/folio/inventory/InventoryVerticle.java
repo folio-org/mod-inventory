@@ -1,10 +1,13 @@
 package org.folio.inventory;
 
-import java.lang.invoke.MethodHandles;
-
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import java.lang.invoke.MethodHandles;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebRequestDiagnostics;
@@ -27,11 +30,6 @@ import org.folio.inventory.resources.TenantApi;
 import org.folio.inventory.resources.TenantItemsApi;
 import org.folio.inventory.resources.UpdateOwnershipApi;
 import org.folio.inventory.storage.Storage;
-
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpServer;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
 
 public class InventoryVerticle extends AbstractVerticle {
   private HttpServer server;
@@ -73,7 +71,8 @@ public class InventoryVerticle extends AbstractVerticle {
     new ItemsByHoldingsRecordIdApi(storage, client).register(router);
     new InventoryConfigApi().register(router);
     new TenantApi().register(router);
-    new UpdateOwnershipApi(storage, client, consortiumService, snapshotService, new InventoryClientFactoryImpl()).register(router);
+    new UpdateOwnershipApi(storage, client, consortiumService, snapshotService,
+      new InventoryClientFactoryImpl()).register(router);
     new TenantItemsApi(client).register(router);
 
     server.requestHandler(router)

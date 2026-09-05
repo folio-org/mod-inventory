@@ -6,10 +6,6 @@ import static api.ApiTestSuite.getDvdMaterialType;
 import static api.ApiTestSuite.getMainLibraryLocation;
 import static api.ApiTestSuite.getReadingRoomLocation;
 import static api.ApiTestSuite.getThirdFloorLocation;
-import static support.fixtures.InstanceFixture.girlOnTheTrain;
-import static support.fixtures.InstanceFixture.nod;
-import static support.fixtures.InstanceFixture.smallAngryPlanet;
-import static support.http.BusinessLogicInterfaceUrls.items;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.inventory.domain.items.CirculationNote.DATE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.NOTE_KEY;
@@ -36,25 +32,22 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static support.fixtures.InstanceFixture.girlOnTheTrain;
+import static support.fixtures.InstanceFixture.nod;
+import static support.fixtures.InstanceFixture.smallAngryPlanet;
+import static support.http.BusinessLogicInterfaceUrls.items;
 import static support.matchers.ResponseMatchers.hasValidationError;
 import static support.matchers.TextDateTimeMatcher.withinSecondsAfter;
 
 import api.ApiTestSuite;
-import support.ApiRoot;
-import support.ApiTests;
-import support.InstanceApiClient;
-import java.util.Collection;
-import java.util.Optional;
-import support.builders.HoldingRequestBuilder;
-import support.builders.ItemRequestBuilder;
-import support.fixtures.InstanceRequestFixture;
-import support.fixtures.ItemRequestFixture;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.Strings;
@@ -72,6 +65,13 @@ import org.joda.time.Seconds;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import support.ApiRoot;
+import support.ApiTests;
+import support.InstanceApiClient;
+import support.builders.HoldingRequestBuilder;
+import support.builders.ItemRequestBuilder;
+import support.fixtures.InstanceRequestFixture;
+import support.fixtures.ItemRequestFixture;
 
 public class ItemsApiTest extends ApiTests {
 
@@ -253,7 +253,7 @@ public class ItemsApiTest extends ApiTests {
 
     Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(postResponse.getStatusCode(), is(422));
+    assertThat(postResponse.statusCode(), is(422));
   }
 
   @Test
@@ -271,7 +271,7 @@ public class ItemsApiTest extends ApiTests {
 
     Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(postResponse.getStatusCode(), is(422));
+    assertThat(postResponse.statusCode(), is(422));
   }
 
   @Test
@@ -288,7 +288,7 @@ public class ItemsApiTest extends ApiTests {
 
     Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(postResponse.getStatusCode(), is(422));
+    assertThat(postResponse.statusCode(), is(422));
   }
 
   @Test
@@ -399,7 +399,7 @@ public class ItemsApiTest extends ApiTests {
 
     Response getResponse = itemsClient.getById(itemId);
 
-    assertThat(getResponse.getStatusCode(), is(200));
+    assertThat(getResponse.statusCode(), is(200));
     JsonObject updatedItem = getResponse.getJson();
 
     assertThat(getTags(updatedItem), hasItem(""));
@@ -454,7 +454,7 @@ public class ItemsApiTest extends ApiTests {
 
     Response putResponse = putCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(putResponse.getStatusCode(), is(404));
+    assertThat(putResponse.statusCode(), is(404));
   }
 
   @Test
@@ -469,7 +469,7 @@ public class ItemsApiTest extends ApiTests {
       .create();
     item = itemsClient.create(item).getJson();
 
-    assertThat(updateItem(item).getStatusCode(), is(409));
+    assertThat(updateItem(item).statusCode(), is(409));
   }
 
   @Test
@@ -609,8 +609,8 @@ public class ItemsApiTest extends ApiTests {
     Response firstPageResponse = firstPageGetCompleted.toCompletableFuture().get(5, SECONDS);
     Response secondPageResponse = secondPageGetCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(firstPageResponse.getStatusCode(), is(200));
-    assertThat(secondPageResponse.getStatusCode(), is(200));
+    assertThat(firstPageResponse.statusCode(), is(200));
+    assertThat(secondPageResponse.statusCode(), is(200));
 
     List<JsonObject> firstPageItems = JsonArrayHelper.toList(
       firstPageResponse.getJson().getJsonArray("items"));
@@ -669,7 +669,7 @@ public class ItemsApiTest extends ApiTests {
 
     Response getAllResponse = getAllCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getAllResponse.getStatusCode(), is(200));
+    assertThat(getAllResponse.statusCode(), is(200));
 
     List<JsonObject> items = JsonArrayHelper.toList(
       getAllResponse.getJson().getJsonArray("items"));
@@ -709,8 +709,8 @@ public class ItemsApiTest extends ApiTests {
 
     Response getPagedResponse = getPagedCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getPagedResponse.getStatusCode(), is(400));
-    assertThat(getPagedResponse.getBody(),
+    assertThat(getPagedResponse.statusCode(), is(400));
+    assertThat(getPagedResponse.body(),
       is("limit and offset must be numeric when supplied"));
   }
 
@@ -748,7 +748,7 @@ public class ItemsApiTest extends ApiTests {
 
     Response searchGetResponse = searchGetCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(searchGetResponse.getStatusCode(), is(200));
+    assertThat(searchGetResponse.statusCode(), is(200));
 
     List<JsonObject> items = JsonArrayHelper.toList(
       searchGetResponse.getJson().getJsonArray("items"));
@@ -786,7 +786,7 @@ public class ItemsApiTest extends ApiTests {
 
     Response retrievePostResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(retrievePostResponse.getStatusCode(), is(200));
+    assertThat(retrievePostResponse.statusCode(), is(200));
 
     List<JsonObject> items = JsonArrayHelper.toList(
       retrievePostResponse.getJson().getJsonArray("items"));
@@ -828,8 +828,8 @@ public class ItemsApiTest extends ApiTests {
     Response retrievePostPageResponseFirst = retrievePostCompletedFirstPage.toCompletableFuture().get(5, SECONDS);
     Response retrievePostPageResponseSecond = retrievePostCompletedSecondPage.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(retrievePostPageResponseFirst.getStatusCode(), is(200));
-    assertThat(retrievePostPageResponseSecond.getStatusCode(), is(200));
+    assertThat(retrievePostPageResponseFirst.statusCode(), is(200));
+    assertThat(retrievePostPageResponseSecond.statusCode(), is(200));
 
     List<JsonObject> firstPageItems = JsonArrayHelper.toList(
       retrievePostPageResponseFirst.getJson().getJsonArray("items"));
@@ -877,8 +877,8 @@ public class ItemsApiTest extends ApiTests {
 
     Response sameBarcodeCreateResponse = createItemCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(sameBarcodeCreateResponse.getStatusCode(), is(400));
-    assertThat(sameBarcodeCreateResponse.getBody(),
+    assertThat(sameBarcodeCreateResponse.statusCode(), is(400));
+    assertThat(sameBarcodeCreateResponse.body(),
       is("Barcode must be unique, 645398607547 is already assigned to another item"));
   }
 
@@ -921,8 +921,8 @@ public class ItemsApiTest extends ApiTests {
 
     Response putItemResponse = putItemCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(putItemResponse.getStatusCode(), is(400));
-    assertThat(putItemResponse.getBody(),
+    assertThat(putItemResponse.statusCode(), is(400));
+    assertThat(putItemResponse.body(),
       is("Barcode must be unique, 645398607547 is already assigned to another item"));
   }
 
@@ -953,13 +953,13 @@ public class ItemsApiTest extends ApiTests {
 
     Response putItemResponse = putItemCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(putItemResponse.getStatusCode(), is(204));
+    assertThat(putItemResponse.statusCode(), is(204));
 
     final var getItemCompleted = okapiClient.get(nodItemLocation);
 
     Response getItemResponse = getItemCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getItemResponse.getStatusCode(), is(200));
+    assertThat(getItemResponse.statusCode(), is(200));
     assertThat(getItemResponse.getJson().getString("barcode"), is("645398607547"));
   }
 
@@ -1005,13 +1005,13 @@ public class ItemsApiTest extends ApiTests {
 
     Response putItemResponse = putItemCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(putItemResponse.getStatusCode(), is(204));
+    assertThat(putItemResponse.statusCode(), is(204));
 
     final var getItemCompleted = okapiClient.get(nodItemLocation);
 
     Response getItemResponse = getItemCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getItemResponse.getStatusCode(), is(200));
+    assertThat(getItemResponse.statusCode(), is(200));
     assertThat(getItemResponse.getJson().containsKey("barcode"), is(false));
   }
 
@@ -1184,7 +1184,7 @@ public class ItemsApiTest extends ApiTests {
 
     Response getResponse = itemsClient.getById(itemId);
 
-    assertThat(getResponse.getStatusCode(), is(200));
+    assertThat(getResponse.statusCode(), is(200));
     JsonObject updatedItem = getResponse.getJson();
 
     assertThat(updatedItem.containsKey("id"), is(true));
@@ -1566,7 +1566,7 @@ public class ItemsApiTest extends ApiTests {
       .put("status", new JsonObject().put("name", "Available"));
 
     Response updateResponse = updateItem(updatedItem);
-    assertThat(updateResponse.getStatusCode(), is(204));
+    assertThat(updateResponse.statusCode(), is(204));
   }
 
   @ParameterizedTest
@@ -1692,7 +1692,7 @@ public class ItemsApiTest extends ApiTests {
     itemToUpdate.remove("additionalCallNumbers");
 
     Response response = itemsClient.attemptToReplace(createdItem.getId(), itemToUpdate);
-    assertThat(response.getStatusCode(), is(204));
+    assertThat(response.statusCode(), is(204));
   }
 
   @Test
@@ -1739,7 +1739,7 @@ public class ItemsApiTest extends ApiTests {
 
     Response getResponse = itemsClient.getById(itemId);
 
-    assertThat(getResponse.getStatusCode(), is(200));
+    assertThat(getResponse.statusCode(), is(200));
     JsonObject updatedItem = getResponse.getJson();
 
     assertThat(getTags(updatedItem), hasItem(""));
@@ -1795,7 +1795,7 @@ public class ItemsApiTest extends ApiTests {
 
     Response patchResponse = patchCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(patchResponse.getStatusCode(), is(404));
+    assertThat(patchResponse.statusCode(), is(404));
   }
 
   @Test
@@ -1844,7 +1844,7 @@ public class ItemsApiTest extends ApiTests {
 
     Response patchResponse = patchCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(patchResponse.getStatusCode(), is(422));
+    assertThat(patchResponse.statusCode(), is(422));
   }
 
   @Test
@@ -1908,7 +1908,7 @@ public class ItemsApiTest extends ApiTests {
 
     Response patchResponse = patchCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(patchResponse.getStatusCode(), is(400));
+    assertThat(patchResponse.statusCode(), is(400));
   }
 
   @Test
@@ -1955,7 +1955,7 @@ public class ItemsApiTest extends ApiTests {
 
     Response patchResponse = patchCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(patchResponse.getStatusCode(), is(422));
+    assertThat(patchResponse.statusCode(), is(422));
   }
 
   @Test
@@ -1980,7 +1980,7 @@ public class ItemsApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void titlesComeFromInstancesForMultipleItems(){
+  void titlesComeFromInstancesForMultipleItems() {
     UUID firstInstanceId = instancesClient.create(
       InstanceRequestFixture.smallAngryPlanet()).getId();
 
@@ -2024,9 +2024,8 @@ public class ItemsApiTest extends ApiTests {
       secondFetchedItem.getString("title"), Is.is("Temeraire"));
   }
 
-
   @Test
-  void readOnlyTitleIsNotStoredWhenCreated(){
+  void readOnlyTitleIsNotStoredWhenCreated() {
     UUID instanceId = instancesClient.create(
       InstanceRequestFixture.smallAngryPlanet()).getId();
 
@@ -2191,7 +2190,7 @@ public class ItemsApiTest extends ApiTests {
       .toList();
   }
 
-  private static Optional<JsonObject> getRecordById(    Collection<JsonObject> collection,    UUID id) {
+  private static Optional<JsonObject> getRecordById(Collection<JsonObject> collection, UUID id) {
     return collection.stream()
       .filter(request -> Strings.CS.equals(request.getString("id"), id.toString()))
       .findFirst();

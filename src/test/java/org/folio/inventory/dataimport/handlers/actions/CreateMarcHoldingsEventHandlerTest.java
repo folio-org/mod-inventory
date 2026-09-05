@@ -50,7 +50,6 @@ import org.folio.JobProfile;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
-import support.TestUtil;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
@@ -80,6 +79,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import support.TestUtil;
 
 @ExtendWith({MockitoExtension.class, VertxExtension.class})
 @MockitoSettings(strictness = Strictness.LENIENT)

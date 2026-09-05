@@ -98,10 +98,10 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response postHoldingsUpdateOwnershipResponse =
       updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(HttpStatus.SC_OK));
-    assertThat(new JsonObject(postHoldingsUpdateOwnershipResponse.getBody()).getJsonArray("notUpdatedEntities").size(),
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(HttpStatus.SC_OK));
+    assertThat(new JsonObject(postHoldingsUpdateOwnershipResponse.body()).getJsonArray("notUpdatedEntities").size(),
       is(0));
-    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     Response sourceTenantHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1);
     List<JsonObject> targetTenantHoldings =
@@ -113,14 +113,14 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.getFirst();
 
-    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
+    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.statusCode());
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord1.getString(INSTANCE_ID));
     assertEquals(getMainLibraryLocation(), targetTenantHoldingsRecord1.getString(PERMANENT_LOCATION_ID_KEY));
 
     Response sourceTenantHoldingsRecord2 = holdingsStorageClient.getById(createHoldingsRecord2);
     JsonObject targetTenantHoldingsRecord2 = targetTenantHoldings.get(1);
 
-    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.getStatusCode());
+    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.statusCode());
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord2.getString(INSTANCE_ID));
     assertEquals(getMainLibraryLocation(), targetTenantHoldingsRecord2.getString(PERMANENT_LOCATION_ID_KEY));
     assertNull(targetTenantHoldingsRecord2.getString("hrid"));
@@ -169,10 +169,10 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response postHoldingsUpdateOwnershipResponse =
       updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(HttpStatus.SC_OK));
-    assertThat(new JsonObject(postHoldingsUpdateOwnershipResponse.getBody()).getJsonArray("notUpdatedEntities").size(),
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(HttpStatus.SC_OK));
+    assertThat(new JsonObject(postHoldingsUpdateOwnershipResponse.body()).getJsonArray("notUpdatedEntities").size(),
       is(0));
-    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     // Verify Holdings ownership updated
     Response sourceTenantHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1);
@@ -185,7 +185,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.get(1);
 
-    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
+    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.statusCode());
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord1.getString(INSTANCE_ID));
     assertTrue(targetTenantHoldingIds.contains(createHoldingsRecord1.toString()));
     assertEquals(getMainLibraryLocation(), targetTenantHoldingsRecord1.getString(PERMANENT_LOCATION_ID_KEY));
@@ -193,7 +193,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response sourceTenantHoldingsRecord2 = holdingsStorageClient.getById(createHoldingsRecord2);
     JsonObject targetTenantHoldingsRecord2 = targetTenantHoldings.get(1);
 
-    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.getStatusCode());
+    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.statusCode());
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord2.getString(INSTANCE_ID));
     assertTrue(targetTenantHoldingIds.contains(createHoldingsRecord2.toString()));
     assertEquals(getMainLibraryLocation(), targetTenantHoldingsRecord2.getString(PERMANENT_LOCATION_ID_KEY));
@@ -206,7 +206,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     JsonObject targetTenantItem1 = targetTenantItems1.getFirst();
 
-    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceTenantItem1.getStatusCode()));
+    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceTenantItem1.statusCode()));
     assertEquals(targetTenantItem1.getString(HOLDINGS_RECORD_ID), createHoldingsRecord1.toString());
     assertEquals(targetTenantItem1.getString(ID), firstItem.getId().toString());
     assertNull(targetTenantItem1.getString(PERMANENT_LOCATION_ID_KEY));
@@ -220,7 +220,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     JsonObject targetTenantItem2 = targetTenantItems2.getFirst();
 
-    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceTenantItem2.getStatusCode()));
+    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceTenantItem2.statusCode()));
     assertEquals(targetTenantItem2.getString(HOLDINGS_RECORD_ID), createHoldingsRecord2.toString());
     assertNull(targetTenantItem2.getString(PERMANENT_LOCATION_ID_KEY));
     assertNull(targetTenantItem2.getString(TEMPORARY_LOCATION_ID_KEY));
@@ -265,8 +265,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     collegeItemsClient.disableFailureEmulation();
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
-    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(HttpStatus.SC_BAD_REQUEST));
+    assertThat(postHoldingsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     JsonArray notUpdatedEntities = postHoldingsUpdateOwnershipResponse.getJson().getJsonArray("notUpdatedEntities");
     assertThat(notUpdatedEntities.size(), is(1));
@@ -287,11 +287,11 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertEquals(0, targetTenantItems.size());
 
     Response sourceTenantHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1);
-    assertThat(sourceTenantHoldingsRecord1.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(sourceTenantHoldingsRecord1.statusCode(), is(HttpStatus.SC_OK));
     assertEquals(instanceId.toString(), sourceTenantHoldingsRecord1.getJson().getString(INSTANCE_ID));
 
     Response sourceTenantItem1 = itemsClient.getById(firstItem.getId());
-    assertThat(sourceTenantItem1.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(sourceTenantItem1.statusCode(), is(HttpStatus.SC_OK));
     assertThat(sourceTenantItem1.getJson().getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord1.toString()));
   }
 
@@ -331,7 +331,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     itemsStorageClient.disableFailureEmulation();
 
     assertThat("Response status should be 400 Bad Request due to partial failure",
-      postHoldingsUpdateOwnershipResponse.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
+      postHoldingsUpdateOwnershipResponse.statusCode(), is(HttpStatus.SC_BAD_REQUEST));
 
     JsonArray notUpdatedEntities = postHoldingsUpdateOwnershipResponse.getJson().getJsonArray("notUpdatedEntities");
     assertThat("There should be exactly one not-updated entity", notUpdatedEntities.size(), is(1));
@@ -340,7 +340,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     Response sourceHoldingsResponse = holdingsStorageClient.getById(createHoldingsRecord1);
     assertThat("Source holding should NOT be deleted due to failure in deleting its item",
-      sourceHoldingsResponse.getStatusCode(), is(HttpStatus.SC_OK));
+      sourceHoldingsResponse.statusCode(), is(HttpStatus.SC_OK));
 
     List<JsonObject> targetHoldings =
       collegeHoldingsStorageClient.getMany(String.format("instanceId==%s", instanceId), 1);
@@ -348,7 +348,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     JsonObject targetHoldingsRecord1 = targetHoldings.getFirst();
 
     Response sourceItemResponse = itemsStorageClient.getById(firstItem.getId());
-    assertThat("Source item should still exist in storage", sourceItemResponse.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat("Source item should still exist in storage", sourceItemResponse.statusCode(), is(HttpStatus.SC_OK));
     assertThat("Source item should still be linked to the original holdings record ID",
       sourceItemResponse.getJson().getString(HOLDINGS_RECORD_ID), is(createHoldingsRecord1.toString()));
 
@@ -380,8 +380,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response postHoldingsUpdateOwnershipResponse =
       updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(400));
-    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(400));
+    assertThat(postHoldingsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     JsonArray notFoundIds = postHoldingsUpdateOwnershipResponse.getJson()
       .getJsonArray("notUpdatedEntities");
@@ -398,11 +398,11 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.getFirst();
 
-    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
+    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.statusCode());
     assertThat(instanceId.toString(), equalTo(targetTenantHoldingsRecord1.getString(INSTANCE_ID)));
 
     Response sourceTenantHoldingsRecord2 = holdingsStorageClient.getById(createHoldingsRecord2);
-    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.getStatusCode());
+    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.statusCode());
   }
 
   @Test
@@ -442,8 +442,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response postHoldingsUpdateOwnershipResponse =
       updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(400));
-    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(400));
+    assertThat(postHoldingsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     JsonArray notFoundIds = postHoldingsUpdateOwnershipResponse.getJson()
       .getJsonArray("notUpdatedEntities");
@@ -461,11 +461,11 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     JsonObject targetTenantHoldingsRecord = targetTenantHoldings.getFirst();
 
-    assertEquals(HttpStatus.SC_OK, sourceTenantHoldingsRecord1.getStatusCode());
+    assertEquals(HttpStatus.SC_OK, sourceTenantHoldingsRecord1.statusCode());
 
     Response sourceTenantHoldingsRecord2 = holdingsStorageClient.getById(createHoldingsRecord2);
 
-    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.getStatusCode());
+    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.statusCode());
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord.getString(INSTANCE_ID));
     assertEquals(createHoldingsRecord2.toString(), targetTenantHoldingsRecord.getString(ID));
 
@@ -477,11 +477,11 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     JsonObject targetTenantItem = targetTenantItems1.getFirst();
 
-    assertThat(HttpStatus.SC_OK, is(sourceTenantItem1.getStatusCode()));
+    assertThat(HttpStatus.SC_OK, is(sourceTenantItem1.statusCode()));
 
     Response sourceTenantItem2 = itemsClient.getById(secondItem.getId());
 
-    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceTenantItem2.getStatusCode()));
+    assertThat(HttpStatus.SC_NOT_FOUND, is(sourceTenantItem2.statusCode()));
     assertThat(targetTenantItem.getString(HOLDINGS_RECORD_ID), is(targetTenantHoldingsRecord.getString(ID)));
     assertEquals(secondItem.getId().toString(), targetTenantItem.getString(ID));
     assertNotEquals(itemHrId, targetTenantItem.getString("hrid"));
@@ -513,8 +513,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response postHoldingsUpdateOwnershipResponse =
       updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(400));
-    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(400));
+    assertThat(postHoldingsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     JsonArray notFoundIds = postHoldingsUpdateOwnershipResponse.getJson()
       .getJsonArray("notUpdatedEntities");
@@ -531,7 +531,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.getFirst();
 
-    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
+    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.statusCode());
     assertThat(instanceId1.toString(), equalTo(targetTenantHoldingsRecord1.getString(INSTANCE_ID)));
   }
 
@@ -544,8 +544,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response postHoldingsUpdateOwnershipResponse =
       updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipWithoutToInstanceId);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(422));
-    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(422));
+    assertThat(postHoldingsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     assertThat(postHoldingsUpdateOwnershipResponse, hasValidationError(
       "toInstanceId is a required field", "toInstanceId", null
@@ -561,8 +561,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response postHoldingsUpdateOwnershipResponse =
       updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipWithoutTenantId);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(422));
-    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(422));
+    assertThat(postHoldingsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     assertThat(postHoldingsUpdateOwnershipResponse, hasValidationError(
       "targetTenantId is a required field", "targetTenantId", null
@@ -578,8 +578,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response postHoldingsUpdateOwnershipResponse =
       updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(422));
-    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(422));
+    assertThat(postHoldingsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     assertThat(postHoldingsUpdateOwnershipResponse, hasValidationError(
       "targetTenantId field cannot be equal to source tenant id", "targetTenantId", ApiTestSuite.TENANT_ID
@@ -595,8 +595,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response postHoldingsUpdateOwnershipResponse =
       updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipWithoutHoldingsRecordIds);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(422));
-    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(422));
+    assertThat(postHoldingsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     assertThat(postHoldingsUpdateOwnershipResponse, hasValidationError(
       "holdingsRecordIds is a required field", "holdingsRecordIds", null
@@ -612,8 +612,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response postHoldingsUpdateOwnershipResponse =
       updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipWithoutHoldingsRecordIds);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(422));
-    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(422));
+    assertThat(postHoldingsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     assertThat(postHoldingsUpdateOwnershipResponse, hasValidationError(
       "targetLocationId is a required field", "targetLocationId", null
@@ -633,9 +633,9 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response postHoldingsUpdateOwnershipResponse =
       updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(400));
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(400));
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getBody(), containsString("tenant is not in consortia"));
+    assertThat(postHoldingsUpdateOwnershipResponse.body(), containsString("tenant is not in consortia"));
     createConsortiumTenant();
   }
 
@@ -659,10 +659,10 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response postHoldingsUpdateOwnershipResponse =
       updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipWithoutHoldingsRecordIds);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(404));
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(404));
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getBody(), containsString("not found"));
-    assertThat(postHoldingsUpdateOwnershipResponse.getBody(), containsString(invalidInstanceId.toString()));
+    assertThat(postHoldingsUpdateOwnershipResponse.body(), containsString("not found"));
+    assertThat(postHoldingsUpdateOwnershipResponse.body(), containsString(invalidInstanceId.toString()));
   }
 
   @Test
@@ -682,9 +682,9 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response postHoldingsUpdateOwnershipResponse =
       updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(400));
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(400));
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getBody(),
+    assertThat(postHoldingsUpdateOwnershipResponse.body(),
       containsString(String.format("Instance with id: %s is not shared", instanceId)));
   }
 
@@ -725,14 +725,14 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertThat(notUpdatedEntitiesIds.getJsonObject(0).getString("errorMessage"),
       containsString(expectedErrorResponse.toString()));
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(400));
-    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(400));
+    assertThat(postHoldingsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     Response sourceTenantHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1);
     Response targetTenantHoldingsRecord1 = collegeHoldingsStorageClient.getById(createHoldingsRecord1);
 
     assertEquals(instanceId.toString(), sourceTenantHoldingsRecord1.getJson().getString(INSTANCE_ID));
-    assertEquals(HttpStatus.SC_NOT_FOUND, targetTenantHoldingsRecord1.getStatusCode());
+    assertEquals(HttpStatus.SC_NOT_FOUND, targetTenantHoldingsRecord1.statusCode());
   }
 
   @Test
@@ -772,8 +772,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     assertThat(notUpdatedEntitiesIds.getJsonObject(0).getString("errorMessage"),
       containsString(expectedErrorResponse.toString()));
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(400));
-    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(400));
+    assertThat(postHoldingsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     Response sourceTenantHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1);
     List<JsonObject> targetTenantHoldings =
@@ -818,10 +818,10 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response postHoldingsUpdateOwnershipResponse =
       updateHoldingsRecordsOwnership(holdingsRecordUpdateOwnershipRequestBody);
 
-    assertThat(postHoldingsUpdateOwnershipResponse.getStatusCode(), is(HttpStatus.SC_OK));
-    assertThat(new JsonObject(postHoldingsUpdateOwnershipResponse.getBody()).getJsonArray("notUpdatedEntities").size(),
+    assertThat(postHoldingsUpdateOwnershipResponse.statusCode(), is(HttpStatus.SC_OK));
+    assertThat(new JsonObject(postHoldingsUpdateOwnershipResponse.body()).getJsonArray("notUpdatedEntities").size(),
       is(0));
-    assertThat(postHoldingsUpdateOwnershipResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsUpdateOwnershipResponse.contentType(), containsString(APPLICATION_JSON));
 
     Response sourceTenantHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1);
     List<JsonObject> targetTenantHoldings =
@@ -830,13 +830,13 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.getFirst();
 
-    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.getStatusCode());
+    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord1.statusCode());
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord1.getString(INSTANCE_ID));
 
     Response sourceTenantHoldingsRecord2 = holdingsStorageClient.getById(createHoldingsRecord2);
     JsonObject targetTenantHoldingsRecord2 = targetTenantHoldings.get(1);
 
-    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.getStatusCode());
+    assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.statusCode());
     assertEquals(instanceId.toString(), targetTenantHoldingsRecord2.getString(INSTANCE_ID));
   }
 
@@ -867,12 +867,12 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     Response response = updateHoldingsRecordsOwnership(requestBody);
 
-    assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
-    assertThat(new JsonObject(response.getBody()).getJsonArray("notUpdatedEntities").size(), is(0));
+    assertThat(response.statusCode(), is(HttpStatus.SC_OK));
+    assertThat(new JsonObject(response.body()).getJsonArray("notUpdatedEntities").size(), is(0));
 
     //check that holding removed from source tenant
     Response sourceHoldingsResponse = holdingsStorageClient.getById(holdingsId);
-    assertThat(sourceHoldingsResponse.getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
+    assertThat(sourceHoldingsResponse.statusCode(), is(HttpStatus.SC_NOT_FOUND));
 
     //check that holding created in target tenant
     List<JsonObject> targetHoldings =
@@ -882,7 +882,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     //check that SRS record from source tenant marked as DELETED
     Response sourceSrsResponse = sourceRecordStorageClient.getById(UUID.fromString(sourceSrsId));
-    assertThat(sourceSrsResponse.getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
+    assertThat(sourceSrsResponse.statusCode(), is(HttpStatus.SC_NOT_FOUND));
 
     //check that SRS record created in target tenant
     List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
@@ -930,7 +930,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     Response response = updateHoldingsRecordsOwnership(requestBody);
 
-    assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(response.statusCode(), is(HttpStatus.SC_OK));
     assertThat(response.getJson().getJsonArray("notUpdatedEntities").size(), is(0));
 
     List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
@@ -986,7 +986,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     collegeSourceRecordStorageClient.disableFailureEmulation();
 
     assertThat("Response status should be 400 Bad Request due to partial failure",
-      response.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
+      response.statusCode(), is(HttpStatus.SC_BAD_REQUEST));
 
     JsonObject responseBody = response.getJson();
     JsonArray notUpdatedEntities = responseBody.getJsonArray("notUpdatedEntities");
@@ -1000,16 +1000,16 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     //Check that FOLIO holding was moved to target tenant
     assertThat("FOLIO holding should be deleted from source tenant",
-      holdingsStorageClient.getById(folioHoldingsId).getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
+      holdingsStorageClient.getById(folioHoldingsId).statusCode(), is(HttpStatus.SC_NOT_FOUND));
     List<JsonObject> targetFolioHoldings = collegeHoldingsStorageClient
       .getMany(String.format("id==%s", folioHoldingsId), 1);
     assertThat("FOLIO holding should be created in target tenant", targetFolioHoldings.size(), is(1));
 
     //Check that MARC holdings still exist in source tenant
     assertThat("MARC holding 1 should still exist in source tenant",
-      holdingsStorageClient.getById(marcHoldingsId1).getStatusCode(), is(HttpStatus.SC_OK));
+      holdingsStorageClient.getById(marcHoldingsId1).statusCode(), is(HttpStatus.SC_OK));
     assertThat("MARC holding 2 should still exist in source tenant",
-      holdingsStorageClient.getById(marcHoldingsId2).getStatusCode(), is(HttpStatus.SC_OK));
+      holdingsStorageClient.getById(marcHoldingsId2).statusCode(), is(HttpStatus.SC_OK));
 
     //Check that MARC holdings created in target tenant
     List<JsonObject> targetMarcHoldings = collegeHoldingsStorageClient
@@ -1065,7 +1065,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     collegeSourceRecordStorageClient.disableFailureEmulation();
 
     assertThat("Response status should be 400 Bad Request due to partial failure",
-      response.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
+      response.statusCode(), is(HttpStatus.SC_BAD_REQUEST));
 
     JsonObject responseBody = response.getJson();
     JsonArray notUpdatedEntities = responseBody.getJsonArray("notUpdatedEntities");
@@ -1075,22 +1075,22 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     // Check that FOLIO holding was moved to target tenant
     assertThat("FOLIO holding should be deleted from source tenant",
-      holdingsStorageClient.getById(folioHoldingsId).getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
+      holdingsStorageClient.getById(folioHoldingsId).statusCode(), is(HttpStatus.SC_NOT_FOUND));
     assertThat("FOLIO holding should be created in target tenant",
       collegeHoldingsStorageClient.getMany(String.format("id==%s", folioHoldingsId), 1).size(), is(1));
 
     // Check that successful MARC holding was moved to target tenant
     assertThat("Successful MARC holding should be deleted from source tenant",
-      holdingsStorageClient.getById(successfulMarcId).getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
+      holdingsStorageClient.getById(successfulMarcId).statusCode(), is(HttpStatus.SC_NOT_FOUND));
     assertThat("Successful MARC holding should be created in target tenant",
       collegeHoldingsStorageClient.getMany(String.format("id==%s", successfulMarcId), 1).size(), is(1));
     Response sourceSrsForSuccess = sourceRecordStorageClient.getById(UUID.fromString(successfulSrsId));
     assertThat("Source SRS for successful holding should be marked as DELETED",
-      sourceSrsForSuccess.getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
+      sourceSrsForSuccess.statusCode(), is(HttpStatus.SC_NOT_FOUND));
 
     // Check that failing MARC holding still exists in source tenant
     assertThat("Failing MARC holding should still exist in source tenant",
-      holdingsStorageClient.getById(failingMarcId).getStatusCode(), is(HttpStatus.SC_OK));
+      holdingsStorageClient.getById(failingMarcId).statusCode(), is(HttpStatus.SC_OK));
     assertThat("Failing MARC holding SHOULD BE created in target tenant despite SRS failure",
       collegeHoldingsStorageClient.getMany(String.format("id==%s", failingMarcId), 1).size(), is(1));
     assertThat("SRS record for failing MARC holding should NOT be created in target tenant",
@@ -1132,7 +1132,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
       ApiTestSuite.COLLEGE_TENANT_ID).create();
 
     Response response = updateHoldingsRecordsOwnership(requestBody);
-    assertThat(response.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
+    assertThat(response.statusCode(), is(HttpStatus.SC_BAD_REQUEST));
 
     JsonObject responseBody = response.getJson();
     JsonArray notUpdatedEntities = responseBody.getJsonArray("notUpdatedEntities");
@@ -1144,11 +1144,11 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
 
     // marc holding without SRS record should not be moved to target tenant
     Response failingSourceHoldingsResponse = holdingsStorageClient.getById(failingHoldingsId);
-    assertThat(failingSourceHoldingsResponse.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(failingSourceHoldingsResponse.statusCode(), is(HttpStatus.SC_OK));
 
     // FOLIO holding should br moved to target tenant
     Response successfulSourceHoldingsResponse = holdingsStorageClient.getById(successfulHoldingsId);
-    assertThat(successfulSourceHoldingsResponse.getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
+    assertThat(successfulSourceHoldingsResponse.statusCode(), is(HttpStatus.SC_NOT_FOUND));
 
     // check that one holding created in target tenant
     List<JsonObject> targetHoldings =
@@ -1193,7 +1193,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response response = updateHoldingsRecordsOwnership(requestBody);
     collegeSourceRecordStorageClient.disableFailureEmulation();
 
-    assertThat(response.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
+    assertThat(response.statusCode(), is(HttpStatus.SC_BAD_REQUEST));
 
     JsonArray notUpdatedEntities = response.getJson().getJsonArray("notUpdatedEntities");
     assertThat(notUpdatedEntities.size(), is(1));
@@ -1203,10 +1203,10 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
       containsString("Failed to post SRS record to target tenant=college"));
 
     // Holdings stays in source tenant when MARC SRS move cannot be completed.
-    assertThat(holdingsStorageClient.getById(marcHoldingsId).getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(holdingsStorageClient.getById(marcHoldingsId).statusCode(), is(HttpStatus.SC_OK));
 
     // Source SRS still exists and target SRS is not created.
-    assertThat(sourceRecordStorageClient.getById(UUID.fromString(sourceSrsId)).getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(sourceRecordStorageClient.getById(UUID.fromString(sourceSrsId)).statusCode(), is(HttpStatus.SC_OK));
     assertThat(collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1).size(), is(0));
   }
 
@@ -1247,7 +1247,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
       ApiTestSuite.COLLEGE_TENANT_ID).create();
 
     Response response = updateHoldingsRecordsOwnership(requestBody);
-    assertThat(response.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
+    assertThat(response.statusCode(), is(HttpStatus.SC_BAD_REQUEST));
 
     // Should return 2 not-updated holdings
     JsonObject responseBody = response.getJson();
@@ -1271,8 +1271,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     ), "Should contain error for bound-with holding");
 
     // Check that no holdings were moved to target tenant
-    assertThat(holdingsStorageClient.getById(marcHoldingId).getStatusCode(), is(HttpStatus.SC_OK));
-    assertThat(holdingsStorageClient.getById(boundWithHoldingId).getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(holdingsStorageClient.getById(marcHoldingId).statusCode(), is(HttpStatus.SC_OK));
+    assertThat(holdingsStorageClient.getById(boundWithHoldingId).statusCode(), is(HttpStatus.SC_OK));
 
     // Check that no holdings were created in target tenant
     List<JsonObject> targetHoldings =
@@ -1327,7 +1327,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     collegeSourceRecordStorageClient.disableFailureEmulation();
 
     // Verify that the operation returns 400 due to snapshot creation failure
-    assertThat(response.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
+    assertThat(response.statusCode(), is(HttpStatus.SC_BAD_REQUEST));
 
     JsonObject responseBody = response.getJson();
     JsonArray notUpdatedEntities = responseBody.getJsonArray("notUpdatedEntities");
@@ -1343,11 +1343,11 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     // Verify MARC holding remains in source tenant due to SRS failure (partial failure)
     Response marcHoldingResponse = holdingsStorageClient.getById(marcHoldingsId);
     assertThat("MARC holding should still exist in source tenant due to SRS failure",
-      marcHoldingResponse.getStatusCode(), is(HttpStatus.SC_OK));
+      marcHoldingResponse.statusCode(), is(HttpStatus.SC_OK));
 
     // Verify FOLIO holding was successfully moved to target tenant
     Response folioHoldingResponse = holdingsStorageClient.getById(folioHoldingsId);
-    assertThat("FOLIO holding should be deleted from source tenant", folioHoldingResponse.getStatusCode(),
+    assertThat("FOLIO holding should be deleted from source tenant", folioHoldingResponse.statusCode(),
       is(HttpStatus.SC_NOT_FOUND));
 
     // Both holdings should be created in target tenant (holdings migration succeeds, SRS migration fails)
@@ -1400,11 +1400,11 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response response = updateHoldingsRecordsOwnership(requestBody);
     collegeLocationsClient.disableFailureEmulation();
 
-    assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(response.statusCode(), is(HttpStatus.SC_OK));
     assertThat(response.getJson().getJsonArray("notUpdatedEntities").size(), is(0));
 
     // Operation should complete and use locationId as fallback when GET /locations fails.
-    assertThat(holdingsStorageClient.getById(marcHoldingsId).getStatusCode(), is(HttpStatus.SC_NOT_FOUND));
+    assertThat(holdingsStorageClient.getById(marcHoldingsId).statusCode(), is(HttpStatus.SC_NOT_FOUND));
 
     List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
     assertThat(targetSrsRecords.size(), is(1));
@@ -1456,7 +1456,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response response = updateHoldingsRecordsOwnership(requestBody);
     collegeLocationsClient.disableFailureEmulation();
 
-    assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(response.statusCode(), is(HttpStatus.SC_OK));
     assertThat(response.getJson().getJsonArray("notUpdatedEntities").size(), is(0));
 
     List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
@@ -1509,7 +1509,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response response = updateHoldingsRecordsOwnership(requestBody);
     collegeLocationsClient.disableFailureEmulation();
 
-    assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(response.statusCode(), is(HttpStatus.SC_OK));
     assertThat(response.getJson().getJsonArray("notUpdatedEntities").size(), is(0));
 
     List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
@@ -1563,7 +1563,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response response = updateHoldingsRecordsOwnership(requestBody);
     collegeLocationsClient.disableFailureEmulation();
 
-    assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(response.statusCode(), is(HttpStatus.SC_OK));
     assertThat(response.getJson().getJsonArray("notUpdatedEntities").size(), is(0));
 
     List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
@@ -1617,7 +1617,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response response = updateHoldingsRecordsOwnership(requestBody);
     collegeLocationsClient.disableFailureEmulation();
 
-    assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(response.statusCode(), is(HttpStatus.SC_OK));
     assertThat(response.getJson().getJsonArray("notUpdatedEntities").size(), is(0));
 
     List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
@@ -1668,7 +1668,7 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
     Response response = updateHoldingsRecordsOwnership(requestBody);
     sourceRecordStorageClient.disableFailureEmulation();
 
-    assertThat(response.getStatusCode(), is(HttpStatus.SC_BAD_REQUEST));
+    assertThat(response.statusCode(), is(HttpStatus.SC_BAD_REQUEST));
 
     JsonArray notUpdatedEntities = response.getJson().getJsonArray("notUpdatedEntities");
     assertThat(notUpdatedEntities.size(), is(1));
@@ -1677,14 +1677,14 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
       containsString(expectedErrorResponse.toString()));
 
     // Source holding is kept since the migration did not fully complete.
-    assertThat(holdingsStorageClient.getById(marcHoldingsId).getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(holdingsStorageClient.getById(marcHoldingsId).statusCode(), is(HttpStatus.SC_OK));
 
     // The SRS record was already posted to the target tenant before the delete step failed.
     List<JsonObject> targetSrsRecords = collegeSourceRecordStorageClient.getMany("matchedId==" + sourceSrsId, 1);
     assertThat(targetSrsRecords.size(), is(1));
 
     // Source SRS record still exists because its deletion failed.
-    assertThat(sourceRecordStorageClient.getById(UUID.fromString(sourceSrsId)).getStatusCode(), is(HttpStatus.SC_OK));
+    assertThat(sourceRecordStorageClient.getById(UUID.fromString(sourceSrsId)).statusCode(), is(HttpStatus.SC_OK));
   }
 
   private JsonObject makeObjectBoundWithPart(String itemId, String holdingsRecordId) {
@@ -1772,8 +1772,8 @@ public class HoldingsUpdateOwnershipApiTest extends ApiTests {
       .get(30, TimeUnit.SECONDS);
 
     // 201 means created; 422 means already exists in this test environment.
-    assertTrue(createLocationResponse.getStatusCode() == HttpStatus.SC_CREATED
-               || createLocationResponse.getStatusCode() == HttpStatus.SC_UNPROCESSABLE_ENTITY);
+    assertTrue(createLocationResponse.statusCode() == HttpStatus.SC_CREATED
+               || createLocationResponse.statusCode() == HttpStatus.SC_UNPROCESSABLE_ENTITY);
   }
 
   @SneakyThrows

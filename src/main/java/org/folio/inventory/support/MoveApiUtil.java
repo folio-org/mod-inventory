@@ -1,10 +1,18 @@
 package org.folio.inventory.support;
 
+import static org.folio.inventory.support.http.server.JsonResponse.badRequest;
+import static org.folio.inventory.support.http.server.JsonResponse.success;
+
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.NotUpdatedEntity;
@@ -16,15 +24,6 @@ import org.folio.inventory.storage.external.CqlQuery;
 import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
-
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
-
-import static org.folio.inventory.support.http.server.JsonResponse.badRequest;
-import static org.folio.inventory.support.http.server.JsonResponse.success;
 
 public final class MoveApiUtil {
   public static final String HOLDINGS_STORAGE = "/holdings-storage/holdings";
@@ -40,7 +39,8 @@ public final class MoveApiUtil {
 
   private MoveApiUtil() { }
 
-  public static OkapiHttpClient createHttpClient(HttpClient client, RoutingContext routingContext, WebContext context) throws MalformedURLException {
+  public static OkapiHttpClient createHttpClient(HttpClient client, RoutingContext routingContext, WebContext context)
+    throws MalformedURLException {
     return new OkapiHttpClient(WebClient.wrap(client), context,
       exception -> ServerErrorResponse.internalError(routingContext.response(),
         String.format("Failed to contact storage module: %s", exception.toString())));
@@ -50,15 +50,6 @@ public final class MoveApiUtil {
                                                  Consumer<Throwable> exceptionHandler) throws MalformedURLException {
     return new OkapiHttpClient(WebClient.wrap(client), URI.create(context.getOkapiLocation()).toURL(),
       context.getTenantId(), context.getToken(), context.getUserId(), context.getRequestId(), exceptionHandler);
-  }
-
-
-  private static MultipleRecordsFetchClient createFetchClient(CollectionResourceClient client, String propertyName) {
-    return MultipleRecordsFetchClient.builder()
-      .withCollectionPropertyName(propertyName)
-      .withExpectedStatus(200)
-      .withCollectionResourceClient(client)
-      .build();
   }
 
   public static CollectionResourceClient createStorageClient(OkapiHttpClient client, Context context, String storageUrl)
@@ -142,6 +133,14 @@ public final class MoveApiUtil {
     } else {
       success(response, body);
     }
+  }
+
+  private static MultipleRecordsFetchClient createFetchClient(CollectionResourceClient client, String propertyName) {
+    return MultipleRecordsFetchClient.builder()
+      .withCollectionPropertyName(propertyName)
+      .withExpectedStatus(200)
+      .withCollectionResourceClient(client)
+      .build();
   }
 
   private static boolean containsError(List<NotUpdatedEntity> entities) {

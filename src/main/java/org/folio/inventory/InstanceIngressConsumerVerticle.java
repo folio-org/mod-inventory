@@ -17,7 +17,8 @@ public class InstanceIngressConsumerVerticle extends KafkaConsumerVerticle {
 
   @Override
   public void start(Promise<Void> startPromise) {
-    var instanceIngressEventHandler = new InstanceIngressEventConsumer(vertx, getStorage(), getHttpClient(), getMappingMetadataCache());
+    var instanceIngressEventHandler =
+      new InstanceIngressEventConsumer(vertx, getStorage(), getHttpClient(), getMappingMetadataCache());
 
     var consumerWrapper = createConsumer(INSTANCE_INGRESS_TOPIC, BASE_PROPERTY);
 
@@ -30,5 +31,4 @@ public class InstanceIngressConsumerVerticle extends KafkaConsumerVerticle {
   protected Logger getLogger() {
     return LOGGER;
   }
-
 }

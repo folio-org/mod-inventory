@@ -25,12 +25,9 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
-import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
-import support.KafkaTest;
-import support.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
@@ -53,6 +50,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import support.KafkaTest;
+import support.TestUtil;
 
 // TODO: refactor and move out static mocking, may be required changes to implementation
 @ExtendWith({VertxExtension.class, MockitoExtension.class})
@@ -81,7 +80,7 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
   }
 
   @Test
-  void shouldShareInstanceWithFOLIOSource(VertxTestContext testContext) throws IOException {
+  void shouldShareInstanceWithFOLIOSource(VertxTestContext testContext) {
 
     // given
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
@@ -168,7 +167,7 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
   }
 
   @Test
-  void shouldNotShareInstanceWithNotFOLIOAndMARCSource(VertxTestContext testContext) throws IOException {
+  void shouldNotShareInstanceWithNotFOLIOAndMARCSource(VertxTestContext testContext) {
 
     // given
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
@@ -226,7 +225,7 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
   }
 
   @Test
-  void shouldNotShareInstanceWhenInstanceExistsOnTargetTenant(VertxTestContext testContext) throws IOException {
+  void shouldNotShareInstanceWhenInstanceExistsOnTargetTenant(VertxTestContext testContext) {
 
     // given
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
@@ -276,7 +275,7 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
   }
 
   @Test
-  void shouldNotShareInstanceWhenTargetReturns500Error(VertxTestContext testContext) throws IOException {
+  void shouldNotShareInstanceWhenTargetReturns500Error(VertxTestContext testContext) {
 
     // given
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
@@ -327,7 +326,7 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
   }
 
   @Test
-  void shouldNotShareInstanceWhenInstanceNotExistsOnSourceTenant(VertxTestContext testContext) throws IOException {
+  void shouldNotShareInstanceWhenInstanceNotExistsOnSourceTenant(VertxTestContext testContext) {
 
     // given
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
@@ -385,7 +384,7 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
   }
 
   @Test
-  void shouldShareInstanceWithMARCSource(VertxTestContext testContext) throws IOException {
+  void shouldShareInstanceWithMARCSource(VertxTestContext testContext) {
 
     // given
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
@@ -457,7 +456,7 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
   }
 
   @Test
-  void shouldNotShareInstanceWithMARCSourceBecauseDIFailed(VertxTestContext testContext) throws IOException {
+  void shouldNotShareInstanceWithMARCSourceBecauseDIFailed(VertxTestContext testContext) {
 
     // given
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
@@ -529,7 +528,7 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
   }
 
   @Test
-  void shouldNotProcessIfDuplicatedEventReceived(VertxTestContext testContext) throws IOException {
+  void shouldNotProcessIfDuplicatedEventReceived(VertxTestContext testContext) {
 
     // given
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));

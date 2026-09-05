@@ -2,8 +2,6 @@ package api.holdings;
 
 import static api.ApiTestSuite.ID_FOR_FAILURE;
 import static api.ApiTestSuite.createConsortiumTenant;
-import static support.fixtures.InstanceFixture.nod;
-import static support.fixtures.InstanceFixture.smallAngryPlanet;
 import static org.folio.inventory.support.http.ContentType.APPLICATION_JSON;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -11,13 +9,10 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static support.fixtures.InstanceFixture.nod;
+import static support.fixtures.InstanceFixture.smallAngryPlanet;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
-import support.ApiRoot;
-import support.ApiTests;
-import support.InstanceApiClient;
-import support.builders.HoldingRequestBuilder;
-import support.builders.HoldingsRecordMoveRequestBuilder;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.Arrays;
@@ -29,13 +24,18 @@ import org.folio.inventory.support.http.client.Response;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import support.ApiRoot;
+import support.ApiTests;
+import support.InstanceApiClient;
+import support.builders.HoldingRequestBuilder;
+import support.builders.HoldingsRecordMoveRequestBuilder;
 
 public class HoldingsApiMoveTest extends ApiTests {
 
   private static final String INSTANCE_ID = "instanceId";
 
   @BeforeEach
-  void initConsortia() throws Exception {
+  void initConsortia() {
     createConsortiumTenant();
   }
 
@@ -61,9 +61,9 @@ public class HoldingsApiMoveTest extends ApiTests {
 
     Response postHoldingsMoveResponse = moveHoldingsRecords(holdingsRecordMoveRequestBody);
 
-    assertThat(postHoldingsMoveResponse.getStatusCode(), is(200));
-    assertThat(new JsonObject(postHoldingsMoveResponse.getBody()).getJsonArray("nonUpdatedIds").size(), is(0));
-    assertThat(postHoldingsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsMoveResponse.statusCode(), is(200));
+    assertThat(new JsonObject(postHoldingsMoveResponse.body()).getJsonArray("nonUpdatedIds").size(), is(0));
+    assertThat(postHoldingsMoveResponse.contentType(), containsString(APPLICATION_JSON));
 
     JsonObject holdingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1)
       .getJson();
@@ -95,9 +95,9 @@ public class HoldingsApiMoveTest extends ApiTests {
 
     Response postHoldingsMoveResponse = moveHoldingsRecords(holdingsMoveRequestBody);
 
-    assertThat(postHoldingsMoveResponse.getStatusCode(), is(200));
-    assertThat(new JsonObject(postHoldingsMoveResponse.getBody()).getJsonArray("nonUpdatedIds").size(), is(0));
-    assertThat(postHoldingsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsMoveResponse.statusCode(), is(200));
+    assertThat(new JsonObject(postHoldingsMoveResponse.body()).getJsonArray("nonUpdatedIds").size(), is(0));
+    assertThat(postHoldingsMoveResponse.contentType(), containsString(APPLICATION_JSON));
 
     JsonObject updatedHoldings1 = holdingsStorageClient.getById(holdingsRecordId1).getJson();
     JsonObject updatedHoldings2 = holdingsStorageClient.getById(holdingsRecordId2).getJson();
@@ -121,9 +121,9 @@ public class HoldingsApiMoveTest extends ApiTests {
 
     Response postHoldingsMoveResponse = moveHoldingsRecords(holdingsMoveRequestBody);
 
-    assertThat(postHoldingsMoveResponse.getStatusCode(), is(422)); // Unprocessable Entity
-    assertThat(postHoldingsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
-    assertThat(postHoldingsMoveResponse.getBody(),
+    assertThat(postHoldingsMoveResponse.statusCode(), is(422)); // Unprocessable Entity
+    assertThat(postHoldingsMoveResponse.contentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsMoveResponse.body(),
       containsString("Instance with id=" + missingSharedInstanceId + " not found"));
   }
 
@@ -144,8 +144,8 @@ public class HoldingsApiMoveTest extends ApiTests {
 
     Response postHoldingsRecordsMoveResponse = moveHoldingsRecords(holdingsRecordMoveRequestBody);
 
-    assertThat(postHoldingsRecordsMoveResponse.getStatusCode(), is(200));
-    assertThat(postHoldingsRecordsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsRecordsMoveResponse.statusCode(), is(200));
+    assertThat(postHoldingsRecordsMoveResponse.contentType(), containsString(APPLICATION_JSON));
 
     var notFoundIds = postHoldingsRecordsMoveResponse.getJson()
       .getJsonArray("nonUpdatedIds")
@@ -171,8 +171,8 @@ public class HoldingsApiMoveTest extends ApiTests {
     Response postMoveHoldingsRecordResponse = postMoveHoldingsRecordCompleted
       .toCompletableFuture().get(5, TimeUnit.SECONDS);
 
-    assertThat(postMoveHoldingsRecordResponse.getStatusCode(), is(422));
-    assertThat(postMoveHoldingsRecordResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postMoveHoldingsRecordResponse.statusCode(), is(422));
+    assertThat(postMoveHoldingsRecordResponse.contentType(), containsString(APPLICATION_JSON));
 
     assertThat(postMoveHoldingsRecordResponse, hasValidationError(
       "toInstanceId is a required field", "toInstanceId", null
@@ -191,8 +191,8 @@ public class HoldingsApiMoveTest extends ApiTests {
     Response postMoveHoldingsRecordResponse = postMoveHoldingsRecordCompleted
       .toCompletableFuture().get(5, TimeUnit.SECONDS);
 
-    assertThat(postMoveHoldingsRecordResponse.getStatusCode(), is(422));
-    assertThat(postMoveHoldingsRecordResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postMoveHoldingsRecordResponse.statusCode(), is(422));
+    assertThat(postMoveHoldingsRecordResponse.contentType(), containsString(APPLICATION_JSON));
 
     assertThat(postMoveHoldingsRecordResponse, hasValidationError(
       "Holdings record ids aren't specified", "holdingsRecordIds", null
@@ -215,11 +215,11 @@ public class HoldingsApiMoveTest extends ApiTests {
 
     Response postMoveHoldingsRecordResponse = moveHoldingsRecords(holdingsRecordMoveRequestBody);
 
-    assertThat(postMoveHoldingsRecordResponse.getStatusCode(), is(422));
-    assertThat(postMoveHoldingsRecordResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postMoveHoldingsRecordResponse.statusCode(), is(422));
+    assertThat(postMoveHoldingsRecordResponse.contentType(), containsString(APPLICATION_JSON));
 
-    assertThat(postMoveHoldingsRecordResponse.getBody(), containsString("errors"));
-    assertThat(postMoveHoldingsRecordResponse.getBody(), containsString(newInstanceId.toString()));
+    assertThat(postMoveHoldingsRecordResponse.body(), containsString("errors"));
+    assertThat(postMoveHoldingsRecordResponse.body(), containsString(newInstanceId.toString()));
   }
 
   @Test
@@ -246,8 +246,8 @@ public class HoldingsApiMoveTest extends ApiTests {
     assertThat(nonUpdatedIdsIds.size(), is(1));
     assertThat(nonUpdatedIdsIds.getFirst(), equalTo(ID_FOR_FAILURE.toString()));
 
-    assertThat(postHoldingsRecordsMoveResponse.getStatusCode(), is(200));
-    assertThat(postHoldingsRecordsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsRecordsMoveResponse.statusCode(), is(200));
+    assertThat(postHoldingsRecordsMoveResponse.contentType(), containsString(APPLICATION_JSON));
 
     JsonObject updatedHoldingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1)
       .getJson();
@@ -288,9 +288,9 @@ public class HoldingsApiMoveTest extends ApiTests {
 
     Response postHoldingsMoveResponse = moveHoldingsRecords(holdingsRecordMoveRequestBody);
 
-    assertThat(postHoldingsMoveResponse.getStatusCode(), is(200));
-    assertThat(new JsonObject(postHoldingsMoveResponse.getBody()).getJsonArray("nonUpdatedIds").size(), is(0));
-    assertThat(postHoldingsMoveResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(postHoldingsMoveResponse.statusCode(), is(200));
+    assertThat(new JsonObject(postHoldingsMoveResponse.body()).getJsonArray("nonUpdatedIds").size(), is(0));
+    assertThat(postHoldingsMoveResponse.contentType(), containsString(APPLICATION_JSON));
 
     JsonObject holdingsRecord1 = holdingsStorageClient.getById(createHoldingsRecord1)
       .getJson();

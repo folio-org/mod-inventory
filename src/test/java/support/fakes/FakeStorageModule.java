@@ -35,7 +35,7 @@ import support.fakes.processors.RecordPreProcessor;
 
 class FakeStorageModule extends AbstractVerticle {
 
-  private static final Logger LOGGER = LogManager.getLogger(FakeOkapi.class);
+  private static final Logger LOGGER = LogManager.getLogger(FakeStorageModule.class);
 
   private final String rootPath;
   private final String collectionPropertyName;

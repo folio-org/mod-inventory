@@ -299,7 +299,7 @@ public class BoundWithTest extends ApiTests {
                                                          + holdings1a.getJson().getString("id"))
       .toCompletableFuture().get(5, SECONDS);
 
-    assertThat("Can retrieve many items by holdings record id", itemsByHoldingsIdResponse.getStatusCode(), is(200));
+    assertThat("Can retrieve many items by holdings record id", itemsByHoldingsIdResponse.statusCode(), is(200));
     assertThat("default limit of 200 is applied", itemsByHoldingsIdResponse.getJson().getJsonArray("items").size(),
       is(200));
     assertThat("total records is 800", itemsByHoldingsIdResponse.getJson().getInteger("totalRecords"), is(800));
@@ -310,7 +310,7 @@ public class BoundWithTest extends ApiTests {
       .toCompletableFuture().get(5, SECONDS);
 
     assertThat("Can retrieve many items by holdings record id with limit",
-      itemsByHoldingsIdResponseWithLimit.getStatusCode(), is(200));
+      itemsByHoldingsIdResponseWithLimit.statusCode(), is(200));
     assertThat("requested limit of 600 is applied",
       itemsByHoldingsIdResponseWithLimit.getJson().getJsonArray("items").size(), is(600));
     assertThat("total records is 800 with limit applied",
@@ -323,7 +323,7 @@ public class BoundWithTest extends ApiTests {
       .toCompletableFuture().get(5, SECONDS);
 
     assertThat("Can retrieve many items by holdings record id with relations=onlyBoundWiths",
-      itemsByHoldingsIdResponseOnlyBoundWiths.getStatusCode(), is(200));
+      itemsByHoldingsIdResponseOnlyBoundWiths.statusCode(), is(200));
     assertThat("response has 400 items with 'onlyBoundWiths'",
       itemsByHoldingsIdResponseOnlyBoundWiths.getJson().getJsonArray("items").size(), is(400));
     assertThat("total records is 400 with 'onlyBoundWiths'",
@@ -371,21 +371,21 @@ public class BoundWithTest extends ApiTests {
       .toCompletableFuture().get(5, SECONDS);
 
     assertThat("Response code 200 (OK) expected when querying by holdingsRecordId",
-      itemsResponse1.getStatusCode(), is(200));
+      itemsResponse1.statusCode(), is(200));
 
     Response itemsResponse3 = okapiClient.get(ApiTestSuite.apiRoot() +
                                               "/inventory/items-by-holdings-id/")
       .toCompletableFuture().get(5, SECONDS);
 
     assertThat("Response code 400 (bad request) expected when not querying by holdingsRecordId",
-      itemsResponse3.getStatusCode(), is(400));
+      itemsResponse3.statusCode(), is(400));
 
     Response itemsResponse4 = okapiClient.get(ApiTestSuite.apiRoot() +
                                               "/inventory/items-by-holdings-id/?query=holdingsRecordId")
       .toCompletableFuture().get(5, SECONDS);
 
     assertThat("Response code 400 (bad request) expected when not querying by holdingsRecordId",
-      itemsResponse4.getStatusCode(), is(400));
+      itemsResponse4.statusCode(), is(400));
   }
 
   @Test
@@ -398,7 +398,7 @@ public class BoundWithTest extends ApiTests {
       .toCompletableFuture().get(5, SECONDS);
 
     assertThat("Response code 200 (OK) expected when querying by holdingsRecordId and relations=onlyBoundWiths",
-      itemsResponse1.getStatusCode(), is(200));
+      itemsResponse1.statusCode(), is(200));
 
     Response itemsResponse2 = okapiClient.get(ApiTestSuite.apiRoot() +
                                               "/inventory/items-by-holdings-id?query=holdingsRecordId=="
@@ -406,7 +406,7 @@ public class BoundWithTest extends ApiTests {
       .toCompletableFuture().get(5, SECONDS);
 
     assertThat("Response code 400 (bad request) expected when providing invalid 'relations' parameter value",
-      itemsResponse2.getStatusCode(), is(400));
+      itemsResponse2.statusCode(), is(400));
   }
 
   private static JsonObject makeObjectBoundWithPart(String itemId, String holdingsRecordId) {

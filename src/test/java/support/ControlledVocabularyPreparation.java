@@ -37,7 +37,7 @@ public class ControlledVocabularyPreparation {
     Response response = getItemCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
     assertThat("Controlled vocabulary API unavailable",
-      response.getStatusCode(), is(200));
+      response.statusCode(), is(200));
 
     List<JsonObject> existingTerms = JsonArrayHelper.toList(
       response.getJson().getJsonArray(this.collectionWrapperProperty));
@@ -50,7 +50,7 @@ public class ControlledVocabularyPreparation {
       Response postResponse = postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
       assertThat("Failed to create reference record",
-        postResponse.getStatusCode(), is(201));
+        postResponse.statusCode(), is(201));
 
       return postResponse.getJson().getString("id");
     } else {
@@ -68,7 +68,7 @@ public class ControlledVocabularyPreparation {
     Response response = getCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
     assertThat("Controlled vocabulary API unavailable",
-      response.getStatusCode(), is(200));
+      response.statusCode(), is(200));
 
     List<JsonObject> existingTerms = JsonArrayHelper.toList(
       response.getJson().getJsonArray(this.collectionWrapperProperty));
@@ -84,7 +84,7 @@ public class ControlledVocabularyPreparation {
       Response postResponse = postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
 
       assertThat("Failed to create reference record",
-        postResponse.getStatusCode(), is(201));
+        postResponse.statusCode(), is(201));
 
       return postResponse.getJson().getString("id");
     } else {

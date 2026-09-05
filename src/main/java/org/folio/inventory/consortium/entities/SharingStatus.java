@@ -16,16 +16,6 @@ public enum SharingStatus {
     this.value = value;
   }
 
-  @JsonValue
-  public String getValue() {
-    return value;
-  }
-
-  @Override
-  public String toString() {
-    return String.valueOf(value);
-  }
-
   @JsonCreator
   public static SharingStatus fromValue(String value) {
     for (SharingStatus b : SharingStatus.values()) {
@@ -34,5 +24,15 @@ public enum SharingStatus {
       }
     }
     throw new IllegalArgumentException("Unexpected value '" + value + "'");
+  }
+
+  @JsonValue
+  public String getValue() {
+    return value;
+  }
+
+  @Override
+  public String toString() {
+    return String.valueOf(value);
   }
 }

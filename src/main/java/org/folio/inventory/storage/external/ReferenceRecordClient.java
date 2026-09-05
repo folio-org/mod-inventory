@@ -1,11 +1,11 @@
 package org.folio.inventory.storage.external;
 
 import io.vertx.core.json.JsonObject;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.util.StringUtil;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 public class ReferenceRecordClient {
   private final CollectionResourceClient collectionResourceClient;
@@ -31,34 +31,31 @@ public class ReferenceRecordClient {
     collectionResourceClient.getAll(query, requestFuture::complete);
 
     requestFuture.thenAccept(response -> {
-      if(response == null) {
+      if (response == null) {
         overallFuture.completeExceptionally(
           new ReferenceRecordClientException(String.format(
             "Failed to get reference record: %s", name)));
-      }
-      else if (response.getStatusCode() == 200) {
+      } else if (response.statusCode() == 200) {
         List<JsonObject> records = JsonArrayHelper.toList(
           response.getJson().getJsonArray(collectionWrappingProperty));
 
-        if(!records.isEmpty()) {
+        if (!records.isEmpty()) {
           JsonObject referenceRecord = records.stream().findFirst().get();
 
           overallFuture.complete(new ReferenceRecord(
             referenceRecord.getString("id"),
             referenceRecord.getString("name")
           ));
-        }
-        else {
+        } else {
           overallFuture.completeExceptionally(
             new ReferenceRecordClientException(
               String.format("Failed to get reference record: %s", name)));
         }
-      }
-      else {
+      } else {
         overallFuture.completeExceptionally(
           new ReferenceRecordClientException(String.format(
             "Failed to get reference records: %s: %s",
-            response.getStatusCode(), response.getBody())));
+            response.statusCode(), response.body())));
       }
     });
 

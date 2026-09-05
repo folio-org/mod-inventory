@@ -16,8 +16,8 @@ public class EventToEntity {
   @Override
   public String toString() {
     return "EventToEntity{" +
-      "table=" + table +
-      ", eventId='" + eventId + '\'' +
-      '}';
+           "table=" + table +
+           ", eventId='" + eventId + '\'' +
+           '}';
   }
 }

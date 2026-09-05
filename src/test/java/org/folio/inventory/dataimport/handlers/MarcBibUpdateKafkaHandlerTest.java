@@ -1,7 +1,6 @@
 package org.folio.inventory.dataimport.handlers;
 
 import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
-import static support.KafkaUtility.checkKafkaEventSent;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
@@ -18,6 +17,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static support.KafkaUtility.checkKafkaEventSent;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
@@ -31,10 +31,6 @@ import java.util.UUID;
 import lombok.SneakyThrows;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.folio.MappingMetadataDto;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
-import support.KafkaTest;
-import support.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.consumers.MarcBibUpdateKafkaHandler;
@@ -55,6 +51,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import support.KafkaTest;
+import support.TestUtil;
 
 @ExtendWith({VertxExtension.class, MockitoExtension.class})
 @MockitoSettings(strictness = Strictness.LENIENT)

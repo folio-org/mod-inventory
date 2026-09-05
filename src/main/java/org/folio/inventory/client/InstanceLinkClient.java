@@ -28,7 +28,8 @@ public class InstanceLinkClient {
     this.okapiHttpClientCreator = this::createOkapiHttpClient;
   }
 
-  public CompletableFuture<Optional<InstanceLinkDtoCollection>> getLinksByInstanceId(String instanceId, Context context) {
+  public CompletableFuture<Optional<InstanceLinkDtoCollection>> getLinksByInstanceId(String instanceId,
+                                                                                     Context context) {
     LOGGER.trace("getLinksByInstanceId: okapi url: {}, tenantId: {}, instanceId: {}",
       context.getOkapiLocation(), context.getTenantId(), instanceId);
     OkapiHttpClient client = okapiHttpClientCreator.apply(context);
@@ -36,18 +37,19 @@ public class InstanceLinkClient {
     return client.get(url)
       .toCompletableFuture()
       .thenCompose(httpResponse -> {
-        if (httpResponse.getStatusCode() == HttpStatus.HTTP_OK.toInt()) {
+        if (httpResponse.statusCode() == HttpStatus.HTTP_OK.toInt()) {
           LOGGER.info("getLinksByInstanceId: InstanceLinkDtoCollection loaded for instanceId '{}'", instanceId);
-          InstanceLinkDtoCollection dto = Json.decodeValue(httpResponse.getBody(), InstanceLinkDtoCollection.class);
+          InstanceLinkDtoCollection dto = Json.decodeValue(httpResponse.body(), InstanceLinkDtoCollection.class);
           return CompletableFuture.completedFuture(Optional.of(dto));
-        } else if (httpResponse.getStatusCode() == HttpStatus.HTTP_NOT_FOUND.toInt()) {
+        } else if (httpResponse.statusCode() == HttpStatus.HTTP_NOT_FOUND.toInt()) {
           LOGGER.warn("getLinksByInstanceId: InstanceLinkDtoCollection not found for instanceId '{}'", instanceId);
           return CompletableFuture.completedFuture(Optional.empty());
         } else {
-          String message = String.format("getLinksByInstanceId: Error for instanceId '%s', status code: %d, response: %s",
-            instanceId,
-            httpResponse.getStatusCode(),
-            httpResponse.getBody());
+          String message =
+            String.format("getLinksByInstanceId: Error for instanceId '%s', status code: %d, response: %s",
+              instanceId,
+              httpResponse.statusCode(),
+              httpResponse.body());
           LOGGER.warn(message);
           return CompletableFuture.failedFuture(new InstanceLinksException(message));
         }
@@ -64,13 +66,14 @@ public class InstanceLinkClient {
     return client.put(url, JsonObject.mapFrom(instanceLinkCollection))
       .toCompletableFuture()
       .thenAccept(httpResponse -> {
-        if (httpResponse.getStatusCode() == HttpStatus.HTTP_NO_CONTENT.toInt()) {
+        if (httpResponse.statusCode() == HttpStatus.HTTP_NO_CONTENT.toInt()) {
           LOGGER.info("updateInstanceLinks: InstanceLinkDtoCollection updated for instanceId '{}'", instanceId);
         } else {
-          var message = String.format("updateInstanceLinks: Error updating for instanceId '%s', status: %d, response: %s",
-            instanceId,
-            httpResponse.getStatusCode(),
-            httpResponse.getBody());
+          var message =
+            String.format("updateInstanceLinks: Error updating for instanceId '%s', status: %d, response: %s",
+              instanceId,
+              httpResponse.statusCode(),
+              httpResponse.body());
           LOGGER.warn(message);
         }
       });

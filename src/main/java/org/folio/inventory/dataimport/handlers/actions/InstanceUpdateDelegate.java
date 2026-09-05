@@ -1,5 +1,11 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
+import static java.lang.String.format;
+import static org.apache.commons.lang3.BooleanUtils.isNotTrue;
+import static org.apache.commons.lang3.BooleanUtils.isTrue;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
+import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
+
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
@@ -19,19 +25,11 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 
-import static java.lang.String.format;
-import static org.apache.commons.lang3.BooleanUtils.isNotTrue;
-import static org.apache.commons.lang3.BooleanUtils.isTrue;
-import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersUpdateDelegate;
-import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
-
 public class InstanceUpdateDelegate {
-
-  private static final Logger LOGGER = LogManager.getLogger(InstanceUpdateDelegate.class);
 
   public static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   public static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
-
+  private static final Logger LOGGER = LogManager.getLogger(InstanceUpdateDelegate.class);
   private final Storage storage;
 
   public InstanceUpdateDelegate(Storage storage) {
@@ -42,7 +40,8 @@ public class InstanceUpdateDelegate {
     logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
     try {
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
-      MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
+      MappingParameters mappingParameters =
+        new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
       JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
       String instanceId = marcRecord.getExternalIdsHolder().getInstanceId();
       LOGGER.info("Instance update with instanceId: {}", instanceId);
@@ -59,11 +58,13 @@ public class InstanceUpdateDelegate {
     }
   }
 
-  public Instance handleBlocking(Map<String, String> eventPayload, Record marcRecord, Context context) throws Exception {
+  public Instance handleBlocking(Map<String, String> eventPayload, Record marcRecord, Context context)
+    throws Exception {
     logParametersUpdateDelegate(LOGGER, eventPayload, marcRecord, context);
     try {
       JsonObject mappingRules = new JsonObject(eventPayload.get(MAPPING_RULES_KEY));
-      MappingParameters mappingParameters = new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
+      MappingParameters mappingParameters =
+        new JsonObject(eventPayload.get(MAPPING_PARAMS_KEY)).mapTo(MappingParameters.class);
       JsonObject parsedRecord = retrieveParsedContent(marcRecord.getParsedRecord());
       String instanceId = marcRecord.getExternalIdsHolder().getInstanceId();
       LOGGER.info("Instance update with instanceId: {}", instanceId);
@@ -81,8 +82,8 @@ public class InstanceUpdateDelegate {
 
   private JsonObject retrieveParsedContent(ParsedRecord parsedRecord) {
     return parsedRecord.getContent() instanceof String
-      ? new JsonObject(parsedRecord.getContent().toString())
-      : JsonObject.mapFrom(parsedRecord.getContent());
+           ? new JsonObject(parsedRecord.getContent().toString())
+           : JsonObject.mapFrom(parsedRecord.getContent());
   }
 
   private Future<Instance> updateInstance(Instance existingInstance, org.folio.Instance mappedInstance) {
@@ -112,11 +113,12 @@ public class InstanceUpdateDelegate {
     Promise<Instance> promise = Promise.promise();
     instanceCollection.update(instance, success -> promise.complete(instance),
       failure -> {
-        if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
-          promise.fail(new OptimisticLockingException(failure.getReason()));
+        if (failure.statusCode() == HttpStatus.SC_CONFLICT) {
+          promise.fail(new OptimisticLockingException(failure.reason()));
         } else {
-          LOGGER.error(format("Error updating Instance - %s, status code %s", failure.getReason(), failure.getStatusCode()));
-          promise.fail(failure.getReason());
+          LOGGER.error(
+            format("Error updating Instance - %s, status code %s", failure.reason(), failure.statusCode()));
+          promise.fail(failure.reason());
         }
       });
     return promise.future();

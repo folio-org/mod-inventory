@@ -10,9 +10,6 @@ import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
-import static support.TestUtil.buildHttpResponseWithBuffer;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.dateTime005Formatter;
 import static org.folio.inventory.dataimport.util.DataImportConstants.ALREADY_EXISTS_ERROR_MSG;
@@ -38,6 +35,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static support.TestUtil.buildHttpResponseWithBuffer;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.matching.RegexPattern;
@@ -51,7 +49,6 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.impl.HttpResponseImpl;
-import java.io.IOException;
 import java.net.URL;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -73,7 +70,7 @@ import org.folio.JobProfile;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
-import support.TestUtil;
+import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.InstanceWriterFactory;
@@ -90,6 +87,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.kafka.exception.DuplicateEventException;
+import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.mapping.mapper.reader.Reader;
@@ -116,6 +114,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import support.TestUtil;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -138,10 +137,10 @@ class CreateInstanceEventHandlerTest extends BaseWireMockTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
-  private static final String TENANT_ID = "diku";
-  private static final String USER_ID = "userId";
-  private static final String REQUEST_ID = "requestId";
-  private static final String TOKEN = "dummy";
+  private static final String TENANT_ID = "test-tenant";
+  private static final String USER_ID = "123456";
+  private static final String REQUEST_ID = "requ-1245677";
+  private static final String TOKEN = "stub-token";
 
   private final JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
@@ -339,7 +338,7 @@ class CreateInstanceEventHandlerTest extends BaseWireMockTest {
   private CreateInstanceEventHandler createInstanceEventHandler;
 
   @BeforeEach
-  void setUp() throws IOException {
+  void setUp() {
     MappingManager.clearReaderFactories();
 
     JsonObject mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
@@ -415,8 +414,8 @@ class CreateInstanceEventHandlerTest extends BaseWireMockTest {
 
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
     context.put("acceptInstanceId", acceptInstanceId);
-    context.put(PAYLOAD_USER_ID, USER_ID);
-    context.put(OKAPI_REQUEST_ID, REQUEST_ID);
+    context.put(DataImportHeaders.USER_ID, USER_ID);
+    context.put(XOkapiHeaders.REQUEST_ID.toLowerCase(), REQUEST_ID);
 
     Buffer buffer = buffer("{\"parsedRecord\":{" +
                            "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
@@ -541,8 +540,8 @@ class CreateInstanceEventHandlerTest extends BaseWireMockTest {
 
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
     context.put("acceptInstanceId", "true");
-    context.put(PAYLOAD_USER_ID, USER_ID);
-    context.put(OKAPI_REQUEST_ID, REQUEST_ID);
+    context.put(DataImportHeaders.USER_ID, USER_ID);
+    context.put(XOkapiHeaders.REQUEST_ID.toLowerCase(), REQUEST_ID);
 
     Buffer buffer = Buffer.buffer("{\"parsedRecord\":{" +
                                   "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
@@ -724,8 +723,8 @@ class CreateInstanceEventHandlerTest extends BaseWireMockTest {
     srsRecord.setId(recordId);
 
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(srsRecord));
-    context.put(PAYLOAD_USER_ID, USER_ID);
-    context.put(OKAPI_REQUEST_ID, REQUEST_ID);
+    context.put(DataImportHeaders.USER_ID, USER_ID);
+    context.put(XOkapiHeaders.REQUEST_ID.toLowerCase(), REQUEST_ID);
 
     Buffer buffer = Buffer.buffer("{\"parsedRecord\":{" +
                                   "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
@@ -797,8 +796,8 @@ class CreateInstanceEventHandlerTest extends BaseWireMockTest {
     srsRecord.setId(recordId);
 
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(srsRecord));
-    context.put(PAYLOAD_USER_ID, USER_ID);
-    context.put(OKAPI_REQUEST_ID, REQUEST_ID);
+    context.put(DataImportHeaders.USER_ID, USER_ID);
+    context.put(XOkapiHeaders.REQUEST_ID.toLowerCase(), REQUEST_ID);
 
     Buffer buffer = Buffer.buffer("{\"parsedRecord\":{" +
                                   "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
@@ -1131,30 +1130,6 @@ class CreateInstanceEventHandlerTest extends BaseWireMockTest {
 
   @Test
   void isEligibleShouldReturnFalseIfCurrentNodeIsEmpty() {
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
-      .withContext(new HashMap<>());
-    assertFalse(createInstanceEventHandler.isEligible(dataImportEventPayload));
-  }
-
-  @Test
-  void isEligibleShouldReturnFalseIfCurrentNodeIsNotActionProfile() {
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
-      .withContext(new HashMap<>());
-    assertFalse(createInstanceEventHandler.isEligible(dataImportEventPayload));
-  }
-
-  @Test
-  void isEligibleShouldReturnFalseIfActionIsNotCreate() {
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
-      .withContext(new HashMap<>());
-    assertFalse(createInstanceEventHandler.isEligible(dataImportEventPayload));
-  }
-
-  @Test
-  void isEligibleShouldReturnFalseIfRecordIsNotInstance() {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
       .withContext(new HashMap<>());

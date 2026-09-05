@@ -1,10 +1,25 @@
 package org.folio.inventory.resources;
 
+import static java.lang.String.format;
+
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.client.WebClient;
+import java.io.UnsupportedEncodingException;
+import java.lang.invoke.MethodHandles;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,20 +37,6 @@ import org.folio.inventory.support.http.server.ClientErrorResponse;
 import org.folio.inventory.support.http.server.FailureResponseConsumer;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 
-import java.io.UnsupportedEncodingException;
-import java.lang.invoke.MethodHandles;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
-import static java.lang.String.format;
-
 public class ItemsByHoldingsRecordIdApi extends ItemsApi {
   private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
@@ -44,7 +45,8 @@ public class ItemsByHoldingsRecordIdApi extends ItemsApi {
   private static final String BOUND_WITH_PARTS_STORAGE_PATH = "/inventory-storage/bound-with-parts";
   private static final String RELATIONS_PARAMETER = "relations";
   private static final String RELATION_PARAM_ONLY_BOUND_WITHS = "onlyBoundWiths";
-  private static final String RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM = "onlyBoundWithsSkipDirectlyLinkedItem";
+  private static final String RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM =
+    "onlyBoundWithsSkipDirectlyLinkedItem";
 
   public ItemsByHoldingsRecordIdApi(final Storage storage, final HttpClient client) {
     super(storage, client);
@@ -55,34 +57,38 @@ public class ItemsByHoldingsRecordIdApi extends ItemsApi {
     router.get(RELATIVE_ITEMS_FOR_HOLDINGS_PATH).handler(this::getSingleTitleAndMultiTitleItems);
   }
 
+  protected Item mapItemFromJson(JsonObject itemFromServer) {
+    return ItemUtil.fromStoredItemRepresentation(itemFromServer);
+  }
+
   /**
-   *  This API is dedicated to a UI Inventory use case, where a holdings record accordion
-   *  lists all items associated with the given holdings record, whether they are regular,
-   *  single-title items or bound-with/multi-title items.
-   *  Database-wise, single title items directly reference the holdings record by a foreign key,
-   *  whereas multi-title items (bound-withs) are associated through a many-to-many holdings/items
-   *  relationship in a 'bound_with_part' table.
-   *  This means that for a combined list of single-title and multi-title items, following
-   *  look-ups are needed:
-   *  1) Find any item IDs of multi-title items that contains the title of the
-   *  holdings record (in bound_with_parts).
-   *  2) Find the actual item records by the list of item IDs.
-   *  3) Unless 'only-bound-withs' is requested, find any regular, single-title items too,
-   *  by the foreign key.
-   *  4) Combine the two lists of items, while eliminating any duplicate, and
-   *  sort by barcode.
-   *  5) Put the items through the method that decorate items for the response
-   *  (i.e. resolving UUIDs and adding extra metadata).
-   *  Sorting and paging
-   *  Bound-withs/multi-title items must be looked up in storage by the retrieved
-   *  list of UUIDs. So if a title happens to be a part of over 100 different bound-withs,
-   *  then a query by a list of IDs will
-   *  violate the URL length limit between mod-inventory and the Inventory storage.
-   *  The look-up of items for bound-withs must therefore be partitioned, which is
-   *  in turn preventing database level sorting and paging (short of using a database
-   *  view for it), meaning that this class must perform the sorting itself.
-   *  Paging is applied to the resulting list of items before it goes through the
-   *  item embellishment.
+   * This API is dedicated to a UI Inventory use case, where a holdings record accordion
+   * lists all items associated with the given holdings record, whether they are regular,
+   * single-title items or bound-with/multi-title items.
+   * Database-wise, single title items directly reference the holdings record by a foreign key,
+   * whereas multi-title items (bound-withs) are associated through a many-to-many holdings/items
+   * relationship in a 'bound_with_part' table.
+   * This means that for a combined list of single-title and multi-title items, following
+   * look-ups are needed:
+   * 1) Find any item IDs of multi-title items that contains the title of the
+   * holdings record (in bound_with_parts).
+   * 2) Find the actual item records by the list of item IDs.
+   * 3) Unless 'only-bound-withs' is requested, find any regular, single-title items too,
+   * by the foreign key.
+   * 4) Combine the two lists of items, while eliminating any duplicate, and
+   * sort by barcode.
+   * 5) Put the items through the method that decorate items for the response
+   * (i.e. resolving UUIDs and adding extra metadata).
+   * Sorting and paging
+   * Bound-withs/multi-title items must be looked up in storage by the retrieved
+   * list of UUIDs. So if a title happens to be a part of over 100 different bound-withs,
+   * then a query by a list of IDs will
+   * violate the URL length limit between mod-inventory and the Inventory storage.
+   * The look-up of items for bound-withs must therefore be partitioned, which is
+   * in turn preventing database level sorting and paging (short of using a database
+   * view for it), meaning that this class must perform the sorting itself.
+   * Paging is applied to the resulting list of items before it goes through the
+   * item embellishment.
    *
    */
   private void getSingleTitleAndMultiTitleItems(RoutingContext routingContext) {
@@ -140,7 +146,7 @@ public class ItemsByHoldingsRecordIdApi extends ItemsApi {
     return listOfItemJsons.stream()
       .map(this::mapItemFromJson)
       .filter(item -> !(skippingDirectlyLinkedItemRequested(webContext)
-        && item.getHoldingId().equals(holdingsRecordId)))
+                        && item.getHoldingId().equals(holdingsRecordId)))
       .toList();
   }
 
@@ -161,7 +167,7 @@ public class ItemsByHoldingsRecordIdApi extends ItemsApi {
               Map<String, Item> mappedItems = itemList.stream()
                 .collect(Collectors.toMap(Item::getId, item -> item));
               List<Item> combinedList = new ArrayList<>(itemList);
-              for (Item item : result.getResult().records) {
+              for (Item item : result.result().records()) {
                 if (!mappedItems.containsKey(item.getId())) {
                   combinedList.add(item);
                 }
@@ -179,7 +185,7 @@ public class ItemsByHoldingsRecordIdApi extends ItemsApi {
   private void respondWithPagedManyItems(List<Item> itemList, WebContext webContext, RoutingContext routingContext) {
     PagingParameters pagingParameters = getPagingParameters(webContext);
     MultipleRecords<Item> items = new MultipleRecords<>(getPage(itemList,
-      pagingParameters.offset, pagingParameters.limit), itemList.size());
+      pagingParameters.offset(), pagingParameters.limit()), itemList.size());
     respondWithManyItems(routingContext, webContext, items);
   }
 
@@ -193,21 +199,22 @@ public class ItemsByHoldingsRecordIdApi extends ItemsApi {
       return "";
     }
 
-    if (relationsParam != null) {
-      if (!Arrays.asList(RELATION_PARAM_ONLY_BOUND_WITHS, RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM).contains(relationsParam)) {
+    if (relationsParam != null
+        && !Arrays.asList(RELATION_PARAM_ONLY_BOUND_WITHS, RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM)
+        .contains(relationsParam)) {
         ClientErrorResponse.badRequest(routingContext.response(),
           "The only valid values of the request parameter 'relations' are: '"
-            + RELATION_PARAM_ONLY_BOUND_WITHS + "' and '" +
-            RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM + "'");
+          + RELATION_PARAM_ONLY_BOUND_WITHS + "' and '" +
+          RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM + "'");
         return "";
       }
-    }
 
-    String[] keyVal = queryByHoldingsRecordId.replaceAll("[()]", "").split("[=]{1,2}");
+    String[] keyVal = queryByHoldingsRecordId.replaceAll("[()]", "").split("={1,2}");
 
     if (keyVal.length != 2) {
       ClientErrorResponse.badRequest(routingContext.response(),
-        "Items must be retrieved by 'holdingsRecordId' from this API: query=holdingsRecordId==[a UUID]. Query was: " + queryByHoldingsRecordId);
+        "Items must be retrieved by 'holdingsRecordId' from this API: query=holdingsRecordId==[a UUID]. Query was: "
+        + queryByHoldingsRecordId);
       return "";
     }
     return keyVal[1];
@@ -216,9 +223,9 @@ public class ItemsByHoldingsRecordIdApi extends ItemsApi {
   private static boolean onlyBoundWithsRequested(WebContext webContext) {
     String relationsParam = webContext.getStringParameter(RELATIONS_PARAMETER, null);
     return relationsParam != null &&
-      (relationsParam.equals(RELATION_PARAM_ONLY_BOUND_WITHS) ||
-        relationsParam.equals(
-          RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM));
+           (relationsParam.equals(RELATION_PARAM_ONLY_BOUND_WITHS) ||
+            relationsParam.equals(
+              RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM));
   }
 
   private static boolean skippingDirectlyLinkedItemRequested(WebContext webContext) {
@@ -241,14 +248,15 @@ public class ItemsByHoldingsRecordIdApi extends ItemsApi {
     if (!StringUtils.isNumeric(limit) || StringUtils.isEmpty(limit)) {
       limit = "200";
     } else if (Integer.parseInt(limit) > Integer.parseInt(maxPageSize)) {
-      log.error("A paging of {} items was requested but the /items-by-holdings-id API cuts off the page at {} items.", limit, maxPageSize);
+      log.error("A paging of {} items was requested but the /items-by-holdings-id API cuts off the page at {} items.",
+        limit, maxPageSize);
       limit = maxPageSize;
     }
     if (!StringUtils.isNumeric(offset) || StringUtils.isEmpty(offset)) {
       offset = "0";
     }
     PagingParameters enforcedPaging = new PagingParameters(Integer.parseInt(limit), Integer.parseInt(offset));
-    log.debug("Paging resolved to limit: {}, offset: {}", enforcedPaging.limit, enforcedPaging.offset);
+    log.debug("Paging resolved to limit: {}, offset: {}", enforcedPaging.limit(), enforcedPaging.offset());
     return enforcedPaging;
   }
 
@@ -259,24 +267,20 @@ public class ItemsByHoldingsRecordIdApi extends ItemsApi {
     return sourceList.subList(offset, Math.min(offset + limit, sourceList.size()));
   }
 
-  protected Item mapItemFromJson(JsonObject itemFromServer) {
-    return ItemUtil.fromStoredItemRepresentation(itemFromServer);
-  }
-
   private MultipleRecordsFetchClient buildPartitionedItemFetchClient(
     RoutingContext routingContext) {
     WebContext webContext = new WebContext(routingContext);
 
     CollectionResourceClient baseClient = null;
     try {
-      URL api = new URL(webContext.getOkapiLocation() + "/item-storage/items");
+      URL api = new URI(webContext.getOkapiLocation() + "/item-storage/items").toURL();
       baseClient =
         new CollectionResourceClient(
-          createHttpClient(routingContext, webContext), api);
-    } catch (MalformedURLException mue) {
+          initializeHttpClient(routingContext, webContext), api);
+    } catch (MalformedURLException | URISyntaxException mue) {
       log.error(String.format(
-          "Could not create CollectionResourceClient due to malformed URL %s%s",
-          webContext.getOkapiLocation(), "/item-storage/items"));
+        "Could not create CollectionResourceClient due to malformed URL %s%s",
+        webContext.getOkapiLocation(), "/item-storage/items"));
     }
     return MultipleRecordsFetchClient.builder()
       .withCollectionPropertyName("items")
@@ -289,23 +293,22 @@ public class ItemsByHoldingsRecordIdApi extends ItemsApi {
     return CqlQuery.exactMatchAny("id", ids);
   }
 
-
   private CollectionResourceClient getCollectionResourceRepository(
     RoutingContext routingContext, WebContext context, String path) {
     CollectionResourceClient collectionResourceClient = null;
     try {
-      OkapiHttpClient okapiClient = createHttpClient(routingContext, context);
+      OkapiHttpClient okapiClient = initializeHttpClient(routingContext, context);
       collectionResourceClient
         = new CollectionResourceClient(
         okapiClient,
-        new URL(context.getOkapiLocation() + path));
-    } catch (MalformedURLException mfue) {
+        new URI(context.getOkapiLocation() + path).toURL());
+    } catch (MalformedURLException | URISyntaxException mfue) {
       log.error(mfue);
     }
     return collectionResourceClient;
   }
 
-  protected OkapiHttpClient createHttpClient(
+  private OkapiHttpClient initializeHttpClient(
     RoutingContext routingContext,
     WebContext context)
     throws MalformedURLException {
@@ -314,5 +317,4 @@ public class ItemsByHoldingsRecordIdApi extends ItemsApi {
       exception -> ServerErrorResponse.internalError(routingContext.response(),
         format("Failed to contact storage module: %s", exception.toString())));
   }
-
 }

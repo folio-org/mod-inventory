@@ -1,5 +1,7 @@
 package org.folio.inventory.common.dao;
 
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.convertToPsqlStandard;
+
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.pgclient.PgConnectOptions;
@@ -7,16 +9,13 @@ import io.vertx.sqlclient.Pool;
 import io.vertx.sqlclient.PreparedQuery;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
-import io.vertx.sqlclient.Tuple;
 import io.vertx.sqlclient.SqlClient;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
+import io.vertx.sqlclient.Tuple;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.folio.inventory.common.dao.PostgresConnectionOptions.convertToPsqlStandard;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class PostgresClientFactory {
   private static final Logger LOGGER = LogManager.getLogger(PostgresClientFactory.class);
@@ -28,10 +27,27 @@ public class PostgresClientFactory {
    */
   private static boolean shouldResetPool = false;
 
-  private Vertx vertx;
+  private final Vertx vertx;
 
   public PostgresClientFactory(Vertx vertx) {
     this.vertx = vertx;
+  }
+
+  /**
+   * close all {@link Pool} clients.
+   */
+  public static Future<Void> closeAll() {
+    List<Future<Void>> closeFutures = POOL_CACHE.values()
+      .stream()
+      .map(SqlClient::close)
+      .toList();
+
+    return Future.all(closeFutures)
+      .onSuccess(v -> {
+        POOL_CACHE.clear();
+        LOGGER.info("All SQL pools closed and cache cleared.");
+      })
+      .mapEmpty();
   }
 
   /**
@@ -56,6 +72,13 @@ public class PostgresClientFactory {
     return future.compose(x -> preparedQuery(sql, tenantId).execute(tuple));
   }
 
+  /**
+   * For test usage only.
+   */
+  public void setShouldResetPool(boolean shouldResetPool) {
+    PostgresClientFactory.shouldResetPool = shouldResetPool;
+  }
+
   private Pool getCachedPool(Vertx vertx, String tenantId) {
     // assumes a single thread Vert.x model so no synchronized needed
     if (POOL_CACHE.containsKey(tenantId) && !shouldResetPool) {
@@ -78,29 +101,5 @@ public class PostgresClientFactory {
     String schemaName = convertToPsqlStandard(tenantId);
     String preparedSql = sql.replace("{schemaName}", schemaName);
     return getCachedPool(tenantId).preparedQuery(preparedSql);
-  }
-
-  /**
-   * close all {@link Pool} clients.
-   */
-  public static Future<Void> closeAll() {
-    List<Future<Void>> closeFutures = POOL_CACHE.values()
-      .stream()
-      .map(SqlClient::close)
-      .toList();
-
-    return Future.all(closeFutures)
-      .onSuccess(v -> {
-        POOL_CACHE.clear();
-        LOGGER.info("All SQL pools closed and cache cleared.");
-      })
-      .mapEmpty();
-  }
-
-  /**
-   * For test usage only.
-   */
-  public void setShouldResetPool(boolean shouldResetPool) {
-    PostgresClientFactory.shouldResetPool = shouldResetPool;
   }
 }

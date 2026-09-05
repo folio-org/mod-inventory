@@ -4,31 +4,32 @@ import io.vertx.core.Future;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
+import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.domain.relationship.EntityTable;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 
-import java.util.UUID;
-
 public class EntityIdStorageDaoImpl implements EntityIdStorageDao {
   private static final Logger LOGGER = LogManager.getLogger(EntityIdStorageDaoImpl.class);
 
-  private static final String INSERT_FUNCTION = "WITH input_rows({recordIdFieldName}, {entityIdFieldName}) AS (\n" +
-    "   VALUES ($1::uuid,$2::uuid)\n" +
-    ")\n" +
-    ", ins AS (\n" +
-    "   INSERT INTO {schemaName}.{tableName}({recordIdFieldName}, {entityIdFieldName})\n" +
-    "   SELECT * FROM input_rows\n" +
-    "   ON CONFLICT ({recordIdFieldName}) DO UPDATE SET {recordIdFieldName}=EXCLUDED.{recordIdFieldName}\n" +
-    "   RETURNING {recordIdFieldName}::uuid, {entityIdFieldName}::uuid\n" +
-    "   )\n" +
-    "SELECT {recordIdFieldName}, {entityIdFieldName}\n" +
-    "FROM   ins\n" +
-    "UNION  ALL\n" +
-    "SELECT c.{recordIdFieldName}, c.{entityIdFieldName} \n" +
-    "FROM   input_rows\n" +
-    "JOIN   {schemaName}.{tableName} c USING ({recordIdFieldName});";
+  private static final String INSERT_FUNCTION = """
+    WITH input_rows({recordIdFieldName}, {entityIdFieldName}) AS (
+       VALUES ($1::uuid,$2::uuid)
+    )
+    , ins AS (
+       INSERT INTO {schemaName}.{tableName}({recordIdFieldName}, {entityIdFieldName})
+       SELECT * FROM input_rows
+       ON CONFLICT ({recordIdFieldName}) DO UPDATE SET {recordIdFieldName}=EXCLUDED.{recordIdFieldName}
+       RETURNING {recordIdFieldName}::uuid, {entityIdFieldName}::uuid
+       )
+    SELECT {recordIdFieldName}, {entityIdFieldName}
+    FROM   ins
+    UNION  ALL
+    SELECT c.{recordIdFieldName}, c.{entityIdFieldName}
+    FROM   input_rows
+    JOIN   {schemaName}.{tableName} c USING ({recordIdFieldName});
+    """;
 
   private final PostgresClientFactory postgresClientFactory;
 

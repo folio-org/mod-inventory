@@ -1,5 +1,6 @@
 package org.folio.inventory.storage.external;
 
+import io.vertx.core.http.HttpClient;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.CollectionProvider;
 import org.folio.inventory.domain.HoldingsRecordCollection;
@@ -7,8 +8,6 @@ import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.user.UserCollection;
-
-import io.vertx.core.http.HttpClient;
 
 public class ExternalStorageCollections implements CollectionProvider {
   private final String baseAddress;
@@ -25,7 +24,8 @@ public class ExternalStorageCollections implements CollectionProvider {
   }
 
   @Override
-  public HoldingsRecordCollection getHoldingsRecordCollection(String tenantId, String token, String userId, String requestId) {
+  public HoldingsRecordCollection getHoldingsRecordCollection(String tenantId, String token, String userId,
+                                                              String requestId) {
     return new ExternalStorageModuleHoldingsRecordCollection(baseAddress,
       tenantId, token, userId, requestId, client);
   }
@@ -37,9 +37,10 @@ public class ExternalStorageCollections implements CollectionProvider {
   }
 
   @Override
-  public AuthorityRecordCollection getAuthorityCollection(String tenantId, String token, String userId, String requestId) {
+  public AuthorityRecordCollection getAuthorityCollection(String tenantId, String token, String userId,
+                                                          String requestId) {
     return new ExternalStorageModuleAuthorityRecordCollection(baseAddress,
-        tenantId, token, userId, requestId, client);
+      tenantId, token, userId, requestId, client);
   }
 
   @Override
@@ -49,7 +50,8 @@ public class ExternalStorageCollections implements CollectionProvider {
   }
 
   @Override
-  public HoldingsRecordsSourceCollection getHoldingsRecordsSourceCollection(String tenantId, String token, String userId, String requestId) {
+  public HoldingsRecordsSourceCollection getHoldingsRecordsSourceCollection(String tenantId, String token,
+                                                                            String userId, String requestId) {
     return new ExternalStorageModuleHoldingsRecordsSourceCollection(baseAddress,
       tenantId, token, userId, requestId, client);
   }

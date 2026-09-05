@@ -51,7 +51,7 @@ class HoldingsPreloaderTest {
   @Mock
   private OrdersPreloaderHelper ordersPreloaderHelper;
   @InjectMocks
-  private final HoldingsPreloader preloader = new HoldingsPreloader(ordersPreloaderHelper);
+  private HoldingsPreloader preloader;
 
   @BeforeEach
   @SneakyThrows

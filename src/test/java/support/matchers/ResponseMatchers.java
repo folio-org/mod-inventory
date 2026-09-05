@@ -12,56 +12,6 @@ import org.hamcrest.TypeSafeMatcher;
 
 public class ResponseMatchers {
 
-  public static Matcher<Response> hasValidationErrorMessage(String expectedMessage) {
-    return new TypeSafeMatcher<>() {
-      @Override
-      public void describeTo(Description description) {
-        description
-          .appendText("Response has 422 status and 'message' - ")
-          .appendValue(expectedMessage);
-      }
-
-      @Override
-      protected boolean matchesSafely(Response response) {
-        if (response.getStatusCode() != 422) {
-          return false;
-        }
-
-        if (!isJsonContent(response)) {
-          return false;
-        }
-
-        JsonArray errors = response.getJson().getJsonArray("errors");
-        if (errors != null && errors.size() == 1) {
-          JsonObject error = errors.getJsonObject(0);
-          JsonArray parameters = error.getJsonArray("parameters");
-
-          if (parameters != null && parameters.size() == 1) {
-            String message = error.getString("message");
-
-            return Objects.equals(expectedMessage, message);
-          }
-        }
-
-        return false;
-      }
-
-      @Override
-      protected void describeMismatchSafely(Response response,
-                                            Description mismatchDescription) {
-        mismatchDescription.appendText("Status: ")
-          .appendValue(response.getStatusCode())
-          .appendText(", body: ");
-
-        if (isJsonContent(response)) {
-          mismatchDescription.appendValue(response.getJson());
-        } else {
-          mismatchDescription.appendValue(response.getBody());
-        }
-      }
-    };
-  }
-
   public static Matcher<Response> hasValidationError(
     String expectedMessage, String expectedKey, String expectedValue) {
 
@@ -77,7 +27,7 @@ public class ResponseMatchers {
 
       @Override
       protected boolean matchesSafely(Response response) {
-        if (response.getStatusCode() != 422) {
+        if (response.statusCode() != 422) {
           return false;
         }
 
@@ -112,19 +62,19 @@ public class ResponseMatchers {
       protected void describeMismatchSafely(Response response,
                                             Description mismatchDescription) {
         mismatchDescription.appendText("Status: ")
-          .appendValue(response.getStatusCode())
+          .appendValue(response.statusCode())
           .appendText(", body: ");
 
         if (isJsonContent(response)) {
           mismatchDescription.appendValue(response.getJson());
         } else {
-          mismatchDescription.appendValue(response.getBody());
+          mismatchDescription.appendValue(response.body());
         }
       }
     };
   }
 
   private static boolean isJsonContent(Response response) {
-    return response.getContentType().startsWith(ContentType.APPLICATION_JSON);
+    return response.contentType().startsWith(ContentType.APPLICATION_JSON);
   }
 }

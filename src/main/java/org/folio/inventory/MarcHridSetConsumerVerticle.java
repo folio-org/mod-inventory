@@ -22,7 +22,8 @@ public class MarcHridSetConsumerVerticle extends KafkaConsumerVerticle {
     var holdingsCollectionService = new HoldingsCollectionService();
     var holdingsRecordUpdateDelegate = new HoldingsUpdateDelegate(getStorage(), holdingsCollectionService);
 
-    var marcHoldingsRecordHridSetKafkaHandler = new MarcHoldingsRecordHridSetKafkaHandler(holdingsRecordUpdateDelegate, getMappingMetadataCache());
+    var marcHoldingsRecordHridSetKafkaHandler =
+      new MarcHoldingsRecordHridSetKafkaHandler(holdingsRecordUpdateDelegate, getMappingMetadataCache());
 
     marcHoldingsConsumerWrapper.start(marcHoldingsRecordHridSetKafkaHandler, constructModuleName())
       .onFailure(startPromise::fail)
@@ -33,5 +34,4 @@ public class MarcHridSetConsumerVerticle extends KafkaConsumerVerticle {
   protected Logger getLogger() {
     return LOGGER;
   }
-
 }

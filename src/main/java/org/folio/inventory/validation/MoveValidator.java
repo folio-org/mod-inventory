@@ -5,15 +5,13 @@ import static org.folio.inventory.resources.MoveApi.ITEM_IDS;
 import static org.folio.inventory.resources.MoveApi.TO_HOLDINGS_RECORD_ID;
 import static org.folio.inventory.resources.MoveApi.TO_INSTANCE_ID;
 
+import io.vertx.core.json.JsonObject;
 import java.util.List;
 import java.util.Optional;
-
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.JsonHelper;
 import org.folio.inventory.support.http.server.ValidationError;
-
-import io.vertx.core.json.JsonObject;
 
 public class MoveValidator {
 
@@ -44,7 +42,8 @@ public class MoveValidator {
       return Optional.of(new ValidationError("toInstanceId is a required field", TO_INSTANCE_ID, null));
     }
 
-    List<String> holdingsRecordIds = JsonArrayHelper.toListOfStrings(holdingsMoveRequest.getJsonArray(HOLDINGS_RECORD_IDS));
+    List<String> holdingsRecordIds =
+      JsonArrayHelper.toListOfStrings(holdingsMoveRequest.getJsonArray(HOLDINGS_RECORD_IDS));
 
     if (holdingsRecordIds.isEmpty()) {
       return Optional.of(new ValidationError("Holdings record ids aren't specified", HOLDINGS_RECORD_IDS, null));

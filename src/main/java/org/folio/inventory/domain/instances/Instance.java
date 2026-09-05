@@ -5,28 +5,22 @@ import static org.folio.inventory.domain.instances.Dates.datesToJson;
 import static org.folio.inventory.domain.instances.Dates.retrieveDatesFromJson;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 
-import java.lang.invoke.MethodHandles;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.inventory.common.WebContext;
+import org.apache.commons.lang3.Strings;
 import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
 import org.folio.inventory.support.JsonArrayHelper;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import org.folio.inventory.support.JsonHelper;
 
 public class Instance {
@@ -77,21 +71,20 @@ public class Instance {
   public static final String NATURE_OF_CONTENT_TERM_IDS_KEY = "natureOfContentTermIds";
   public static final String DATES_KEY = "dates";
   public static final String JSON_FOR_STORAGE_KEY = "jsonForStorage";
-
-
   private final String id;
+  private final String hrid;
+  private final String source;
+  private final String title;
+  private final String instanceTypeId;
   @JsonProperty("_version")
   private Integer version;
-  private final String hrid;
   private String matchKey;
   private String sourceUri;
-  private final String source;
   private List<InstanceRelationshipToParent> parentInstances = new ArrayList<>();
   private List<InstanceRelationshipToChild> childInstances = new ArrayList<>();
   private List<PrecedingSucceedingTitle> precedingTitles = new ArrayList<>();
   private List<PrecedingSucceedingTitle> succeedingTitles = new ArrayList<>();
   private boolean isBoundWith = false;
-  private final String title;
   private String indexTitle;
   private List<AlternativeTitle> alternativeTitles = new ArrayList<>();
   private List<String> editions = new ArrayList<>();
@@ -105,7 +98,6 @@ public class Instance {
   private List<String> publicationRange = new ArrayList<>();
   private List<String> administrativeNotes = new ArrayList<>();
   private List<ElectronicAccess> electronicAccess = new ArrayList<>();
-  private final String instanceTypeId;
   private List<String> instanceFormatIds;
   private List<String> physicalDescriptions = new ArrayList<>();
   private List<String> languages = new ArrayList<>();
@@ -124,8 +116,6 @@ public class Instance {
   private List<String> tags;
   private List<String> natureOfContentTermIds = new ArrayList<>();
   private Dates dates;
-
-  protected static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
   public Instance(
     String id,
@@ -146,8 +136,9 @@ public class Instance {
   /**
    * Creates Instance POJO from JSON.
    * Note: Doesn't set Metadata (since some DI processing seems to fail with it)
-   *       Metadata thus have to be added after instantiation where required.
-   * @param instanceJson  JSON from client request or storage server response
+   * Metadata thus have to be added after instantiation where required.
+   *
+   * @param instanceJson JSON from client request or storage server response
    * @return Instance object that holds all (known) properties from the JSON
    */
   public static Instance fromJson(JsonObject instanceJson) {
@@ -200,18 +191,19 @@ public class Instance {
 
   /**
    *
-   * @return  JSON representation of the Instance, compatible with FOLIO's
-   * Instance storage API.
+   * @return JSON representation of the Instance, compatible with FOLIO's
+   *   Instance storage API.
    */
+  @JsonIgnore
   public JsonObject getJsonForStorage() {
     JsonObject json = new JsonObject();
     //TODO: Review if this shouldn't be defaulting here
     json.put(ID, getId() != null
-      ? getId()
-      : UUID.randomUUID().toString());
+                 ? getId()
+                 : UUID.randomUUID().toString());
     putIfNotNull(json, VERSION_KEY, version);
     json.put(HRID_KEY, hrid);
-    if (source != null) json.put(SOURCE_KEY, source);
+    if (source != null) { json.put(SOURCE_KEY, source); }
     json.put(MATCH_KEY_KEY, matchKey);
     json.put(SOURCE_URI_KEY, sourceUri);
     json.put(TITLE_KEY, title);
@@ -228,7 +220,7 @@ public class Instance {
     json.put(PUBLICATION_FREQUENCY_KEY, publicationFrequency);
     json.put(PUBLICATION_RANGE_KEY, publicationRange);
     json.put(ELECTRONIC_ACCESS_KEY, electronicAccess);
-    if (instanceTypeId != null) json.put(INSTANCE_TYPE_ID_KEY, instanceTypeId);
+    if (instanceTypeId != null) { json.put(INSTANCE_TYPE_ID_KEY, instanceTypeId); }
     json.put(INSTANCE_FORMAT_IDS_KEY, instanceFormatIds);
     json.put(PHYSICAL_DESCRIPTIONS_KEY, physicalDescriptions);
     json.put(LANGUAGES_KEY, languages);
@@ -240,10 +232,11 @@ public class Instance {
     json.put(DISCOVERY_SUPPRESS_KEY, discoverySuppress);
     json.put(DELETED_KEY, deleted);
     json.put(STATISTICAL_CODE_IDS_KEY, statisticalCodeIds);
-    if (sourceRecordFormat != null) json.put(SOURCE_RECORD_FORMAT_KEY, sourceRecordFormat);
+    if (sourceRecordFormat != null) { json.put(SOURCE_RECORD_FORMAT_KEY, sourceRecordFormat); }
     json.put(STATUS_ID_KEY, statusId);
     json.put(STATUS_UPDATED_DATE_KEY, statusUpdatedDate);
-    json.put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray(getTags() == null ? Collections.emptyList() : getTags())));
+    json.put(TAGS_KEY,
+      new JsonObject().put(TAG_LIST_KEY, new JsonArray(getTags() == null ? Collections.emptyList() : getTags())));
     json.put(NATURE_OF_CONTENT_TERM_IDS_KEY, natureOfContentTermIds);
     putIfNotNull(json, DATES_KEY, datesToJson(dates));
 
@@ -252,11 +245,11 @@ public class Instance {
 
   /**
    *
-   * @param context context of the incoming web request
    * @return JSON representation of the Instance, compatible with Inventory's
-   * Instance schema
+   *   Instance schema
    */
-  public JsonObject getJsonForResponse(WebContext context) {
+  @JsonIgnore
+  public JsonObject getJsonForResponse() {
     JsonObject json = new JsonObject();
 
     json.put(ID, getId());
@@ -298,23 +291,50 @@ public class Instance {
     putIfNotNull(json, STATUS_ID_KEY, getStatusId());
     putIfNotNull(json, STATUS_UPDATED_DATE_KEY, getStatusUpdatedDate());
     putIfNotNull(json, METADATA_KEY, getMetadata());
-    putIfNotNull(json, TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray(getTags())));
+    putIfNotNull(json, TAGS_KEY, tags != null ? new JsonObject().put(TAG_LIST_KEY, new JsonArray(tags)) : null);
     putIfNotNull(json, NATURE_OF_CONTENT_TERM_IDS_KEY, getNatureOfContentTermIds());
     putIfNotNull(json, DATES_KEY, datesToJson(dates));
 
     if (precedingTitles != null) {
       JsonArray precedingTitlesJsonArray = new JsonArray();
       precedingTitles.forEach(precedingTitle -> precedingTitlesJsonArray.add(precedingTitle.toPrecedingTitleJson()));
-      json.put(PRECEDING_TITLES_KEY, precedingTitlesJsonArray );
+      json.put(PRECEDING_TITLES_KEY, precedingTitlesJsonArray);
     }
 
     if (succeedingTitles != null) {
       JsonArray succeedingTitlesJsonArray = new JsonArray();
-      succeedingTitles.forEach(succeedingTitle -> succeedingTitlesJsonArray.add(succeedingTitle.toSucceedingTitleJson()));
-      json.put(SUCCEEDING_TITLES_KEY, succeedingTitlesJsonArray );
+      succeedingTitles.forEach(
+        succeedingTitle -> succeedingTitlesJsonArray.add(succeedingTitle.toSucceedingTitleJson()));
+      json.put(SUCCEEDING_TITLES_KEY, succeedingTitlesJsonArray);
     }
 
     return json;
+  }
+
+  public Instance setDates(Dates dates) {
+    this.dates = dates;
+    return this;
+  }
+
+  public String getId() {
+    return id;
+  }
+
+  public Integer getVersion() {
+    return version;
+  }
+
+  public Instance setVersion(Integer version) {
+    this.version = version;
+    return this;
+  }
+
+  public String getHrid() {
+    return hrid;
+  }
+
+  public String getMatchKey() {
+    return matchKey;
   }
 
   public Instance setMatchKey(String matchKey) {
@@ -322,14 +342,30 @@ public class Instance {
     return this;
   }
 
+  public String getSourceUri() {
+    return sourceUri;
+  }
+
   public Instance setSourceUri(String sourceUri) {
     this.sourceUri = sourceUri;
     return this;
   }
 
-  public Instance setIndexTitle(String indexTitle) {
-    this.indexTitle = indexTitle;
+  public String getSource() {
+    return source;
+  }
+
+  public List<String> getAdministrativeNotes() {
+    return administrativeNotes;
+  }
+
+  public Instance setAdministrativeNotes(List<String> administrativeNotes) {
+    this.administrativeNotes = administrativeNotes;
     return this;
+  }
+
+  public List<InstanceRelationshipToParent> getParentInstances() {
+    return parentInstances;
   }
 
   public Instance setParentInstances(List<InstanceRelationshipToParent> parentInstances) {
@@ -342,6 +378,10 @@ public class Instance {
     return this;
   }
 
+  public List<InstanceRelationshipToChild> getChildInstances() {
+    return childInstances;
+  }
+
   public Instance setChildInstances(List<InstanceRelationshipToChild> childInstances) {
     this.childInstances = (childInstances != null ? childInstances : this.childInstances);
     return this;
@@ -350,6 +390,10 @@ public class Instance {
   public Instance setChildInstances(JsonArray childInstances) {
     this.childInstances = toListOfObjects(childInstances, InstanceRelationshipToChild::new);
     return this;
+  }
+
+  public List<PrecedingSucceedingTitle> getPrecedingTitles() {
+    return Collections.unmodifiableList(precedingTitles);
   }
 
   public Instance setPrecedingTitles(List<PrecedingSucceedingTitle> precedingTitles) {
@@ -362,6 +406,10 @@ public class Instance {
     return this;
   }
 
+  public List<PrecedingSucceedingTitle> getSucceedingTitles() {
+    return Collections.unmodifiableList(succeedingTitles);
+  }
+
   public Instance setSucceedingTitles(List<PrecedingSucceedingTitle> succeedingTitles) {
     this.succeedingTitles = succeedingTitles != null ? succeedingTitles : this.succeedingTitles;
     return this;
@@ -372,9 +420,30 @@ public class Instance {
     return this;
   }
 
+  public boolean getIsBoundWith() {
+    return isBoundWith;
+  }
+
   public Instance setIsBoundWith(boolean isBoundWith) {
     this.isBoundWith = isBoundWith;
     return this;
+  }
+
+  public String getTitle() {
+    return title;
+  }
+
+  public String getIndexTitle() {
+    return indexTitle;
+  }
+
+  public Instance setIndexTitle(String indexTitle) {
+    this.indexTitle = indexTitle;
+    return this;
+  }
+
+  public List<AlternativeTitle> getAlternativeTitles() {
+    return alternativeTitles;
   }
 
   public Instance setAlternativeTitles(List<AlternativeTitle> alternativeTitles) {
@@ -387,9 +456,17 @@ public class Instance {
     return this;
   }
 
+  public List<String> getEditions() {
+    return editions;
+  }
+
   public Instance setEditions(List<String> editions) {
     this.editions = editions;
     return this;
+  }
+
+  public List<SeriesItem> getSeries() {
+    return series;
   }
 
   public Instance setSeries(List<SeriesItem> series) {
@@ -402,6 +479,10 @@ public class Instance {
     return this;
   }
 
+  public List<Identifier> getIdentifiers() {
+    return identifiers;
+  }
+
   public Instance setIdentifiers(List<Identifier> identifiers) {
     this.identifiers = identifiers;
     return this;
@@ -410,6 +491,10 @@ public class Instance {
   public Instance setIdentifiers(JsonArray array) {
     this.identifiers = toListOfObjects(array, Identifier::new);
     return this;
+  }
+
+  public List<Contributor> getContributors() {
+    return contributors;
   }
 
   public Instance setContributors(List<Contributor> contributors) {
@@ -422,6 +507,10 @@ public class Instance {
     return this;
   }
 
+  public List<Subject> getSubjects() {
+    return subjects;
+  }
+
   public Instance setSubjects(List<Subject> subjects) {
     this.subjects = subjects;
     return this;
@@ -430,6 +519,10 @@ public class Instance {
   public Instance setSubjects(JsonArray array) {
     this.subjects = toListOfObjects(array, Subject::new);
     return this;
+  }
+
+  public List<Classification> getClassifications() {
+    return classifications;
   }
 
   public Instance setClassifications(List<Classification> classifications) {
@@ -442,6 +535,10 @@ public class Instance {
     return this;
   }
 
+  public List<Publication> getPublication() {
+    return publication;
+  }
+
   public Instance setPublication(List<Publication> publication) {
     this.publication = publication;
     return this;
@@ -452,9 +549,17 @@ public class Instance {
     return this;
   }
 
+  public List<String> getPublicationFrequency() {
+    return publicationFrequency;
+  }
+
   public Instance setPublicationFrequency(List<String> publicationFrequency) {
     this.publicationFrequency = publicationFrequency;
     return this;
+  }
+
+  public List<String> getPublicationRange() {
+    return publicationRange;
   }
 
   public Instance setPublicationRange(List<String> publicationRange) {
@@ -462,9 +567,8 @@ public class Instance {
     return this;
   }
 
-  public Instance setAdministrativeNotes(List<String> administrativeNotes) {
-    this.administrativeNotes = administrativeNotes;
-    return this;
+  public List<ElectronicAccess> getElectronicAccess() {
+    return electronicAccess;
   }
 
   public Instance setElectronicAccess(List<ElectronicAccess> electronicAccess) {
@@ -472,14 +576,17 @@ public class Instance {
     return this;
   }
 
-  public Instance setElectronicAccess (JsonArray array) {
+  public Instance setElectronicAccess(JsonArray array) {
     this.electronicAccess = toListOfObjects(array, ElectronicAccess::new);
     return this;
   }
 
-  public Instance setDates(Dates dates) {
-    this.dates = dates;
-    return this;
+  public String getInstanceTypeId() {
+    return instanceTypeId;
+  }
+
+  public List<String> getInstanceFormatIds() {
+    return instanceFormatIds;
   }
 
   public Instance setInstanceFormatIds(List<String> instanceFormatIds) {
@@ -487,14 +594,26 @@ public class Instance {
     return this;
   }
 
+  public List<String> getPhysicalDescriptions() {
+    return physicalDescriptions;
+  }
+
   public Instance setPhysicalDescriptions(List<String> physicalDescriptions) {
     this.physicalDescriptions = physicalDescriptions;
     return this;
   }
 
+  public List<String> getLanguages() {
+    return languages;
+  }
+
   public Instance setLanguages(List<String> languages) {
     this.languages = languages;
     return this;
+  }
+
+  public List<Note> getNotes() {
+    return notes;
   }
 
   public Instance setNotes(List<Note> notes) {
@@ -507,9 +626,17 @@ public class Instance {
     return this;
   }
 
+  public String getModeOfIssuanceId() {
+    return modeOfIssuanceId;
+  }
+
   public Instance setModeOfIssuanceId(String modeOfIssuanceId) {
     this.modeOfIssuanceId = modeOfIssuanceId;
     return this;
+  }
+
+  public String getCatalogedDate() {
+    return catalogedDate;
   }
 
   public Instance setCatalogedDate(String catalogedDate) {
@@ -517,9 +644,17 @@ public class Instance {
     return this;
   }
 
+  public Boolean getPreviouslyHeld() {
+    return previouslyHeld;
+  }
+
   public Instance setPreviouslyHeld(Boolean previouslyHeld) {
     this.previouslyHeld = previouslyHeld;
     return this;
+  }
+
+  public Boolean getStaffSuppress() {
+    return staffSuppress;
   }
 
   public Instance setStaffSuppress(Boolean staffSuppress) {
@@ -527,9 +662,17 @@ public class Instance {
     return this;
   }
 
+  public Boolean getDiscoverySuppress() {
+    return discoverySuppress;
+  }
+
   public Instance setDiscoverySuppress(Boolean discoverySuppress) {
     this.discoverySuppress = discoverySuppress;
     return this;
+  }
+
+  public Boolean getDeleted() {
+    return deleted;
   }
 
   public Instance setDeleted(Boolean deleted) {
@@ -537,9 +680,17 @@ public class Instance {
     return this;
   }
 
+  public List<String> getStatisticalCodeIds() {
+    return statisticalCodeIds;
+  }
+
   public Instance setStatisticalCodeIds(List<String> statisticalCodeIds) {
     this.statisticalCodeIds = statisticalCodeIds;
     return this;
+  }
+
+  public String getSourceRecordFormat() {
+    return sourceRecordFormat;
   }
 
   public Instance setSourceRecordFormat(String sourceRecordFormat) {
@@ -547,9 +698,17 @@ public class Instance {
     return this;
   }
 
+  public String getStatusId() {
+    return statusId;
+  }
+
   public Instance setStatusId(String statusId) {
     this.statusId = statusId;
     return this;
+  }
+
+  public String getStatusUpdatedDate() {
+    return statusUpdatedDate;
   }
 
   public Instance setStatusUpdatedDate(String statusUpdatedDate) {
@@ -557,9 +716,8 @@ public class Instance {
     return this;
   }
 
-  public Instance setVersion(Integer version) {
-    this.version = version;
-    return this;
+  public Metadata getMetadata() {
+    return metadata;
   }
 
   public Instance setMetadata(Metadata metadata) {
@@ -567,9 +725,17 @@ public class Instance {
     return this;
   }
 
+  public List<String> getTags() {
+    return tags;
+  }
+
   public Instance setTags(List<String> tags) {
     this.tags = tags;
     return this;
+  }
+
+  public List<String> getNatureOfContentTermIds() {
+    return natureOfContentTermIds;
   }
 
   public Instance setNatureOfContentTermIds(List<String> natureOfContentTermIds) {
@@ -577,248 +743,75 @@ public class Instance {
     return this;
   }
 
-  public String getId() {
-    return id;
-  }
-
-  public Integer getVersion() {
-    return version;
-  }
-
-  public String getHrid() {
-    return hrid;
-  }
-
-  public String getMatchKey() {
-    return matchKey;
-  }
-
-  public String getSourceUri() {
-    return sourceUri;
-  }
-
-  public String getSource() {
-    return source;
-  }
-
-  public List<String> getAdministrativeNotes() {
-    return administrativeNotes;
-  }
-
-  public List<InstanceRelationshipToParent> getParentInstances() {
-    return parentInstances;
-  }
-
-  public List<InstanceRelationshipToChild> getChildInstances() {
-    return childInstances;
-  }
-
-  public List<PrecedingSucceedingTitle> getPrecedingTitles() {
-    return Collections.unmodifiableList(precedingTitles);
-  }
-
-  public List<PrecedingSucceedingTitle> getSucceedingTitles() {
-    return Collections.unmodifiableList(succeedingTitles);
-  }
-
-  public boolean getIsBoundWith() {
-    return isBoundWith;
-  }
-
-  public String getTitle() {
-    return title;
-  }
-
-  public String getIndexTitle() {
-    return indexTitle;
-  }
-
-  public List<AlternativeTitle> getAlternativeTitles() {
-    return alternativeTitles;
-  }
-
-  public List<String> getEditions() {
-    return editions;
-  }
-
-  public List<SeriesItem> getSeries() {
-    return series;
-  }
-
-  public List<Identifier> getIdentifiers() {
-    return identifiers;
-  }
-
-  public List<Contributor> getContributors() {
-    return contributors;
-  }
-
-  public List<Subject> getSubjects() {
-    return subjects;
-  }
-
-  public List<Classification> getClassifications() {
-    return classifications;
-  }
-
-  public List<Publication> getPublication() {
-    return publication;
-  }
-
-  public List<String> getPublicationFrequency() {
-    return publicationFrequency;
-  }
-
-  public List<String> getPublicationRange() {
-    return publicationRange;
-  }
-
-  public List<ElectronicAccess> getElectronicAccess() {
-    return electronicAccess;
-  }
-
-  public String getInstanceTypeId() {
-    return instanceTypeId;
-  }
-
-  public List<String> getInstanceFormatIds() {
-    return instanceFormatIds;
-  }
-
-  public List<String> getPhysicalDescriptions() {
-    return physicalDescriptions;
-  }
-
-  public List<String> getLanguages() {
-    return languages;
-  }
-
-  public List<Note> getNotes() {
-    return notes;
-  }
-
-
-  public String getModeOfIssuanceId() {
-    return modeOfIssuanceId;
-  }
-
-  public String getCatalogedDate() {
-    return catalogedDate;
-  }
-
-  public Boolean getPreviouslyHeld() {
-    return previouslyHeld;
-  }
-
-  public Boolean getStaffSuppress() {
-    return staffSuppress;
-  }
-
-  public Boolean getDiscoverySuppress() {
-    return discoverySuppress;
-  }
-
-  public Boolean getDeleted() {
-    return deleted;
-  }
-
-  public List<String> getStatisticalCodeIds() {
-    return statisticalCodeIds;
-  }
-
-  public String getSourceRecordFormat() {
-    return sourceRecordFormat;
-  }
-
-  public String getStatusId() {
-    return statusId;
-  }
-
-  public String getStatusUpdatedDate() {
-    return statusUpdatedDate;
-  }
-
-  public Metadata getMetadata() {
-    return metadata;
-  }
-
-  public List<String> getTags() {
-    return tags;
-  }
-
-  public List<String> getNatureOfContentTermIds() {
-    return natureOfContentTermIds;
-  }
-
   public Instance copyWithNewId(String newId) {
     return new Instance(newId, null, null, this.source, this.title, this.instanceTypeId)
-            .setIndexTitle(indexTitle)
-            .setSourceUri(sourceUri)
-            .setAlternativeTitles(alternativeTitles)
-            .setEditions(editions)
-            .setSeries(series)
-            .setIdentifiers(identifiers)
-            .setContributors(contributors)
-            .setSubjects(subjects)
-            .setClassifications(classifications)
-            .setPublication(publication)
-            .setPublicationFrequency(publicationFrequency)
-            .setPublicationRange(publicationRange)
-            .setElectronicAccess(electronicAccess)
-            .setInstanceFormatIds(instanceFormatIds)
-            .setPhysicalDescriptions(physicalDescriptions)
-            .setLanguages(languages)
-            .setNotes(notes)
-            .setAdministrativeNotes(administrativeNotes)
-            .setModeOfIssuanceId(modeOfIssuanceId)
-            .setCatalogedDate(catalogedDate)
-            .setPreviouslyHeld(previouslyHeld)
-            .setStaffSuppress(staffSuppress)
-            .setDiscoverySuppress(discoverySuppress)
-            .setStatisticalCodeIds(statisticalCodeIds)
-            .setSourceRecordFormat(sourceRecordFormat)
-            .setStatusId(statusId)
-            .setStatusUpdatedDate(statusUpdatedDate)
-            .setMetadata(metadata)
-            .setTags(tags)
-            .setNatureOfContentTermIds(natureOfContentTermIds)
-            .setDates(dates);
+      .setIndexTitle(indexTitle)
+      .setSourceUri(sourceUri)
+      .setAlternativeTitles(alternativeTitles)
+      .setEditions(editions)
+      .setSeries(series)
+      .setIdentifiers(identifiers)
+      .setContributors(contributors)
+      .setSubjects(subjects)
+      .setClassifications(classifications)
+      .setPublication(publication)
+      .setPublicationFrequency(publicationFrequency)
+      .setPublicationRange(publicationRange)
+      .setElectronicAccess(electronicAccess)
+      .setInstanceFormatIds(instanceFormatIds)
+      .setPhysicalDescriptions(physicalDescriptions)
+      .setLanguages(languages)
+      .setNotes(notes)
+      .setAdministrativeNotes(administrativeNotes)
+      .setModeOfIssuanceId(modeOfIssuanceId)
+      .setCatalogedDate(catalogedDate)
+      .setPreviouslyHeld(previouslyHeld)
+      .setStaffSuppress(staffSuppress)
+      .setDiscoverySuppress(discoverySuppress)
+      .setStatisticalCodeIds(statisticalCodeIds)
+      .setSourceRecordFormat(sourceRecordFormat)
+      .setStatusId(statusId)
+      .setStatusUpdatedDate(statusUpdatedDate)
+      .setMetadata(metadata)
+      .setTags(tags)
+      .setNatureOfContentTermIds(natureOfContentTermIds)
+      .setDates(dates);
   }
 
   public Instance copyInstance() {
     return new Instance(this.id, this.version, this.hrid, this.source, this.title, this.instanceTypeId)
-            .setIndexTitle(indexTitle)
-            .setSourceUri(sourceUri)
-            .setAlternativeTitles(alternativeTitles)
-            .setEditions(editions)
-            .setSeries(series)
-            .setIdentifiers(identifiers)
-            .setContributors(contributors)
-            .setSubjects(subjects)
-            .setClassifications(classifications)
-            .setPublication(publication)
-            .setPublicationFrequency(publicationFrequency)
-            .setPublicationRange(publicationRange)
-            .setElectronicAccess(electronicAccess)
-            .setInstanceFormatIds(instanceFormatIds)
-            .setPhysicalDescriptions(physicalDescriptions)
-            .setLanguages(languages)
-            .setNotes(notes)
-            .setAdministrativeNotes(administrativeNotes)
-            .setModeOfIssuanceId(modeOfIssuanceId)
-            .setCatalogedDate(catalogedDate)
-            .setPreviouslyHeld(previouslyHeld)
-            .setStaffSuppress(staffSuppress)
-            .setDiscoverySuppress(discoverySuppress)
-            .setDeleted(deleted)
-            .setStatisticalCodeIds(statisticalCodeIds)
-            .setSourceRecordFormat(sourceRecordFormat)
-            .setStatusId(statusId)
-            .setStatusUpdatedDate(statusUpdatedDate)
-            .setMetadata(metadata)
-            .setTags(tags)
-            .setNatureOfContentTermIds(natureOfContentTermIds)
-            .setDates(dates);
+      .setIndexTitle(indexTitle)
+      .setSourceUri(sourceUri)
+      .setAlternativeTitles(alternativeTitles)
+      .setEditions(editions)
+      .setSeries(series)
+      .setIdentifiers(identifiers)
+      .setContributors(contributors)
+      .setSubjects(subjects)
+      .setClassifications(classifications)
+      .setPublication(publication)
+      .setPublicationFrequency(publicationFrequency)
+      .setPublicationRange(publicationRange)
+      .setElectronicAccess(electronicAccess)
+      .setInstanceFormatIds(instanceFormatIds)
+      .setPhysicalDescriptions(physicalDescriptions)
+      .setLanguages(languages)
+      .setNotes(notes)
+      .setAdministrativeNotes(administrativeNotes)
+      .setModeOfIssuanceId(modeOfIssuanceId)
+      .setCatalogedDate(catalogedDate)
+      .setPreviouslyHeld(previouslyHeld)
+      .setStaffSuppress(staffSuppress)
+      .setDiscoverySuppress(discoverySuppress)
+      .setDeleted(deleted)
+      .setStatisticalCodeIds(statisticalCodeIds)
+      .setSourceRecordFormat(sourceRecordFormat)
+      .setStatusId(statusId)
+      .setStatusUpdatedDate(statusUpdatedDate)
+      .setMetadata(metadata)
+      .setTags(tags)
+      .setNatureOfContentTermIds(natureOfContentTermIds)
+      .setDates(dates);
   }
 
   public Instance addIdentifier(Identifier identifier) {
@@ -847,9 +840,9 @@ public class Instance {
 
   public Instance removeIdentifier(final String identifierTypeId, final String value) {
     List<Identifier> newIdentifiers = this.identifiers.stream()
-      .filter(it -> !(StringUtils.equals(it.identifierTypeId, identifierTypeId)
-        && StringUtils.equals(it.value, value)))
-      .collect(Collectors.toList());
+      .filter(it -> !(Strings.CS.equals(it.identifierTypeId(), identifierTypeId)
+                      && Strings.CS.equals(it.value(), value)))
+      .toList();
 
     return copyInstance().setIdentifiers(newIdentifiers);
   }
@@ -864,7 +857,7 @@ public class Instance {
       try {
         final JsonObject tags = instanceRequest.getJsonObject(TAGS_KEY);
         return tags != null && tags.containsKey(TAG_LIST_KEY) ?
-          JsonArrayHelper.toListOfStrings(tags.getJsonArray(TAG_LIST_KEY)) : new ArrayList<>();
+               JsonArrayHelper.toListOfStrings(tags.getJsonArray(TAG_LIST_KEY)) : new ArrayList<>();
       } catch (ClassCastException e) {
         return JsonArrayHelper.toListOfStrings(instanceRequest.getJsonArray(TAGS_KEY));
       }
@@ -894,7 +887,6 @@ public class Instance {
       }
     }
   }
-
 
   private static <T> List<T> toListOfObjects(JsonArray array, Function<JsonObject, T> objectMapper) {
     return array != null

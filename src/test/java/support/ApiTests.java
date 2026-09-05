@@ -130,6 +130,6 @@ public abstract class ApiTests {
   private void deleteAll(URL root) {
     var deleteCompleted = okapiClient.delete(root + "?query=" + PercentCodec.encode("cql.allRecords=1"));
     Response response = deleteCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
-    assertThat("Failed to delete all records", response.getStatusCode(), is(204));
+    assertThat("Failed to delete all records", response.statusCode(), is(204));
   }
 }

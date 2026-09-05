@@ -52,8 +52,8 @@ public interface InstanceIngressEventHandler {
 
   default boolean eventContainsNoData(InstanceIngressEvent event) {
     return isNull(event.getEventPayload())
-      || isNull(event.getEventPayload().getSourceRecordObject())
-      || isNull(event.getEventPayload().getSourceType());
+           || isNull(event.getEventPayload().getSourceRecordObject())
+           || isNull(event.getEventPayload().getSourceType());
   }
 
   default Optional<String> getInstanceId(InstanceIngressEvent event) {
@@ -121,7 +121,8 @@ public interface InstanceIngressEventHandler {
   }
 
   default Future<org.folio.Instance> prepareAndExecuteMapping(MappingMetadataDto mappingMetadata, Record targetRecord,
-                                                              InstanceIngressEvent event, String instanceId, Logger logger) {
+                                                              InstanceIngressEvent event, String instanceId,
+                                                              Logger logger) {
     try {
       logger.info("Manipulating fields of a Record from InstanceIngressEvent with id '{}'", event.getId());
       var mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
@@ -136,7 +137,8 @@ public interface InstanceIngressEventHandler {
       logger.info("Mapping a Record from InstanceIngressEvent with id '{}' into an Instance", event.getId());
       var parsedRecord = new JsonObject((String) targetRecord.getParsedRecord().getContent());
       RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_BIB_RECORD_FORMAT);
-      var instance = recordMapper.mapRecord(parsedRecord, mappingParameters, new JsonObject(mappingMetadata.getMappingRules()));
+      var instance =
+        recordMapper.mapRecord(parsedRecord, mappingParameters, new JsonObject(mappingMetadata.getMappingRules()));
       instance.setId(instanceId);
       instance.setSource(event.getEventPayload().getSourceType().value());
       logger.info("Mapped Instance from InstanceIngressEvent with id '{}': {}", event.getId(), instance);
@@ -147,15 +149,18 @@ public interface InstanceIngressEventHandler {
     }
   }
 
-  default Future<Instance> executeFieldsManipulation(Instance instance, Record srcRecord, Map<String, Object> eventProperties,
+  default Future<Instance> executeFieldsManipulation(Instance instance, Record srcRecord,
+                                                     Map<String, Object> eventProperties,
                                                      BiFunction<Instance, Record, Future<Instance>> fieldsManipulationFunction) {
     if (eventProperties.containsKey(LINKED_DATA_ID)) {
-      AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, TAG_999, SUBFIELD_L, String.valueOf(eventProperties.get(LINKED_DATA_ID)));
+      AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, TAG_999, SUBFIELD_L,
+        String.valueOf(eventProperties.get(LINKED_DATA_ID)));
     }
     return fieldsManipulationFunction.apply(instance, srcRecord);
   }
 
-  default Future<Snapshot> postSnapshotInSrsAndHandleResponse(String id, Context context, BiFunction<Context, Snapshot, Future<Snapshot>> postSnapshotFunction) {
+  default Future<Snapshot> postSnapshotInSrsAndHandleResponse(String id, Context context,
+                                                              BiFunction<Context, Snapshot, Future<Snapshot>> postSnapshotFunction) {
     var snapshot = new Snapshot()
       .withJobExecutionId(id)
       .withProcessingStartedDate(new Date())

@@ -73,8 +73,8 @@ class ConsortiumServiceTest extends BaseWireMockTest {
     consortiumService.getConsortiumConfiguration(context)
       .onComplete(testContext.succeeding(result -> testContext.verify(() -> {
         assertTrue(result.isPresent());
-        assertEquals(result.get().getCentralTenantId(), centralTenantId);
-        assertEquals(result.get().getConsortiumId(), consortiumId);
+        assertEquals(result.get().centralTenantId(), centralTenantId);
+        assertEquals(result.get().consortiumId(), consortiumId);
         testContext.completeNow();
       })));
   }

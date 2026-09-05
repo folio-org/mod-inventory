@@ -28,7 +28,7 @@ public interface AsynchronousCollection<T> {
   default CompletableFuture<T> add(T item) {
     final CompletableFuture<T> future = new CompletableFuture<>();
 
-    add(item, success -> future.complete(success.getResult()),
+    add(item, success -> future.complete(success.result()),
       failure -> future.completeExceptionally(
         new InternalServerErrorException(failure)));
 
@@ -42,8 +42,8 @@ public interface AsynchronousCollection<T> {
   default CompletableFuture<T> findById(String id) {
     final CompletableFuture<T> future = new CompletableFuture<>();
 
-    findById(id, success -> future.complete(success.getResult()),
-      failure -> future.completeExceptionally(new InternalServerErrorException(failure.getReason())));
+    findById(id, success -> future.complete(success.result()),
+      failure -> future.completeExceptionally(new InternalServerErrorException(failure.reason())));
 
     return future;
   }
@@ -76,12 +76,12 @@ public interface AsynchronousCollection<T> {
   }
 
   void patch(String id,
-    JsonObject patchJson,
-    Consumer<Success<Void>> completionCallback,
-    Consumer<Failure> failureCallback);
+             JsonObject patchJson,
+             Consumer<Success<Void>> completionCallback,
+             Consumer<Failure> failureCallback);
 
   void putJson(String id,
-    JsonObject bodyJson,
-    Consumer<Success<Void>> completionCallback,
-    Consumer<Failure> failureCallback);
+               JsonObject bodyJson,
+               Consumer<Success<Void>> completionCallback,
+               Consumer<Failure> failureCallback);
 }

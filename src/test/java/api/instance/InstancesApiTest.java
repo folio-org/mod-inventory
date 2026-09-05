@@ -113,11 +113,11 @@ public class InstancesApiTest extends ApiTests {
 
     Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
-    String location = postResponse.getLocation();
+    String location = postResponse.location();
 
-    assertThat(postResponse.getStatusCode(), is(201));
+    assertThat(postResponse.statusCode(), is(201));
     assertThat(location, is(notNullValue()));
-    assertThat(postResponse.getBody(), is(notNullValue()));
+    assertThat(postResponse.body(), is(notNullValue()));
 
     JsonObject createdInstance = postResponse.getJson();
 
@@ -192,16 +192,16 @@ public class InstancesApiTest extends ApiTests {
 
     Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
-    String location = postResponse.getLocation();
+    String location = postResponse.location();
 
-    assertThat(postResponse.getStatusCode(), is(201));
+    assertThat(postResponse.statusCode(), is(201));
     assertThat(location, is(notNullValue()));
 
     final var getCompleted = okapiClient.get(location);
 
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getResponse.getStatusCode(), is(200));
+    assertThat(getResponse.statusCode(), is(200));
 
     JsonObject createdInstance = getResponse.getJson();
 
@@ -243,9 +243,9 @@ public class InstancesApiTest extends ApiTests {
 
     Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(postResponse.getStatusCode(), is(400));
+    assertThat(postResponse.statusCode(), is(400));
     assertTrue(postResponse.hasBody());
-    assertEquals(SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE, postResponse.getBody());
+    assertEquals(SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE, postResponse.body());
   }
 
   @Test
@@ -278,7 +278,7 @@ public class InstancesApiTest extends ApiTests {
     Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
     // Assertions
-    assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.CREATED.code()));
+    assertThat(postResponse.statusCode(), is(HttpResponseStatus.CREATED.code()));
     assertEquals(2, postResponse.getJson().getJsonArray("instances").size());
     assertEquals(0, postResponse.getJson().getJsonArray("errorMessages").size());
     assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(2));
@@ -289,7 +289,7 @@ public class InstancesApiTest extends ApiTests {
     Response getAngryPlanetInstanceResponse
       = getAngryPlanetInstanceCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getAngryPlanetInstanceResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
+    assertThat(getAngryPlanetInstanceResponse.statusCode(), is(HttpResponseStatus.OK.code()));
     JsonObject createdAngryPlanetInstance = getAngryPlanetInstanceResponse.getJson();
     assertEquals(createdAngryPlanetInstance.getString("id"), angryPlanetInstanceId);
     assertThat(createdAngryPlanetInstance.getString("title"), is("Long Way to a Small Angry Planet"));
@@ -308,7 +308,7 @@ public class InstancesApiTest extends ApiTests {
     Response getTreasureIslandInstanceResponse
       = getTreasureIslandInstanceCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getTreasureIslandInstanceResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
+    assertThat(getTreasureIslandInstanceResponse.statusCode(), is(HttpResponseStatus.OK.code()));
     JsonObject createdTreasureIslandInstance = getTreasureIslandInstanceResponse.getJson();
     assertEquals(createdTreasureIslandInstance.getString("id"), treasureIslandInstanceId);
     assertThat(createdTreasureIslandInstance.getString("title"), is("Treasure Island"));
@@ -336,7 +336,7 @@ public class InstancesApiTest extends ApiTests {
     Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
     // Assertions
-    assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
+    assertThat(postResponse.statusCode(), is(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
     assertEquals(0, postResponse.getJson().getJsonArray("instances").size());
     assertEquals(1, postResponse.getJson().getJsonArray("errorMessages").size());
     assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(0));
@@ -377,7 +377,7 @@ public class InstancesApiTest extends ApiTests {
     Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
     // Assertions
-    assertThat(postResponse.getStatusCode(), is(HttpResponseStatus.CREATED.code()));
+    assertThat(postResponse.statusCode(), is(HttpResponseStatus.CREATED.code()));
     assertEquals(2, postResponse.getJson().getJsonArray("instances").size());
     assertEquals(1, postResponse.getJson().getJsonArray("errorMessages").size());
     assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(2));
@@ -392,10 +392,10 @@ public class InstancesApiTest extends ApiTests {
 
     Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(postResponse.getStatusCode(), is(400));
-    assertThat(postResponse.getContentType(), is(ContentType.TEXT_PLAIN));
-    assertThat(postResponse.getLocation(), is(nullValue()));
-    assertThat(postResponse.getBody(), is("Title must be provided for an instance"));
+    assertThat(postResponse.statusCode(), is(400));
+    assertThat(postResponse.contentType(), is(ContentType.TEXT_PLAIN));
+    assertThat(postResponse.location(), is(nullValue()));
+    assertThat(postResponse.body(), is("Title must be provided for an instance"));
   }
 
   @Test
@@ -430,13 +430,13 @@ public class InstancesApiTest extends ApiTests {
 
     Response putResponse = updateInstance(updateInstanceRequest);
 
-    assertThat(putResponse.getStatusCode(), is(204));
+    assertThat(putResponse.statusCode(), is(204));
 
     final var getCompleted = okapiClient.get(instanceLocation);
 
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getResponse.getStatusCode(), is(200));
+    assertThat(getResponse.statusCode(), is(200));
 
     JsonObject updatedInstance = getResponse.getJson();
 
@@ -509,7 +509,7 @@ public class InstancesApiTest extends ApiTests {
 
     Response putResponse = updateInstance(updateInstanceRequest);
 
-    assertThat(putResponse.getStatusCode(), is(204));
+    assertThat(putResponse.statusCode(), is(204));
   }
 
   @Test
@@ -538,15 +538,15 @@ public class InstancesApiTest extends ApiTests {
 
     // Put Instance for update
     Response putResponse = updateInstance(instanceForUpdate);
-    assertThat(putResponse.getStatusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
+    assertThat(putResponse.statusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
     assertThat(putResponse.hasBody(), is(true));
-    assertThat(putResponse.getBody(), is(
+    assertThat(putResponse.body(), is(
       format("Failed to update suppress from discovery flag for record in SRS. InstanceID: %s, StatusCode: 500", id)));
 
     // Get existing Instance
     final var getCompleted = okapiClient.get(instanceLocation);
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
-    assertThat(getResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
+    assertThat(getResponse.statusCode(), is(HttpResponseStatus.OK.code()));
     assertTrue(getResponse.getJson().getBoolean("staffSuppress"));
     assertFalse(getResponse.getJson().getBoolean("discoverySuppress"));
     assertFalse(getResponse.getJson().getBoolean("deleted"));
@@ -578,14 +578,14 @@ public class InstancesApiTest extends ApiTests {
 
     // Put Instance for update
     Response putResponse = updateInstance(instanceForUpdate);
-    assertThat(putResponse.getStatusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
+    assertThat(putResponse.statusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
     assertThat(putResponse.hasBody(), is(true));
-    assertThat(putResponse.getBody(), is(format("The instance wasn't undeleted in SRS. InstanceID: %s, SC: 500", id)));
+    assertThat(putResponse.body(), is(format("The instance wasn't undeleted in SRS. InstanceID: %s, SC: 500", id)));
 
     // Get existing Instance
     final var getCompleted = okapiClient.get(instanceLocation);
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
-    assertThat(getResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
+    assertThat(getResponse.statusCode(), is(HttpResponseStatus.OK.code()));
     assertTrue(getResponse.getJson().getBoolean("staffSuppress"));
     assertTrue(getResponse.getJson().getBoolean("discoverySuppress"));
     assertFalse(getResponse.getJson().getBoolean("deleted"));
@@ -627,7 +627,7 @@ public class InstancesApiTest extends ApiTests {
 
     var putResponse = updateInstance(updateInstanceRequest);
 
-    assertThat(putResponse.getStatusCode(), is(204));
+    assertThat(putResponse.statusCode(), is(204));
   }
 
   @Test
@@ -637,8 +637,8 @@ public class InstancesApiTest extends ApiTests {
 
     Response putResponse = updateInstance(updateInstanceRequest);
 
-    assertThat(putResponse.getStatusCode(), is(404));
-    assertThat(putResponse.getBody(), is("Instance not found"));
+    assertThat(putResponse.statusCode(), is(404));
+    assertThat(putResponse.body(), is("Instance not found"));
   }
 
   @Test
@@ -647,9 +647,9 @@ public class InstancesApiTest extends ApiTests {
     JsonObject instance = createInstance(smallAngryPlanet(ApiTestSuite.ID_FOR_OPTIMISTIC_LOCKING_FAILURE));
 
     Response putResponse = updateInstance(instance);
-    assertThat(putResponse.getStatusCode(), is(409));
-    assertThat(putResponse.getBody(), is("Optimistic Locking"));
-    assertThat(putResponse.getContentType(), is(ContentType.TEXT_PLAIN));
+    assertThat(putResponse.statusCode(), is(409));
+    assertThat(putResponse.body(), is("Optimistic Locking"));
+    assertThat(putResponse.contentType(), is(ContentType.TEXT_PLAIN));
   }
 
   @Test
@@ -662,13 +662,13 @@ public class InstancesApiTest extends ApiTests {
     URL instanceLocation = new URI(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id"))).toURL();
     // Put Instance for update
     Response putResponse = updateInstance(instanceForUpdate);
-    assertThat(putResponse.getStatusCode(), is(HttpResponseStatus.NO_CONTENT.code()));
+    assertThat(putResponse.statusCode(), is(HttpResponseStatus.NO_CONTENT.code()));
     // Get existing Instance
     final var getCompleted = okapiClient.get(instanceLocation);
 
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
+    assertThat(getResponse.statusCode(), is(HttpResponseStatus.OK.code()));
 
     JsonObject updatedInstance = getResponse.getJson();
     assertEquals(updatedInstance, newInstance);
@@ -685,7 +685,7 @@ public class InstancesApiTest extends ApiTests {
       // Put Instance for update
       Response putResponse = updateInstance(instanceForUpdate);
 
-      assertThat(putResponse.getStatusCode(), is(HttpResponseStatus.UNPROCESSABLE_ENTITY.code()));
+      assertThat(putResponse.statusCode(), is(HttpResponseStatus.UNPROCESSABLE_ENTITY.code()));
       assertThat(putResponse.getJson().getJsonArray("errors").size(), is(1));
 
       instanceForUpdate.remove(field);
@@ -707,7 +707,7 @@ public class InstancesApiTest extends ApiTests {
     // Put Instance for update
     Response putResponse = updateInstance(instanceForUpdate);
 
-    assertThat(putResponse.getStatusCode(), is(HttpResponseStatus.UNPROCESSABLE_ENTITY.code()));
+    assertThat(putResponse.statusCode(), is(HttpResponseStatus.UNPROCESSABLE_ENTITY.code()));
     assertNotNull(putResponse.getJson().getJsonArray("errors"));
     JsonArray errors = putResponse.getJson().getJsonArray("errors");
     assertThat(errors.size(), is(1));
@@ -724,7 +724,7 @@ public class InstancesApiTest extends ApiTests {
 
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getResponse.getStatusCode(), is(200));
+    assertThat(getResponse.statusCode(), is(200));
 
     JsonObject updatedInstance = getResponse.getJson();
     assertThat(updatedInstance.getString("id"), is(newInstance.getString("id")));
@@ -749,14 +749,14 @@ public class InstancesApiTest extends ApiTests {
     // Put Instance for update
     Response putResponse = updateInstance(instanceForUpdate);
 
-    assertThat(putResponse.getStatusCode(), is(HttpResponseStatus.NO_CONTENT.code()));
+    assertThat(putResponse.statusCode(), is(HttpResponseStatus.NO_CONTENT.code()));
 
     // Get existing Instance
     final var getCompleted = okapiClient.get(instanceLocation);
 
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
+    assertThat(getResponse.statusCode(), is(HttpResponseStatus.OK.code()));
 
     JsonObject updatedInstance = getResponse.getJson();
     assertThat(updatedInstance.getString("id"), is(newInstance.getString("id")));
@@ -781,9 +781,9 @@ public class InstancesApiTest extends ApiTests {
 
     Response putResponse = updateInstance(updateInstanceRequest);
 
-    assertThat(putResponse.getStatusCode(), is(400));
+    assertThat(putResponse.statusCode(), is(400));
     assertTrue(putResponse.hasBody());
-    assertEquals(SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE, putResponse.getBody());
+    assertEquals(SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE, putResponse.body());
   }
 
   @Test
@@ -798,7 +798,7 @@ public class InstancesApiTest extends ApiTests {
 
     Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(deleteResponse.getStatusCode(), is(204));
+    assertThat(deleteResponse.statusCode(), is(204));
     assertThat(deleteResponse.hasBody(), is(false));
 
     final var getAllCompleted = okapiClient.get(ApiRoot.instances());
@@ -824,14 +824,14 @@ public class InstancesApiTest extends ApiTests {
 
     Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(deleteResponse.getStatusCode(), is(204));
+    assertThat(deleteResponse.statusCode(), is(204));
     assertThat(deleteResponse.hasBody(), is(false));
 
     final var getCompleted = okapiClient.get(instanceToDeleteLocation);
 
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getResponse.getStatusCode(), is(404));
+    assertThat(getResponse.statusCode(), is(404));
 
     final var getAllCompleted = okapiClient.get(ApiRoot.instances());
 
@@ -851,7 +851,7 @@ public class InstancesApiTest extends ApiTests {
 
     sourceRecordStorageClient.create(sourceRecord);
     Response getCreatedSourceRecordResponse = sourceRecordStorageClient.getById(instanceId);
-    assertEquals(getCreatedSourceRecordResponse.getStatusCode(), HttpStatus.HTTP_OK.toInt());
+    assertEquals(getCreatedSourceRecordResponse.statusCode(), HttpStatus.HTTP_OK.toInt());
     assertEquals(instanceId.toString(), getCreatedSourceRecordResponse.getJson().getString("id"));
 
     URL softDeleteUrl = new URI(String.format("%s/%s/%s",
@@ -864,7 +864,7 @@ public class InstancesApiTest extends ApiTests {
 
     Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(deleteResponse.getStatusCode(), is(204));
+    assertThat(deleteResponse.statusCode(), is(204));
     assertThat(deleteResponse.hasBody(), is(false));
 
     final var getCompleted = okapiClient.get(getByIdUrl);
@@ -876,7 +876,7 @@ public class InstancesApiTest extends ApiTests {
     assertTrue(getResponse.getJson().getBoolean("deleted"));
 
     Response getDeletedSourceRecordResponse = sourceRecordStorageClient.getById(instanceId);
-    assertEquals(getDeletedSourceRecordResponse.getStatusCode(), HttpStatus.HTTP_NOT_FOUND.toInt());
+    assertEquals(getDeletedSourceRecordResponse.statusCode(), HttpStatus.HTTP_NOT_FOUND.toInt());
   }
 
   @Test
@@ -886,7 +886,7 @@ public class InstancesApiTest extends ApiTests {
     JsonObject instanceToDelete = createInstance(marcInstanceWithDefaultBlockedFields(instanceId));
 
     Response getSourceRecordResponse = sourceRecordStorageClient.getById(instanceId);
-    assertEquals(getSourceRecordResponse.getStatusCode(), HttpStatus.HTTP_NOT_FOUND.toInt());
+    assertEquals(getSourceRecordResponse.statusCode(), HttpStatus.HTTP_NOT_FOUND.toInt());
 
     URL softDeleteUrl = new URI(format("%s/%s/%s",
       ApiRoot.instances(), instanceToDelete.getString("id"), "mark-deleted")).toURL();
@@ -900,9 +900,9 @@ public class InstancesApiTest extends ApiTests {
 
     String expectedMessage = String.format(
       "MARC record was not set for deletion because it was not found by instance ID: %s", instanceId);
-    assertThat(deleteResponse.getStatusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
+    assertThat(deleteResponse.statusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
     assertThat(deleteResponse.hasBody(), is(true));
-    assertThat(deleteResponse.getBody(), is(expectedMessage));
+    assertThat(deleteResponse.body(), is(expectedMessage));
 
     final var getCompleted = okapiClient.get(getByIdUrl);
 
@@ -912,7 +912,7 @@ public class InstancesApiTest extends ApiTests {
     assertTrue(getResponse.getJson().getBoolean("discoverySuppress"));
 
     Response getDeletedSourceRecordResponse = sourceRecordStorageClient.getById(instanceId);
-    assertEquals(getDeletedSourceRecordResponse.getStatusCode(), HttpStatus.HTTP_NOT_FOUND.toInt());
+    assertEquals(getDeletedSourceRecordResponse.statusCode(), HttpStatus.HTTP_NOT_FOUND.toInt());
   }
 
   @Test
@@ -936,7 +936,7 @@ public class InstancesApiTest extends ApiTests {
     final var deleteCompleted = okapiClient.delete(softDeleteUrl);
     Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(deleteResponse.getStatusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
+    assertThat(deleteResponse.statusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
     assertThat(deleteResponse.hasBody(), is(true));
 
     final var getCompleted = okapiClient.get(getByIdUrl);
@@ -957,7 +957,7 @@ public class InstancesApiTest extends ApiTests {
 
     Response getAllResponse = getAllCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getAllResponse.getStatusCode(), is(200));
+    assertThat(getAllResponse.statusCode(), is(200));
 
     List<JsonObject> instances = JsonArrayHelper.toList(
       getAllResponse.getJson().getJsonArray("instances"));
@@ -984,8 +984,8 @@ public class InstancesApiTest extends ApiTests {
     Response firstPageResponse = firstPageGetCompleted.toCompletableFuture().get(5, SECONDS);
     Response secondPageResponse = secondPageGetCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(firstPageResponse.getStatusCode(), is(200));
-    assertThat(secondPageResponse.getStatusCode(), is(200));
+    assertThat(firstPageResponse.statusCode(), is(200));
+    assertThat(secondPageResponse.statusCode(), is(200));
 
     List<JsonObject> firstPageInstances = JsonArrayHelper.toList(
       firstPageResponse.getJson().getJsonArray("instances"));
@@ -1007,8 +1007,8 @@ public class InstancesApiTest extends ApiTests {
 
     Response getPagedResponse = getPagedCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getPagedResponse.getStatusCode(), is(400));
-    assertThat(getPagedResponse.getBody(),
+    assertThat(getPagedResponse.statusCode(), is(400));
+    assertThat(getPagedResponse.body(),
       is("limit and offset must be numeric when supplied"));
   }
 
@@ -1024,7 +1024,7 @@ public class InstancesApiTest extends ApiTests {
 
     Response searchGetResponse = searchGetCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(searchGetResponse.getStatusCode(), is(200));
+    assertThat(searchGetResponse.statusCode(), is(200));
 
     List<JsonObject> instances = JsonArrayHelper.toList(
       searchGetResponse.getJson().getJsonArray("instances"));
@@ -1042,7 +1042,7 @@ public class InstancesApiTest extends ApiTests {
 
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getResponse.getStatusCode(), is(404));
+    assertThat(getResponse.statusCode(), is(404));
   }
 
   @Test
@@ -1108,8 +1108,8 @@ public class InstancesApiTest extends ApiTests {
 
     final Response response = instancesClient.attemptToCreate(smallAngryPlanet(UUID.randomUUID()));
 
-    assertThat(response.getStatusCode(), is(500));
-    assertThat(response.getBody(), is(expectedErrorMessage));
+    assertThat(response.statusCode(), is(500));
+    assertThat(response.body(), is(expectedErrorMessage));
   }
 
   @Test
@@ -1131,8 +1131,8 @@ public class InstancesApiTest extends ApiTests {
       .attemptToReplace(instance.getId(), instance.getJson().copy()
         .put("subjects", new JsonArray().add("Small angry planet subject")));
 
-    assertThat(updateResponse.getStatusCode(), is(500));
-    assertThat(updateResponse.getBody(), is(expectedErrorMessage));
+    assertThat(updateResponse.statusCode(), is(500));
+    assertThat(updateResponse.body(), is(expectedErrorMessage));
   }
 
   @Test
@@ -1149,8 +1149,8 @@ public class InstancesApiTest extends ApiTests {
 
     final Response response = instancesClient.attemptToCreate(smallAngryPlanet(UUID.randomUUID()));
 
-    assertThat(response.getStatusCode(), is(422));
-    assertThat(response.getBody(), is(expectedErrorMessage));
+    assertThat(response.statusCode(), is(422));
+    assertThat(response.body(), is(expectedErrorMessage));
   }
 
   @Test
@@ -1172,8 +1172,8 @@ public class InstancesApiTest extends ApiTests {
       .attemptToReplace(instance.getId(), instance.getJson().copy()
         .put("subjects", new JsonArray().add("Small angry planet subject")));
 
-    assertThat(updateResponse.getStatusCode(), is(422));
-    assertThat(updateResponse.getBody(), is(expectedErrorMessage));
+    assertThat(updateResponse.statusCode(), is(422));
+    assertThat(updateResponse.body(), is(expectedErrorMessage));
   }
 
   @Test
@@ -1210,13 +1210,13 @@ public class InstancesApiTest extends ApiTests {
 
     Response patchResponse = patchInstance(instanceId, patchRequest);
 
-    assertThat(patchResponse.getStatusCode(), is(204));
+    assertThat(patchResponse.statusCode(), is(204));
 
     final var getCompleted = okapiClient.get(instanceLocation);
 
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getResponse.getStatusCode(), is(200));
+    assertThat(getResponse.statusCode(), is(200));
 
     JsonObject updatedInstance = getResponse.getJson();
 

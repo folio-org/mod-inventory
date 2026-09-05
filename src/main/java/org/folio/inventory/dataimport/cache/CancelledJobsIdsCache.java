@@ -14,7 +14,7 @@ public class CancelledJobsIdsCache {
 
   public CancelledJobsIdsCache() {
     int expirationTimeMinutes = Integer.parseInt(System.getProperty(EXPIRATION_TIME_PARAMETER,
-        System.getenv().getOrDefault(EXPIRATION_TIME_PARAMETER, DEFAULT_EXPIRATION_TIME_MINUTES)));
+      System.getenv().getOrDefault(EXPIRATION_TIME_PARAMETER, DEFAULT_EXPIRATION_TIME_MINUTES)));
 
     this.cache = Caffeine.newBuilder()
       .expireAfterWrite(expirationTimeMinutes, TimeUnit.MINUTES)
@@ -39,5 +39,4 @@ public class CancelledJobsIdsCache {
   public boolean contains(String jobId) {
     return cache.asMap().containsKey(jobId);
   }
-
 }

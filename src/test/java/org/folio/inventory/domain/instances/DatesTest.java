@@ -28,9 +28,9 @@ class DatesTest {
   void shouldCreateDatesFromJson(String dateTypeId, String date1, String date2) {
     var dates = convertToDates(datesJson(dateTypeId, date1, date2));
 
-    assertThat(dates.getDateTypeId(), is(dateTypeId));
-    assertThat(dates.getDate1(), is(date1));
-    assertThat(dates.getDate2(), is(date2));
+    assertThat(dates.dateTypeId(), is(dateTypeId));
+    assertThat(dates.date1(), is(date1));
+    assertThat(dates.date2(), is(date2));
   }
 
   @Test

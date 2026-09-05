@@ -188,10 +188,10 @@ class ExternalStorageModuleInstanceCollectionTest extends BaseWireMockTest {
     assertEquals(List.of("existing-admin-note"), result.getAdministrativeNotes(),
       "administrativeNotes must be preserved from existing instance");
     assertEquals("existing-parent-id",
-      result.getParentInstances().getFirst().getSuperInstanceId(),
+      result.getParentInstances().getFirst().superInstanceId(),
       "parentInstances must be preserved from existing instance");
     assertEquals("existing-child-id",
-      result.getChildInstances().getFirst().getSubInstanceId(),
+      result.getChildInstances().getFirst().subInstanceId(),
       "childInstances must be preserved from existing instance");
   }
 

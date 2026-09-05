@@ -29,7 +29,7 @@ import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 public class ConsortiumDataCache {
 
   private static final Logger LOG = LogManager.getLogger(ConsortiumDataCache.class);
-  private static final String USER_TENANTS_PATH = "/user-tenants?limit=1"; //NOSONAR
+  private static final String USER_TENANTS_PATH = "/user-tenants?limit=1";
   private static final String USER_TENANTS_FIELD = "userTenants";
   private static final String CENTRAL_TENANT_ID_FIELD = "centralTenantId";
   private static final String CONSORTIUM_ID_FIELD = "consortiumId";
@@ -52,7 +52,7 @@ public class ConsortiumDataCache {
    * @param tenantId - tenant id
    * @param headers  - okapi headers
    * @return future of Optional with consortium data for the specified {@code tenantId},
-   * if the specified {@code tenantId} is not included to any consortium, then returns future with empty Optional
+   *   if the specified {@code tenantId} is not included to any consortium, then returns future with empty Optional
    */
   public Future<Optional<ConsortiumConfiguration>> getConsortiumData(String tenantId, Map<String, String> headers) {
     LOG.info("getConsortiumData:: Retrieving consortium data for tenantId: '{}'", tenantId);
@@ -64,7 +64,8 @@ public class ConsortiumDataCache {
     }
   }
 
-  private CompletableFuture<Optional<ConsortiumConfiguration>> loadConsortiumData(String tenantId, Map<String, String> headers) {
+  private CompletableFuture<Optional<ConsortiumConfiguration>> loadConsortiumData(String tenantId,
+                                                                                  Map<String, String> headers) {
     LOG.info("loadConsortiumData:: Loading consortium data for tenantId: '{}'", tenantId);
     String okapiUrl = headers.get(URL);
     WebClient client = WebClient.wrap(httpClient);
@@ -86,9 +87,9 @@ public class ConsortiumDataCache {
         LOG.info("loadConsortiumData:: Consortium data was loaded, tenantId: '{}'", tenantId);
         JsonObject userTenant = userTenants.getJsonObject(0);
         return Future.succeededFuture(Optional.of(
-          new ConsortiumConfiguration(userTenant.getString(CENTRAL_TENANT_ID_FIELD), userTenant.getString(CONSORTIUM_ID_FIELD))));
+          new ConsortiumConfiguration(userTenant.getString(CENTRAL_TENANT_ID_FIELD),
+            userTenant.getString(CONSORTIUM_ID_FIELD))));
       }).toCompletionStage()
       .toCompletableFuture();
   }
-
 }

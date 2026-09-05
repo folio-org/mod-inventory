@@ -94,10 +94,10 @@ class ExternalStorageModuleAuthorityRecordCollectionTest extends AbstractExterna
 
     MultipleRecords<Authority> allInstancesWrapped = getOnCompletion(findFuture);
 
-    List<Authority> allInstances = allInstancesWrapped.records;
+    List<Authority> allInstances = allInstancesWrapped.records();
 
     assertThat(allInstances.size(), is(0));
-    assertThat(allInstancesWrapped.totalRecords, is(0));
+    assertThat(allInstancesWrapped.totalRecords(), is(0));
   }
 
   @SneakyThrows

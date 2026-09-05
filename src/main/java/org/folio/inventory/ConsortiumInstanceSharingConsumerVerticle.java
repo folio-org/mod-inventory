@@ -41,11 +41,12 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
   public void start(Promise<Void> startPromise) {
     JsonObject config = vertx.getOrCreateContext().config();
     KafkaConfig kafkaConfig = getKafkaConfig(config);
-    LOGGER.info(format("kafkaConfig: %s", kafkaConfig));
+    LOGGER.info("kafkaConfig: {}", kafkaConfig);
 
     HttpClient httpClient = vertx.createHttpClient();
     Storage storage = Storage.basedUpon(config, httpClient);
-    SharedInstanceEventIdStorageServiceImpl sharedInstanceEventIdStorageService = new SharedInstanceEventIdStorageServiceImpl(new EventIdStorageDaoImpl(new PostgresClientFactory(vertx)));
+    SharedInstanceEventIdStorageServiceImpl sharedInstanceEventIdStorageService =
+      new SharedInstanceEventIdStorageServiceImpl(new EventIdStorageDaoImpl(new PostgresClientFactory(vertx)));
     ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx,
       httpClient, storage, kafkaConfig, sharedInstanceEventIdStorageService);
 
@@ -57,10 +58,16 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
       });
   }
 
+  @Override
+  public void stop(Promise<Void> stopPromise) {
+    consumer.stop().onComplete(ar -> stopPromise.complete());
+  }
+
   private Future<KafkaConsumerWrapper<String, String>> createKafkaConsumerWrapper(KafkaConfig kafkaConfig,
                                                                                   AsyncRecordHandler<String, String> recordHandler) {
-    SubscriptionDefinition subscriptionDefinition = KafkaTopicNameHelper.createSubscriptionDefinition(kafkaConfig.getEnvId(),
-      KafkaTopicNameHelper.getDefaultNameSpace(), SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_INIT.value());
+    SubscriptionDefinition subscriptionDefinition =
+      KafkaTopicNameHelper.createSubscriptionDefinition(kafkaConfig.getEnvId(),
+        KafkaTopicNameHelper.getDefaultNameSpace(), SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_INIT.value());
 
     KafkaConsumerWrapper<String, String> consumerWrapper = KafkaConsumerWrapper.<String, String>builder()
       .context(context)
@@ -87,11 +94,6 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
       .build();
     LOGGER.info("kafkaConfig: {}", kafkaConfig);
     return kafkaConfig;
-  }
-
-  @Override
-  public void stop(Promise<Void> stopPromise) {
-    consumer.stop().onComplete(ar -> stopPromise.complete());
   }
 
   private int getLoadLimit() {

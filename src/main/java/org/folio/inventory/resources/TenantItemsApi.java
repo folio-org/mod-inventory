@@ -6,14 +6,19 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.handler.BodyHandler;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URL;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
@@ -29,27 +34,18 @@ import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.handler.BodyHandler;
-
 /**
  * Resource that allows to get Inventory items from multiple tenants at once.
  * User should have an affiliation in order to be able to retrieve items from the corresponding tenant.
  */
 public class TenantItemsApi {
 
-  private static final Logger LOG = LogManager.getLogger(MethodHandles.lookup().lookupClass());
-
-  private static final String TENANT_ITEMS_PATH = "/inventory/tenant-items";
   public static final String ITEMS_FIELD = "items";
   public static final String ITEM_FIELD = "item";
   public static final String TOTAL_RECORDS_FIELD = "totalRecords";
   public static final String TENANT_ID_FIELD = "tenantId";
-
+  private static final Logger LOG = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+  private static final String TENANT_ITEMS_PATH = "/inventory/tenant-items";
   private final HttpClient client;
 
   public TenantItemsApi(HttpClient client) {
@@ -62,8 +58,8 @@ public class TenantItemsApi {
   }
 
   /**
-   *  This API is meant to be used by UI to fetch different items from several
-   *  tenants together within one call
+   * This API is meant to be used by UI to fetch different items from several
+   * tenants together within one call
    *
    */
   private void getItemsFromTenants(RoutingContext routingContext) {
@@ -83,15 +79,15 @@ public class TenantItemsApi {
       .thenAccept(response -> JsonResponse.success(routingContext.response(), JsonObject.mapFrom(response)));
   }
 
-  private CompletableFuture<List<TenantItem>> getItemsWithTenantId(String tenantId, List<String> itemIds, RoutingContext routingContext) {
+  private CompletableFuture<List<TenantItem>> getItemsWithTenantId(String tenantId, List<String> itemIds,
+                                                                   RoutingContext routingContext) {
     LOG.info("getItemsWithTenantId:: Fetching items - {} from tenant - {}", itemIds, tenantId);
     var context = new WebContext(routingContext);
     CollectionResourceClient itemsStorageClient;
     try {
       OkapiHttpClient okapiClient = createHttpClient(tenantId, context, routingContext);
       itemsStorageClient = createItemsStorageClient(okapiClient, context);
-    }
-    catch (MalformedURLException e) {
+    } catch (MalformedURLException | URISyntaxException e) {
       invalidOkapiUrlResponse(routingContext, context);
       return CompletableFuture.completedFuture(List.of());
     }
@@ -110,18 +106,19 @@ public class TenantItemsApi {
   }
 
   private List<JsonObject> getItems(Response response) {
-    if (response.getStatusCode() != HttpStatus.SC_OK || !response.hasBody()) {
+    if (response.statusCode() != HttpStatus.SC_OK || !response.hasBody()) {
       return List.of();
     }
     return JsonArrayHelper.toList(response.getJson(), ITEMS_FIELD);
   }
 
-  private CollectionResourceClient createItemsStorageClient(OkapiHttpClient client, WebContext context) throws MalformedURLException {
-    return new CollectionResourceClient(client, new URL(context.getOkapiLocation() + "/item-storage/items"));
+  private CollectionResourceClient createItemsStorageClient(OkapiHttpClient client, WebContext context)
+    throws MalformedURLException, URISyntaxException {
+    return new CollectionResourceClient(client, new URI(context.getOkapiLocation() + "/item-storage/items").toURL());
   }
 
   private OkapiHttpClient createHttpClient(String tenantId, WebContext context,
-                                             RoutingContext routingContext) throws MalformedURLException {
+                                           RoutingContext routingContext) throws MalformedURLException {
     return new OkapiHttpClient(WebClient.wrap(client),
       URI.create(context.getOkapiLocation()).toURL(),
       Optional.ofNullable(tenantId).orElse(context.getTenantId()),
@@ -136,5 +133,4 @@ public class TenantItemsApi {
     ServerErrorResponse.internalError(routingContext.response(),
       String.format("Invalid Okapi URL: %s", context.getOkapiLocation()));
   }
-
 }

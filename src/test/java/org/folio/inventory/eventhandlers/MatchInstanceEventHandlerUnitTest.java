@@ -269,8 +269,8 @@ class MatchInstanceEventHandlerUnitTest {
       );
       assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
-      assertEquals(matchedInstanceAsJsonObject.getString("hrid"), INSTANCE_HRID);
+      assertEquals(INSTANCE_ID, matchedInstanceAsJsonObject.getString(ID_FIELD));
+      assertEquals(INSTANCE_HRID, matchedInstanceAsJsonObject.getString("hrid"));
       testContext.completeNow();
     }));
   }
@@ -320,7 +320,7 @@ class MatchInstanceEventHandlerUnitTest {
       );
       assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
+      assertEquals(INSTANCE_ID, matchedInstanceAsJsonObject.getString(ID_FIELD));
       testContext.completeNow();
     }));
   }
@@ -427,7 +427,7 @@ class MatchInstanceEventHandlerUnitTest {
       );
       assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
+      assertEquals(INSTANCE_ID, matchedInstanceAsJsonObject.getString(ID_FIELD));
       verify(storage, times(0)).getInstanceCollection(
         Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)));
       testContext.completeNow();
@@ -483,7 +483,7 @@ class MatchInstanceEventHandlerUnitTest {
       );
       assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
       JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), INSTANCE_ID);
+      assertEquals(INSTANCE_ID, matchedInstanceAsJsonObject.getString(ID_FIELD));
       verify(storage, times(0)).getInstanceCollection(
         Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)));
       testContext.completeNow();

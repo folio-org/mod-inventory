@@ -17,12 +17,12 @@ public class InstanceApiClient {
     final var postCompleted = client.post(ApiRoot.instances(), newInstanceRequest);
     final var postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat("Failed to create instance", postResponse.getStatusCode(), is(201));
+    assertThat("Failed to create instance", postResponse.statusCode(), is(201));
 
-    final var getCompleted = client.get(postResponse.getLocation());
+    final var getCompleted = client.get(postResponse.location());
     final var getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat("Failed to get instance", getResponse.getStatusCode(), is(200));
+    assertThat("Failed to get instance", getResponse.statusCode(), is(200));
     return getResponse.getJson();
   }
 }

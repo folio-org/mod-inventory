@@ -5,7 +5,6 @@ import static io.vertx.core.Future.succeededFuture;
 import static io.vertx.core.buffer.Buffer.buffer;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
-import static support.TestUtil.buildHttpResponseWithBuffer;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_L;
@@ -21,6 +20,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static support.TestUtil.buildHttpResponseWithBuffer;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
@@ -33,7 +33,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import org.apache.http.HttpStatus;
 import org.folio.MappingMetadataDto;
-import support.TestUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
@@ -60,6 +59,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import support.TestUtil;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -67,10 +67,10 @@ class UpdateInstanceIngressEventHandlerUnitTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String BIB_RECORD_PATH = "src/test/resources/handlers/bib-record.json";
-  private static final String TENANT = "tenant";
-  private static final String OKAPI_URL = "okapiUrl";
-  private static final String TOKEN = "token";
-  private static final String USER_ID = "userId";
+  private static final String TENANT = "stub-tenant";
+  private static final String OKAPI_URL = "https://example.com";
+  private static final String TOKEN = "stub-token";
+  private static final String USER_ID = "12345";
 
   @Mock
   private SourceStorageRecordsClient sourceStorageClient;
@@ -493,8 +493,6 @@ class UpdateInstanceIngressEventHandlerUnitTest {
       .getExistingPrecedingSucceedingTitles(any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).deletePrecedingSucceedingTitles(any(), any());
     doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any(), any());
-    doReturn(sourceStorageSnapshotsClient).when(handler)
-      .getSourceStorageSnapshotsClient(any(), any(), any(), any(), any());
     var snapshotHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_CREATED);
     doReturn(succeededFuture(snapshotHttpResponse)).when(sourceStorageSnapshotsClient)
       .postSourceStorageSnapshots(any());
@@ -579,7 +577,7 @@ class UpdateInstanceIngressEventHandlerUnitTest {
     assertThat(instance.getId()).isEqualTo(instanceId);
     assertThat(instance.getHrid()).isEqualTo(existedInstance.getHrid());
     assertThat(instance.getSource()).isEqualTo("LINKED_DATA");
-    assertThat(instance.getIdentifiers().stream().anyMatch(i -> i.value.equals("(ld) " + linkedDataId))).isTrue();
+    assertThat(instance.getIdentifiers().stream().anyMatch(i -> i.value().equals("(ld) " + linkedDataId))).isTrue();
 
     var recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());

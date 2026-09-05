@@ -29,8 +29,8 @@ import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.entities.SharingInstanceEventType;
 import org.folio.inventory.consortium.entities.SharingStatus;
 import org.folio.inventory.consortium.handlers.InstanceSharingHandlerFactory;
-import org.folio.inventory.consortium.handlers.Source;
-import org.folio.inventory.consortium.handlers.Target;
+import org.folio.inventory.consortium.handlers.SourceTenantProvider;
+import org.folio.inventory.consortium.handlers.TargetTenantProvider;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -49,11 +49,9 @@ import org.folio.okapi.common.XOkapiHeaders;
 
 public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<String, String> {
 
-  private static final Logger LOGGER = LogManager.getLogger(ConsortiumInstanceSharingHandler.class);
   public static final String SOURCE = "source";
   public static final SharingInstanceEventType eventType = CONSORTIUM_INSTANCE_SHARING_COMPLETE;
-
-  public static final String ID = "id";
+  private static final Logger LOGGER = LogManager.getLogger(ConsortiumInstanceSharingHandler.class);
   private final Vertx vertx;
   private final HttpClient httpClient;
   private final Storage storage;
@@ -61,7 +59,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   private final InstanceOperationsHelper instanceOperations;
   private final EventIdStorageService eventIdStorageService;
 
-  public ConsortiumInstanceSharingHandler(Vertx vertx, HttpClient httpClient, Storage storage, KafkaConfig kafkaConfig, EventIdStorageService eventIdStorageService) {
+  public ConsortiumInstanceSharingHandler(Vertx vertx, HttpClient httpClient, Storage storage, KafkaConfig kafkaConfig,
+                                          EventIdStorageService eventIdStorageService) {
     this.vertx = vertx;
     this.httpClient = httpClient;
     this.storage = storage;
@@ -80,20 +79,25 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       kafkaHeaders.putAll(KafkaHeaderUtils.kafkaHeadersToMap(event.headers()));
       String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
 
-      LOGGER.info("Event CONSORTIUM_INSTANCE_SHARING_INIT has been received for InstanceId={}, sourceTenant={}, targetTenant={}",
+      LOGGER.info(
+        "Event CONSORTIUM_INSTANCE_SHARING_INIT has been received for InstanceId={}, sourceTenant={}, targetTenant={}",
         instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId());
 
-      Future<String> eventToSharedInstanceFuture = eventIdStorageService.store(event.key(), sharingInstanceMetadata.getTargetTenantId());
+      Future<String> eventToSharedInstanceFuture =
+        eventIdStorageService.store(event.key(), sharingInstanceMetadata.getTargetTenantId());
       eventToSharedInstanceFuture.compose(r -> {
 
         publishInstanceIfNeeded(sharingInstanceMetadata, kafkaHeaders).onComplete(t -> {
           if (t.succeeded()) {
-            LOGGER.info("handle:: Checking if Instance exists on target tenant - COMPLETED SUCCESSFULLY for instanceId: {}, sourceTenant: {}, targetTenant: {}",
+            LOGGER.info(
+              "handle:: Checking if Instance exists on target tenant - COMPLETED SUCCESSFULLY for instanceId: {}, sourceTenant: {}, targetTenant: {}",
               instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId());
             promise.complete(t.result());
           } else {
-            LOGGER.warn("handle:: Checking if Instance exists on target tenant - FAILED for instanceId: {}, sourceTenant: {}, targetTenant: {} error: {}",
-              instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId(), t.cause());
+            LOGGER.warn(
+              "handle:: Checking if Instance exists on target tenant - FAILED for instanceId: {}, sourceTenant: {}, targetTenant: {} error: {}",
+              instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId(),
+              t.cause());
             promise.fail(t.cause());
           }
         });
@@ -104,7 +108,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
             instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId());
           promise.complete();
         } else {
-          LOGGER.warn("handle:: Error creating inventory recordId and sharedInstanceId for instanceId: {}, sourceTenant: {}, targetTenant: {}",
+          LOGGER.warn(
+            "handle:: Error creating inventory recordId and sharedInstanceId for instanceId: {}, sourceTenant: {}, targetTenant: {}",
             instanceId, sharingInstanceMetadata.getSourceTenantId(), sharingInstanceMetadata.getTargetTenantId());
           promise.fail(throwable);
         }
@@ -117,27 +122,31 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     return promise.future();
   }
 
-  private Future<String> publishInstanceIfNeeded(SharingInstance sharingInstanceMetadata, Map<String, String> kafkaHeaders) {
+  private Future<String> publishInstanceIfNeeded(SharingInstance sharingInstanceMetadata,
+                                                 Map<String, String> kafkaHeaders) {
 
     String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
     String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
     String targetTenant = sharingInstanceMetadata.getTargetTenantId();
 
-    Source source = new Source(sourceTenant, getTenantSpecificSourceCollection(sourceTenant, kafkaHeaders));
-    Target target = new Target(targetTenant, getTenantSpecificSourceCollection(targetTenant, kafkaHeaders));
+    SourceTenantProvider sourceTenantProvider =
+      new SourceTenantProvider(sourceTenant, getTenantSpecificSourceCollection(sourceTenant, kafkaHeaders));
+    TargetTenantProvider targetTenantProvider =
+      new TargetTenantProvider(targetTenant, getTenantSpecificSourceCollection(targetTenant, kafkaHeaders));
 
     LOGGER.info("Checking if instance with InstanceId={} exists on target tenant={}", instanceId, targetTenant);
 
-    return instanceOperations.getInstanceById(instanceId, target)
+    return instanceOperations.getInstanceById(instanceId, targetTenantProvider)
       .compose(instance -> {
-        String warningMessage = String.format("Instance with InstanceId=%s is present on target tenant: %s", instanceId, targetTenant);
+        String warningMessage =
+          String.format("Instance with InstanceId=%s is present on target tenant: %s", instanceId, targetTenant);
         sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, warningMessage, kafkaHeaders);
         return Future.succeededFuture(warningMessage);
       })
       .recover(throwable -> {
         if (throwable.getClass().equals(NotFoundException.class)) {
           LOGGER.info("Instance with InstanceId={} is not exists on target tenant: {}.", instanceId, targetTenant);
-          return publishInstance(sharingInstanceMetadata, source, target, kafkaHeaders);
+          return publishInstance(sharingInstanceMetadata, sourceTenantProvider, targetTenantProvider, kafkaHeaders);
         } else {
           LOGGER.error("Instance with InstanceId={} cannot be shared on target tenant: {}.",
             instanceId, targetTenant, throwable);
@@ -146,8 +155,9 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       });
   }
 
-  private Future<String> publishInstance(SharingInstance sharingInstanceMetadata, Source source,
-                                         Target target, Map<String, String> kafkaHeaders) {
+  private Future<String> publishInstance(SharingInstance sharingInstanceMetadata,
+                                         SourceTenantProvider sourceTenantProvider,
+                                         TargetTenantProvider targetTenantProvider, Map<String, String> kafkaHeaders) {
 
     String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
     String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
@@ -159,23 +169,27 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     Promise<String> promise = Promise.promise();
 
     try {
-      instanceOperations.getInstanceById(instanceId, source).onComplete(result -> {
+      instanceOperations.getInstanceById(instanceId, sourceTenantProvider).onComplete(result -> {
         if (result.succeeded()) {
           Instance instance = result.result();
           Optional<InstanceSharingHandlerFactory> type = checkSourceType(instance.getSource());
           type.ifPresentOrElse(
             sourceType -> getInstanceSharingHandler(sourceType, instanceOperations, storage, vertx, httpClient)
-              .publishInstance(instance, sharingInstanceMetadata, source, target, kafkaHeaders)
-              .onComplete(publishResult -> handleSharingResult(sharingInstanceMetadata, kafkaHeaders, promise, publishResult)),
+              .publishInstance(instance, sharingInstanceMetadata, sourceTenantProvider, targetTenantProvider,
+                kafkaHeaders)
+              .onComplete(
+                publishResult -> handleSharingResult(sharingInstanceMetadata, kafkaHeaders, promise, publishResult)),
             () -> {
-              String errorMessage = format("Error sharing Instance with InstanceId=%s to the target tenant %s. Error: %s",
-                instanceId, targetTenant, format("Unsupported source type: %s", instance.getSource()));
+              String errorMessage =
+                format("Error sharing Instance with InstanceId=%s to the target tenant %s. Error: %s",
+                  instanceId, targetTenant, format("Unsupported source type: %s", instance.getSource()));
               LOGGER.error("publishInstance:: {}", errorMessage);
               promise.fail(errorMessage);
             });
         } else {
           String errorMessage = format("Error sharing Instance with InstanceId=%s to the target tenant %s. " +
-            "Because the instance is not found on the source tenant %s", instanceId, targetTenant, sourceTenant);
+                                       "Because the instance is not found on the source tenant %s", instanceId,
+            targetTenant, sourceTenant);
           sendErrorResponseAndPrintLogMessage(errorMessage, sharingInstanceMetadata, kafkaHeaders);
           promise.fail(errorMessage);
         }
@@ -195,14 +209,16 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       .findFirst();
   }
 
-  private void handleSharingResult(SharingInstance sharingInstanceMetadata, Map<String, String> kafkaHeaders, Promise<String> promise,
+  private void handleSharingResult(SharingInstance sharingInstanceMetadata, Map<String, String> kafkaHeaders,
+                                   Promise<String> promise,
                                    AsyncResult<String> result) {
 
     String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
     String targetTenant = sharingInstanceMetadata.getTargetTenantId();
 
     if (result.succeeded()) {
-      String completeMessage = format("Instance with InstanceId=%s has been shared to the target tenant %s", instanceId, targetTenant);
+      String completeMessage =
+        format("Instance with InstanceId=%s has been shared to the target tenant %s", instanceId, targetTenant);
       sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, completeMessage, kafkaHeaders);
       promise.complete(completeMessage);
     } else {
@@ -213,7 +229,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
     }
   }
 
-  private void sendErrorResponseAndPrintLogMessage(String errorMessage, SharingInstance sharingInstance, Map<String, String> kafkaHeaders) {
+  private void sendErrorResponseAndPrintLogMessage(String errorMessage, SharingInstance sharingInstance,
+                                                   Map<String, String> kafkaHeaders) {
     LOGGER.error("handle:: {}", errorMessage);
     sendCompleteEventToKafka(sharingInstance, SharingStatus.ERROR, errorMessage, kafkaHeaders);
   }
@@ -225,7 +242,8 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
       List<KafkaHeader> kafkaHeadersList = convertKafkaHeadersMap(kafkaHeaders);
 
       LOGGER.info("sendEventToKafka :: Sending a message about the result of sharing instance with InstanceId={}" +
-        " to tenant {}. Status: {}, Message: {}", sharingInstance.getInstanceIdentifier(), tenantId, status.getValue(), errorMessage);
+                  " to tenant {}. Status: {}, Message: {}", sharingInstance.getInstanceIdentifier(), tenantId,
+        status.getValue(), errorMessage);
 
       KafkaProducerRecord<String, String> kafkaRecord =
         createProducerRecord(getTopicName(tenantId, eventType),
@@ -253,11 +271,12 @@ public class ConsortiumInstanceSharingHandler implements AsyncRecordHandler<Stri
   }
 
   private KafkaProducerRecord<String, String> createProducerRecord(String topicName, SharingInstance sharingInstance,
-                                                                   SharingStatus status, String message, List<KafkaHeader> kafkaHeaders) {
+                                                                   SharingStatus status, String message,
+                                                                   List<KafkaHeader> kafkaHeaders) {
 
     String logErrorMessage = SharingStatus.ERROR == status ? format(" Error: %s", message) : EMPTY;
     LOGGER.info("createKafkaMessage :: Create producer record for sharing instance with InstanceId={} with status {} " +
-      "to topic {}{}", sharingInstance.getInstanceIdentifier(), status, topicName, logErrorMessage);
+                "to topic {}{}", sharingInstance.getInstanceIdentifier(), status, topicName, logErrorMessage);
 
     sharingInstance.setStatus(status);
     if (SharingStatus.ERROR == sharingInstance.getStatus()) {

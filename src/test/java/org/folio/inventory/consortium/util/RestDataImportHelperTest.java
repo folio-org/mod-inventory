@@ -1,28 +1,6 @@
 package org.folio.inventory.consortium.util;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.ext.web.client.impl.HttpResponseImpl;
-import org.folio.HttpStatus;
-import org.folio.rest.client.ChangeManagerClient;
-import org.folio.rest.jaxrs.model.JobProfileInfo;
-import org.folio.rest.jaxrs.model.RawRecordsDto;
-import org.folio.rest.jaxrs.model.RecordsMetadata;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 import static io.vertx.core.buffer.Buffer.buffer;
-import static support.TestUtil.buildHttpResponseWithBuffer;
 import static org.folio.inventory.consortium.util.RestDataImportHelper.FIELD_JOB_EXECUTIONS;
 import static org.folio.inventory.consortium.util.RestDataImportHelper.STATUS_COMMITTED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,6 +10,27 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static support.TestUtil.buildHttpResponseWithBuffer;
+
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.impl.HttpResponseImpl;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import org.folio.HttpStatus;
+import org.folio.rest.client.ChangeManagerClient;
+import org.folio.rest.jaxrs.model.JobProfileInfo;
+import org.folio.rest.jaxrs.model.RawRecordsDto;
+import org.folio.rest.jaxrs.model.RecordsMetadata;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class RestDataImportHelperTest {
 
@@ -98,7 +97,8 @@ class RestDataImportHelperTest {
         // then
         assertTrue(asyncResult.failed());
         assertEquals("Error receiving new JobExecution for sharing instance with InstanceId=" +
-          expectedJobExecutionId + ". Status message: Ok. Status code: 500", asyncResult.cause().getMessage());
+                     expectedJobExecutionId + ". Status message: Ok. Status code: 500",
+          asyncResult.cause().getMessage());
       });
   }
 
@@ -123,7 +123,9 @@ class RestDataImportHelperTest {
       .onComplete(asyncResult -> {
         // then
         assertTrue(asyncResult.failed());
-        assertEquals("class java.lang.String cannot be cast to class io.vertx.core.json.JsonObject (java.lang.String is in module java.base of loader 'bootstrap'; io.vertx.core.json.JsonObject is in unnamed module of loader 'app')", asyncResult.cause().getMessage());
+        assertEquals(
+          "class java.lang.String cannot be cast to class io.vertx.core.json.JsonObject (java.lang.String is in module java.base of loader 'bootstrap'; io.vertx.core.json.JsonObject is in unnamed module of loader 'app')",
+          asyncResult.cause().getMessage());
       });
   }
 
@@ -148,7 +150,7 @@ class RestDataImportHelperTest {
         // then
         assertTrue(asyncResult.failed());
         assertEquals("Response body doesn't contains JobExecution object for sharing instance with InstanceId=" +
-          expectedJobExecutionId + ".", asyncResult.cause().getMessage());
+                     expectedJobExecutionId + ".", asyncResult.cause().getMessage());
       });
   }
 
@@ -197,7 +199,8 @@ class RestDataImportHelperTest {
         // then
         assertFalse(asyncResult.succeeded());
         assertEquals("Failed to set JobProfile for JobExecution with jobExecutionId=" +
-          expectedJobExecutionId + ". Status message: Ok. Status code: 500", asyncResult.cause().getMessage());
+                     expectedJobExecutionId + ". Status message: Ok. Status code: 500",
+          asyncResult.cause().getMessage());
       });
   }
 
@@ -280,7 +283,7 @@ class RestDataImportHelperTest {
         // then
         assertFalse(asyncResult.succeeded());
         assertEquals("Response body doesn't contains data for jobExecutionId=" + expectedJobExecutionId
-          + ".", asyncResult.cause().getMessage());
+                     + ".", asyncResult.cause().getMessage());
       });
   }
 
@@ -305,8 +308,7 @@ class RestDataImportHelperTest {
         // then
         assertFalse(asyncResult.succeeded());
         assertEquals("Error getting jobExecution by jobExecutionId=" + expectedJobExecutionId
-          + ". Status message: Ok. Status code: 500", asyncResult.cause().getMessage());
+                     + ". Status message: Ok. Status code: 500", asyncResult.cause().getMessage());
       });
   }
-
 }

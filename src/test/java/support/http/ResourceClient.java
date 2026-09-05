@@ -88,11 +88,6 @@ public class ResourceClient {
       "instances");
   }
 
-  public static ResourceClient forBoundWithItems(OkapiHttpClient okapiClient) {
-    return new ResourceClient(okapiClient, BusinessLogicInterfaceUrls::boundWithItemsUrl,
-      "bound-with items", "items");
-  }
-
   public static ResourceClient forInstitutions(OkapiHttpClient client) {
     return new ResourceClient(client, StorageInterfaceUrls::institutionsStorageUrl,
       "institutions", "locinsts");
@@ -176,15 +171,15 @@ public class ResourceClient {
     Response response = attemptToCreate(request);
 
     assertThat(
-      String.format("Failed to create %s: %s", resourceName, response.getBody()),
-      response.getStatusCode(), is(HttpURLConnection.HTTP_CREATED));
+      String.format("Failed to create %s: %s", resourceName, response.body()),
+      response.statusCode(), is(HttpURLConnection.HTTP_CREATED));
 
     if (response.hasBody()) {
       return new IndividualResource(response);
     } else {
-      assertThat(response.getLocation(), is(notNullValue()));
+      assertThat(response.location(), is(notNullValue()));
 
-      final var getCompleted = client.get(response.getLocation());
+      final var getCompleted = client.get(response.location());
 
       return new IndividualResource(getCompleted.toCompletableFuture().get(5, SECONDS));
     }
@@ -194,7 +189,6 @@ public class ResourceClient {
     throws MalformedURLException, InterruptedException, ExecutionException,
     TimeoutException {
 
-    //TODO: Reinstate json checking
     final var createCompleted = client.post(urlMaker.combine(""), request);
 
     return createCompleted.toCompletableFuture().get(5, SECONDS);
@@ -218,8 +212,8 @@ public class ResourceClient {
     Response putResponse = attemptToReplace(id, request);
 
     assertThat(
-      String.format("Failed to update %s %s: %s", resourceName, id, putResponse.getBody()),
-      putResponse.getStatusCode(), is(HttpURLConnection.HTTP_NO_CONTENT));
+      String.format("Failed to update %s %s: %s", resourceName, id, putResponse.body()),
+      putResponse.statusCode(), is(HttpURLConnection.HTTP_NO_CONTENT));
   }
 
   public Response attemptToReplace(UUID id, JsonObject request)
@@ -241,8 +235,8 @@ public class ResourceClient {
     Response patchResponse = attemptToPatch(id, request);
 
     assertThat(
-      String.format("Failed to update %s %s: %s", resourceName, id, patchResponse.getBody()),
-      patchResponse.getStatusCode(), is(HttpURLConnection.HTTP_NO_CONTENT));
+      String.format("Failed to update %s %s: %s", resourceName, id, patchResponse.body()),
+      patchResponse.statusCode(), is(HttpURLConnection.HTTP_NO_CONTENT));
   }
 
   public Response attemptToPatch(UUID id, JsonObject request)
@@ -274,8 +268,8 @@ public class ResourceClient {
     Response response = deleteCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(String.format(
-        "Failed to delete %s %s: %s", resourceName, id, response.getBody()),
-      response.getStatusCode(), is(204));
+        "Failed to delete %s %s: %s", resourceName, id, response.body()),
+      response.statusCode(), is(204));
   }
 
   public void deleteAll()
@@ -290,8 +284,8 @@ public class ResourceClient {
     Response response = deleteCompleted.toCompletableFuture().get(5, SECONDS);
 
     assertThat(String.format(
-        "Failed to delete %s: %s", resourceName, response.getBody()),
-      response.getStatusCode(), is(204));
+        "Failed to delete %s: %s", resourceName, response.body()),
+      response.statusCode(), is(204));
   }
 
   public List<JsonObject> getAll()
@@ -304,8 +298,8 @@ public class ResourceClient {
 
     Response response = getFinished.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(format("Get all records failed: %s", response.getBody()),
-      response.getStatusCode(), is(200));
+    assertThat(format("Get all records failed: %s", response.body()),
+      response.statusCode(), is(200));
 
     return JsonArrayHelper.toList(response.getJson()
       .getJsonArray(collectionArrayPropertyName));
@@ -316,8 +310,8 @@ public class ResourceClient {
 
     Response response = attemptGetMany(query, limit);
 
-    assertThat(format("Get all records failed: %s", response.getBody()),
-      response.getStatusCode(), is(200));
+    assertThat(format("Get all records failed: %s", response.body()),
+      response.statusCode(), is(200));
 
     return JsonArrayHelper.toList(response.getJson()
       .getJsonArray(collectionArrayPropertyName));
@@ -338,7 +332,7 @@ public class ResourceClient {
     final var future = client.post(urlMaker.combine("/emulate-failure"),
       JsonObject.mapFrom(failureDescriptor));
 
-    assertThat(future.toCompletableFuture().get(5, SECONDS).getStatusCode(), is(201));
+    assertThat(future.toCompletableFuture().get(5, SECONDS).statusCode(), is(201));
   }
 
   public void disableFailureEmulation()

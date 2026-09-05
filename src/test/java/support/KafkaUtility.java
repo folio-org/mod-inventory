@@ -40,10 +40,6 @@ public final class KafkaUtility {
     throw new UnsupportedOperationException("Cannot instantiate utility class.");
   }
 
-  public static String getBootstrapServers() {
-    return bootstrapServers;
-  }
-
   public static void setBootstrapServers(String servers) {
     bootstrapServers = servers;
   }
@@ -83,10 +79,6 @@ public final class KafkaUtility {
 
       return kafkaProducer.send(producerRecord).get();
     }
-  }
-
-  public static String[] getKafkaHostAndPort() {
-    return bootstrapServers.split(":");
   }
 
   private static Properties getConsumerProperties() {

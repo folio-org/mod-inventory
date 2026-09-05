@@ -46,7 +46,7 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
 
   @Override
   public Future<HttpResponse<Buffer>> putSourceStorageRecordsGenerationById(String id, Record aRecord) {
-    return createRequest(PUT, SOURCE_STORAGE_RECORDS + id + "/generation",      folioHeaders, webClient)
+    return createRequest(PUT, SOURCE_STORAGE_RECORDS + id + "/generation", folioHeaders, webClient)
       .sendBuffer(getBuffer(aRecord));
   }
 

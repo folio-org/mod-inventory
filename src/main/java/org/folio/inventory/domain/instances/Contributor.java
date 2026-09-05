@@ -34,5 +34,4 @@ public class Contributor extends Authorized {
       json.getString(AUTHORITY_ID_KEY),
       json.getBoolean(PRIMARY_KEY));
   }
-
 }

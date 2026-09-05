@@ -1,11 +1,10 @@
 package org.folio.inventory.dataimport.entities;
 
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 import org.folio.rest.jaxrs.model.HoldingsRecord;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Class for storing intermediate results of the Holdings(errors and successful) Handler's processing between runs if Optimistic Locking reveals.

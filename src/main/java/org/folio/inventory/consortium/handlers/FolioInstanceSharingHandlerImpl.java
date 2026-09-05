@@ -1,18 +1,17 @@
 package org.folio.inventory.consortium.handlers;
 
+import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.SOURCE;
+import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
+import static org.folio.inventory.domain.items.Item.HRID_KEY;
+
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
+import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.domain.instances.Instance;
-
-import java.util.Map;
-
-import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.SOURCE;
-import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
-import static org.folio.inventory.domain.items.Item.HRID_KEY;
 
 public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
@@ -25,7 +24,8 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
   }
 
   public Future<String> publishInstance(Instance instance, SharingInstance sharingInstanceMetadata,
-                                        Source source, Target target, Map<String, String> kafkaHeaders) {
+                                        SourceTenantProvider sourceTenantProvider,
+                                        TargetTenantProvider targetTenantProvider, Map<String, String> kafkaHeaders) {
 
     String instanceId = instance.getId();
     String sourceTenantId = sharingInstanceMetadata.getSourceTenantId();
@@ -39,15 +39,14 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
     jsonInstance.remove(HRID_KEY);
 
     // Add instance to the targetInstanceCollection
-    return instanceOperations.addInstance(Instance.fromJson(jsonInstance), target)
+    return instanceOperations.addInstance(Instance.fromJson(jsonInstance), targetTenantProvider)
       .compose(targetInstance -> {
         JsonObject jsonInstanceToPublish = new JsonObject(instance.getJsonForStorage().encode());
         jsonInstanceToPublish.put(SOURCE, CONSORTIUM_FOLIO.getValue());
         jsonInstanceToPublish.put(HRID_KEY, targetInstance.getHrid());
 
         // Update instance in sourceInstanceCollection
-        return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish), source);
+        return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish), sourceTenantProvider);
       });
   }
-
 }

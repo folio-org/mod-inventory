@@ -1,20 +1,19 @@
 package api;
 
-import support.ApiRoot;
-import support.ApiTests;
-import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.json.JsonObject;
-import lombok.SneakyThrows;
-
-import org.folio.inventory.config.InventoryConfiguration;
-import org.folio.inventory.config.InventoryConfigurationImpl;
-import org.folio.inventory.support.http.client.Response;
-import org.junit.jupiter.api.Test;
-
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.vertx.core.json.JsonObject;
+import lombok.SneakyThrows;
+import org.folio.inventory.config.InventoryConfiguration;
+import org.folio.inventory.config.InventoryConfigurationImpl;
+import org.folio.inventory.support.http.client.Response;
+import org.junit.jupiter.api.Test;
+import support.ApiRoot;
+import support.ApiTests;
 
 public class InventoryConfigApiTest extends ApiTests {
 
@@ -27,7 +26,7 @@ public class InventoryConfigApiTest extends ApiTests {
 
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
+    assertThat(getResponse.statusCode(), is(HttpResponseStatus.OK.code()));
     JsonObject actualResponse = getResponse.getJson();
 
     for (String blockedField : config.getInstanceBlockedFields()) {
@@ -42,7 +41,7 @@ public class InventoryConfigApiTest extends ApiTests {
 
     Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
 
-    assertThat(getResponse.getStatusCode(), is(HttpResponseStatus.OK.code()));
+    assertThat(getResponse.statusCode(), is(HttpResponseStatus.OK.code()));
     JsonObject actualResponse = getResponse.getJson();
 
     for (String blockedField : config.getHoldingsBlockedFields()) {

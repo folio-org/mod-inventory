@@ -16,7 +16,7 @@ public final class JsonObjectMatchers {
   }
 
   private static <T> Matcher<JsonObject> encodedJsonMatches(Matcher<T> matcher) {
-    return new TypeSafeMatcher<JsonObject>() {
+    return new TypeSafeMatcher<>() {
       @Override
       public void describeTo(Description description) {
         description.appendDescriptionOf(matcher);

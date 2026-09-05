@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import lombok.SneakyThrows;
 import org.folio.DataImportEventPayload;
+import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.inventory.client.OrdersClient;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.OrdersPreloaderHelper;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.PreloadingFields;
@@ -130,11 +131,11 @@ class OrdersPreloaderHelperTest {
 
   private DataImportEventPayload createEventPayload() {
     HashMap<String, String> context = new HashMap<>();
-    context.put("userId", "testUser");
+    context.put(DataImportHeaders.USER_ID, "12456");
     return new DataImportEventPayload()
       .withOkapiUrl("http://localhost:9493")
-      .withTenant("diku")
-      .withToken("token")
+      .withTenant("test-tenant")
+      .withToken("stub-token")
       .withContext(context);
   }
 }

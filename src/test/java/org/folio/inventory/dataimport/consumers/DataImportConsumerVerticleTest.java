@@ -3,8 +3,6 @@ package org.folio.inventory.dataimport.consumers;
 import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.DataImportEventTypes.DI_COMPLETED;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
-import static support.KafkaUtility.checkKafkaEventSent;
-import static support.KafkaUtility.sendEvent;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
@@ -15,6 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
+import static support.KafkaUtility.checkKafkaEventSent;
+import static support.KafkaUtility.sendEvent;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -31,7 +31,6 @@ import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.inventory.DataImportConsumerVerticle;
-import support.KafkaTest;
 import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
@@ -43,6 +42,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import support.KafkaTest;
 
 @ExtendWith({VertxExtension.class, MockitoExtension.class})
 class DataImportConsumerVerticleTest extends KafkaTest {
@@ -139,7 +139,7 @@ class DataImportConsumerVerticleTest extends KafkaTest {
     sendEvent(headers, TENANT_ID, DI_INCOMING_MARC_BIB_RECORD_PARSED.value(), event.getId(), Json.encode(event));
 
     // then
-    var observedValues = checkKafkaEventSent(TENANT_ID, DI_COMPLETED.value(), 30000);
+    var observedValues = checkKafkaEventSent(TENANT_ID, DI_COMPLETED.value(), 10000);
 
     assertEquals(1, observedValues.size());
 

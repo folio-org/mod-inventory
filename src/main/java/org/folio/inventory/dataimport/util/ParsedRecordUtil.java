@@ -1,17 +1,15 @@
 package org.folio.inventory.dataimport.util;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import org.folio.rest.jaxrs.model.ParsedRecord;
-import org.folio.rest.jaxrs.model.Record;
-
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.Optional;
-
+import org.folio.rest.jaxrs.model.ParsedRecord;
+import org.folio.rest.jaxrs.model.Record;
 import org.marc4j.MarcJsonReader;
 import org.marc4j.MarcReader;
 import org.marc4j.marc.ControlField;
@@ -20,9 +18,9 @@ public final class ParsedRecordUtil {
 
   public static final String TAG_999 = "999";
   public static final String INDICATOR_F = "f";
+  public static final char LEADER_STATUS_DELETED = 'd';
   private static final String LEADER = "leader";
   private static final int LEADER_STATUS_SUBFIELD_POSITION = 5;
-  public static final char LEADER_STATUS_DELETED = 'd';
 
   private ParsedRecordUtil() {
   }
@@ -37,8 +35,8 @@ public final class ParsedRecordUtil {
     return fields.stream()
       .map(o -> (JsonObject) o)
       .filter(field -> field.containsKey(TAG_999)
-        && INDICATOR_F.equals(field.getJsonObject(TAG_999).getString("ind1"))
-        && INDICATOR_F.equals(field.getJsonObject(TAG_999).getString("ind2")))
+                       && INDICATOR_F.equals(field.getJsonObject(TAG_999).getString("ind1"))
+                       && INDICATOR_F.equals(field.getJsonObject(TAG_999).getString("ind2")))
       .flatMap(targetField -> targetField.getJsonObject(TAG_999).getJsonArray("subfields").stream())
       .map(subfieldAsObject -> (JsonObject) subfieldAsObject)
       .filter(subfield -> subfield.containsKey(additionalSubfield.subfieldCode))
@@ -49,8 +47,8 @@ public final class ParsedRecordUtil {
 
   public static JsonObject normalize(Object content) {
     return (content instanceof String)
-      ? new JsonObject((String) content)
-      : JsonObject.mapFrom(content);
+           ? new JsonObject((String) content)
+           : JsonObject.mapFrom(content);
   }
 
   /**
@@ -100,7 +98,7 @@ public final class ParsedRecordUtil {
    * Update MARC Leader status 05 for the given {@link ParsedRecord} content
    *
    * @param parsedRecord parsedRecord parsed record
-   * @param status new MARC Leader status
+   * @param status       new MARC Leader status
    */
   public static void updateLeaderStatus(ParsedRecord parsedRecord, Character status) {
     if (Objects.isNull(parsedRecord) || Objects.isNull(parsedRecord.getContent()) || Objects.isNull(status)) {
@@ -118,7 +116,8 @@ public final class ParsedRecordUtil {
   }
 
   private static MarcReader buildMarcReader(Record record) {
-    return new MarcJsonReader(new ByteArrayInputStream(record.getParsedRecord().getContent().toString().getBytes(StandardCharsets.UTF_8)));
+    return new MarcJsonReader(
+      new ByteArrayInputStream(record.getParsedRecord().getContent().toString().getBytes(StandardCharsets.UTF_8)));
   }
 
   public enum AdditionalSubfields {

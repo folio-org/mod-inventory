@@ -70,10 +70,10 @@ class ExternalItemCollectionTest extends AbstractExternalStorageTest {
 
     MultipleRecords<Item> wrappedItems = getOnCompletion(findFuture);
 
-    List<Item> allItems = wrappedItems.records;
+    List<Item> allItems = wrappedItems.records();
 
     assertThat(allItems.size(), is(0));
-    assertThat(wrappedItems.totalRecords, is(0));
+    assertThat(wrappedItems.totalRecords(), is(0));
   }
 
   @Test
@@ -88,34 +88,34 @@ class ExternalItemCollectionTest extends AbstractExternalStorageTest {
 
     MultipleRecords<Item> wrappedItems = getOnCompletion(findFuture);
 
-    List<Item> allItems = wrappedItems.records;
+    List<Item> allItems = wrappedItems.records();
 
     assertThat(allItems.size(), is(3));
-    assertThat(wrappedItems.totalRecords, is(3));
+    assertThat(wrappedItems.totalRecords(), is(3));
 
     Item smallAngry = getItem(allItems, "036000291452");
 
     assertThat(smallAngry, notNullValue());
-    assertThat(smallAngry.getStatus().getName(), is(ItemStatusName.AVAILABLE));
+    assertThat(smallAngry.getStatus().name(), is(ItemStatusName.AVAILABLE));
     assertThat(smallAngry.getMaterialTypeId(), is(bookMaterialTypeId));
     assertThat(smallAngry.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
     assertThat(smallAngry.getTemporaryLocationId(), is(annexLibraryLocationId));
 
-    Item nod = getItem(allItems, "565578437802");
+    Item nodItem = getItem(allItems, "565578437802");
 
-    assertThat(nod, notNullValue());
-    assertThat(nod.getStatus().getName(), is(ItemStatusName.AVAILABLE));
-    assertThat(nod.getMaterialTypeId(), is(bookMaterialTypeId));
-    assertThat(nod.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
-    assertThat(nod.getTemporaryLocationId(), is(annexLibraryLocationId));
+    assertThat(nodItem, notNullValue());
+    assertThat(nodItem.getStatus().name(), is(ItemStatusName.AVAILABLE));
+    assertThat(nodItem.getMaterialTypeId(), is(bookMaterialTypeId));
+    assertThat(nodItem.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
+    assertThat(nodItem.getTemporaryLocationId(), is(annexLibraryLocationId));
 
-    Item uprooted = getItem(allItems, "657670342075");
+    Item uprootedItem = getItem(allItems, "657670342075");
 
-    assertThat(uprooted, notNullValue());
-    assertThat(uprooted.getStatus().getName(), is(ItemStatusName.AVAILABLE));
-    assertThat(uprooted.getMaterialTypeId(), is(bookMaterialTypeId));
-    assertThat(uprooted.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
-    assertThat(uprooted.getTemporaryLocationId(), is(annexLibraryLocationId));
+    assertThat(uprootedItem, notNullValue());
+    assertThat(uprootedItem.getStatus().name(), is(ItemStatusName.AVAILABLE));
+    assertThat(uprootedItem.getMaterialTypeId(), is(bookMaterialTypeId));
+    assertThat(uprootedItem.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
+    assertThat(uprootedItem.getTemporaryLocationId(), is(annexLibraryLocationId));
   }
 
   @Test
@@ -164,7 +164,7 @@ class ExternalItemCollectionTest extends AbstractExternalStorageTest {
     assertThat(updated.getTemporaryLocationId(), is(added.getTemporaryLocationId()));
     assertThat(updated.getMaterialTypeId(), is(added.getMaterialTypeId()));
     assertThat(updated.getPermanentLoanTypeId(), is(added.getPermanentLoanTypeId()));
-    assertThat(updated.getStatus().getName(), is(ItemStatusName.CHECKED_OUT));
+    assertThat(updated.getStatus().name(), is(ItemStatusName.CHECKED_OUT));
   }
 
   @Test
@@ -200,10 +200,10 @@ class ExternalItemCollectionTest extends AbstractExternalStorageTest {
 
     MultipleRecords<Item> wrappedItems = getOnCompletion(findAllFuture);
 
-    List<Item> allItems = wrappedItems.records;
+    List<Item> allItems = wrappedItems.records();
 
     assertThat(allItems.size(), is(3));
-    assertThat(wrappedItems.totalRecords, is(3));
+    assertThat(wrappedItems.totalRecords(), is(3));
   }
 
   @Test
@@ -231,11 +231,11 @@ class ExternalItemCollectionTest extends AbstractExternalStorageTest {
     MultipleRecords<Item> firstPage = getOnCompletion(firstPageFuture);
     MultipleRecords<Item> secondPage = getOnCompletion(secondPageFuture);
 
-    assertThat(firstPage.records.size(), is(3));
-    assertThat(secondPage.records.size(), is(2));
+    assertThat(firstPage.records().size(), is(3));
+    assertThat(secondPage.records().size(), is(2));
 
-    assertThat(firstPage.totalRecords, is(5));
-    assertThat(secondPage.totalRecords, is(5));
+    assertThat(firstPage.totalRecords(), is(5));
+    assertThat(secondPage.totalRecords(), is(5));
   }
 
   @Test
@@ -266,10 +266,10 @@ class ExternalItemCollectionTest extends AbstractExternalStorageTest {
 
     MultipleRecords<Item> wrappedItems = getOnCompletion(findFuture);
 
-    assertThat(wrappedItems.records.size(), is(1));
-    assertThat(wrappedItems.totalRecords, is(1));
+    assertThat(wrappedItems.records().size(), is(1));
+    assertThat(wrappedItems.totalRecords(), is(1));
 
-    assertThat(wrappedItems.records.stream().findFirst().get().id, is(addedSmallAngryPlanet.id));
+    assertThat(wrappedItems.records().stream().findFirst().get().id, is(addedSmallAngryPlanet.id));
   }
 
   @Test
@@ -301,14 +301,14 @@ class ExternalItemCollectionTest extends AbstractExternalStorageTest {
 
     assertThat(foundItem, notNullValue());
     assertThat(foundItem.getBarcode(), is("036000291452"));
-    assertThat(foundItem.getStatus().getName(), is(ItemStatusName.AVAILABLE));
+    assertThat(foundItem.getStatus().name(), is(ItemStatusName.AVAILABLE));
     assertThat(foundItem.getMaterialTypeId(), is(bookMaterialTypeId));
     assertThat(foundItem.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
     assertThat(foundItem.getTemporaryLocationId(), is(annexLibraryLocationId));
 
     assertThat(otherFoundItem, notNullValue());
     assertThat(otherFoundItem.getBarcode(), is("565578437802"));
-    assertThat(otherFoundItem.getStatus().getName(), is(ItemStatusName.AVAILABLE));
+    assertThat(otherFoundItem.getStatus().name(), is(ItemStatusName.AVAILABLE));
     assertThat(otherFoundItem.getMaterialTypeId(), is(bookMaterialTypeId));
     assertThat(otherFoundItem.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
     assertThat(otherFoundItem.getTemporaryLocationId(), is(annexLibraryLocationId));

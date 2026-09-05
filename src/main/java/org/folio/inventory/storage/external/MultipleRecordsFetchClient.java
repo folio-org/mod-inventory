@@ -2,16 +2,15 @@ package org.folio.inventory.storage.external;
 
 import static org.apache.commons.collections4.ListUtils.partition;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
+
+import io.vertx.core.json.JsonObject;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
 import org.folio.inventory.exceptions.ExternalResourceFetchException;
 import org.folio.inventory.support.CompletableFutures;
 import org.folio.inventory.support.http.client.Response;
-
-import io.vertx.core.json.JsonObject;
 
 public class MultipleRecordsFetchClient {
   private static final int DEFAULT_PARTITION_SIZE = 30;
@@ -26,6 +25,10 @@ public class MultipleRecordsFetchClient {
     this.partitionSize = builder.partitionSize;
     this.collectionPropertyName = builder.collectionPropertyName;
     this.expectedStatus = builder.expectedStatus;
+  }
+
+  public static Builder builder() {
+    return new Builder();
   }
 
   public <T> CompletableFuture<List<JsonObject>> find(
@@ -50,7 +53,7 @@ public class MultipleRecordsFetchClient {
     resourceClient.getAll(query.toString(), future::complete);
 
     return future.thenCompose(response -> {
-      if (response.getStatusCode() != expectedStatus) {
+      if (response.statusCode() != expectedStatus) {
         return CompletableFutures.failedFuture(new ExternalResourceFetchException(response));
       }
 
@@ -58,15 +61,11 @@ public class MultipleRecordsFetchClient {
     });
   }
 
-  public static Builder builder() {
-    return new Builder();
-  }
-
   public static class Builder {
+    private final int partitionSize = DEFAULT_PARTITION_SIZE;
     private CollectionResourceClient collectionResourceClient;
     private int expectedStatus = 200;
     private String collectionPropertyName;
-    private final int partitionSize = DEFAULT_PARTITION_SIZE;
 
     public Builder withCollectionResourceClient(CollectionResourceClient client) {
       this.collectionResourceClient = client;

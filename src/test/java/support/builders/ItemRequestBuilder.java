@@ -273,35 +273,6 @@ public class ItemRequestBuilder extends AbstractBuilder {
       this.order);
   }
 
-  public ItemRequestBuilder withReadOnlyCallNumber(String callNumber) {
-    return new ItemRequestBuilder(
-      this.id,
-      this.holdingId,
-      this.inTransitDestinationServicePointId,
-      this.readOnlyTitle,
-      callNumber,
-      this.barcode,
-      this.status,
-      this.materialType,
-      this.readOnlyEffectiveLocation,
-      this.permanentLocation,
-      this.temporaryLocation,
-      this.permanentLoanType,
-      this.temporaryLoanType,
-      this.circulationNotes,
-      this.tags,
-      this.lastCheckIn,
-      this.itemLevelCallNumber,
-      this.itemLevelCallNumberPrefix,
-      this.itemLevelCallNumberSuffix,
-      this.itemLevelCallNumberTypeId,
-      this.additionalCallNumbers,
-      this.hrid,
-      this.copyNumber,
-      this.administrativeNotes,
-      this.order);
-  }
-
   public ItemRequestBuilder withBarcode(String barcode) {
     return new ItemRequestBuilder(
       this.id,
@@ -345,35 +316,6 @@ public class ItemRequestBuilder extends AbstractBuilder {
 
   public ItemRequestBuilder withNoMaterialType() {
     return withMaterialType(null);
-  }
-
-  public ItemRequestBuilder withReadOnlyEffectiveLocation(JsonObject location) {
-    return new ItemRequestBuilder(
-      this.id,
-      this.holdingId,
-      this.inTransitDestinationServicePointId,
-      this.readOnlyTitle,
-      this.readOnlyCallNumber,
-      this.barcode,
-      this.status,
-      this.materialType,
-      location,
-      this.permanentLocation,
-      this.temporaryLocation,
-      this.permanentLoanType,
-      this.temporaryLoanType,
-      this.circulationNotes,
-      this.tags,
-      this.lastCheckIn,
-      this.itemLevelCallNumber,
-      this.itemLevelCallNumberPrefix,
-      this.itemLevelCallNumberSuffix,
-      this.itemLevelCallNumberTypeId,
-      this.additionalCallNumbers,
-      this.hrid,
-      this.copyNumber,
-      this.administrativeNotes,
-      this.order);
   }
 
   public ItemRequestBuilder withTemporaryLocation(JsonObject location) {
@@ -434,20 +376,8 @@ public class ItemRequestBuilder extends AbstractBuilder {
       this.order);
   }
 
-  public ItemRequestBuilder permanentlyInThirdFloor() {
-    return withPermanentLocation(thirdFloor());
-  }
-
   public ItemRequestBuilder temporarilyInReadingRoom() {
     return withTemporaryLocation(readingRoom());
-  }
-
-  public ItemRequestBuilder withNoPermanentLocation() {
-    return withPermanentLocation(null);
-  }
-
-  public ItemRequestBuilder withNoTemporaryLocation() {
-    return withTemporaryLocation(null);
   }
 
   public ItemRequestBuilder canCirculate() {
@@ -534,7 +464,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
       .put("note", "Please read this note before checking in the item")
       .put("staffOnly", false);
 
-    JsonArray circulationNotes = new JsonArray(Collections.singletonList(checkInNote));
+    JsonArray circulationNoteArray = new JsonArray(Collections.singletonList(checkInNote));
 
     return new ItemRequestBuilder(
       this.id,
@@ -550,7 +480,7 @@ public class ItemRequestBuilder extends AbstractBuilder {
       this.temporaryLocation,
       this.permanentLoanType,
       this.temporaryLoanType,
-      circulationNotes,
+      circulationNoteArray,
       this.tags,
       this.lastCheckIn,
       this.itemLevelCallNumber,
@@ -922,12 +852,6 @@ public class ItemRequestBuilder extends AbstractBuilder {
     return new JsonObject()
       .put("id", ApiTestSuite.getDvdMaterialType())
       .put("name", "DVD");
-  }
-
-  private static JsonObject thirdFloor() {
-    return new JsonObject()
-      .put("id", ApiTestSuite.getThirdFloorLocation())
-      .put("name", "3rd Floor");
   }
 
   private static JsonObject canCirculateLoanType() {

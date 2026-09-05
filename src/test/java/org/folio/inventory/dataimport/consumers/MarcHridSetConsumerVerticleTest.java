@@ -4,10 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import support.KafkaTest;
 import org.folio.inventory.MarcHridSetConsumerVerticle;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import support.KafkaTest;
 
 @ExtendWith(VertxExtension.class)
 class MarcHridSetConsumerVerticleTest extends KafkaTest {

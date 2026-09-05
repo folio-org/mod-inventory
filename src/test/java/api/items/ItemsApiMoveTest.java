@@ -1,7 +1,6 @@
 package api.items;
 
 import static api.ApiTestSuite.ID_FOR_FAILURE;
-import static support.fixtures.InstanceFixture.smallAngryPlanet;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.folio.inventory.support.JsonArrayHelper.toList;
 import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
@@ -13,15 +12,9 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static support.fixtures.InstanceFixture.smallAngryPlanet;
 
 import api.ApiTestSuite;
-import support.ApiRoot;
-import support.ApiTests;
-import support.InstanceApiClient;
-import support.builders.AbstractBuilder;
-import support.builders.HoldingRequestBuilder;
-import support.builders.ItemRequestBuilder;
-import support.builders.ItemsMoveRequestBuilder;
 import io.vertx.core.json.JsonObject;
 import java.util.Arrays;
 import java.util.List;
@@ -32,6 +25,13 @@ import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.junit.jupiter.api.Test;
+import support.ApiRoot;
+import support.ApiTests;
+import support.InstanceApiClient;
+import support.builders.AbstractBuilder;
+import support.builders.HoldingRequestBuilder;
+import support.builders.ItemRequestBuilder;
+import support.builders.ItemsMoveRequestBuilder;
 
 public class ItemsApiMoveTest extends ApiTests {
 
@@ -59,9 +59,9 @@ public class ItemsApiMoveTest extends ApiTests {
 
     final var moveItemsResponse = moveItems(newHoldingsId, firstItem, secondItem);
 
-    assertThat(moveItemsResponse.getStatusCode(), is(200));
+    assertThat(moveItemsResponse.statusCode(), is(200));
     assertThat(toList(moveItemsResponse.getJson(), "nonUpdatedIds"), hasSize(0));
-    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(moveItemsResponse.contentType(), containsString(APPLICATION_JSON));
 
     final var firstUpdatedItem = itemsClient.getById(firstItem.getId()).getJson();
     final var secondUpdatedItem = itemsClient.getById(secondItem.getId()).getJson();
@@ -89,8 +89,8 @@ public class ItemsApiMoveTest extends ApiTests {
 
     final var moveItemsResponse = moveItems(newHoldingsId, nonExistentItemId, item.getId());
 
-    assertThat(moveItemsResponse.getStatusCode(), is(200));
-    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(moveItemsResponse.statusCode(), is(200));
+    assertThat(moveItemsResponse.contentType(), containsString(APPLICATION_JSON));
 
     final var notFoundIds = toListOfStrings(moveItemsResponse.getJson(),
       "nonUpdatedIds");
@@ -107,24 +107,24 @@ public class ItemsApiMoveTest extends ApiTests {
   void cannotMoveItemsToUnspecifiedHoldingsRecord() {
     final var moveItemsResponse = moveItems(null, UUID.randomUUID());
 
-    assertThat(moveItemsResponse.getStatusCode(), is(422));
-    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(moveItemsResponse.statusCode(), is(422));
+    assertThat(moveItemsResponse.contentType(), containsString(APPLICATION_JSON));
 
-    assertThat(moveItemsResponse.getBody(), containsString("errors"));
-    assertThat(moveItemsResponse.getBody(), containsString("toHoldingsRecordId"));
-    assertThat(moveItemsResponse.getBody(), containsString("toHoldingsRecordId is a required field"));
+    assertThat(moveItemsResponse.body(), containsString("errors"));
+    assertThat(moveItemsResponse.body(), containsString("toHoldingsRecordId"));
+    assertThat(moveItemsResponse.body(), containsString("toHoldingsRecordId is a required field"));
   }
 
   @Test
   void cannotMoveUnspecifiedItems() {
     final var moveItemsResponse = moveItems(UUID.randomUUID(), List.of());
 
-    assertThat(moveItemsResponse.getStatusCode(), is(422));
-    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(moveItemsResponse.statusCode(), is(422));
+    assertThat(moveItemsResponse.contentType(), containsString(APPLICATION_JSON));
 
-    assertThat(moveItemsResponse.getBody(), containsString("errors"));
-    assertThat(moveItemsResponse.getBody(), containsString("itemIds"));
-    assertThat(moveItemsResponse.getBody(), containsString("Item ids aren't specified"));
+    assertThat(moveItemsResponse.body(), containsString("errors"));
+    assertThat(moveItemsResponse.body(), containsString("itemIds"));
+    assertThat(moveItemsResponse.body(), containsString("Item ids aren't specified"));
   }
 
   @Test
@@ -142,11 +142,11 @@ public class ItemsApiMoveTest extends ApiTests {
 
     final var moveItemsResponse = moveItems(nonExistentHoldingsId, item);
 
-    assertThat(moveItemsResponse.getStatusCode(), is(422));
-    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(moveItemsResponse.statusCode(), is(422));
+    assertThat(moveItemsResponse.contentType(), containsString(APPLICATION_JSON));
 
-    assertThat(moveItemsResponse.getBody(), containsString("errors"));
-    assertThat(moveItemsResponse.getBody(), containsString(nonExistentHoldingsId.toString()));
+    assertThat(moveItemsResponse.body(), containsString("errors"));
+    assertThat(moveItemsResponse.body(), containsString(nonExistentHoldingsId.toString()));
   }
 
   @Test
@@ -164,7 +164,7 @@ public class ItemsApiMoveTest extends ApiTests {
 
     final var moveItemsResponse = moveItems(newHoldingsId, item);
 
-    assertThat(moveItemsResponse.getStatusCode(), is(200));
+    assertThat(moveItemsResponse.statusCode(), is(200));
 
     final var updatedItem = itemsClient.getById(item.getId());
 
@@ -200,8 +200,8 @@ public class ItemsApiMoveTest extends ApiTests {
     assertThat(nonUpdatedIdsIds, hasSize(1));
     assertThat(nonUpdatedIdsIds.getFirst(), equalTo(ID_FOR_FAILURE.toString()));
 
-    assertThat(moveItemsResponse.getStatusCode(), is(200));
-    assertThat(moveItemsResponse.getContentType(), containsString(APPLICATION_JSON));
+    assertThat(moveItemsResponse.statusCode(), is(200));
+    assertThat(moveItemsResponse.contentType(), containsString(APPLICATION_JSON));
 
     final var firstItemUpdated = itemsClient.getById(firstItem.getId()).getJson();
 

@@ -14,7 +14,7 @@ import org.folio.inventory.support.http.server.ValidationError;
 
 public final class InstancePrecedingSucceedingTitleValidators {
 
-  private InstancePrecedingSucceedingTitleValidators() {}
+  private InstancePrecedingSucceedingTitleValidators() { }
 
   public static CompletableFuture<Instance> refuseWhenUnconnectedHasNoTitle(
     Instance instance) {
@@ -30,15 +30,6 @@ public final class InstancePrecedingSucceedingTitleValidators {
       succeedingError)
       .thenCompose(prev -> refuseWhenUnconnectedHasNoTitle(instance, instance
         .getPrecedingTitles(), precedingError));
-
-  }
-
-  private static CompletableFuture<Instance> refuseWhenUnconnectedHasNoTitle(
-    Instance instance, List<PrecedingSucceedingTitle> titles, ValidationError error) {
-
-    return isTitleMissingForUnconnectedPrecedingSucceeding(titles)
-      ? failedFuture(new UnprocessableEntityException(error))
-      : completedFuture(instance);
   }
 
   public static boolean isTitleMissingForUnconnectedPrecedingSucceeding(
@@ -50,10 +41,18 @@ public final class InstancePrecedingSucceedingTitleValidators {
 
     return titles.stream()
       .filter(InstancePrecedingSucceedingTitleValidators::isUnconnectedPrecedingSucceedingTitle)
-      .anyMatch(title -> StringUtils.isBlank(title.title));
+      .anyMatch(title -> StringUtils.isBlank(title.title()));
+  }
+
+  private static CompletableFuture<Instance> refuseWhenUnconnectedHasNoTitle(
+    Instance instance, List<PrecedingSucceedingTitle> titles, ValidationError error) {
+
+    return isTitleMissingForUnconnectedPrecedingSucceeding(titles)
+           ? failedFuture(new UnprocessableEntityException(error))
+           : completedFuture(instance);
   }
 
   private static boolean isUnconnectedPrecedingSucceedingTitle(PrecedingSucceedingTitle title) {
-    return title.precedingInstanceId == null && title.succeedingInstanceId == null;
+    return title.precedingInstanceId() == null && title.succeedingInstanceId() == null;
   }
 }

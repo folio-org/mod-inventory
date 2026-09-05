@@ -16,5 +16,4 @@ public class SeriesItem extends Authorized {
   public SeriesItem(JsonObject json) {
     this(json.getString(VALUE_KEY), json.getString(AUTHORITY_ID_KEY));
   }
-
 }

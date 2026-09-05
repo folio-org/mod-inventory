@@ -1,11 +1,9 @@
 package org.folio.inventory.support;
 
+import io.vertx.core.json.JsonObject;
 import java.util.Collection;
 import java.util.Optional;
-
 import org.folio.inventory.domain.items.Item;
-
-import io.vertx.core.json.JsonObject;
 
 public class HoldingsSupport {
   private HoldingsSupport() { }
@@ -25,7 +23,7 @@ public class HoldingsSupport {
     JsonObject holding,
     Collection<JsonObject> instances) {
 
-    if(holding == null || !holding.containsKey("instanceId")) {
+    if (holding == null || !holding.containsKey("instanceId")) {
       return Optional.empty();
     }
 

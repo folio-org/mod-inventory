@@ -82,7 +82,8 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
     }
   }
 
-  private InstanceIngressEventHandler getInstanceIngressEventHandler(InstanceIngressEvent.EventType eventType, Context context) {
+  private InstanceIngressEventHandler getInstanceIngressEventHandler(InstanceIngressEvent.EventType eventType,
+                                                                     Context context) {
     var precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
     SnapshotService snapshotService = new SnapshotService(client);
     switch (eventType) {
@@ -102,5 +103,4 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
       }
     }
   }
-
 }

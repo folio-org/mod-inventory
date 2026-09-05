@@ -42,7 +42,6 @@ import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.dataimport.util.DataImportHeaders;
-import support.KafkaTest;
 import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
 import org.folio.inventory.dataimport.cache.DeleteRuleFor999FieldCache;
@@ -60,6 +59,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import support.KafkaTest;
 
 @ExtendWith({MockitoExtension.class, VertxExtension.class})
 class DataImportKafkaHandlerTest extends KafkaTest {

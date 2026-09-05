@@ -1,48 +1,50 @@
 package org.folio.inventory.dataimport.handlers.matching;
 
+import static org.folio.inventory.dataimport.handlers.matching.loaders.AbstractLoader.INSTANCES_IDS;
+import static org.folio.inventory.dataimport.handlers.matching.loaders.AbstractLoader.MULTI_MATCH_IDS;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.extractMatchProfile;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
+import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
+
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.util.concurrent.CompletableFuture;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
+import org.folio.MappingMetadataDto;
 import org.folio.MatchProfile;
+import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.PreloadingFields;
 import org.folio.inventory.dataimport.handlers.matching.util.MatchingParametersRelations;
+import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.exceptions.MatchingException;
 import org.folio.processing.matching.MatchingManager;
 import org.folio.rest.jaxrs.model.EntityType;
-import org.folio.MappingMetadataDto;
 import org.folio.rest.jaxrs.model.MatchExpression;
-
-import java.util.concurrent.CompletableFuture;
-
-import static org.folio.inventory.dataimport.handlers.matching.loaders.AbstractLoader.INSTANCES_IDS;
-import static org.folio.inventory.dataimport.handlers.matching.loaders.AbstractLoader.MULTI_MATCH_IDS;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.extractMatchProfile;
-import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
-import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
 
 public abstract class AbstractMatchEventHandler implements EventHandler {
   private static final Logger LOGGER = LogManager.getLogger(AbstractMatchEventHandler.class);
-  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingMetadata snapshot was not found by jobExecutionId '%s'";
+  private static final String MAPPING_METADATA_NOT_FOUND_MSG =
+    "MappingMetadata snapshot was not found by jobExecutionId '%s'";
   private static final String MATCHING_RELATIONS = "MATCHING_PARAMETERS_RELATIONS";
   private static final String MAPPING_PARAMS = "MAPPING_PARAMS";
-  private static final String FOUND_MULTIPLE_ENTITIES = "Found multiple entities during matching on localTenant: %s and centralTenant: %s";
+  private static final String FOUND_MULTIPLE_ENTITIES =
+    "Found multiple entities during matching on localTenant: %s and centralTenant: %s";
   private static final String CENTRAL_TENANT_ID_KEY = "CENTRAL_TENANT_ID";
 
-  private MappingMetadataCache mappingMetadataCache;
-  private ConsortiumService consortiumService;
+  private final MappingMetadataCache mappingMetadataCache;
+  private final ConsortiumService consortiumService;
 
   protected AbstractMatchEventHandler(MappingMetadataCache mappingMetadataCache, ConsortiumService consortiumService) {
     this.mappingMetadataCache = mappingMetadataCache;
@@ -57,13 +59,14 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     dataImportEventPayload.setEventType(getNotMatchedEventType());
     Context context = constructContext(dataImportEventPayload.getTenant(),
       dataImportEventPayload.getToken(), dataImportEventPayload.getOkapiUrl(),
-      dataImportEventPayload.getContext().get(PAYLOAD_USER_ID),
-      dataImportEventPayload.getContext().get(OKAPI_REQUEST_ID));
+      dataImportEventPayload.getContext().get(DataImportHeaders.USER_ID),
+      dataImportEventPayload.getContext().get(XOkapiHeaders.REQUEST_ID.toLowerCase()));
 
     mappingMetadataCache.get(dataImportEventPayload.getJobExecutionId(), context)
       .toCompletionStage()
       .thenCompose(metadataOptional -> metadataOptional
-        .map(mappingMetadataDto -> doMatching(dataImportEventPayload, mappingMetadataDto, new MatchingParametersRelations(), context))
+        .map(mappingMetadataDto -> doMatching(dataImportEventPayload, mappingMetadataDto,
+          new MatchingParametersRelations(), context))
         .orElse(CompletableFuture.failedFuture(new EventProcessingException(MAPPING_METADATA_NOT_FOUND_MSG))))
       .whenComplete((matched, throwable) -> {
         if (throwable != null) {
@@ -84,8 +87,29 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     return future;
   }
 
-  private CompletableFuture<Boolean> doMatching(DataImportEventPayload dataImportEventPayload, MappingMetadataDto mappingMetadataDto,
-                                                MatchingParametersRelations matchingParametersRelations, Context context) {
+  @Override
+  public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
+    if (dataImportEventPayload.getCurrentNode() != null && MATCH_PROFILE == dataImportEventPayload.getCurrentNode()
+      .getContentType()) {
+      MatchProfile matchProfile =
+        JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(MatchProfile.class);
+      return matchProfile.getExistingRecordType() == getEntityType();
+    }
+    return false;
+  }
+
+  protected abstract EntityType getEntityType();
+
+  protected abstract String getMatchedEventType();
+
+  protected abstract String getNotMatchedEventType();
+
+  protected abstract boolean isConsortiumActionAvailable();
+
+  private CompletableFuture<Boolean> doMatching(DataImportEventPayload dataImportEventPayload,
+                                                MappingMetadataDto mappingMetadataDto,
+                                                MatchingParametersRelations matchingParametersRelations,
+                                                Context context) {
     dataImportEventPayload.getContext().put(MAPPING_PARAMS, mappingMetadataDto.getMappingParams());
     dataImportEventPayload.getContext().put(MATCHING_RELATIONS,
       Json.encode(matchingParametersRelations.getMatchingRelations()));
@@ -95,42 +119,54 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     var entityJson = dataImportEventPayload.getContext().get(getEntityType().value());
     // Only extract an ID when the value is a JSON object; item submatch stores a JSON array here.
     var savedInstanceId = StringUtils.isNotEmpty(entityJson) && entityJson.charAt(0) == '{'
-      ? new JsonObject(entityJson).getString("id") : null;
+                          ? new JsonObject(entityJson).getString("id") : null;
 
     return MatchingManager.match(dataImportEventPayload)
       .thenCompose(matchedLocal -> {
         if (isConsortiumActionAvailable()) {
-          return matchCentralTenantIfNeeded(dataImportEventPayload, matchedLocal, context, mappingMetadataDto, matchingParametersRelations, savedMultiMatchIds, savedInstancesIds, savedInstanceId);
+          return matchCentralTenantIfNeeded(dataImportEventPayload, matchedLocal, context, mappingMetadataDto,
+            matchingParametersRelations, savedMultiMatchIds, savedInstancesIds, savedInstanceId);
         }
         return CompletableFuture.completedFuture(matchedLocal);
       });
   }
 
-  private CompletableFuture<Boolean> matchCentralTenantIfNeeded(DataImportEventPayload dataImportEventPayload, boolean isMatchedLocal, Context context,
-                                                                MappingMetadataDto mappingMetadataDto, MatchingParametersRelations matchingParametersRelations,
-                                                                String savedMultiMatchIds, String savedInstancesIds, String savedInstanceId) {
-    LOGGER.debug("matchCentralTenantIfNeeded :: dataImportEventPayload.tenant: {}, isMatchedLocal: {}", dataImportEventPayload.getTenant(), isMatchedLocal);
+  private CompletableFuture<Boolean> matchCentralTenantIfNeeded(DataImportEventPayload dataImportEventPayload,
+                                                                boolean isMatchedLocal, Context context,
+                                                                MappingMetadataDto mappingMetadataDto,
+                                                                MatchingParametersRelations matchingParametersRelations,
+                                                                String savedMultiMatchIds, String savedInstancesIds,
+                                                                String savedInstanceId) {
+    LOGGER.debug("matchCentralTenantIfNeeded :: dataImportEventPayload.tenant: {}, isMatchedLocal: {}",
+      dataImportEventPayload.getTenant(), isMatchedLocal);
     return consortiumService.getConsortiumConfiguration(context)
       .toCompletionStage().toCompletableFuture()
       .thenCompose(consortiumConfiguration -> {
-        if (consortiumConfiguration.isPresent() && !consortiumConfiguration.get().getCentralTenantId().equals(context.getTenantId())
-          && !isMatchByPolOrVrn(dataImportEventPayload)) {
-          LOGGER.debug("matchCentralTenantIfNeeded:: Start matching on central tenant with id: {}", consortiumConfiguration.get().getCentralTenantId());
+        if (consortiumConfiguration.isPresent() && !consortiumConfiguration.get().centralTenantId()
+          .equals(context.getTenantId())
+            && !isMatchByPolOrVrn(dataImportEventPayload)) {
+          LOGGER.debug("matchCentralTenantIfNeeded:: Start matching on central tenant with id: {}",
+            consortiumConfiguration.get().centralTenantId());
           var localMatchedInstance = dataImportEventPayload.getContext().get(getEntityType().value());
           var localCallMultiMatchIds = dataImportEventPayload.getContext().get(MULTI_MATCH_IDS);
           var localCallInstancesIds = dataImportEventPayload.getContext().get(INSTANCES_IDS);
           if (savedInstanceId != null && savedMultiMatchIds == null && savedInstancesIds == null) {
             dataImportEventPayload.getContext().put(MULTI_MATCH_IDS, new JsonArray().add(savedInstanceId).encode());
           }
-          preparePayloadBeforeConsortiumProcessing(dataImportEventPayload, consortiumConfiguration.get(), mappingMetadataDto, matchingParametersRelations, savedMultiMatchIds, savedInstancesIds);
+          preparePayloadBeforeConsortiumProcessing(dataImportEventPayload, consortiumConfiguration.get(),
+            mappingMetadataDto, matchingParametersRelations, savedMultiMatchIds, savedInstancesIds);
           return MatchingManager.match(dataImportEventPayload)
             .thenCompose(isMatchedConsortium -> {
               dataImportEventPayload.setTenant(context.getTenantId());
               if (Boolean.TRUE.equals(isMatchedConsortium) && isMatchedLocal && localMatchedInstance != null
-                && !isShadowEntity(localMatchedInstance, dataImportEventPayload.getContext().get(getEntityType().value()))) {
-                LOGGER.warn("matchCentralTenantIfNeeded:: Found multiple results during matching on local tenant: {} and central tenant: {} ",
-                  context.getTenantId(), consortiumConfiguration.get().getCentralTenantId());
-                return CompletableFuture.failedFuture(new MatchingException(String.format(FOUND_MULTIPLE_ENTITIES, context.getTenantId(), consortiumConfiguration.get().getCentralTenantId())));
+                  && !isShadowEntity(localMatchedInstance,
+                dataImportEventPayload.getContext().get(getEntityType().value()))) {
+                LOGGER.warn(
+                  "matchCentralTenantIfNeeded:: Found multiple results during matching on local tenant: {} and central tenant: {} ",
+                  context.getTenantId(), consortiumConfiguration.get().centralTenantId());
+                return CompletableFuture.failedFuture(new MatchingException(
+                  String.format(FOUND_MULTIPLE_ENTITIES, context.getTenantId(),
+                    consortiumConfiguration.get().centralTenantId())));
               }
               if (localCallMultiMatchIds != null) {
                 dataImportEventPayload.getContext().put(MULTI_MATCH_IDS, localCallMultiMatchIds);
@@ -141,29 +177,34 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
               if (StringUtils.isEmpty(dataImportEventPayload.getContext().get(getEntityType().value()))) {
                 dataImportEventPayload.getContext().put(getEntityType().value(), localMatchedInstance);
               } else {
-                dataImportEventPayload.getContext().put(CENTRAL_TENANT_ID_KEY, consortiumConfiguration.get().getCentralTenantId());
-                LOGGER.info("matchCentralTenantIfNeeded:: Matched on central tenant: {}", consortiumConfiguration.get().getCentralTenantId());
+                dataImportEventPayload.getContext()
+                  .put(CENTRAL_TENANT_ID_KEY, consortiumConfiguration.get().centralTenantId());
+                LOGGER.info("matchCentralTenantIfNeeded:: Matched on central tenant: {}",
+                  consortiumConfiguration.get().centralTenantId());
               }
               return CompletableFuture.completedFuture(isMatchedConsortium || isMatchedLocal);
             });
         }
-        LOGGER.debug("matchCentralTenantIfNeeded:: Consortium configuration for tenant: {} not found", context.getTenantId());
+        LOGGER.debug("matchCentralTenantIfNeeded:: Consortium configuration for tenant: {} not found",
+          context.getTenantId());
         return CompletableFuture.completedFuture(isMatchedLocal);
       });
   }
 
   private boolean isMatchByPolOrVrn(DataImportEventPayload dataImportEventPayload) {
     MatchProfile matchProfile = extractMatchProfile(dataImportEventPayload);
-    MatchExpression matchExpression = matchProfile.getMatchDetails().get(0).getExistingMatchExpression();
+    MatchExpression matchExpression = matchProfile.getMatchDetails().getFirst().getExistingMatchExpression();
     return matchExpression.getFields().stream()
       .anyMatch(field -> field.getValue().endsWith("." + PreloadingFields.POL.getExistingMatchField())
-        || field.getValue().endsWith("." + PreloadingFields.VRN.getExistingMatchField()));
+                         || field.getValue().endsWith("." + PreloadingFields.VRN.getExistingMatchField()));
   }
 
-  private void preparePayloadBeforeConsortiumProcessing(DataImportEventPayload dataImportEventPayload, ConsortiumConfiguration consortiumConfiguration,
-                                                        MappingMetadataDto mappingMetadataDto, MatchingParametersRelations matchingParametersRelations,
+  private void preparePayloadBeforeConsortiumProcessing(DataImportEventPayload dataImportEventPayload,
+                                                        ConsortiumConfiguration consortiumConfiguration,
+                                                        MappingMetadataDto mappingMetadataDto,
+                                                        MatchingParametersRelations matchingParametersRelations,
                                                         String savedMultiMatchIds, String savedInstancesIds) {
-    dataImportEventPayload.setTenant(consortiumConfiguration.getCentralTenantId());
+    dataImportEventPayload.setTenant(consortiumConfiguration.centralTenantId());
     dataImportEventPayload.getContext().put(MAPPING_PARAMS, mappingMetadataDto.getMappingParams());
     dataImportEventPayload.getContext().put(MATCHING_RELATIONS,
       Json.encode(matchingParametersRelations.getMatchingRelations()));
@@ -180,25 +221,8 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     if (localEntity != null && matchedEntity != null) {
       JsonObject localEntityAsJson = new JsonObject(localEntity);
       JsonObject matchedEntityAsJson = new JsonObject(matchedEntity);
-      return StringUtils.equals(localEntityAsJson.getString("id"), matchedEntityAsJson.getString("id"));
+      return Strings.CS.equals(localEntityAsJson.getString("id"), matchedEntityAsJson.getString("id"));
     }
     return false;
   }
-
-  @Override
-  public boolean isEligible(DataImportEventPayload dataImportEventPayload) {
-    if (dataImportEventPayload.getCurrentNode() != null && MATCH_PROFILE == dataImportEventPayload.getCurrentNode().getContentType()) {
-      MatchProfile matchProfile = JsonObject.mapFrom(dataImportEventPayload.getCurrentNode().getContent()).mapTo(MatchProfile.class);
-      return matchProfile.getExistingRecordType() == getEntityType();
-    }
-    return false;
-  }
-
-  protected abstract EntityType getEntityType();
-
-  protected abstract String getMatchedEventType();
-
-  protected abstract String getNotMatchedEventType();
-
-  protected abstract boolean isConsortiumActionAvailable();
 }

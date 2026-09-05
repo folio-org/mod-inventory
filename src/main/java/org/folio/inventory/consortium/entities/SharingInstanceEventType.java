@@ -20,5 +20,4 @@ public enum SharingInstanceEventType {
   public String value() {
     return this.value;
   }
-
 }

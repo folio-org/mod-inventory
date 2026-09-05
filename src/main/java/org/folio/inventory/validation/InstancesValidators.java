@@ -16,7 +16,7 @@ public final class InstancesValidators {
 
   private static final Logger LOGGER = LogManager.getLogger(InstancesValidators.class);
 
-  private InstancesValidators() {}
+  private InstancesValidators() { }
 
   public static CompletableFuture<Instance> refuseWhenInstanceNotFound(Instance instance) {
     if (instance == null) {
@@ -30,8 +30,9 @@ public final class InstancesValidators {
   public static CompletableFuture<Instance> refuseWhenHridChanged(
     Instance existingInstance, Instance updatedInstance) {
 
-    if(!Objects.equals(existingInstance.getHrid(), updatedInstance.getHrid())) {
-      String message = String.format("HRID change detected: existing=%s, updated=%s", existingInstance.getHrid(), updatedInstance.getHrid());
+    if (!Objects.equals(existingInstance.getHrid(), updatedInstance.getHrid())) {
+      String message = String.format("HRID change detected: existing=%s, updated=%s", existingInstance.getHrid(),
+        updatedInstance.getHrid());
       LOGGER.error(message);
       return failedFuture(new UnprocessableEntityException(message, "hrid", updatedInstance.getHrid()));
     }

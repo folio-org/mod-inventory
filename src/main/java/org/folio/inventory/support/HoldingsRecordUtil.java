@@ -50,17 +50,17 @@ public final class HoldingsRecordUtil {
    */
   public static JsonObject mergeHoldingsRecords(JsonObject target, JsonObject source) {
     Map<String, Object> preservedValues = new HashMap<>();
-    
+
     for (String field : FIELDS_TO_PRESERVE) {
       preservedValues.put(field, target.getValue(field));
     }
-    
+
     var mergedInstanceAsJson = target.mergeIn(source, true);
-    
+
     for (Map.Entry<String, Object> entry : preservedValues.entrySet()) {
       mergedInstanceAsJson.put(entry.getKey(), entry.getValue());
     }
-    
+
     return mergedInstanceAsJson;
   }
 }

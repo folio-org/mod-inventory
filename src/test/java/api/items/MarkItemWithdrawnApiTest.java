@@ -1,18 +1,14 @@
 package api.items;
 
-import static support.fixtures.InstanceFixture.smallAngryPlanet;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static support.fixtures.InstanceFixture.smallAngryPlanet;
 import static support.matchers.ItemMatchers.isMissing;
 import static support.matchers.ItemMatchers.isWithdrawn;
 import static support.matchers.RequestMatchers.hasStatus;
 import static support.matchers.RequestMatchers.isOpenNotYetFilled;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
-import support.ApiTests;
-import support.builders.HoldingRequestBuilder;
-import support.builders.ItemRequestBuilder;
-import support.dto.Request;
 import io.vertx.core.json.JsonObject;
 import java.util.UUID;
 import lombok.SneakyThrows;
@@ -24,6 +20,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import support.ApiTests;
+import support.builders.HoldingRequestBuilder;
+import support.builders.ItemRequestBuilder;
+import support.dto.Request;
 
 public class MarkItemWithdrawnApiTest extends ApiTests {
 
@@ -63,7 +63,7 @@ public class MarkItemWithdrawnApiTest extends ApiTests {
 
   @Test
   void shouldWithdrawItemThatCannotBeFound() {
-    assertThat(markItemFixture.markWithdrawn(UUID.randomUUID()).getStatusCode(),
+    assertThat(markItemFixture.markWithdrawn(UUID.randomUUID()).statusCode(),
       is(404));
   }
 

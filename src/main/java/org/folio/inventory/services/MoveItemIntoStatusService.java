@@ -22,11 +22,9 @@ import org.slf4j.LoggerFactory;
 
 public class MoveItemIntoStatusService {
   private static final Logger log = LoggerFactory.getLogger(MoveItemIntoStatusService.class);
-
+  private static final TargetItemStatusValidators validator = new TargetItemStatusValidators();
   private final ItemCollection itemCollection;
   private final RequestRepository requestRepository;
-
-  private static final TargetItemStatusValidators validator = new TargetItemStatusValidators();
 
   public MoveItemIntoStatusService(ItemCollection itemCollection, Clients clients) {
     this.itemCollection = itemCollection;
@@ -60,7 +58,7 @@ public class MoveItemIntoStatusService {
 
   private boolean requestIsExpiredOnHoldShelf(Request request) {
     return request.getHoldShelfExpirationDate() != null
-      && currentDateTime().isAfter(request.getHoldShelfExpirationDate());
+           && currentDateTime().isAfter(request.getHoldShelfExpirationDate());
   }
 
   private CompletableFuture<Request> moveRequestIntoNotYetFilledStatus(Request request) {

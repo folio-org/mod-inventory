@@ -14,10 +14,6 @@ public enum RequestStatus {
     this.value = value;
   }
 
-  public String getValue() {
-    return value;
-  }
-
   /**
    * Returns RequestStatus matched by given value, or null if can not match.
    *
@@ -29,6 +25,10 @@ public enum RequestStatus {
       .filter(currentValue -> currentValue.getValue().equals(value))
       .findFirst()
       .orElse(null);
+  }
+
+  public String getValue() {
+    return value;
   }
 }
 

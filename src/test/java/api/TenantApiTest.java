@@ -28,7 +28,7 @@ public class TenantApiTest extends ApiTests {
     final var postCompleted = okapiClient.post(ApiRoot.tenant(), "{}");
 
     Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(postResponse.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
+    assertThat(postResponse.statusCode(), is(HTTP_NO_CONTENT.toInt()));
   }
 
   @Test
@@ -44,7 +44,7 @@ public class TenantApiTest extends ApiTests {
     final var postCompleted = okapiClient.post(ApiRoot.tenant(), "{}");
 
     Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(postResponse.getStatusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
+    assertThat(postResponse.statusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
 
     PostgresConnectionOptions.setSystemProperties(systemProperties);
   }
@@ -54,13 +54,13 @@ public class TenantApiTest extends ApiTests {
     final var postCompleted = okapiClient.post(ApiRoot.tenant(), "{}");
 
     Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(postResponse.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
+    assertThat(postResponse.statusCode(), is(HTTP_NO_CONTENT.toInt()));
 
     final var deleteCompleted = okapiClient
       .delete(ApiRoot.tenant());
 
     Response deleteResponse = deleteCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(deleteResponse.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
+    assertThat(deleteResponse.statusCode(), is(HTTP_NO_CONTENT.toInt()));
   }
 
   @Test
@@ -68,7 +68,7 @@ public class TenantApiTest extends ApiTests {
     final var postCompleted = okapiClient.post(ApiRoot.tenant(), "{}");
 
     Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(postResponse.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
+    assertThat(postResponse.statusCode(), is(HTTP_NO_CONTENT.toInt()));
 
     PgConnectOptions pgConnectOptions = PostgresConnectionOptions.getConnectionOptions(TENANT_ID);
     Map<String, String> systemProperties = Map.of(DB_HOST, pgConnectOptions.getHost(),
@@ -81,13 +81,13 @@ public class TenantApiTest extends ApiTests {
     final var deleteCompletedBefore = okapiClient.delete(ApiRoot.tenant());
 
     Response deleteResponseBefore = deleteCompletedBefore.toCompletableFuture().get(10, SECONDS);
-    assertThat(deleteResponseBefore.getStatusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
+    assertThat(deleteResponseBefore.statusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
 
     PostgresConnectionOptions.setSystemProperties(systemProperties);
 
     final var deleteCompletedAfter = okapiClient.delete(ApiRoot.tenant());
 
     Response deleteResponseAfter = deleteCompletedAfter.toCompletableFuture().get(10, SECONDS);
-    assertThat(deleteResponseAfter.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
+    assertThat(deleteResponseAfter.statusCode(), is(HTTP_NO_CONTENT.toInt()));
   }
 }

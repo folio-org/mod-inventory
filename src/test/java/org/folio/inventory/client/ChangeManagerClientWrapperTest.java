@@ -6,10 +6,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
 import static org.folio.HttpStatus.SC_CREATED;
 import static org.folio.HttpStatus.SC_OK;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_TENANT;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_TOKEN;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_URL;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -22,6 +18,7 @@ import java.util.UUID;
 import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.dataimport.util.FolioHeaders;
 import org.folio.inventory.client.wrappers.ChangeManagerClientWrapper;
+import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.rest.jaxrs.model.InitJobExecutionsRqDto;
 import org.folio.rest.jaxrs.model.JobExecution;
 import org.folio.rest.jaxrs.model.JobProfileInfo;
@@ -34,9 +31,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(VertxExtension.class)
 class ChangeManagerClientWrapperTest extends BaseWireMockTest {
 
-  private static final String TOKEN = "token";
-  private static final String USER_ID = "userId";
-  private static final String REQUEST_ID = "requestId";
+  private static final String TOKEN = "stub-token";
+  private static final String USER_ID = "12345";
+  private static final String REQUEST_ID = "req-12456";
 
   private static final String JOB_EXECUTIONS_PATH = "/change-manager/jobExecutions";
 
@@ -64,44 +61,44 @@ class ChangeManagerClientWrapperTest extends BaseWireMockTest {
     stubStatusDto = new StatusDto();
 
     WIRE_MOCK.stubFor(post(new UrlPathPattern(new RegexPattern(JOB_EXECUTIONS_PATH), true))
-      .withHeader(OKAPI_URL, equalTo(WIRE_MOCK.baseUrl()))
-      .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
-      .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
-      .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
+      .withHeader(XOkapiHeaders.URL.toLowerCase(), equalTo(WIRE_MOCK.baseUrl()))
+      .withHeader(XOkapiHeaders.TOKEN.toLowerCase(), equalTo(TOKEN))
+      .withHeader(XOkapiHeaders.TENANT.toLowerCase(), equalTo(TENANT_ID))
+      .withHeader(XOkapiHeaders.USER_ID.toLowerCase(), equalTo(USER_ID))
       .willReturn(WireMock.created()));
 
     WIRE_MOCK.stubFor(post(
       new UrlPathPattern(new RegexPattern(JOB_EXECUTIONS_PATH + "/" + stubRawRecordsDto.getId() + "/records"),
         true))
       .withQueryParam("acceptInstanceId", equalTo("true"))
-      .withHeader(OKAPI_URL, equalTo(WIRE_MOCK.baseUrl()))
-      .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
-      .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
-      .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
+      .withHeader(XOkapiHeaders.URL.toLowerCase(), equalTo(WIRE_MOCK.baseUrl()))
+      .withHeader(XOkapiHeaders.TOKEN.toLowerCase(), equalTo(TOKEN))
+      .withHeader(XOkapiHeaders.TENANT.toLowerCase(), equalTo(TENANT_ID))
+      .withHeader(XOkapiHeaders.USER_ID.toLowerCase(), equalTo(USER_ID))
       .willReturn(WireMock.created()));
 
     WIRE_MOCK.stubFor(
       put(new UrlPathPattern(new RegexPattern(JOB_EXECUTIONS_PATH + "/" + stubJobExecution.getId()), true))
-        .withHeader(OKAPI_URL, equalTo(WIRE_MOCK.baseUrl()))
-        .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
-        .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
-        .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
+        .withHeader(XOkapiHeaders.URL.toLowerCase(), equalTo(WIRE_MOCK.baseUrl()))
+        .withHeader(XOkapiHeaders.TOKEN.toLowerCase(), equalTo(TOKEN))
+        .withHeader(XOkapiHeaders.TENANT.toLowerCase(), equalTo(TENANT_ID))
+        .withHeader(XOkapiHeaders.USER_ID.toLowerCase(), equalTo(USER_ID))
         .willReturn(WireMock.ok()));
 
     WIRE_MOCK.stubFor(put(new UrlPathPattern(
       new RegexPattern(JOB_EXECUTIONS_PATH + "/" + stubJobProfileInfo.getId() + "/jobProfile"), true))
-      .withHeader(OKAPI_URL, equalTo(WIRE_MOCK.baseUrl()))
-      .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
-      .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
-      .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
+      .withHeader(XOkapiHeaders.URL.toLowerCase(), equalTo(WIRE_MOCK.baseUrl()))
+      .withHeader(XOkapiHeaders.TOKEN.toLowerCase(), equalTo(TOKEN))
+      .withHeader(XOkapiHeaders.TENANT.toLowerCase(), equalTo(TENANT_ID))
+      .withHeader(XOkapiHeaders.USER_ID.toLowerCase(), equalTo(USER_ID))
       .willReturn(WireMock.ok()));
 
     WIRE_MOCK.stubFor(put(
       new UrlPathPattern(new RegexPattern(JOB_EXECUTIONS_PATH + "/" + stubJobExecution.getId() + "/status"), true))
-      .withHeader(OKAPI_URL, equalTo(WIRE_MOCK.baseUrl()))
-      .withHeader(OKAPI_TOKEN, equalTo(TOKEN))
-      .withHeader(OKAPI_TENANT, equalTo(TENANT_ID))
-      .withHeader(OKAPI_USER_ID, equalTo(USER_ID))
+      .withHeader(XOkapiHeaders.URL.toLowerCase(), equalTo(WIRE_MOCK.baseUrl()))
+      .withHeader(XOkapiHeaders.TOKEN.toLowerCase(), equalTo(TOKEN))
+      .withHeader(XOkapiHeaders.TENANT.toLowerCase(), equalTo(TENANT_ID))
+      .withHeader(XOkapiHeaders.USER_ID.toLowerCase(), equalTo(USER_ID))
       .willReturn(WireMock.ok()));
   }
 

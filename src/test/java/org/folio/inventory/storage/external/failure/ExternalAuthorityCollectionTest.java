@@ -320,13 +320,13 @@ class ExternalAuthorityCollectionTest extends BaseWireMockTest {
   }
 
   private void assertBadRequest(Failure failure) {
-    assertThat(failure.getReason(), is("Bad Request"));
-    assertThat(failure.getStatusCode(), is(400));
+    assertThat(failure.reason(), is("Bad Request"));
+    assertThat(failure.statusCode(), is(400));
   }
 
   private void assertServerError(Failure failure) {
-    assertThat(failure.getReason(), is("Server Error"));
-    assertThat(failure.getStatusCode(), is(500));
+    assertThat(failure.reason(), is("Server Error"));
+    assertThat(failure.statusCode(), is(500));
   }
 
   private ResponseDefinitionBuilder badRequestResponse() {

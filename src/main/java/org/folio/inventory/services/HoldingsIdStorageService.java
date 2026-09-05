@@ -7,7 +7,7 @@ import org.folio.inventory.common.dao.EntityIdStorageDao;
 import org.folio.inventory.domain.relationship.EntityTable;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 
-public class HoldingsIdStorageService implements IdStorageService{
+public class HoldingsIdStorageService implements IdStorageService {
   private static final Logger LOGGER = LogManager.getLogger(HoldingsIdStorageService.class);
 
   private final EntityIdStorageDao entityIdStorageDao;
@@ -18,7 +18,8 @@ public class HoldingsIdStorageService implements IdStorageService{
 
   @Override
   public Future<RecordToEntity> store(String recordId, String holdingsId, String tenantId) {
-    RecordToEntity recordToHoldings = RecordToEntity.builder().table(EntityTable.HOLDINGS).recordId(recordId).entityId(holdingsId).build();
+    RecordToEntity recordToHoldings =
+      RecordToEntity.builder().table(EntityTable.HOLDINGS).recordId(recordId).entityId(holdingsId).build();
     LOGGER.info("Saving RecordToHoldings relationship: {}", recordToHoldings);
     return entityIdStorageDao.saveRecordToEntityRelationship(recordToHoldings, tenantId);
   }

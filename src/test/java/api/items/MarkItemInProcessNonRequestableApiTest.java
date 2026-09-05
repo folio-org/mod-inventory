@@ -1,6 +1,5 @@
 package api.items;
 
-import static support.fixtures.InstanceFixture.smallAngryPlanet;
 import static org.folio.inventory.domain.items.CirculationNote.NOTE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.NOTE_TYPE_KEY;
 import static org.folio.inventory.domain.items.CirculationNote.STAFF_ONLY_KEY;
@@ -9,15 +8,12 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static support.fixtures.InstanceFixture.smallAngryPlanet;
 import static support.matchers.ItemMatchers.isInProcessNonRequestable;
 import static support.matchers.RequestMatchers.hasStatus;
 import static support.matchers.RequestMatchers.isOpenNotYetFilled;
 import static support.matchers.ResponseMatchers.hasValidationError;
 
-import support.ApiTests;
-import support.builders.HoldingRequestBuilder;
-import support.builders.ItemRequestBuilder;
-import support.dto.Request;
 import io.vertx.core.json.JsonObject;
 import java.util.Date;
 import java.util.UUID;
@@ -29,6 +25,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import support.ApiTests;
+import support.builders.HoldingRequestBuilder;
+import support.builders.ItemRequestBuilder;
+import support.dto.Request;
 
 public class MarkItemInProcessNonRequestableApiTest extends ApiTests {
 
@@ -68,7 +68,7 @@ public class MarkItemInProcessNonRequestableApiTest extends ApiTests {
       .canCirculate());
     final Response response = markItemInProcessNonRequestable(createdItem);
 
-    assertEquals(200, response.getStatusCode());
+    assertEquals(200, response.statusCode());
     assertThat(response.getJson(), isInProcessNonRequestable());
     assertThat(itemsClient.getById(createdItem.getId()).getJson(), isInProcessNonRequestable());
   }
@@ -88,7 +88,7 @@ public class MarkItemInProcessNonRequestableApiTest extends ApiTests {
 
   @Test
   void shouldNotMarkItemInProcessThatCannotBeFound() {
-    assertThat(markItemFixture.markInProcess(UUID.randomUUID()).getStatusCode(),
+    assertThat(markItemFixture.markInProcess(UUID.randomUUID()).statusCode(),
       is(404));
   }
 

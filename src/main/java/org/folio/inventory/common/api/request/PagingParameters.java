@@ -4,14 +4,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.domain.items.CQLQueryRequestDto;
 
-public class PagingParameters {
-  public final Integer limit;
-  public final Integer offset;
-
-  public PagingParameters(Integer limit, Integer offset) {
-    this.offset = offset;
-    this.limit = limit;
-  }
+public record PagingParameters(Integer limit, Integer offset) {
 
   public static PagingParameters defaults() {
     return new PagingParameters(10, 0);
@@ -26,7 +19,6 @@ public class PagingParameters {
     } else {
       return null;
     }
-
   }
 
   public static PagingParameters from(CQLQueryRequestDto cqlQueryRequestDto) {

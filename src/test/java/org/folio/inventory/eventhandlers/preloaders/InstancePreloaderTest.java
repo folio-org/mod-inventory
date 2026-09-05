@@ -51,7 +51,7 @@ class InstancePreloaderTest {
   @Mock
   private OrdersPreloaderHelper ordersPreloaderHelper;
   @InjectMocks
-  private final InstancePreloader preloader = new InstancePreloader(ordersPreloaderHelper);
+  private InstancePreloader preloader;
 
   @BeforeEach
   @SneakyThrows

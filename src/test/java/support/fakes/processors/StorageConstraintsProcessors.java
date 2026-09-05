@@ -8,7 +8,6 @@ import static support.http.StorageInterfaceUrls.instanceRelationshipTypeUrl;
 import static support.http.StorageInterfaceUrls.instancesStorageUrl;
 
 import io.vertx.core.json.JsonObject;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Map;
@@ -24,31 +23,31 @@ import org.folio.util.StringUtil;
 
 public final class StorageConstraintsProcessors {
 
-  private StorageConstraintsProcessors() {  }
+  private StorageConstraintsProcessors() { }
 
   public static CompletableFuture<JsonObject> instanceRelationshipsConstraints(
     @SuppressWarnings("unused") String tenant, JsonObject oldRelationship, JsonObject newRelationship) {
 
     final InstanceRelationship relationship = new InstanceRelationship(newRelationship);
 
-    return getInstanceByIds(relationship.subInstanceId, relationship.superInstanceId)
+    return getInstanceByIds(relationship.subInstanceId(), relationship.superInstanceId())
       .thenCombine(get(instanceRelationshipTypeUrl(
-        "/" + relationship.instanceRelationshipTypeId)), (relationships, relationshipType) -> {
+        "/" + relationship.instanceRelationshipTypeId())), (relationships, relationshipType) -> {
 
-        if (relationshipType.getStatusCode() != 200) {
+        if (relationshipType.statusCode() != 200) {
           throw new UnprocessableEntityException(new ValidationError(
             "Relationship type does not exist", "instanceRelationshipTypeId",
-            relationship.instanceRelationshipTypeId));
+            relationship.instanceRelationshipTypeId()));
         }
 
-        if (!relationships.containsKey(relationship.subInstanceId)) {
+        if (!relationships.containsKey(relationship.subInstanceId())) {
           throw new UnprocessableEntityException(new ValidationError(
-            "Sub instance does not exist", "subInstanceId", relationship.subInstanceId));
+            "Sub instance does not exist", "subInstanceId", relationship.subInstanceId()));
         }
 
-        if (!relationships.containsKey(relationship.superInstanceId)) {
+        if (!relationships.containsKey(relationship.superInstanceId())) {
           throw new UnprocessableEntityException(new ValidationError(
-            "Super instance does not exist", "superInstanceId", relationship.superInstanceId));
+            "Super instance does not exist", "superInstanceId", relationship.superInstanceId()));
         }
 
         return newRelationship;
@@ -60,28 +59,28 @@ public final class StorageConstraintsProcessors {
 
     final PrecedingSucceedingTitle relationship = PrecedingSucceedingTitle.from(newRelationship);
 
-    if (relationship.precedingInstanceId == null && relationship.succeedingInstanceId == null) {
+    if (relationship.precedingInstanceId() == null && relationship.succeedingInstanceId() == null) {
       throw new UnprocessableEntityException(
         new ValidationError("Either preceding or succeeding id must be set",
           "succeedingInstanceId", null));
     }
 
-    return getInstanceByIds(relationship.precedingInstanceId, relationship.succeedingInstanceId)
+    return getInstanceByIds(relationship.precedingInstanceId(), relationship.succeedingInstanceId())
       .thenCompose(instancesMap -> {
-        if (relationship.precedingInstanceId != null
-            && !instancesMap.containsKey(relationship.precedingInstanceId)) {
+        if (relationship.precedingInstanceId() != null
+            && !instancesMap.containsKey(relationship.precedingInstanceId())) {
 
           throw new UnprocessableEntityException(new ValidationError(
             "Preceding instance does not exist", "precedingInstanceId",
-            relationship.precedingInstanceId));
+            relationship.precedingInstanceId()));
         }
 
-        if (relationship.succeedingInstanceId != null
-            && !instancesMap.containsKey(relationship.succeedingInstanceId)) {
+        if (relationship.succeedingInstanceId() != null
+            && !instancesMap.containsKey(relationship.succeedingInstanceId())) {
 
           throw new UnprocessableEntityException(new ValidationError(
             "Succeeding instance does not exist", "succeedingInstanceId",
-            relationship.succeedingInstanceId));
+            relationship.succeedingInstanceId()));
         }
 
         return completedFuture(newRelationship);

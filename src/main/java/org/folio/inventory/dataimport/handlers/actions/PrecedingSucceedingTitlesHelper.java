@@ -2,22 +2,22 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import static java.lang.String.format;
 
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.WebClient;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
-
-import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.client.WebClient;
 import lombok.SneakyThrows;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
@@ -33,7 +33,7 @@ public class PrecedingSucceedingTitlesHelper {
   private static final Logger LOGGER = LogManager.getLogger(PrecedingSucceedingTitlesHelper.class);
 
   private WebClient webClient;
-  private Function<Context, OkapiHttpClient> okapiHttpClientCreator;
+  private final Function<Context, OkapiHttpClient> okapiHttpClientCreator;
 
   public PrecedingSucceedingTitlesHelper(WebClient webClient) {
     this.webClient = webClient;
@@ -50,15 +50,18 @@ public class PrecedingSucceedingTitlesHelper {
 
     Promise<List<JsonObject>> promise = Promise.promise();
     String instanceId = instance.getId();
-    String queryForPrecedingSucceedingInstances = String.format("succeedingInstanceId==(%s) or precedingInstanceId==(%s)", instanceId, instanceId);
+    String queryForPrecedingSucceedingInstances =
+      String.format("succeedingInstanceId==(%s) or precedingInstanceId==(%s)", instanceId, instanceId);
 
     precedingSucceedingTitlesClient.getAll(queryForPrecedingSucceedingInstances, response -> {
-      if (response.getStatusCode() == 200) {
+      if (response.statusCode() == 200) {
         JsonObject json = response.getJson();
-        List<JsonObject> precedingSucceedingTitles = JsonArrayHelper.toList(json.getJsonArray("precedingSucceedingTitles"));
+        List<JsonObject> precedingSucceedingTitles =
+          JsonArrayHelper.toList(json.getJsonArray("precedingSucceedingTitles"));
         promise.complete(precedingSucceedingTitles);
       } else {
-        String msg = format("Error retrieving existing preceding and succeeding titles. Response status code: %s", response.getStatusCode());
+        String msg = format("Error retrieving existing preceding and succeeding titles. Response status code: %s",
+          response.statusCode());
         LOGGER.error(msg);
         promise.fail(msg);
       }
@@ -71,7 +74,8 @@ public class PrecedingSucceedingTitlesHelper {
     LOGGER.info("deletePrecedingSucceedingTitles:: parameters titlesIds: {} , context: {} ", titlesIds, context);
 
     CollectionResourceClient precedingSucceedingTitlesClient = createPrecedingSucceedingTitlesClient(context);
-    CollectionResourceRepository precedingSucceedingTitlesRepository = new CollectionResourceRepository(precedingSucceedingTitlesClient);
+    CollectionResourceRepository precedingSucceedingTitlesRepository =
+      new CollectionResourceRepository(precedingSucceedingTitlesClient);
 
     titlesIds.forEach(id -> precedingSucceedingTitlesRepository
       .delete(id)
@@ -89,7 +93,8 @@ public class PrecedingSucceedingTitlesHelper {
   public Future<Void> createPrecedingSucceedingTitles(Instance instance, Context context) {
     LOGGER.info("createPrecedingSucceedingTitles:: parameters instance: {} , context: {} ", instance, context);
     CollectionResourceClient precedingSucceedingTitlesClient = createPrecedingSucceedingTitlesClient(context);
-    CollectionResourceRepository precedingSucceedingTitlesRepository = new CollectionResourceRepository(precedingSucceedingTitlesClient);
+    CollectionResourceRepository precedingSucceedingTitlesRepository =
+      new CollectionResourceRepository(precedingSucceedingTitlesClient);
 
     List<PrecedingSucceedingTitle> precedingSucceedingTitles = new ArrayList<>();
     preparePrecedingTitles(instance, precedingSucceedingTitles);
@@ -137,11 +142,11 @@ public class PrecedingSucceedingTitlesHelper {
       for (PrecedingSucceedingTitle parent : instance.getPrecedingTitles()) {
         PrecedingSucceedingTitle precedingSucceedingTitle = new PrecedingSucceedingTitle(
           UUID.randomUUID().toString(),
-          parent.precedingInstanceId,
+          parent.precedingInstanceId(),
           instance.getId(),
-          parent.title,
-          parent.hrid,
-          parent.identifiers);
+          parent.title(),
+          parent.hrid(),
+          parent.identifiers());
         preparedTitles.add(precedingSucceedingTitle);
       }
     }
@@ -153,10 +158,10 @@ public class PrecedingSucceedingTitlesHelper {
         PrecedingSucceedingTitle precedingSucceedingTitle = new PrecedingSucceedingTitle(
           UUID.randomUUID().toString(),
           instance.getId(),
-          child.succeedingInstanceId,
-          child.title,
-          child.hrid,
-          child.identifiers);
+          child.succeedingInstanceId(),
+          child.title(),
+          child.hrid(),
+          child.identifiers());
         preparedTitles.add(precedingSucceedingTitle);
       }
     }
@@ -169,17 +174,16 @@ public class PrecedingSucceedingTitlesHelper {
 
   @SneakyThrows
   private OkapiHttpClient createHttpClient(Context context) {
-    return new OkapiHttpClient(webClient, new URL(context.getOkapiLocation()),
+    return new OkapiHttpClient(webClient, new URI(context.getOkapiLocation()).toURL(),
       context.getTenantId(), context.getToken(), null, null, null);
   }
 
   private URL getRootUrl(Context context) {
     try {
-      return new URL(context.getOkapiLocation() + "/preceding-succeeding-titles");
-    } catch (MalformedURLException e) {
+      return new URI(context.getOkapiLocation() + "/preceding-succeeding-titles").toURL();
+    } catch (MalformedURLException | URISyntaxException e) {
       LOGGER.warn("Error during creating precedingSucceedingTitlesClient", e);
       throw new EventProcessingException("Error during creating precedingSucceedingTitlesClient", e);
     }
   }
-
 }

@@ -10,9 +10,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 import io.vertx.core.json.JsonObject;
-import java.io.IOException;
 import java.util.function.Consumer;
-import support.TestUtil;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.handlers.TenantProvider;
@@ -23,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import support.TestUtil;
 
 @ExtendWith(MockitoExtension.class)
 class InstanceOperationsHelperTest {
@@ -38,12 +37,12 @@ class InstanceOperationsHelperTest {
 
   @BeforeEach
   void setUp() {
-    when(tenantProvider.getInstanceCollection()).thenReturn(instanceCollection);
+    when(tenantProvider.instanceCollection()).thenReturn(instanceCollection);
     instanceOperationsHelper = new InstanceOperationsHelper();
   }
 
   @Test
-  void addInstanceSuccessTest() throws IOException {
+  void addInstanceSuccessTest() {
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
     Instance existingInstance = Instance.fromJson(jsonInstance);
 
@@ -61,7 +60,7 @@ class InstanceOperationsHelperTest {
   }
 
   @Test
-  void addInstanceFailureTest() throws Exception {
+  void addInstanceFailureTest() {
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
     Instance existingInstance = Instance.fromJson(jsonInstance);
 

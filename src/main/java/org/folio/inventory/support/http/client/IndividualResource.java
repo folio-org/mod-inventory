@@ -25,6 +25,6 @@ public class IndividualResource {
   }
 
   public String getLocation() {
-    return response.getLocation();
+    return response.location();
   }
 }

@@ -1,13 +1,12 @@
 package org.folio.inventory.common;
 
-import org.folio.inventory.common.domain.Success;
-
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+import org.folio.inventory.common.domain.Success;
 
 public class WaitForAllFutures<T> {
   private final ArrayList<CompletableFuture<T>> allFutures = new ArrayList<>();

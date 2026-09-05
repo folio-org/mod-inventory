@@ -44,10 +44,10 @@ class SynchronousHttpClientTest extends BaseWireMockTest {
 
     var response = client.get(new URI(WIRE_MOCK.url("/record")).toURL());
 
-    assertThat(response.getStatusCode(), is(HTTP_OK.toInt()));
+    assertThat(response.statusCode(), is(HTTP_OK.toInt()));
     assertThat(response.getJson().getString("message"), is("hello"));
-    assertThat(response.getContentType(), is(APPLICATION_JSON.getMimeType()));
-    assertThat(response.getLocation(), is(locationResponseHeader));
+    assertThat(response.contentType(), is(APPLICATION_JSON.getMimeType()));
+    assertThat(response.location(), is(locationResponseHeader));
   }
 
   @Test
@@ -61,8 +61,8 @@ class SynchronousHttpClientTest extends BaseWireMockTest {
 
     var response = client.put(new URI(WIRE_MOCK.url("/record/12345")).toURL(), dummyJsonRequestBody());
 
-    assertThat(response.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
-    assertThat(response.getBody(), is(emptyOrNullString()));
+    assertThat(response.statusCode(), is(HTTP_NO_CONTENT.toInt()));
+    assertThat(response.body(), is(emptyOrNullString()));
   }
 
   private JsonObject dummyJsonRequestBody() {

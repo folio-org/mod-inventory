@@ -2,9 +2,9 @@ package org.folio.inventory;
 
 import static java.time.Duration.ofSeconds;
 import static org.folio.DataImportEventTypes.DI_JOB_CANCELLED;
-import static support.KafkaUtility.sendEvent;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
+import static support.KafkaUtility.sendEvent;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;

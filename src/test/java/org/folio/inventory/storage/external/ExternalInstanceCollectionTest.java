@@ -71,10 +71,10 @@ class ExternalInstanceCollectionTest extends AbstractExternalStorageTest {
 
     MultipleRecords<Instance> allInstancesWrapped = getOnCompletion(findFuture);
 
-    List<Instance> allInstances = allInstancesWrapped.records;
+    List<Instance> allInstances = allInstancesWrapped.records();
 
     assertThat(allInstances.size(), is(0));
-    assertThat(allInstancesWrapped.totalRecords, is(0));
+    assertThat(allInstancesWrapped.totalRecords(), is(0));
   }
 
   @Test
@@ -109,10 +109,10 @@ class ExternalInstanceCollectionTest extends AbstractExternalStorageTest {
 
     MultipleRecords<Instance> allInstancesWrapped = getOnCompletion(findFuture);
 
-    List<Instance> allInstances = allInstancesWrapped.records;
+    List<Instance> allInstances = allInstancesWrapped.records();
 
     assertThat(allInstances.size(), is(3));
-    assertThat(allInstancesWrapped.totalRecords, is(3));
+    assertThat(allInstancesWrapped.totalRecords(), is(3));
 
     Instance createdAngryPlanet = getInstance(allInstances, "Long Way to a Small Angry Planet");
     Instance createdNod = getInstance(allInstances, "Nod");
@@ -191,14 +191,14 @@ class ExternalInstanceCollectionTest extends AbstractExternalStorageTest {
     MultipleRecords<Instance> firstPage = getOnCompletion(firstPageFuture);
     MultipleRecords<Instance> secondPage = getOnCompletion(secondPageFuture);
 
-    List<Instance> firstPageInstances = firstPage.records;
-    List<Instance> secondPageInstances = secondPage.records;
+    List<Instance> firstPageInstances = firstPage.records();
+    List<Instance> secondPageInstances = secondPage.records();
 
     assertThat(firstPageInstances.size(), is(3));
     assertThat(secondPageInstances.size(), is(2));
 
-    assertThat(firstPage.totalRecords, is(5));
-    assertThat(secondPage.totalRecords, is(5));
+    assertThat(firstPage.totalRecords(), is(5));
+    assertThat(secondPage.totalRecords(), is(5));
   }
 
   @Test
@@ -230,10 +230,10 @@ class ExternalInstanceCollectionTest extends AbstractExternalStorageTest {
 
     MultipleRecords<Instance> allInstancesWrapped = getOnCompletion(findAllFuture);
 
-    List<Instance> allInstances = allInstancesWrapped.records;
+    List<Instance> allInstances = allInstancesWrapped.records();
 
     assertThat(allInstances.size(), is(3));
-    assertThat(allInstancesWrapped.totalRecords, is(3));
+    assertThat(allInstancesWrapped.totalRecords(), is(3));
   }
 
   @Test
@@ -288,10 +288,10 @@ class ExternalInstanceCollectionTest extends AbstractExternalStorageTest {
 
     MultipleRecords<Instance> findByNameResultsWrapped = getOnCompletion(findFuture);
 
-    List<Instance> findByNameResults = findByNameResultsWrapped.records;
+    List<Instance> findByNameResults = findByNameResultsWrapped.records();
 
     assertThat(findByNameResults.size(), is(1));
-    assertThat(findByNameResultsWrapped.totalRecords, is(1));
+    assertThat(findByNameResultsWrapped.totalRecords(), is(1));
 
     assertThat(findByNameResults.getFirst().getId(), is(addedSmallAngryPlanet.getId()));
   }
@@ -408,7 +408,7 @@ class ExternalInstanceCollectionTest extends AbstractExternalStorageTest {
   private int getSize() {
     return getOnCompletion((CompletableFuture<MultipleRecords<Instance>> find) ->
       collection.findAll(PagingParameters.defaults(), succeed(find), fail(find)))
-      .records.size();
+      .records().size();
   }
 
   private static boolean hasIdentifier(
@@ -417,8 +417,8 @@ class ExternalInstanceCollectionTest extends AbstractExternalStorageTest {
     final String value) {
 
     return instance.getIdentifiers().stream().anyMatch(it ->
-      Strings.CS.equals(it.identifierTypeId, identifierTypeId)
-      && Strings.CS.equals(it.value, value));
+      Strings.CS.equals(it.identifierTypeId(), identifierTypeId)
+      && Strings.CS.equals(it.value(), value));
   }
 
   private Instance getInstance(List<Instance> allInstances, final String title) {

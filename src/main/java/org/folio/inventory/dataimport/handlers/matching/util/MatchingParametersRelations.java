@@ -8,7 +8,7 @@ import java.util.Map;
  */
 public class MatchingParametersRelations {
 
-  private Map<String, String> matchingRelations = new HashMap<>();
+  private final Map<String, String> matchingRelations = new HashMap<>();
 
   public MatchingParametersRelations() {
     matchingRelations.put("instance.alternativeTitles[].alternativeTitleTypeId", "alternativeTitleTypes");
@@ -47,9 +47,5 @@ public class MatchingParametersRelations {
 
   public Map<String, String> getMatchingRelations() {
     return matchingRelations;
-  }
-
-  public void setMatchingRelations(Map<String, String> matchingRelations) {
-    this.matchingRelations = matchingRelations;
   }
 }

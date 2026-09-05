@@ -31,5 +31,4 @@ public class MarcBibUpdateConsumerVerticle extends KafkaConsumerVerticle {
   protected Logger getLogger() {
     return LOGGER;
   }
-
 }

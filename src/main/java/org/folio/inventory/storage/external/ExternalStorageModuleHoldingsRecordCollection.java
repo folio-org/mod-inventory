@@ -7,10 +7,10 @@ import io.vertx.core.json.JsonObject;
 import java.io.IOException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 
 class ExternalStorageModuleHoldingsRecordCollection
   extends ExternalStorageModuleCollection<HoldingsRecord>
@@ -28,14 +28,24 @@ class ExternalStorageModuleHoldingsRecordCollection
   }
 
   ExternalStorageModuleHoldingsRecordCollection(String baseAddress,
-                                         String tenant,
-                                         String token,
-                                         String userId,
-                                         String requestId,
-                                         HttpClient client) {
+                                                String tenant,
+                                                String token,
+                                                String userId,
+                                                String requestId,
+                                                HttpClient client) {
 
     super(String.format("%s/%s", baseAddress, "holdings-storage/holdings"),
       tenant, token, userId, requestId, "holdingsRecords", client);
+  }
+
+  @Override
+  protected JsonObject mapToRequest(HoldingsRecord holding) {
+    try {
+      return JsonObject.mapFrom(holding);
+    } catch (Exception e) {
+      LOGGER.error(e);
+      throw new JsonMappingException("Can`t map 'Holdingsrecord' entity to json", e);
+    }
   }
 
   @Override
@@ -49,17 +59,7 @@ class ExternalStorageModuleHoldingsRecordCollection
   }
 
   @Override
-  protected String getId(HoldingsRecord record) {
-    return record.getId();
-  }
-
-  @Override
-  protected JsonObject mapToRequest(HoldingsRecord holding) {
-    try {
-      return JsonObject.mapFrom(holding);
-    } catch (Exception e) {
-      LOGGER.error(e);
-      throw new JsonMappingException("Can`t map 'Holdingsrecord' entity to json", e);
-    }
+  protected String getId(HoldingsRecord entity) {
+    return entity.getId();
   }
 }

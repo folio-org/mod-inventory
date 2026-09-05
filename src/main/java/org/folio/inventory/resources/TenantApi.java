@@ -29,7 +29,7 @@ public class TenantApi {
   private static final String DROP_SCHEMA_SQL = "DROP SCHEMA IF EXISTS %s CASCADE";
   private static final String CHANGELOG_TENANT_PATH = "liquibase/tenant/changelog.xml";
   private static final String TENANT_PATH = "/_/tenant";
-  private InventoryKafkaTopicService inventoryKafkaTopicService = new InventoryKafkaTopicService();
+  private final InventoryKafkaTopicService inventoryKafkaTopicService = new InventoryKafkaTopicService();
 
   public void register(Router router) {
     router.post(TENANT_PATH).handler(this::create);
@@ -43,11 +43,13 @@ public class TenantApi {
       .onSuccess(result -> {
           Vertx vertx = routingContext.vertx();
           var kafkaAdminClientService = new KafkaAdminClientService(vertx);
-          kafkaAdminClientService.createKafkaTopics(inventoryKafkaTopicService.createTopicObjects(), context.getTenantId());
+          kafkaAdminClientService.createKafkaTopics(inventoryKafkaTopicService.createTopicObjects(),
+            context.getTenantId());
           routingContext.response().setStatusCode(HttpStatus.HTTP_NO_CONTENT.toInt()).end();
         }
       )
-      .onFailure(fail -> routingContext.response().setStatusCode(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt()).end(fail.toString()));
+      .onFailure(fail -> routingContext.response().setStatusCode(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt())
+        .end(fail.toString()));
   }
 
   public void delete(RoutingContext routingContext) {
@@ -55,7 +57,8 @@ public class TenantApi {
 
     deleteSchemaForTenant(context.getTenantId())
       .onSuccess(result -> routingContext.response().setStatusCode(HttpStatus.HTTP_NO_CONTENT.toInt()).end())
-      .onFailure(fail -> routingContext.response().setStatusCode(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt()).end(fail.toString()));
+      .onFailure(fail -> routingContext.response().setStatusCode(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt())
+        .end(fail.toString()));
   }
 
   public Future<Integer> initializeSchemaForTenant(String tenantId) {

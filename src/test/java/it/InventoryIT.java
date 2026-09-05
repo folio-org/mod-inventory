@@ -10,6 +10,7 @@ import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.http.ContentType;
 import java.nio.file.Path;
 
+import org.folio.okapi.common.XOkapiHeaders;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,20 +43,22 @@ import org.testcontainers.utility.DockerImageName;
 class InventoryIT {
 
   private static final Logger LOG = LoggerFactory.getLogger(InventoryIT.class);
-  /** Container logging, requires log4j-slf4j-impl in test scope */
+  /**
+   * Container logging, requires log4j-slf4j-impl in test scope
+   */
   private static final boolean IS_LOG_ENABLED = false;
   private static final Network NETWORK = Network.newNetwork();
 
   @Container
   private static final KafkaContainer KAFKA =
-      new KafkaContainer(DockerImageName.parse("apache/kafka-native:4.2.0"))
+    new KafkaContainer(DockerImageName.parse("apache/kafka-native:4.2.0"))
       .withNetwork(NETWORK)
       .withNetworkAliases("ourkafka");
 
   @Container
   private static final GenericContainer<?> MOD_INVENTORY =
-      new GenericContainer<>(
-          new ImageFromDockerfile("mod-inventory").withFileFromPath(".", Path.of(".")))
+    new GenericContainer<>(
+      new ImageFromDockerfile("mod-inventory").withFileFromPath(".", Path.of(".")))
       .dependsOn(KAFKA)
       .withNetwork(NETWORK)
       .withNetworkAliases("mod-inventory")
@@ -84,7 +87,7 @@ class InventoryIT {
     // request without X-Okapi-Tenant
     when().
       get("/admin/health").
-    then().
+      then().
       statusCode(200).
       body(is("OK")).
       contentType(ContentType.TEXT);
@@ -103,7 +106,7 @@ class InventoryIT {
 
     when().
       get(path).
-    then().
+      then().
       statusCode(404);
 
     assertThat(MOD_INVENTORY.getLogs(), containsString("Handling GET " + path));
@@ -111,10 +114,9 @@ class InventoryIT {
 
   private void setTenant(String tenant) {
     RestAssured.requestSpecification = new RequestSpecBuilder()
-        .addHeader("X-Okapi-Url", "http://mod-inventory:9403")  // returns 404 for all other APIs
-        .addHeader("X-Okapi-Tenant", tenant)
-        .setContentType(ContentType.JSON)
-        .build();
+      .addHeader(XOkapiHeaders.URL, "http://mod-inventory:9403")  // returns 404 for all other APIs
+      .addHeader(XOkapiHeaders.TENANT, tenant)
+      .setContentType(ContentType.JSON)
+      .build();
   }
-
 }

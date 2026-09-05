@@ -9,7 +9,7 @@ import org.joda.time.Seconds;
 public class TextDateTimeMatcher {
 
   public static Matcher<String> withinSecondsAfter(Seconds seconds, DateTime start) {
-    return new TypeSafeMatcher<String>() {
+    return new TypeSafeMatcher<>() {
       @Override
       public void describeTo(Description description) {
         description.appendText(String.format(

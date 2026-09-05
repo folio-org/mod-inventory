@@ -10,9 +10,11 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-
+import lombok.SneakyThrows;
 import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.common.api.request.PagingParameters;
@@ -24,13 +26,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
-import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
-
-import lombok.SneakyThrows;
-
 class ExternalInstanceCollectionTest extends BaseWireMockTest {
-  
+
   private static final VertxAssistant vertxAssistant = new VertxAssistant();
 
   @BeforeAll
@@ -328,13 +325,13 @@ class ExternalInstanceCollectionTest extends BaseWireMockTest {
   }
 
   private void assertBadRequest(Failure failure) {
-    assertThat(failure.getReason(), is("Bad Request"));
-    assertThat(failure.getStatusCode(), is(400));
+    assertThat(failure.reason(), is("Bad Request"));
+    assertThat(failure.statusCode(), is(400));
   }
 
   private void assertServerError(Failure failure) {
-    assertThat(failure.getReason(), is("Server Error"));
-    assertThat(failure.getStatusCode(), is(500));
+    assertThat(failure.reason(), is("Server Error"));
+    assertThat(failure.statusCode(), is(500));
   }
 
   private ResponseDefinitionBuilder serverErrorResponse() {

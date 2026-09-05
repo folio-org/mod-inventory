@@ -40,7 +40,8 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
   private static final String MAX_DISTRIBUTION_NUMBER_TEMPLATE = "inventory.kafka.%s.maxDistributionNumber";
   private static final String MAX_DISTRIBUTION_NUMBER_DEFAULT = "100";
   private static final String CACHE_EXPIRATION_DEFAULT = "3600";
-  private static final String PROFILE_SNAPSHOT_CACHE_EXPIRATION_TIME = "inventory.profile-snapshot-cache.expiration.time.seconds";
+  private static final String PROFILE_SNAPSHOT_CACHE_EXPIRATION_TIME =
+    "inventory.profile-snapshot-cache.expiration.time.seconds";
   private final List<KafkaConsumerWrapper<String, String>> consumerWrappers = new ArrayList<>();
   private ProfileSnapshotCache profileSnapshotCache;
   private KafkaConfig kafkaConfig;
@@ -64,7 +65,8 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
     return createConsumer(eventType, loadLimitPropertyKey, true);
   }
 
-  protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, String loadLimitPropertyKey, boolean namespacedTopic) {
+  protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, String loadLimitPropertyKey,
+                                                                boolean namespacedTopic) {
     var kafkaConsumerWrapper = KafkaConsumerWrapper.<String, String>builder()
       .context(context)
       .vertx(vertx)
@@ -118,7 +120,8 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
   protected ProfileSnapshotCache getProfileSnapshotCache() {
     if (isNull(profileSnapshotCache)) {
       var profileSnapshotExpirationTime = getCacheEnvVariable(PROFILE_SNAPSHOT_CACHE_EXPIRATION_TIME);
-      profileSnapshotCache = new ProfileSnapshotCache(vertx, getHttpClient(), Long.parseLong(profileSnapshotExpirationTime));
+      profileSnapshotCache =
+        new ProfileSnapshotCache(vertx, getHttpClient(), Long.parseLong(profileSnapshotExpirationTime));
     }
     return profileSnapshotCache;
   }
@@ -135,6 +138,10 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
     return getConsumerProperty(MAX_DISTRIBUTION_NUMBER_TEMPLATE, property, MAX_DISTRIBUTION_NUMBER_DEFAULT);
   }
 
+  protected String getDefaultLoadLimit() {
+    return LOAD_LIMIT_DEFAULT;
+  }
+
   private JsonObject getConfig() {
     if (isNull(config)) {
       config = vertx.getOrCreateContext().config();
@@ -144,8 +151,8 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
 
   private SubscriptionDefinition getSubscriptionDefinition(String envId, String eventType, boolean namespacedTopic) {
     return namespacedTopic
-      ? KafkaTopicNameHelper.createSubscriptionDefinition(envId, getDefaultNameSpace(), eventType)
-      : createSubscriptionDefinition(envId, eventType);
+           ? KafkaTopicNameHelper.createSubscriptionDefinition(envId, getDefaultNameSpace(), eventType)
+           : createSubscriptionDefinition(envId, eventType);
   }
 
   private SubscriptionDefinition createSubscriptionDefinition(String env, String eventType) {
@@ -166,9 +173,4 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
   private int getConsumerProperty(String nameTemplate, String propertyKey, String defaultValue) {
     return parseInt(getProperty(format(nameTemplate, propertyKey), defaultValue));
   }
-
-  protected String getDefaultLoadLimit() {
-    return LOAD_LIMIT_DEFAULT;
-  }
-
 }

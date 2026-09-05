@@ -1,18 +1,18 @@
 package org.folio.inventory.storage.external;
 
+import io.vertx.core.http.HttpClient;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.WebClient;
 import java.net.MalformedURLException;
-import java.net.URL;
-
+import java.net.URI;
+import java.net.URISyntaxException;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.exceptions.InternalServerErrorException;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 
-import io.vertx.core.http.HttpClient;
-import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.client.WebClient;
-
 public final class Clients {
+
   private final CollectionResourceRepository requestStorageRepository;
 
   /**
@@ -27,7 +27,7 @@ public final class Clients {
 
       requestStorageRepository = createCollectionResourceRepository(httpClient, context,
         "/request-storage/requests");
-    } catch (MalformedURLException ex) {
+    } catch (MalformedURLException | URISyntaxException ex) {
       throw new InternalServerErrorException(ex);
     }
   }
@@ -46,15 +46,15 @@ public final class Clients {
   }
 
   private CollectionResourceRepository createCollectionResourceRepository(
-    OkapiHttpClient client, WebContext context, String rootPath) throws MalformedURLException {
+    OkapiHttpClient client, WebContext context, String rootPath) throws URISyntaxException, MalformedURLException {
 
     return new CollectionResourceRepository(createCollectionResourceClient(client, context, rootPath));
   }
 
   private CollectionResourceClient createCollectionResourceClient(
-    OkapiHttpClient client, WebContext context, String rootPath) throws MalformedURLException {
+    OkapiHttpClient client, WebContext context, String rootPath) throws URISyntaxException, MalformedURLException {
 
     return new CollectionResourceClient(client,
-      new URL(context.getOkapiLocation() + rootPath));
+      new URI(context.getOkapiLocation() + rootPath).toURL());
   }
 }

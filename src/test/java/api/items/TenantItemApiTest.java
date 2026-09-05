@@ -4,18 +4,13 @@ import static api.ApiTestSuite.COLLEGE_TENANT_ID;
 import static api.ApiTestSuite.CONSORTIA_TENANT_ID;
 import static api.ApiTestSuite.getBookMaterialType;
 import static api.ApiTestSuite.getCanCirculateLoanType;
-import static support.fixtures.InstanceFixture.smallAngryPlanet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.resources.TenantItemsApi.ITEM_FIELD;
 import static org.folio.inventory.resources.TenantItemsApi.TENANT_ID_FIELD;
 import static org.folio.inventory.resources.TenantItemsApi.TOTAL_RECORDS_FIELD;
 import static org.folio.inventory.support.ItemUtil.ID;
+import static support.fixtures.InstanceFixture.smallAngryPlanet;
 
-import support.ApiRoot;
-import support.ApiTests;
-import support.InstanceApiClient;
-import support.builders.HoldingRequestBuilder;
-import support.http.ResourceClient;
 import io.vertx.core.json.JsonObject;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +23,11 @@ import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.junit.jupiter.api.Test;
+import support.ApiRoot;
+import support.ApiTests;
+import support.InstanceApiClient;
+import support.builders.HoldingRequestBuilder;
+import support.http.ResourceClient;
 
 public class TenantItemApiTest extends ApiTests {
 
@@ -52,7 +52,7 @@ public class TenantItemApiTest extends ApiTests {
 
     var response = okapiClient.post(ApiRoot.tenantItems(), JsonObject.mapFrom(tenantItemPairCollection))
       .toCompletableFuture().get(5, TimeUnit.SECONDS);
-    assertThat(response.getStatusCode()).isEqualTo(200);
+    assertThat(response.statusCode()).isEqualTo(200);
 
     consortiumItem = JsonObject.of(ITEM_FIELD, consortiumItem, TENANT_ID_FIELD, CONSORTIA_TENANT_ID);
     collegeItem = JsonObject.of(ITEM_FIELD, collegeItem, TENANT_ID_FIELD, COLLEGE_TENANT_ID);

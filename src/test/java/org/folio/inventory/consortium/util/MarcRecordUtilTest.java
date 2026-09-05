@@ -9,14 +9,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import org.folio.ParsedRecord;
 import org.folio.Record;
-import support.TestUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import support.TestUtil;
 
 class MarcRecordUtilTest {
 
@@ -47,7 +46,7 @@ class MarcRecordUtilTest {
   }
 
   @Test
-  void shouldRemove9subfieldsThatContainValue() throws IOException {
+  void shouldRemove9subfieldsThatContainValue() {
     // given
     String recordId = UUID.randomUUID().toString();
 
@@ -77,9 +76,8 @@ class MarcRecordUtilTest {
     parsedRecord.setContent("null");
     Record testRecord = new Record().withId(recordId).withParsedRecord(parsedRecord);
     // when
-    assertDoesNotThrow(() -> {
-      MarcRecordUtil.removeSubfieldsThatContainsValues(testRecord, List.of("245", "700"), '9', List.of(UUID_1, UUID_3));
-    }, "Exception thrown");
+    assertDoesNotThrow(() -> MarcRecordUtil.removeSubfieldsThatContainsValues(testRecord, List.of("245", "700"), '9',
+      List.of(UUID_1, UUID_3)), "Exception thrown");
   }
 
   @Test

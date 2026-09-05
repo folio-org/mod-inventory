@@ -12,7 +12,7 @@ public class CqlHelper {
   private CqlHelper() { }
 
   public static String multipleRecordsCqlQuery(List<String> recordIds) {
-    if(recordIds.isEmpty()) {
+    if (recordIds.isEmpty()) {
       return null;
     }
     return buildQueryByIds(recordIds);
@@ -20,6 +20,7 @@ public class CqlHelper {
 
   /**
    * Returns non-encoded CQL query with ids of records
+   *
    * @param recordIds record's ids
    * @return CQL expression
    */
@@ -29,9 +30,9 @@ public class CqlHelper {
 
   public static String buildMultipleValuesCqlQuery(String prefix, List<String> values) {
     return String.format("%s(%s)", prefix, values.stream()
-            .map(String::toString)
-            .distinct()
-            .collect(Collectors.joining(" or ")));
+      .map(String::toString)
+      .distinct()
+      .collect(Collectors.joining(" or ")));
   }
 
   /**
@@ -39,7 +40,8 @@ public class CqlHelper {
    * <p>
    * barcodeIs("abc") = "barcode==\"abc\""<br>
    * barcodeIs("1-*?") = "barcode==\"1-\\*\\?\""
-   * @param barcode  String to match
+   *
+   * @param barcode String to match
    * @return CQL expression
    */
   public static String barcodeIs(String barcode) {
