@@ -23,6 +23,7 @@ import org.folio.rest.jaxrs.model.MarcFieldProtectionSetting;
 import org.folio.rest.jaxrs.model.Record;
 import org.marc4j.marc.ControlField;
 import org.marc4j.marc.DataField;
+import org.marc4j.marc.MarcFactory;
 import org.marc4j.marc.VariableField;
 
 /**
@@ -146,6 +147,109 @@ public final class AdditionalFieldsUtil {
     if (marcRecord != null && has035SubfieldWithOclcPrefix(marcRecord)) {
       MarcRecordNormalizer.normalize035Field(marcRecord);
       MarcRecordEditor.recalculateAndWriteBack(holder, marcRecord);
+    }
+  }
+
+  /**
+   * Runs the update-005 / move-001-to-035 / normalize-035 sequence used by instance create/replace/ingress
+   * handlers as a single parse -&gt; mutate -&gt; write-back, instead of three independent round trips through the
+   * parsed-record-content cache. Equivalent to calling {@link #updateLatestTransactionDate(Record,
+   * MappingParameters, Clock)}, {@link #move001To035(Record)}, and {@link #normalize035(Record)} in sequence.
+   *
+   * @param targetRecord      record to update
+   * @param mappingParameters mapping parameters (for the 005 field-protection check)
+   * @param clock             clock used to compute the current date/time written to field 005
+   * @throws EventProcessingException if field 005 needed updating but the record could not be parsed or the
+   *                                  final write-back failed
+   */
+  public static void executeStandardFieldsManipulation(Record targetRecord, MappingParameters mappingParameters,
+                                                        Clock clock) {
+    JaxrsRecordHolder holder = new JaxrsRecordHolder(targetRecord);
+    org.marc4j.marc.Record marcRecord = MarcRecordEditor.computeMarcRecord(holder);
+    boolean needsDate = isField005NeedToUpdate(marcRecord, mappingParameters);
+    if (marcRecord == null) {
+      if (needsDate) {
+        throw new EventProcessingException(format("Failed to update field '005' to record with id '%s'",
+          targetRecord != null ? targetRecord.getId() : "null"));
+      }
+      return;
+    }
+    if (needsDate) {
+      String date = DATE_TIME_005_FORMATTER.format(ZonedDateTime.now(clock));
+      MarcFieldEditor.addOrReplaceControlField(marcRecord, TAG_005, date, true);
+    }
+    move001To035OnRecord(marcRecord);
+    normalize035OnRecord(marcRecord);
+    if (!MarcRecordEditor.recalculateAndWriteBack(holder, marcRecord)) {
+      throw new EventProcessingException(format("Failed to update field '005' to record with id '%s'",
+        targetRecord.getId()));
+    }
+  }
+
+  /**
+   * Runs the update-005 / normalize-035 / remove-035-with-hrid sequence used by
+   * {@code ReplaceInstanceEventHandler}'s MARC-source branch as a single parse -&gt; mutate -&gt; write-back.
+   * Equivalent to calling {@link #updateLatestTransactionDate(Record, MappingParameters, Clock)},
+   * {@link #normalize035(Record)}, and {@link #remove035FieldWhenRecordContainsHrId(Record)} in sequence.
+   *
+   * @param targetRecord      record to update
+   * @param mappingParameters mapping parameters (for the 005 field-protection check)
+   * @param clock             clock used to compute the current date/time written to field 005
+   * @throws EventProcessingException if field 005 needed updating but the record could not be parsed or the
+   *                                  final write-back failed
+   */
+  public static void executeReplaceFieldsManipulation(Record targetRecord, MappingParameters mappingParameters,
+                                                       Clock clock) {
+    JaxrsRecordHolder holder = new JaxrsRecordHolder(targetRecord);
+    org.marc4j.marc.Record marcRecord = MarcRecordEditor.computeMarcRecord(holder);
+    boolean needsDate = isField005NeedToUpdate(marcRecord, mappingParameters);
+    if (marcRecord == null) {
+      if (needsDate) {
+        throw new EventProcessingException(format("Failed to update field '005' to record with id '%s'",
+          targetRecord != null ? targetRecord.getId() : "null"));
+      }
+      return;
+    }
+    if (needsDate) {
+      String date = DATE_TIME_005_FORMATTER.format(ZonedDateTime.now(clock));
+      MarcFieldEditor.addOrReplaceControlField(marcRecord, TAG_005, date, true);
+    }
+    normalize035OnRecord(marcRecord);
+    if (Record.RecordType.MARC_BIB.equals(targetRecord.getRecordType())) {
+      String hrid = MarcFieldEditor.getControlFieldValue(marcRecord, TAG_001);
+      // matches MarcRecordEditor.removeField's branching: remove035WithActualHrId ultimately calls
+      // removeField(holder, TAG_035, TAG_035_SUB, actualHrId), which removes the whole first 035 field
+      // when actualHrId is empty, rather than trying (and NPE-ing) to match an empty subfield value.
+      if (StringUtils.isEmpty(hrid)) {
+        MarcFieldEditor.removeFirstField(marcRecord, TAG_035);
+      } else {
+        MarcFieldEditor.removeFieldWithSubfieldValue(marcRecord, TAG_035, TAG_035_SUB, hrid);
+      }
+    }
+    if (!MarcRecordEditor.recalculateAndWriteBack(holder, marcRecord)) {
+      throw new EventProcessingException(format("Failed to update field '005' to record with id '%s'",
+        targetRecord.getId()));
+    }
+  }
+
+  private static void move001To035OnRecord(org.marc4j.marc.Record marcRecord) {
+    String valueFrom001 = MarcFieldEditor.getControlFieldValue(marcRecord, TAG_001);
+    if (StringUtils.isNotEmpty(valueFrom001)) {
+      String valueFrom003 = MarcFieldEditor.getControlFieldValue(marcRecord, TAG_003);
+      String new035Value = mergeFieldsFor035(valueFrom003, valueFrom001);
+      if (!MarcFieldEditor.fieldExists(marcRecord, TAG_035, TAG_035_SUB, new035Value)) {
+        MarcFactory factory = MarcFactory.newInstance();
+        DataField dataField = factory.newDataField(TAG_035, TAG_035_IND, TAG_035_IND);
+        dataField.addSubfield(factory.newSubfield(TAG_035_SUB, new035Value));
+        MarcFieldEditor.addDataFieldInOrder(marcRecord, dataField);
+      }
+    }
+    MarcFieldEditor.removeFirstField(marcRecord, TAG_003);
+  }
+
+  private static void normalize035OnRecord(org.marc4j.marc.Record marcRecord) {
+    if (has035SubfieldWithOclcPrefix(marcRecord)) {
+      MarcRecordNormalizer.normalize035Field(marcRecord);
     }
   }
 
@@ -355,16 +459,29 @@ public final class AdditionalFieldsUtil {
    * @return true for case when field 005 have to updated
    */
   private static boolean isField005NeedToUpdate(Record srcRecord, MappingParameters mappingParameters) {
+    return isField005NeedToUpdate(MarcRecordEditor.computeMarcRecord(new JaxrsRecordHolder(srcRecord)),
+      mappingParameters);
+  }
+
+  /**
+   * Checks whether field 005 needs to be updated or this field is protected, given an already-parsed (possibly
+   * null) marc4j record. Same defaulting logic as {@link #isField005NeedToUpdate(Record, MappingParameters)}: if
+   * {@code marcRecord} is null (record could not be parsed) or {@code fieldProtectionSettings} is empty/null,
+   * {@code needToUpdate} stays {@code true}.
+   *
+   * @param marcRecord        already-parsed marc4j record, or null if the record could not be parsed
+   * @param mappingParameters mapping parameters
+   * @return true for case when field 005 have to updated
+   */
+  private static boolean isField005NeedToUpdate(org.marc4j.marc.Record marcRecord,
+                                                 MappingParameters mappingParameters) {
     boolean needToUpdate = true;
     List<MarcFieldProtectionSetting> fieldProtectionSettings = mappingParameters.getMarcFieldProtectionSettings();
-    if (CollectionUtils.isNotEmpty(fieldProtectionSettings)) {
-      org.marc4j.marc.Record marcRecord = MarcRecordEditor.computeMarcRecord(new JaxrsRecordHolder(srcRecord));
-      if (marcRecord != null) {
-        List<VariableField> variableFields = marcRecord.getVariableFields(TAG_005);
-        if (!variableFields.isEmpty()) {
-          VariableField field = variableFields.getFirst();
-          needToUpdate = isNotProtected(fieldProtectionSettings, (ControlField) field);
-        }
+    if (CollectionUtils.isNotEmpty(fieldProtectionSettings) && marcRecord != null) {
+      List<VariableField> variableFields = marcRecord.getVariableFields(TAG_005);
+      if (!variableFields.isEmpty()) {
+        VariableField field = variableFields.getFirst();
+        needToUpdate = isNotProtected(fieldProtectionSettings, (ControlField) field);
       }
     }
     return needToUpdate;

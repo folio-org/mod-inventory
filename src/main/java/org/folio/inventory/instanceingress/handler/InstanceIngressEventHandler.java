@@ -17,6 +17,7 @@ import static org.folio.rest.jaxrs.model.Snapshot.Status.COMMITTED;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import java.time.Clock;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -126,9 +127,8 @@ public interface InstanceIngressEventHandler {
     try {
       logger.info("Manipulating fields of a Record from InstanceIngressEvent with id '{}'", event.getId());
       var mappingParameters = Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
-      AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
-      AdditionalFieldsUtil.move001To035(targetRecord);
-      AdditionalFieldsUtil.normalize035(targetRecord);
+      AdditionalFieldsUtil.executeStandardFieldsManipulation(targetRecord, mappingParameters,
+        Clock.systemDefaultZone());
       if (event.getEventPayload().getAdditionalProperties().containsKey(LINKED_DATA_ID)) {
         AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, TAG_035, TAG_035_SUB,
           "(ld) " + event.getEventPayload().getAdditionalProperties().get(LINKED_DATA_ID));

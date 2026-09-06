@@ -26,6 +26,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -128,9 +129,8 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
               .map(mappingMetadata -> {
                 MappingParameters mappingParameters =
                   Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
-                AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
-                AdditionalFieldsUtil.move001To035(targetRecord);
-                AdditionalFieldsUtil.normalize035(targetRecord);
+                AdditionalFieldsUtil.executeStandardFieldsManipulation(targetRecord, mappingParameters,
+                  Clock.systemDefaultZone());
                 payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
                 return prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
                   mappingParameters);

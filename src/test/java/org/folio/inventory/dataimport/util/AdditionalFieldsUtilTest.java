@@ -1,5 +1,6 @@
 package org.folio.inventory.dataimport.util;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INVALID_DATA_FIELD_MSG;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
@@ -49,6 +50,7 @@ import org.folio.rest.jaxrs.model.MarcFieldProtectionSetting;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -1043,6 +1045,153 @@ class AdditionalFieldsUtilTest {
 
     // then
     assertTrue(result.isEmpty());
+  }
+
+  @DisplayName("should produce content identical to the sequential update005/move001To035/normalize035 calls "
+    + "when 005 needs updating, 001 is present, and an OCoLC-prefixed 035 exists")
+  @Test
+  void shouldProduceSameContentAsSequentialCalls_whenStandardManipulationUpdates005Moves001AndNormalizes035() {
+    // given: two identical records - a 001 to move to 035, an existing OCoLC-prefixed 035 to normalize, and no
+    // field-protection settings, so field 005 also needs updating
+    String parsedContent =
+      "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"003\":\"qwerty\"},"
+      + "{\"005\":\"20141107001016.0\"},"
+      + "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)on. 607TST .001\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
+      + "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    var mappingParameters = new MappingParameters();
+    Clock fixedClock = Clock.fixed(Instant.parse("2024-03-15T10:30:45.123Z"), ZoneId.of("UTC"));
+
+    var sequentialRecord = buildMarcRecordWithContent(parsedContent);
+    var batchedRecord = buildMarcRecordWithContent(parsedContent);
+
+    // when
+    AdditionalFieldsUtil.updateLatestTransactionDate(sequentialRecord, mappingParameters, fixedClock);
+    AdditionalFieldsUtil.move001To035(sequentialRecord);
+    AdditionalFieldsUtil.normalize035(sequentialRecord);
+
+    AdditionalFieldsUtil.executeStandardFieldsManipulation(batchedRecord, mappingParameters, fixedClock);
+
+    // then
+    assertThat(batchedRecord.getParsedRecord().getContent())
+      .isEqualTo(sequentialRecord.getParsedRecord().getContent());
+  }
+
+  @DisplayName("should produce content identical to the sequential update005/move001To035/normalize035 calls "
+    + "when 005 is protected, 001 is absent, and no OCoLC-prefixed 035 exists")
+  @Test
+  void shouldProduceSameContentAsSequentialCalls_whenStandardManipulationSkipsAllThreeSteps() {
+    // given: two identical records - no 001 (move001To035 only removes 003), no OCoLC-prefixed 035
+    // (normalize035 is a no-op), and a field-protection setting that protects 005 (so 005 is skipped too)
+    String parsedContent =
+      "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"003\":\"qwerty\"},"
+      + "{\"005\":\"20141107001016.0\"},"
+      + "{\"035\":{\"subfields\":[{\"a\":\"(NhFolYBP)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
+      + "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    var mappingParameters = new MappingParameters().withMarcFieldProtectionSettings(
+      List.of(new MarcFieldProtectionSetting().withField(TAG_005).withData("*")));
+    Clock fixedClock = Clock.fixed(Instant.parse("2024-03-15T10:30:45.123Z"), ZoneId.of("UTC"));
+
+    var sequentialRecord = buildMarcRecordWithContent(parsedContent);
+    var batchedRecord = buildMarcRecordWithContent(parsedContent);
+
+    // when
+    AdditionalFieldsUtil.updateLatestTransactionDate(sequentialRecord, mappingParameters, fixedClock);
+    AdditionalFieldsUtil.move001To035(sequentialRecord);
+    AdditionalFieldsUtil.normalize035(sequentialRecord);
+
+    AdditionalFieldsUtil.executeStandardFieldsManipulation(batchedRecord, mappingParameters, fixedClock);
+
+    // then
+    assertThat(batchedRecord.getParsedRecord().getContent())
+      .isEqualTo(sequentialRecord.getParsedRecord().getContent());
+  }
+
+  @DisplayName("should produce content identical to the sequential update005/normalize035/remove035WithHrId calls "
+    + "when the record is a MARC_BIB and the 035-with-hrid removal actually runs")
+  @Test
+  void shouldProduceSameContentAsSequentialCalls_whenReplaceManipulationRunsHrIdRemovalOnMarcBib() {
+    // given: two identical MARC_BIB records - an OCoLC-prefixed 035 to normalize, and a second 035 whose
+    // subfield contains the 001 hrid value, so remove035FieldWhenRecordContainsHrId actually removes it
+    String parsedContent =
+      "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},"
+      + "{\"005\":\"20141107001016.0\"},"
+      + "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
+      + "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)on. 607TST .001\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
+      + "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    var mappingParameters = new MappingParameters();
+    Clock fixedClock = Clock.fixed(Instant.parse("2024-03-15T10:30:45.123Z"), ZoneId.of("UTC"));
+
+    var sequentialRecord = buildMarcRecordWithContent(parsedContent).withRecordType(Record.RecordType.MARC_BIB);
+    var batchedRecord = buildMarcRecordWithContent(parsedContent).withRecordType(Record.RecordType.MARC_BIB);
+
+    // when
+    AdditionalFieldsUtil.updateLatestTransactionDate(sequentialRecord, mappingParameters, fixedClock);
+    AdditionalFieldsUtil.normalize035(sequentialRecord);
+    AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(sequentialRecord);
+
+    AdditionalFieldsUtil.executeReplaceFieldsManipulation(batchedRecord, mappingParameters, fixedClock);
+
+    // then
+    assertThat(batchedRecord.getParsedRecord().getContent())
+      .isEqualTo(sequentialRecord.getParsedRecord().getContent());
+  }
+
+  @DisplayName("should produce content identical to the sequential update005/normalize035/remove035WithHrId calls "
+    + "when the record is not a MARC_BIB and the 035-with-hrid removal is skipped")
+  @Test
+  void shouldProduceSameContentAsSequentialCalls_whenReplaceManipulationSkipsHrIdRemovalOnNonMarcBib() {
+    // given: same fixture as the MARC_BIB case, but recorded as a MARC_AUTHORITY record, so
+    // remove035FieldWhenRecordContainsHrId's MARC_BIB guard skips the 035-with-hrid removal entirely on both sides
+    String parsedContent =
+      "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},"
+      + "{\"005\":\"20141107001016.0\"},"
+      + "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
+      + "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)on. 607TST .001\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
+      + "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    var mappingParameters = new MappingParameters();
+    Clock fixedClock = Clock.fixed(Instant.parse("2024-03-15T10:30:45.123Z"), ZoneId.of("UTC"));
+
+    var sequentialRecord =
+      buildMarcRecordWithContent(parsedContent).withRecordType(Record.RecordType.MARC_AUTHORITY);
+    var batchedRecord =
+      buildMarcRecordWithContent(parsedContent).withRecordType(Record.RecordType.MARC_AUTHORITY);
+
+    // when
+    AdditionalFieldsUtil.updateLatestTransactionDate(sequentialRecord, mappingParameters, fixedClock);
+    AdditionalFieldsUtil.normalize035(sequentialRecord);
+    AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(sequentialRecord);
+
+    AdditionalFieldsUtil.executeReplaceFieldsManipulation(batchedRecord, mappingParameters, fixedClock);
+
+    // then
+    assertThat(batchedRecord.getParsedRecord().getContent())
+      .isEqualTo(sequentialRecord.getParsedRecord().getContent());
+  }
+
+  @DisplayName("should throw EventProcessingException when 005 needs updating but the record cannot be parsed")
+  @Test
+  void executeStandardFieldsManipulationThrowsEventProcessingException_whenRecordCannotBeParsed() {
+    // given: a record with no parsed record at all. isField005NeedToUpdate short-circuits to "needs update"
+    // when no field protection settings are configured, regardless of content, so executeStandardFieldsManipulation
+    // reaches its own null-marcRecord guard and throws rather than silently no-oping - mirroring
+    // updateLatestTransactionDateThrowsEventProcessingExceptionWithCause_whenAddingControlledFieldFails's fixture.
+    var recordWithNoParsedRecord = new Record().withId(UUID.randomUUID().toString());
+
+    // when
+    var exception = assertThrows(EventProcessingException.class,
+      () -> AdditionalFieldsUtil.executeStandardFieldsManipulation(recordWithNoParsedRecord, new MappingParameters(),
+        Clock.systemDefaultZone()));
+
+    // then
+    assertThat(exception.getMessage()).contains(recordWithNoParsedRecord.getId());
+  }
+
+  private static Record buildMarcRecordWithContent(String parsedContent) {
+    return new Record().withId(UUID.randomUUID().toString())
+      .withParsedRecord(new ParsedRecord().withContent(parsedContent))
+      .withGeneration(0)
+      .withState(Record.State.ACTUAL)
+      .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
   }
 
   private static String readFileFromPath(String path) throws IOException {

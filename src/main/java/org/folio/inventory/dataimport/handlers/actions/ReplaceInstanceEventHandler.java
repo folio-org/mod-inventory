@@ -35,6 +35,7 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.time.Clock;
 import java.util.AbstractMap;
 import java.util.Date;
 import java.util.HashMap;
@@ -510,9 +511,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
                 var updatedIncomingRecord = Json.encode(incomingRecord);
                 var targetRecord = Json.decodeValue(updatedIncomingRecord, org.folio.rest.jaxrs.model.Record.class);
 
-                AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
-                AdditionalFieldsUtil.normalize035(targetRecord);
-                AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(targetRecord);
+                AdditionalFieldsUtil.executeReplaceFieldsManipulation(targetRecord, mappingParameters,
+                  Clock.systemDefaultZone());
                 eventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
               } else {
                 eventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(incomingRecord));
@@ -526,9 +526,8 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       org.folio.rest.jaxrs.model.Record targetRecord =
         Json.decodeValue(marcBibAsJson, org.folio.rest.jaxrs.model.Record.class);
 
-      AdditionalFieldsUtil.updateLatestTransactionDate(targetRecord, mappingParameters);
-      AdditionalFieldsUtil.move001To035(targetRecord);
-      AdditionalFieldsUtil.normalize035(targetRecord);
+      AdditionalFieldsUtil.executeStandardFieldsManipulation(targetRecord, mappingParameters,
+        Clock.systemDefaultZone());
       eventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
     }
     return Future.succeededFuture();

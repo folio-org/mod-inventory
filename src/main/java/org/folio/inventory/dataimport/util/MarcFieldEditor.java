@@ -7,12 +7,13 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.marc4j.marc.ControlField;
 import org.marc4j.marc.DataField;
 import org.marc4j.marc.MarcFactory;
+import org.marc4j.marc.Record;
 import org.marc4j.marc.Subfield;
 import org.marc4j.marc.VariableField;
 
 /**
  * Pure marc4j field-manipulation logic, with no dependency on any FOLIO {@code Record} type, no cache and no
- * I/O (parsing/serialization). Every method here takes an already-parsed {@link org.marc4j.marc.Record} and
+ * I/O (parsing/serialization). Every method here takes an already-parsed {@link Record} and
  * either mutates it in place or reads a value off it - callers own parsing the record in, and writing/caching
  * it back out.
  *
@@ -40,8 +41,7 @@ public final class MarcFieldEditor {
    * @param value      value of the field
    * @param replace    if true, replaces an existing field with the same tag; if false, appends a new field
    */
-  public static void addOrReplaceControlField(org.marc4j.marc.Record marcRecord, String tag, String value,
-                                              boolean replace) {
+  public static void addOrReplaceControlField(Record marcRecord, String tag, String value, boolean replace) {
     if (replace) {
       var currentField = (ControlField) marcRecord.getVariableField(tag);
       var newControlField = MarcFactory.newInstance().newControlField(tag, value);
@@ -66,8 +66,7 @@ public final class MarcFieldEditor {
    * @param subfield   subfield code to add
    * @param value      value of the subfield to add
    */
-  public static void addSubfieldToField(org.marc4j.marc.Record marcRecord, String field, char subfield,
-                                        String value) {
+  public static void addSubfieldToField(Record marcRecord, String field, char subfield, String value) {
     MarcFactory factory = MarcFactory.newInstance();
     VariableField variableField = getSingleFieldByIndicators(marcRecord.getVariableFields(field));
     DataField dataField;
@@ -85,28 +84,16 @@ public final class MarcFieldEditor {
     marcRecord.addVariableField(dataField);
   }
 
-  private static VariableField getSingleFieldByIndicators(List<VariableField> list) {
-    if (CollectionUtils.isEmpty(list)) {
-      return null;
-    }
-    return list.stream()
-      .filter(DataField.class::isInstance)
-      .map(DataField.class::cast)
-      .filter(f -> f.getIndicator1() == INDICATOR_F && f.getIndicator2() == INDICATOR_F)
-      .findFirst()
-      .orElse(null);
-  }
-
   /**
    * Inserts a data field into the record's data fields in ascending tag order, relying on
-   * {@link org.marc4j.marc.Record#getDataFields()} returning the record's live (mutable) internal list rather
+   * {@link Record#getDataFields()} returning the record's live (mutable) internal list rather
    * than a copy - an implementation detail of marc4j's {@code RecordImpl}, not a contract promised by the
    * {@code Record} interface, but pinned by round-trip tests.
    *
    * @param marcRecord marc4j record to mutate
    * @param field      data field to insert
    */
-  public static void addDataFieldInOrder(org.marc4j.marc.Record marcRecord, DataField field) {
+  public static void addDataFieldInOrder(Record marcRecord, DataField field) {
     String tag = field.getTag();
     List<DataField> dataFields = marcRecord.getDataFields();
     for (int i = 0; i < dataFields.size(); i++) {
@@ -125,7 +112,7 @@ public final class MarcFieldEditor {
    * @param fieldName  tag of the field to remove
    * @return true if a field was found and removed, false otherwise
    */
-  public static boolean removeFirstField(org.marc4j.marc.Record marcRecord, String fieldName) {
+  public static boolean removeFirstField(Record marcRecord, String fieldName) {
     VariableField variableField = marcRecord.getVariableField(fieldName);
     if (variableField != null) {
       marcRecord.removeVariableField(variableField);
@@ -143,32 +130,12 @@ public final class MarcFieldEditor {
    * @param value      value that the subfield should contain
    * @return true if a matching field was found and removed, false otherwise
    */
-  public static boolean removeFieldWithSubfieldValue(org.marc4j.marc.Record marcRecord, String fieldName,
-                                                      char subfield, String value) {
+  public static boolean removeFieldWithSubfieldValue(Record marcRecord, String fieldName, char subfield, String value) {
     List<VariableField> variableFields = marcRecord.getVariableFields(fieldName);
     for (VariableField variableField : variableFields) {
       if (fieldContainsSubfieldValue(variableField, subfield, value)) {
         marcRecord.removeVariableField(variableField);
         return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Checks if the field contains a certain value in the selected subfield.
-   *
-   * @param field    from MARC BIB record
-   * @param subfield subfield of the field
-   * @param value    value of the field
-   * @return true if contains, false otherwise
-   */
-  private static boolean fieldContainsSubfieldValue(VariableField field, char subfield, String value) {
-    if (field instanceof DataField dataField) {
-      for (Subfield sub : dataField.getSubfields(subfield)) {
-        if (isNotEmpty(sub.getData()) && sub.getData().contains(value.trim())) {
-          return true;
-        }
       }
     }
     return false;
@@ -181,7 +148,7 @@ public final class MarcFieldEditor {
    * @param tag        tag of the field(s) to remove
    * @return true if at least one field was found and removed, false otherwise
    */
-  public static boolean removeAllFieldsWithTag(org.marc4j.marc.Record marcRecord, String tag) {
+  public static boolean removeAllFieldsWithTag(Record marcRecord, String tag) {
     List<VariableField> fieldsToRemove = List.copyOf(marcRecord.getVariableFields(tag));
     fieldsToRemove.forEach(marcRecord::removeVariableField);
     return !fieldsToRemove.isEmpty();
@@ -196,7 +163,7 @@ public final class MarcFieldEditor {
    * @param subfieldCode subfield code to remove
    * @param values       values of the subfield to remove
    */
-  public static void removeSubfieldValues(org.marc4j.marc.Record marcRecord, List<String> tags, char subfieldCode,
+  public static void removeSubfieldValues(Record marcRecord, List<String> tags, char subfieldCode,
                                           List<String> values) {
     for (VariableField variableField : marcRecord.getVariableFields(tags.toArray(new String[0]))) {
       if (!(variableField instanceof DataField dataField)) {
@@ -221,7 +188,7 @@ public final class MarcFieldEditor {
    * @param value      value to match, already known non-null by the caller
    * @return true if a matching field exists
    */
-  public static boolean fieldExists(org.marc4j.marc.Record marcRecord, String tag, char subfield, String value) {
+  public static boolean fieldExists(Record marcRecord, String tag, char subfield, String value) {
     for (VariableField field : marcRecord.getVariableFields(tag)) {
       if (field instanceof DataField dataField) {
         for (Subfield sub : dataField.getSubfields(subfield)) {
@@ -245,7 +212,7 @@ public final class MarcFieldEditor {
    * @param subfieldCode subfield code to look for
    * @return true if a data field with a subfield of this code exists, false otherwise
    */
-  public static boolean subfieldExists(org.marc4j.marc.Record marcRecord, char subfieldCode) {
+  public static boolean subfieldExists(Record marcRecord, char subfieldCode) {
     for (DataField dataField : marcRecord.getDataFields()) {
       if (dataField.getSubfield(subfieldCode) != null) {
         return true;
@@ -261,7 +228,7 @@ public final class MarcFieldEditor {
    * @param tag        tag to read
    * @return value from field, or null if no controlled field with the given tag exists
    */
-  public static String getControlFieldValue(org.marc4j.marc.Record marcRecord, String tag) {
+  public static String getControlFieldValue(Record marcRecord, String tag) {
     return marcRecord.getControlFields()
       .stream()
       .filter(field -> field.getTag().equals(tag))
@@ -281,7 +248,7 @@ public final class MarcFieldEditor {
    * @param subfield   subfield code whose data value should be returned
    * @return the data of the first matching subfield, or null if no matching field or subfield is found
    */
-  public static String getDataFieldSubfieldValue(org.marc4j.marc.Record marcRecord, String tag, char ind1,
+  public static String getDataFieldSubfieldValue(Record marcRecord, String tag, char ind1,
                                                  char ind2, char subfield) {
     return marcRecord.getDataFields().stream()
       .filter(df -> df.getTag().equals(tag) && df.getIndicator1() == ind1 && df.getIndicator2() == ind2)
@@ -300,12 +267,43 @@ public final class MarcFieldEditor {
    * @return the data of the first matching subfield in any data field with the given tag, or null if no
    *   matching field or subfield is found
    */
-  public static String getDataFieldSubfieldValue(org.marc4j.marc.Record marcRecord, String tag, char subfield) {
+  public static String getDataFieldSubfieldValue(Record marcRecord, String tag, char subfield) {
     return marcRecord.getDataFields().stream()
       .filter(df -> df.getTag().equals(tag))
       .flatMap(df -> df.getSubfields(subfield).stream())
       .findFirst()
       .map(Subfield::getData)
       .orElse(null);
+  }
+
+  private static VariableField getSingleFieldByIndicators(List<VariableField> list) {
+    if (CollectionUtils.isEmpty(list)) {
+      return null;
+    }
+    return list.stream()
+      .filter(DataField.class::isInstance)
+      .map(DataField.class::cast)
+      .filter(f -> f.getIndicator1() == INDICATOR_F && f.getIndicator2() == INDICATOR_F)
+      .findFirst()
+      .orElse(null);
+  }
+
+  /**
+   * Checks if the field contains a certain value in the selected subfield.
+   *
+   * @param field    from MARC BIB record
+   * @param subfield subfield of the field
+   * @param value    value of the field
+   * @return true if contains, false otherwise
+   */
+  private static boolean fieldContainsSubfieldValue(VariableField field, char subfield, String value) {
+    if (field instanceof DataField dataField) {
+      for (Subfield sub : dataField.getSubfields(subfield)) {
+        if (isNotEmpty(sub.getData()) && sub.getData().contains(value.trim())) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 }
