@@ -96,7 +96,7 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
         event.getEventPayload().getAdditionalProperties(), super::executeFieldsManipulation))
       .compose(createdInstance -> {
         var targetContent = targetRecord.getParsedRecord().getContent().toString();
-        var content = reorderMarcRecordFields(sourceContent, targetContent);
+        var content = reorderMarcRecordFields(sourceContent, targetContent, targetRecord.getId());
         targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(content));
         return saveRecordInSrsAndHandleResponse(event, targetRecord, createdInstance);
       });

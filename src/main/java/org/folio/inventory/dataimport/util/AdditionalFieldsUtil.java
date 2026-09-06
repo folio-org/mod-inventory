@@ -12,27 +12,21 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
-import com.github.benmanes.caffeine.cache.stats.CacheStats;
-import io.vertx.core.Context;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.ZoneId;
+import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.ForkJoinPool;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.domain.instances.Instance;
@@ -42,6 +36,7 @@ import org.folio.processing.util.MarcRecordNormalizer;
 import org.folio.rest.jaxrs.model.MarcFieldProtectionSetting;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
+import org.marc4j.MarcException;
 import org.marc4j.MarcJsonReader;
 import org.marc4j.MarcJsonWriter;
 import org.marc4j.MarcReader;
@@ -59,7 +54,7 @@ import org.marc4j.marc.impl.Verifier;
  */
 public final class AdditionalFieldsUtil {
 
-  public static final DateTimeFormatter dateTime005Formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss.S");
+  public static final DateTimeFormatter DATE_TIME_005_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss.S");
   public static final String TAG_00X_PREFIX = "00";
   public static final String TAG_005 = "005";
   public static final String TAG_999 = "999";
@@ -75,11 +70,11 @@ public final class AdditionalFieldsUtil {
   private static final String TAG_003 = "003";
   private static final char TAG_035_IND = ' ';
   private static final String ANY_STRING = "*";
-  private static final String HR_ID_FIELD = "hrid";
   private static final CacheLoader<String, org.marc4j.marc.Record> parsedRecordContentCacheLoader;
   private static final LoadingCache<String, org.marc4j.marc.Record> parsedRecordContentCache;
   private static final String OCLC_PREFIX = "(OCoLC)";
-  private static final ObjectMapper objectMapper = new ObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final int MAX_CACHE_SIZE = 2000;
 
   static {
     // this function is executed when creating a new item to be saved in the cache.
@@ -97,34 +92,19 @@ public final class AdditionalFieldsUtil {
       };
 
     parsedRecordContentCache =
-      Caffeine.newBuilder().maximumSize(2000)
-        // weak keys allows parsed content strings that are used as keys to be garbage
-        // collected, even it is still
-        // referenced by the cache.
-        .weakKeys()
+      Caffeine.newBuilder()
+        .maximumSize(MAX_CACHE_SIZE)
+        // strong (equals/hashCode-based) keys: the cache is content-addressed, so structurally-equal
+        // parsed content must map to the same entry regardless of String instance identity.
         .recordStats()
-        .executor(
-          serviceExecutor -> {
-            // Due to the static nature and the API of this AdditionalFieldsUtil class, it is difficult to
-            // pass a vertx instance or assume whether a call to any of its static methods here is by a Vertx
-            // thread or a regular thread. The logic before is able to discern the type of thread and execute
-            // cache operations using the appropriate threading model.
-            Context context = Vertx.currentContext();
-            if (context != null) {
-              context.runOnContext(ar -> serviceExecutor.run());
-            } else {
-              // The common pool below is used because it is the  default executor for caffeine
-              ForkJoinPool.commonPool().execute(serviceExecutor);
-            }
-          })
         .build(parsedRecordContentCacheLoader);
   }
 
   private AdditionalFieldsUtil() {
   }
 
-  public static CacheStats getCacheStats() {
-    return parsedRecordContentCache.stats();
+  public static AdditionalFieldsUtilCacheStats getCacheStats() {
+    return AdditionalFieldsUtilCacheStats.fromCaffeine(parsedRecordContentCache.stats());
   }
 
   /**
@@ -138,11 +118,9 @@ public final class AdditionalFieldsUtil {
    */
   public static boolean addFieldToMarcRecord(Record recordForUpdate, String field, char subfield, String value) {
     boolean result = false;
-    try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+    try {
       if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null
           && recordForUpdate.getParsedRecord().getContent() != null) {
-        MarcWriter streamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
-        MarcJsonWriter jsonWriter = new MarcJsonWriter(os);
         MarcFactory factory = MarcFactory.newInstance();
         org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
         if (marcRecord != null) {
@@ -160,15 +138,7 @@ public final class AdditionalFieldsUtil {
           }
           dataField.addSubfield(factory.newSubfield(subfield, value));
           marcRecord.addVariableField(dataField);
-          // use stream writer to recalculate leader
-          streamWriter.write(marcRecord);
-          jsonWriter.write(marcRecord);
-
-          String parsedContentString = new JsonObject(os.toString()).encode();
-          // save parsed content string to cache then set it on the record
-          parsedRecordContentCache.put(parsedContentString, marcRecord);
-          recordForUpdate.setParsedRecord(recordForUpdate.getParsedRecord().withContent(parsedContentString));
-          result = true;
+          result = recalculateLeaderAndParsedRecord(recordForUpdate, marcRecord);
         }
       }
     } catch (Exception e) {
@@ -185,13 +155,26 @@ public final class AdditionalFieldsUtil {
    * @param mappingParameters mapping parameters
    */
   public static void updateLatestTransactionDate(Record recordForUpdate, MappingParameters mappingParameters) {
+    updateLatestTransactionDate(recordForUpdate, mappingParameters, Clock.systemDefaultZone());
+  }
+
+  /**
+   * Updates field 005 for case when this field is not protected, using the given {@link Clock} as the source of
+   * the current time so the resulting value is deterministic and testable.
+   *
+   * @param recordForUpdate   record to update
+   * @param mappingParameters mapping parameters
+   * @param clock             clock used to compute the current date/time written to field 005
+   */
+  public static void updateLatestTransactionDate(Record recordForUpdate, MappingParameters mappingParameters,
+                                                 Clock clock) {
     if (isField005NeedToUpdate(recordForUpdate, mappingParameters)) {
-      String date = dateTime005Formatter.format(ZonedDateTime.ofInstant(Instant.now(), ZoneId.systemDefault()));
-      boolean isLatestTransactionDateUpdated = addControlledFieldToMarcRecord(
-        recordForUpdate, TAG_005, date, AdditionalFieldsUtil::replaceOrAddControlledFieldInMarcRecord);
-      if (!isLatestTransactionDateUpdated) {
+      String date = DATE_TIME_005_FORMATTER.format(ZonedDateTime.now(clock));
+      try {
+        addControlledFieldToMarcRecordOrThrow(recordForUpdate, TAG_005, date, true);
+      } catch (Exception e) {
         throw new EventProcessingException(format("Failed to update field '005' to record with id '%s'",
-          recordForUpdate != null ? recordForUpdate.getId() : "null"));
+          recordForUpdate != null ? recordForUpdate.getId() : "null"), e);
       }
     }
   }
@@ -202,45 +185,60 @@ public final class AdditionalFieldsUtil {
    * @param recordForUpdate record that needs to be updated
    * @param field           tag of controlled field
    * @param value           value of the field to add
+   * @param replace         if true, replaces an existing field with the same tag; if false, appends a new field
    * @return true if succeeded, false otherwise
    */
   public static boolean addControlledFieldToMarcRecord(Record recordForUpdate, String field, String value,
-                                                       AddControlledFieldToMarcRecordFunction addFieldFunc) {
-    boolean result = false;
-    try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
-      if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null
-          && recordForUpdate.getParsedRecord().getContent() != null) {
-        MarcWriter streamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
-        MarcJsonWriter jsonWriter = new MarcJsonWriter(os);
-
-        org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
-        if (marcRecord != null) {
-          addFieldFunc.apply(field, value, marcRecord);
-          // use stream writer to recalculate leader
-          streamWriter.write(marcRecord);
-          jsonWriter.write(marcRecord);
-
-          String parsedContentString = new JsonObject(os.toString()).encode();
-          // save parsed content string to cache then set it on the record
-          parsedRecordContentCache.put(parsedContentString, marcRecord);
-          recordForUpdate.setParsedRecord(recordForUpdate.getParsedRecord().withContent(parsedContentString));
-          result = true;
-        }
-      }
+                                                       boolean replace) {
+    try {
+      addControlledFieldToMarcRecordOrThrow(recordForUpdate, field, value, replace);
+      return true;
     } catch (Exception e) {
       LOGGER.warn("addControlledFieldToMarcRecord:: Failed to add additional controlled field {} to record {}",
         field, getRecordId(recordForUpdate), e);
+      return false;
     }
-    return result;
   }
 
-  public static void addControlledFieldToMarcRecord(String field, String value, org.marc4j.marc.Record marcRecord) {
+  /**
+   * Throwing core of {@link #addControlledFieldToMarcRecord(Record, String, String, boolean)}. Same behaviour,
+   * except failures - null record/parsed-record/content, an unparseable record, or a failed write-back - raise
+   * a {@link MarcContentException} carrying the failure detail instead of being swallowed into a boolean.
+   * This lets callers that need the real cause (e.g. {@link #updateLatestTransactionDate}) chain it into their
+   * own exception rather than losing it.
+   */
+  private static void addControlledFieldToMarcRecordOrThrow(Record recordForUpdate, String field, String value,
+                                                            boolean replace) {
+    if (recordForUpdate == null || recordForUpdate.getParsedRecord() == null
+        || recordForUpdate.getParsedRecord().getContent() == null) {
+      throw new MarcContentException(format(
+        "Cannot add controlled field '%s' to record '%s': record, parsed record, or its content is null",
+        field, getRecordId(recordForUpdate)));
+    }
+    org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
+    if (marcRecord == null) {
+      throw new MarcContentException(format(
+        "Cannot add controlled field '%s' to record '%s': failed to parse the parsed record content",
+        field, getRecordId(recordForUpdate)));
+    }
+    if (replace) {
+      replaceOrAddControlField(field, value, marcRecord);
+    } else {
+      appendControlField(field, value, marcRecord);
+    }
+    if (!recalculateLeaderAndParsedRecord(recordForUpdate, marcRecord)) {
+      throw new MarcContentException(format(
+        "Cannot add controlled field '%s' to record '%s': failed to recalculate leader and write back the "
+        + "parsed record content", field, getRecordId(recordForUpdate)));
+    }
+  }
+
+  private static void appendControlField(String field, String value, org.marc4j.marc.Record marcRecord) {
     ControlField dataField = MarcFactory.newInstance().newControlField(field, value);
     marcRecord.addVariableField(dataField);
   }
 
-  public static void replaceOrAddControlledFieldInMarcRecord(String field, String value,
-                                                             org.marc4j.marc.Record marcRecord) {
+  private static void replaceOrAddControlField(String field, String value, org.marc4j.marc.Record marcRecord) {
     var currentField = (ControlField) marcRecord.getVariableField(field);
     var newControlField = MarcFactory.newInstance().newControlField(field, value);
     if (currentField != null) {
@@ -280,7 +278,7 @@ public final class AdditionalFieldsUtil {
     if (!Strings.CS.equals(hrId, valueFrom001)) {
       removeField(marcRecord, TAG_001);
       if (StringUtils.isNotEmpty(hrId)) {
-        addControlledFieldToMarcRecord(marcRecord, TAG_001, hrId, AdditionalFieldsUtil::addControlledFieldToMarcRecord);
+        addControlledFieldToMarcRecord(marcRecord, TAG_001, hrId, false);
       }
     }
   }
@@ -306,7 +304,7 @@ public final class AdditionalFieldsUtil {
       }
     } catch (Exception e) {
       LOGGER.warn("getValueFromControlledField:: Failed to read controlled field {} from record {}", tag,
-        srcRecord.getId(), e);
+        getRecordId(srcRecord), e);
       return null;
     }
     return null;
@@ -377,11 +375,9 @@ public final class AdditionalFieldsUtil {
    */
   public static boolean removeField(Record recordForUpdate, String fieldName, char subfield, String value) {
     boolean isFieldRemoveSucceed = false;
-    try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+    try {
       if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null
           && recordForUpdate.getParsedRecord().getContent() != null) {
-        MarcWriter marcStreamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
-        MarcJsonWriter marcJsonWriter = new MarcJsonWriter(baos);
         org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
         if (marcRecord != null) {
           if (StringUtils.isEmpty(value)) {
@@ -391,14 +387,7 @@ public final class AdditionalFieldsUtil {
           }
 
           if (isFieldRemoveSucceed) {
-            // use stream writer to recalculate leader
-            marcStreamWriter.write(marcRecord);
-            marcJsonWriter.write(marcRecord);
-
-            String parsedContentString = new JsonObject(baos.toString()).encode();
-            // save parsed content string to cache then set it on the record
-            parsedRecordContentCache.put(parsedContentString, marcRecord);
-            recordForUpdate.setParsedRecord(recordForUpdate.getParsedRecord().withContent(parsedContentString));
+            isFieldRemoveSucceed = recalculateLeaderAndParsedRecord(recordForUpdate, marcRecord);
           }
         }
       }
@@ -428,7 +417,10 @@ public final class AdditionalFieldsUtil {
    * @return - true if filling needed.
    */
   public static boolean isFieldsFillingNeeded(Record srcRecord, Instance instance) {
-    var externalIdsHolder = srcRecord.getExternalIdsHolder();
+    var externalIdsHolder = srcRecord != null ? srcRecord.getExternalIdsHolder() : null;
+    if (externalIdsHolder == null) {
+      return false;
+    }
     return isValidIdAndHrid(instance.getId(), instance.getHrid(),
       externalIdsHolder.getInstanceId(), externalIdsHolder.getInstanceHrid());
   }
@@ -444,26 +436,16 @@ public final class AdditionalFieldsUtil {
   public static boolean addDataFieldToMarcRecord(Record recordForUpdate, String tag, char ind1, char ind2,
                                                  char subfield, String value) {
     boolean result = false;
-    try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+    try {
       if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null
           && recordForUpdate.getParsedRecord().getContent() != null) {
-        MarcWriter streamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
-        MarcJsonWriter jsonWriter = new MarcJsonWriter(os);
         MarcFactory factory = MarcFactory.newInstance();
         org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
         if (marcRecord != null) {
           DataField dataField = factory.newDataField(tag, ind1, ind2);
           dataField.addSubfield(factory.newSubfield(subfield, value));
           addDataFieldInNumericalOrder(dataField, marcRecord);
-          // use stream writer to recalculate leader
-          streamWriter.write(marcRecord);
-          jsonWriter.write(marcRecord);
-
-          String parsedContentString = new JsonObject(os.toString()).encode();
-          // save parsed content string to cache then set it on the record
-          parsedRecordContentCache.put(parsedContentString, marcRecord);
-          recordForUpdate.setParsedRecord(recordForUpdate.getParsedRecord().withContent(parsedContentString));
-          result = true;
+          result = recalculateLeaderAndParsedRecord(recordForUpdate, marcRecord);
         }
       }
     } catch (Exception e) {
@@ -489,6 +471,11 @@ public final class AdditionalFieldsUtil {
    * @return true if exist
    */
   public static boolean isFieldExist(Record recordForUpdate, String tag, char subfield, String value) {
+    if (value == null) {
+      // nothing to match against - deliberately "not found", rather than letting the trim() below
+      // NPE and get masked as a caught-and-logged "error during the search" false.
+      return false;
+    }
     try {
       org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
       if (marcRecord != null) {
@@ -527,30 +514,27 @@ public final class AdditionalFieldsUtil {
   /**
    * Move original marc hrId to 035 tag and assign created by inventory hrId into 001 tag
    *
-   * @param recordInstancePair pair of related instance and record
+   * @param srcRecord record to update
+   * @param hrid      hrid to assign into the 001 tag
    */
-  public static void fillHrIdFieldInMarcRecord(Pair<Record, JsonObject> recordInstancePair) {
-    String hrid = recordInstancePair.getValue().getString(HR_ID_FIELD);
-    String valueFrom001 = AdditionalFieldsUtil.getValueFromControlledField(recordInstancePair.getKey(), TAG_001);
+  public static void fillHrIdFieldInMarcRecord(Record srcRecord, String hrid) {
+    String valueFrom001 = getValueFromControlledField(srcRecord, TAG_001);
     if (!Strings.CS.equals(hrid, valueFrom001)) {
       if (StringUtils.isNotEmpty(valueFrom001)) {
-        String originalHrIdPrefix =
-          AdditionalFieldsUtil.getValueFromControlledField(recordInstancePair.getKey(), TAG_003);
-        String originalHrId = AdditionalFieldsUtil.mergeFieldsFor035(originalHrIdPrefix, valueFrom001);
-        if (!AdditionalFieldsUtil.isFieldExist(recordInstancePair.getKey(), TAG_035, TAG_035_SUB, originalHrId)) {
-          AdditionalFieldsUtil.addDataFieldToMarcRecord(recordInstancePair.getKey(), TAG_035, TAG_035_IND, TAG_035_IND,
-            TAG_035_SUB, originalHrId);
+        String originalHrIdPrefix = getValueFromControlledField(srcRecord, TAG_003);
+        String originalHrId = mergeFieldsFor035(originalHrIdPrefix, valueFrom001);
+        if (!isFieldExist(srcRecord, TAG_035, TAG_035_SUB, originalHrId)) {
+          addDataFieldToMarcRecord(srcRecord, TAG_035, TAG_035_IND, TAG_035_IND, TAG_035_SUB, originalHrId);
         }
       }
-      AdditionalFieldsUtil.removeField(recordInstancePair.getKey(), TAG_001);
+      removeField(srcRecord, TAG_001);
       if (StringUtils.isNotEmpty(hrid)) {
-        AdditionalFieldsUtil.addControlledFieldToMarcRecord(recordInstancePair.getKey(), TAG_001, hrid,
-          AdditionalFieldsUtil::addControlledFieldToMarcRecord);
+        addControlledFieldToMarcRecord(srcRecord, TAG_001, hrid, false);
       }
     } else {
-      AdditionalFieldsUtil.remove035WithActualHrId(recordInstancePair.getKey(), hrid);
+      remove035WithActualHrId(srcRecord, hrid);
     }
-    AdditionalFieldsUtil.removeField(recordInstancePair.getKey(), TAG_003);
+    removeField(srcRecord, TAG_003);
   }
 
   /**
@@ -559,17 +543,19 @@ public final class AdditionalFieldsUtil {
    *
    * @param sourceOrderContent content with incoming record fields order
    * @param systemOrderContent system modified record content with reordered fields
+   * @param recordId           id of the record being reordered, for diagnostics if reordering fails
    * @return MARC record parsed content with desired fields order
    */
-  public static String reorderMarcRecordFields(String sourceOrderContent, String systemOrderContent) {
+  public static String reorderMarcRecordFields(String sourceOrderContent, String systemOrderContent,
+                                               String recordId) {
     try {
-      var parsedContent = objectMapper.readTree(systemOrderContent);
+      var parsedContent = OBJECT_MAPPER.readTree(systemOrderContent);
       var fieldsArrayNode = (ArrayNode) parsedContent.path(FIELDS);
 
       var nodes = toNodeList(fieldsArrayNode);
       var nodes00X = removeAndGetNodesByTagPrefix(nodes, TAG_00X_PREFIX);
       var sourceOrderTags = getSourceFields(sourceOrderContent);
-      var reorderedFields = objectMapper.createArrayNode();
+      var reorderedFields = OBJECT_MAPPER.createArrayNode();
 
       var node001 = removeAndGetNodeByTag(nodes00X, TAG_001);
       if (node001 != null && !node001.isEmpty()) {
@@ -600,7 +586,8 @@ public final class AdditionalFieldsUtil {
       ((ObjectNode) parsedContent).set(FIELDS, reorderedFields);
       return parsedContent.toString();
     } catch (Exception e) {
-      LOGGER.error("An error occurred while reordering Marc record fields: {}", e.getMessage(), e);
+      LOGGER.error("reorderMarcRecordFields:: Failed to reorder Marc record fields for record '{}', falling back "
+        + "to the un-reordered system field order: {}", recordId, e.getMessage(), e);
       return systemOrderContent;
     }
   }
@@ -617,12 +604,24 @@ public final class AdditionalFieldsUtil {
       .anyMatch(sf -> sf.getData() != null && sf.getData().trim().startsWith(OCLC_PREFIX));
   }
 
-  private static void recalculateLeaderAndParsedRecord(Record recordForUpdate, org.marc4j.marc.Record marcRecord) {
+  /**
+   * Recalculates the leader (via a stream-writer round trip) and rewrites the parsed record content for
+   * {@code recordForUpdate}, then refreshes the cache entry for the new content.
+   *
+   * @param recordForUpdate record whose parsed record content should be replaced
+   * @param marcRecord      mutated marc4j record to serialize
+   * @return true if the leader was recalculated and the record content was updated, false if an error occurred
+   */
+  private static boolean recalculateLeaderAndParsedRecord(Record recordForUpdate, org.marc4j.marc.Record marcRecord) {
     try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+      // marcRecord has already been mutated in place by the caller. The cache entry keyed by the record's
+      // current (pre-mutation) content string now points at an object whose fields no longer match that key -
+      // invalidate it before anyone else can observe the stale mapping, and before we re-key it below.
+      String staleContentKey = normalizeContent(recordForUpdate.getParsedRecord().getContent());
+      parsedRecordContentCache.invalidate(staleContentKey);
       MarcWriter streamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
-      MarcJsonWriter jsonWriter = new MarcJsonWriter(os);
-
-      if (marcRecord != null) {
+      MarcWriter jsonWriter = new MarcJsonWriter(os);
+      try (AutoCloseable closeStreamWriter = streamWriter::close; AutoCloseable closeJsonWriter = jsonWriter::close) {
         // use stream writer to recalculate leader
         streamWriter.write(marcRecord);
         jsonWriter.write(marcRecord);
@@ -631,15 +630,32 @@ public final class AdditionalFieldsUtil {
         // save parsed content string to cache then set it on the record
         parsedRecordContentCache.put(parsedContentString, marcRecord);
         recordForUpdate.setParsedRecord(recordForUpdate.getParsedRecord().withContent(parsedContentString));
+        return true;
       }
     } catch (Exception e) {
-      LOGGER.warn("recalculateLeaderAndParsedRecord:: Failed to recalculate leader and parsed record for record: {}",
-        recordForUpdate.getId(), e);
+      if (isOversizedRecordException(e)) {
+        LOGGER.warn("recalculateLeaderAndParsedRecord:: Record {} exceeds the MARC21 99999-byte length limit "
+          + "and cannot be serialized", recordForUpdate.getId(), e);
+      } else {
+        LOGGER.warn("recalculateLeaderAndParsedRecord:: Failed to recalculate leader and parsed record for "
+          + "record: {}", recordForUpdate.getId(), e);
+      }
+      return false;
     }
   }
 
+  /**
+   * Detects marc4j's oversized-record failure - {@code MarcStreamWriter} refuses to write a record whose
+   * ISO 2709 serialization would exceed the MARC21 99999-byte record-length limit. Checking the exception type
+   * first, then the message, keeps this from misclassifying unrelated {@link MarcException}s (e.g. an oversized
+   * individual field, which marc4j reports with a different message) as this specific, actionable condition.
+   */
+  private static boolean isOversizedRecordException(Exception e) {
+    return e instanceof MarcException && e.getMessage() != null && e.getMessage().contains("99999 bytes");
+  }
+
   private static MarcReader buildMarcReader(Record srcRecord) {
-    String content = normalizeContent(srcRecord.getParsedRecord());
+    String content = normalizeContent(srcRecord.getParsedRecord().getContent());
     return new MarcJsonReader(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
   }
 
@@ -648,7 +664,9 @@ public final class AdditionalFieldsUtil {
       return null;
     }
     return list.stream()
-      .filter(f -> ((DataField) f).getIndicator1() == INDICATOR_F && ((DataField) f).getIndicator2() == INDICATOR_F)
+      .filter(DataField.class::isInstance)
+      .map(DataField.class::cast)
+      .filter(f -> f.getIndicator1() == INDICATOR_F && f.getIndicator2() == INDICATOR_F)
       .findFirst()
       .orElse(null);
   }
@@ -664,10 +682,8 @@ public final class AdditionalFieldsUtil {
     boolean needToUpdate = true;
     List<MarcFieldProtectionSetting> fieldProtectionSettings = mappingParameters.getMarcFieldProtectionSettings();
     if (CollectionUtils.isNotEmpty(fieldProtectionSettings)) {
-      MarcReader reader =
-        new MarcJsonReader(new ByteArrayInputStream(srcRecord.getParsedRecord().getContent().toString().getBytes()));
-      if (reader.hasNext()) {
-        org.marc4j.marc.Record marcRecord = reader.next();
+      org.marc4j.marc.Record marcRecord = computeMarcRecord(srcRecord);
+      if (marcRecord != null) {
         List<VariableField> variableFields = marcRecord.getVariableFields(TAG_005);
         if (!variableFields.isEmpty()) {
           VariableField field = variableFields.getFirst();
@@ -722,18 +738,15 @@ public final class AdditionalFieldsUtil {
   }
 
   /**
-   * Normalize parsed record content of {@link ParsedRecord} is type {@link String}
+   * Canonicalizes parsed record content (as held by {@link ParsedRecord#getContent()}, either a {@link String} or a
+   * structured type such as {@link JsonObject}/{@code Map}) into a single canonical JSON string, so that content
+   * differing only in whitespace or key order produces the same cache key.
    *
-   * @param parsedRecord parsed record
-   * @return parsed record normalized content
+   * @param content parsed record content
+   * @return canonicalized content string
    */
-  private static String normalizeContent(ParsedRecord parsedRecord) {
-    Object content = parsedRecord.getContent();
-    return (content instanceof String contentStr ? new JsonObject(contentStr) : JsonObject.mapFrom(content)).encode();
-  }
-
   private static String normalizeContent(Object content) {
-    return content instanceof String contentStr ? contentStr : Json.encode(content);
+    return (content instanceof String contentStr ? new JsonObject(contentStr) : JsonObject.mapFrom(content)).encode();
   }
 
   private static boolean removeFieldByNameAndValue(org.marc4j.marc.Record marcRecord, String fieldName, char subfield,
@@ -782,7 +795,7 @@ public final class AdditionalFieldsUtil {
   }
 
   private static boolean isValidIdAndHrid(String id, String hrid, String externalId, String externalHrid) {
-    return (isNotEmpty(externalId)) && (id.equals(externalId) && !hrid.equals(externalHrid));
+    return isNotEmpty(externalId) && (Objects.equals(id, externalId) && !Objects.equals(hrid, externalHrid));
   }
 
   private static void addDataFieldInNumericalOrder(DataField field, org.marc4j.marc.Record marcRecord) {
@@ -831,7 +844,11 @@ public final class AdditionalFieldsUtil {
   }
 
   private static String getTagFromNode(JsonNode node) {
-    return node.fieldNames().next();
+    // an empty field node ({}) has no tag and must never structurally match a real tag lookup, so callers
+    // (removeAndGetNodeByTag's equality check, removeAndGetNodesByTagPrefix's startsWith check, and the
+    // getSourceFields loop) all correctly treat "" as "never matches" for well-formed input.
+    var fieldNames = node.fieldNames();
+    return fieldNames.hasNext() ? fieldNames.next() : "";
   }
 
   private static List<String> getSourceFields(String source) {
@@ -839,7 +856,7 @@ public final class AdditionalFieldsUtil {
     var remainingFields = new ArrayList<String>();
     var has001 = false;
     try {
-      var sourceJson = objectMapper.readTree(source);
+      var sourceJson = OBJECT_MAPPER.readTree(source);
       var fieldsNode = sourceJson.get(FIELDS);
 
       for (JsonNode fieldNode : fieldsNode) {
@@ -862,10 +879,5 @@ public final class AdditionalFieldsUtil {
       LOGGER.error("An error occurred while parsing source JSON: {}", e.getMessage(), e);
     }
     return sourceFields;
-  }
-
-  @FunctionalInterface
-  public interface AddControlledFieldToMarcRecordFunction {
-    void apply(String field, String value, org.marc4j.marc.Record marcRecord);
   }
 }

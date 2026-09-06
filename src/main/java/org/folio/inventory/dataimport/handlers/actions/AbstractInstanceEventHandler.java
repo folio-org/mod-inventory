@@ -21,7 +21,6 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
@@ -319,7 +318,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     setExternalIdsForInstance(externalIdsHolder, externalId, externalHrId);
     boolean isAddedField = AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, TAG_999, 'i', externalId);
     if (IS_HRID_FILLING_NEEDED_FOR_INSTANCE) {
-      AdditionalFieldsUtil.fillHrIdFieldInMarcRecord(Pair.of(srcRecord, externalEntity));
+      AdditionalFieldsUtil.fillHrIdFieldInMarcRecord(srcRecord, externalHrId);
     }
     if (!isAddedField) {
       throw new EventProcessingException(

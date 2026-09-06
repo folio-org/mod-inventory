@@ -3,16 +3,17 @@ package org.folio.inventory.consortium.util;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.Record;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
+import org.marc4j.MarcException;
 import org.marc4j.MarcJsonReader;
 import org.marc4j.MarcJsonWriter;
 import org.marc4j.MarcReader;
@@ -47,7 +48,9 @@ public final class MarcRecordUtil {
       org.marc4j.marc.Record marcRecord = computeMarcRecord(record);
       if (marcRecord != null) {
         for (VariableField variableField : marcRecord.getVariableFields(fields.toArray(new String[0]))) {
-          DataField dataField = (DataField) variableField;
+          if (!(variableField instanceof DataField dataField)) {
+            continue;
+          }
           List<Subfield> subfields = dataField.getSubfields(subfieldCode);
           for (Subfield subfield : subfields) {
             if (subfield != null && values.contains(subfield.getData())) {
@@ -67,26 +70,52 @@ public final class MarcRecordUtil {
     }
   }
 
+  /**
+   * Removes all fields with the given tag from the marc record, recalculating the leader in the process.
+   *
+   * @param marcRecord record that needs to be updated
+   * @param fieldTag   tag of the field(s) to remove
+   * @return the same record instance, with its parsed record content updated if any field was removed
+   */
   public static Record removeFieldFromMarcRecord(Record marcRecord, String fieldTag) {
-    var content = marcRecord.getParsedRecord().getContent();
-    JsonObject contentObject = (content instanceof String contentStr) ? new JsonObject(contentStr) :
-                               JsonObject.mapFrom(content);
+    org.marc4j.marc.Record parsedMarcRecord = computeMarcRecord(marcRecord);
+    if (parsedMarcRecord != null) {
+      List<VariableField> fieldsToRemove = new ArrayList<>(parsedMarcRecord.getVariableFields(fieldTag));
+      if (!fieldsToRemove.isEmpty()) {
+        fieldsToRemove.forEach(parsedMarcRecord::removeVariableField);
 
-    JsonArray fields = contentObject.getJsonArray("fields");
-    if (fields != null) {
-      for (int i = 0; i < fields.size(); i++) {
-        JsonObject field = fields.getJsonObject(i);
-        if (field != null && field.getMap().containsKey(fieldTag)) {
-          field.remove(fieldTag);
-          fields.remove(i);
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+          MarcWriter marcStreamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
+          MarcWriter marcJsonWriter = new MarcJsonWriter(baos);
+          try (AutoCloseable closeStreamWriter = marcStreamWriter::close;
+               AutoCloseable closeJsonWriter = marcJsonWriter::close) {
+            // use stream writer to recalculate leader
+            marcStreamWriter.write(parsedMarcRecord);
+            marcJsonWriter.write(parsedMarcRecord);
+
+            String updatedContent = new JsonObject(baos.toString()).encode();
+            marcRecord.getParsedRecord().setContent(updatedContent);
+          }
+        } catch (Exception e) {
+          if (isOversizedRecordException(e)) {
+            LOGGER.warn("removeFieldFromMarcRecord:: Record {} exceeds the MARC21 99999-byte length limit and "
+              + "cannot be serialized", marcRecord.getId(), e);
+          } else {
+            LOGGER.warn("removeFieldFromMarcRecord:: Failed to remove field {} from record {}", fieldTag,
+              marcRecord.getId(), e);
+          }
         }
       }
     }
-
-    String updatedFormattedContent = contentObject.encodePrettily();
-    marcRecord.getParsedRecord().setFormattedContent(updatedFormattedContent);
-    marcRecord.getParsedRecord().setContent(contentObject);
     return marcRecord;
+  }
+
+  /**
+   * Detects marc4j's oversized-record failure - {@code MarcStreamWriter} refuses to write a record whose
+   * ISO 2709 serialization would exceed the MARC21 99999-byte record-length limit.
+   */
+  private static boolean isOversizedRecordException(Exception e) {
+    return e instanceof MarcException && e.getMessage() != null && e.getMessage().contains("99999 bytes");
   }
 
   /**
@@ -147,7 +176,7 @@ public final class MarcRecordUtil {
   }
 
   private static MarcReader buildMarcReader(Record record) {
-    String content = ParsedRecordUtil.normalize(record.getParsedRecord()).encode();
+    String content = ParsedRecordUtil.normalize(record.getParsedRecord().getContent()).encode();
     return new MarcJsonReader(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
   }
 

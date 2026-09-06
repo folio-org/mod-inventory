@@ -171,7 +171,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
                 .compose(createdInstance -> executeFieldsManipulation(createdInstance, targetRecord))
                 .compose(createdInstance -> {
                   var targetContent = targetRecord.getParsedRecord().getContent().toString();
-                  var content = reorderMarcRecordFields(sourceContent, targetContent);
+                  var content = reorderMarcRecordFields(sourceContent, targetContent, targetRecord.getId());
                   targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(content));
                   setSuppressFromDiscovery(targetRecord, createdInstance.getDiscoverySuppress());
                   return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance,

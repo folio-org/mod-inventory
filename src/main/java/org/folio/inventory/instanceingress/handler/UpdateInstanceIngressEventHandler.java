@@ -123,7 +123,7 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
         event.getEventPayload().getAdditionalProperties(), super::executeFieldsManipulation))
       .compose(updatedInstance -> {
         var targetContent = targetRecord.getParsedRecord().getContent().toString();
-        var content = reorderMarcRecordFields(sourceContent, targetContent);
+        var content = reorderMarcRecordFields(sourceContent, targetContent, targetRecord.getId());
         targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(content));
         return putRecordInSrsAndHandleResponse(targetRecord, updatedInstance);
       })

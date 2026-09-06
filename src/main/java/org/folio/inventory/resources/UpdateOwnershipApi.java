@@ -889,8 +889,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     ExternalIdsHolder newExternalIds = sourceSrsRecord.getExternalIdsHolder();
     newExternalIds.setHoldingsHrid(targetHolding.getHrid());
 
-    AdditionalFieldsUtil.addControlledFieldToMarcRecord(sourceSrsRecord, TAG_001, targetHolding.getHrid(),
-      AdditionalFieldsUtil::replaceOrAddControlledFieldInMarcRecord);
+    AdditionalFieldsUtil.addControlledFieldToMarcRecord(sourceSrsRecord, TAG_001, targetHolding.getHrid(), true);
     LOGGER.info("buildTargetSrsRecord:: Updated field 001 with new HRID: {}", targetHolding.getHrid());
 
     // Replace existing 852$b values (regardless of indicators) and set target holding permanent location code.

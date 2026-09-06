@@ -11,7 +11,7 @@ import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.dateTime005Formatter;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.DATE_TIME_005_FORMATTER;
 import static org.folio.inventory.dataimport.util.DataImportConstants.ALREADY_EXISTS_ERROR_MSG;
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.LEADER_STATUS_DELETED;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
@@ -470,7 +470,8 @@ class CreateInstanceEventHandlerTest extends BaseWireMockTest {
     String title = "titleValue";
     RecordToEntity recordToInstance = RecordToEntity.builder().recordId(recordId).entityId(instanceId).build();
 
-    String expectedDate = dateTime005Formatter.format(ZonedDateTime.ofInstant(Instant.now(), ZoneId.systemDefault()));
+    String expectedDate =
+      DATE_TIME_005_FORMATTER.format(ZonedDateTime.ofInstant(Instant.now(), ZoneId.systemDefault()));
 
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId), StringValue.of(title));
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);

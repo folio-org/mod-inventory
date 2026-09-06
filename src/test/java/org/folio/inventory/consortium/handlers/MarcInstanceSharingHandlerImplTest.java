@@ -36,6 +36,7 @@ import org.folio.Link;
 import org.folio.LinkingRuleDto;
 import org.folio.Record;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
@@ -220,7 +221,7 @@ class MarcInstanceSharingHandlerImplTest {
 
     verify(restDataImportHelper, times(1))
       .importMarcRecord(Mockito.argThat(marcRecord ->
-          JsonObject.mapFrom(marcRecord.getParsedRecord().getContent()).getJsonArray("fields").encode()
+          ParsedRecordUtil.normalize(marcRecord.getParsedRecord().getContent()).getJsonArray("fields").encode()
             .equals(PARSED_RECORD_FIELDS_AFTER_UNLINK)),
         any(), any());
 
@@ -280,7 +281,7 @@ class MarcInstanceSharingHandlerImplTest {
 
       verify(restDataImportHelper, times(1))
         .importMarcRecord(Mockito.argThat(marcRecord ->
-            JsonObject.mapFrom(marcRecord.getParsedRecord().getContent())
+            ParsedRecordUtil.normalize(marcRecord.getParsedRecord().getContent())
               .getJsonArray("fields").encode().equals(PARSED_RECORD_FIELDS_AFTER_UNLINK_LOCAL_LINKS)),
           any(), any());
 
@@ -482,13 +483,17 @@ class MarcInstanceSharingHandlerImplTest {
     var future = marcHandler.publishInstance(instance, sharingInstanceMetadata, sourceTenantProvider,
       targetTenantProvider, kafkaHeaders);
 
-    //then
+    //then: both authorities are CONSORTIUM_MARC (not local), so their $9 links must survive untouched.
+    // (Comparing the leader here would be wrong regardless of local-authority linking: importAndCommit always
+    // strips "001" before import, which always changes the recalculated leader - asserting the leader is
+    // unchanged only ever passed because removeFieldFromMarcRecord used to leave a stale, unrecalculated
+    // leader in place; that staleness is exactly the bug fixed separately in MarcRecordUtil.)
     verify(restDataImportHelper, times(1))
-      .importMarcRecord(Mockito.argThat(marcRecord ->
-          JsonObject.mapFrom(marcRecord.getParsedRecord().getContent()).getString("leader").equals(
-            new JsonObject(RECORD_JSON_WITH_LINKED_AUTHORITIES).getJsonObject("parsedRecord").getJsonObject("content")
-              .getString("leader"))),
-        any(), any());
+      .importMarcRecord(Mockito.argThat(marcRecord -> {
+        String fields =
+          ParsedRecordUtil.normalize(marcRecord.getParsedRecord().getContent()).getJsonArray("fields").encode();
+        return fields.contains(AUTHORITY_ID_1) && fields.contains(AUTHORITY_ID_2);
+      }), any(), any());
 
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
       assertEquals(INSTANCE_ID_1, result);
