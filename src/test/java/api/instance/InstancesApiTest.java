@@ -23,7 +23,6 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
-import static org.joda.time.DateTimeZone.UTC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -58,13 +57,12 @@ import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.util.PercentCodec;
-import org.joda.time.DateTime;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import support.ApiRoot;
 import support.ApiTests;
+import support.FutureAssistance;
 import support.InstanceApiClient;
-import support.fakes.EndpointFailureDescriptor;
 
 public class InstancesApiTest extends ApiTests {
 
@@ -108,10 +106,7 @@ public class InstancesApiTest extends ApiTests {
         ))
       );
 
-    final var postCompleted = okapiClient
-      .post(ApiRoot.instances(), newInstanceRequest);
-
-    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
+    Response postResponse = instancesClient.attemptToCreate(newInstanceRequest);
 
     String location = postResponse.location();
 
@@ -187,19 +182,14 @@ public class InstancesApiTest extends ApiTests {
       .put("tags", null)
       .put("instanceTypeId", ApiTestSuite.getTextInstanceType());
 
-    final var postCompleted = okapiClient
-      .post(ApiRoot.instances(), newInstanceRequest);
-
-    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
+    Response postResponse = instancesClient.attemptToCreate(newInstanceRequest);
 
     String location = postResponse.location();
 
     assertThat(postResponse.statusCode(), is(201));
     assertThat(location, is(notNullValue()));
 
-    final var getCompleted = okapiClient.get(location);
-
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getResponse = FutureAssistance.getOnCompletion(okapiClient.get(location), 5, SECONDS);
 
     assertThat(getResponse.statusCode(), is(200));
 
@@ -238,10 +228,7 @@ public class InstancesApiTest extends ApiTests {
       .put("discoverySuppress", false)
       .put("deleted", true);
 
-    final var postCompleted = okapiClient
-      .post(ApiRoot.instances(), newInstanceRequest);
-
-    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
+    Response postResponse = instancesClient.attemptToCreate(newInstanceRequest);
 
     assertThat(postResponse.statusCode(), is(400));
     assertTrue(postResponse.hasBody());
@@ -272,10 +259,7 @@ public class InstancesApiTest extends ApiTests {
     request.put("totalRecords", 2);
 
     // Post collection of instances
-    final var postCompleted = okapiClient
-      .post(ApiRoot.instancesBatch(), request);
-
-    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
+    Response postResponse = instancesBatchClient.attemptToCreate(request);
 
     // Assertions
     assertThat(postResponse.statusCode(), is(HttpResponseStatus.CREATED.code()));
@@ -284,10 +268,7 @@ public class InstancesApiTest extends ApiTests {
     assertEquals(postResponse.getJson().getInteger("totalRecords"), Integer.valueOf(2));
 
     // Get and assert angryPlanetInstance
-    final var getAngryPlanetInstanceCompleted
-      = okapiClient.get(String.format("%s/%s", ApiRoot.instances(), angryPlanetInstanceId));
-    Response getAngryPlanetInstanceResponse
-      = getAngryPlanetInstanceCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getAngryPlanetInstanceResponse = instancesClient.getById(UUID.fromString(angryPlanetInstanceId));
 
     assertThat(getAngryPlanetInstanceResponse.statusCode(), is(HttpResponseStatus.OK.code()));
     JsonObject createdAngryPlanetInstance = getAngryPlanetInstanceResponse.getJson();
@@ -303,10 +284,7 @@ public class InstancesApiTest extends ApiTests {
     assertThat(tagList, hasItems(tagNameOne, tagNameTwo));
 
     // Get and assert treasureIslandInstance
-    final var getTreasureIslandInstanceCompleted
-      = okapiClient.get(String.format("%s/%s", ApiRoot.instances(), treasureIslandInstanceId));
-    Response getTreasureIslandInstanceResponse
-      = getTreasureIslandInstanceCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getTreasureIslandInstanceResponse = instancesClient.getById(UUID.fromString(treasureIslandInstanceId));
 
     assertThat(getTreasureIslandInstanceResponse.statusCode(), is(HttpResponseStatus.OK.code()));
     JsonObject createdTreasureIslandInstance = getTreasureIslandInstanceResponse.getJson();
@@ -330,10 +308,7 @@ public class InstancesApiTest extends ApiTests {
     request.put("total", 1);
 
     // Post instance
-    final var postCompleted = okapiClient
-      .post(ApiRoot.instancesBatch(), request);
-
-    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
+    Response postResponse = instancesBatchClient.attemptToCreate(request);
 
     // Assertions
     assertThat(postResponse.statusCode(), is(HttpResponseStatus.INTERNAL_SERVER_ERROR.code()));
@@ -371,10 +346,7 @@ public class InstancesApiTest extends ApiTests {
     request.put("totalRecords", 3);
 
     // Post instance
-    final var postCompleted = okapiClient
-      .post(ApiRoot.instancesBatch(), request);
-
-    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
+    Response postResponse = instancesBatchClient.attemptToCreate(request);
 
     // Assertions
     assertThat(postResponse.statusCode(), is(HttpResponseStatus.CREATED.code()));
@@ -388,9 +360,7 @@ public class InstancesApiTest extends ApiTests {
   void instanceTitleIsMandatory() {
     JsonObject newInstanceRequest = new JsonObject();
 
-    final var postCompleted = okapiClient.post(ApiRoot.instances(), newInstanceRequest);
-
-    Response postResponse = postCompleted.toCompletableFuture().get(5, SECONDS);
+    Response postResponse = instancesClient.attemptToCreate(newInstanceRequest);
 
     assertThat(postResponse.statusCode(), is(400));
     assertThat(postResponse.contentType(), is(HttpHeaderValues.TEXT_PLAIN.toString()));
@@ -425,16 +395,12 @@ public class InstancesApiTest extends ApiTests {
       .put("discoverySuppress", true)
       .put("deleted", true);
 
-    URL instanceLocation = URI.create(String.format("%s/%s", ApiRoot.instances(),
-      newInstance.getString("id"))).toURL();
-
-    Response putResponse = updateInstance(updateInstanceRequest);
+    Response putResponse =
+      instancesClient.attemptToReplace(UUID.fromString(updateInstanceRequest.getString("id")), updateInstanceRequest);
 
     assertThat(putResponse.statusCode(), is(204));
 
-    final var getCompleted = okapiClient.get(instanceLocation);
-
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getResponse = instancesClient.getById(UUID.fromString(newInstance.getString("id")));
 
     assertThat(getResponse.statusCode(), is(200));
 
@@ -507,7 +473,8 @@ public class InstancesApiTest extends ApiTests {
       .put("natureOfContentTermIds",
         new JsonArray().add(ApiTestSuite.getAudiobookNatureOfContentTermId()));
 
-    Response putResponse = updateInstance(updateInstanceRequest);
+    Response putResponse =
+      instancesClient.attemptToReplace(UUID.fromString(updateInstanceRequest.getString("id")), updateInstanceRequest);
 
     assertThat(putResponse.statusCode(), is(204));
   }
@@ -523,29 +490,23 @@ public class InstancesApiTest extends ApiTests {
       .put("discoverySuppress", true));
 
     // Emulate failure on Source Record Storage side during updating suppression flags
-    sourceRecordStorageClient.emulateFailure(new EndpointFailureDescriptor()
-      .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
-      .setBody("Internal server error")
-      .setContentType("plain/text")
-      .setStatusCode(500)
-      .setMethod(PUT.name()));
+    sourceRecordStorageClient.emulateFailure(500, PUT.name(), "Internal server error", "plain/text");
 
     JsonObject instanceForUpdate = newInstance.copy()
       .put("staffSuppress", true)
       .put("discoverySuppress", false)
       .put("deleted", false);
-    URL instanceLocation = new URI(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id"))).toURL();
 
     // Put Instance for update
-    Response putResponse = updateInstance(instanceForUpdate);
+    Response putResponse =
+      instancesClient.attemptToReplace(UUID.fromString(instanceForUpdate.getString("id")), instanceForUpdate);
     assertThat(putResponse.statusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
     assertThat(putResponse.hasBody(), is(true));
     assertThat(putResponse.body(), is(
       format("Failed to update suppress from discovery flag for record in SRS. InstanceID: %s, StatusCode: 500", id)));
 
     // Get existing Instance
-    final var getCompleted = okapiClient.get(instanceLocation);
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getResponse = instancesClient.getById(UUID.fromString(newInstance.getString("id")));
     assertThat(getResponse.statusCode(), is(HttpResponseStatus.OK.code()));
     assertTrue(getResponse.getJson().getBoolean("staffSuppress"));
     assertFalse(getResponse.getJson().getBoolean("discoverySuppress"));
@@ -563,28 +524,22 @@ public class InstancesApiTest extends ApiTests {
       .put("discoverySuppress", true));
 
     // Emulate failure on Source Record Storage side during updating suppression flags
-    sourceRecordStorageClient.emulateFailure(new EndpointFailureDescriptor()
-      .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
-      .setBody("Internal server error")
-      .setContentType("plain/text")
-      .setStatusCode(500)
-      .setMethod(POST.name()));
+    sourceRecordStorageClient.emulateFailure(500, POST.name(), "Internal server error", "plain/text");
 
     JsonObject instanceForUpdate = newInstance.copy()
       .put("staffSuppress", true)
       .put("discoverySuppress", true)
       .put("deleted", false);
-    URL instanceLocation = new URI(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id"))).toURL();
 
     // Put Instance for update
-    Response putResponse = updateInstance(instanceForUpdate);
+    Response putResponse =
+      instancesClient.attemptToReplace(UUID.fromString(instanceForUpdate.getString("id")), instanceForUpdate);
     assertThat(putResponse.statusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
     assertThat(putResponse.hasBody(), is(true));
     assertThat(putResponse.body(), is(format("The instance wasn't undeleted in SRS. InstanceID: %s, SC: 500", id)));
 
     // Get existing Instance
-    final var getCompleted = okapiClient.get(instanceLocation);
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getResponse = instancesClient.getById(UUID.fromString(newInstance.getString("id")));
     assertThat(getResponse.statusCode(), is(HttpResponseStatus.OK.code()));
     assertTrue(getResponse.getJson().getBoolean("staffSuppress"));
     assertTrue(getResponse.getJson().getBoolean("discoverySuppress"));
@@ -625,7 +580,8 @@ public class InstancesApiTest extends ApiTests {
       .put(TAGS_KEY, new JsonObject().put(TAG_LIST_KEY, new JsonArray().add("test")))
       .put(PRECEDING_TITLES_KEY, precedingTitles);
 
-    var putResponse = updateInstance(updateInstanceRequest);
+    var putResponse =
+      instancesClient.attemptToReplace(UUID.fromString(updateInstanceRequest.getString("id")), updateInstanceRequest);
 
     assertThat(putResponse.statusCode(), is(204));
   }
@@ -635,7 +591,8 @@ public class InstancesApiTest extends ApiTests {
   void cannotUpdateAnInstanceThatDoesNotExist() {
     JsonObject updateInstanceRequest = smallAngryPlanet(UUID.randomUUID());
 
-    Response putResponse = updateInstance(updateInstanceRequest);
+    Response putResponse =
+      instancesClient.attemptToReplace(UUID.fromString(updateInstanceRequest.getString("id")), updateInstanceRequest);
 
     assertThat(putResponse.statusCode(), is(404));
     assertThat(putResponse.body(), is("Instance not found"));
@@ -646,7 +603,7 @@ public class InstancesApiTest extends ApiTests {
   void cannotUpdateAnInstanceWithOptimisticLockingFailure() {
     JsonObject instance = createInstance(smallAngryPlanet(ApiTestSuite.ID_FOR_OPTIMISTIC_LOCKING_FAILURE));
 
-    Response putResponse = updateInstance(instance);
+    Response putResponse = instancesClient.attemptToReplace(UUID.fromString(instance.getString("id")), instance);
     assertThat(putResponse.statusCode(), is(409));
     assertThat(putResponse.body(), is("Optimistic Locking"));
     assertThat(putResponse.contentType(), is(HttpHeaderValues.TEXT_PLAIN.toString()));
@@ -659,14 +616,12 @@ public class InstancesApiTest extends ApiTests {
     // Create new Instance
     JsonObject newInstance = createInstance(treasureIslandInstance(id));
     JsonObject instanceForUpdate = newInstance.copy();
-    URL instanceLocation = new URI(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id"))).toURL();
     // Put Instance for update
-    Response putResponse = updateInstance(instanceForUpdate);
+    Response putResponse =
+      instancesClient.attemptToReplace(UUID.fromString(instanceForUpdate.getString("id")), instanceForUpdate);
     assertThat(putResponse.statusCode(), is(HttpResponseStatus.NO_CONTENT.code()));
     // Get existing Instance
-    final var getCompleted = okapiClient.get(instanceLocation);
-
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getResponse = instancesClient.getById(UUID.fromString(newInstance.getString("id")));
 
     assertThat(getResponse.statusCode(), is(HttpResponseStatus.OK.code()));
 
@@ -683,7 +638,8 @@ public class InstancesApiTest extends ApiTests {
 
     for (String field : config.getInstanceBlockedFields()) {
       // Put Instance for update
-      Response putResponse = updateInstance(instanceForUpdate);
+      Response putResponse =
+        instancesClient.attemptToReplace(UUID.fromString(instanceForUpdate.getString("id")), instanceForUpdate);
 
       assertThat(putResponse.statusCode(), is(HttpResponseStatus.UNPROCESSABLE_ENTITY.code()));
       assertThat(putResponse.getJson().getJsonArray("errors").size(), is(1));
@@ -703,9 +659,9 @@ public class InstancesApiTest extends ApiTests {
     JsonObject newInstance = createInstance(createInstanceRequest);
 
     JsonObject instanceForUpdate = treasureIslandInstance(id);
-    URL instanceLocation = new URI(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id"))).toURL();
     // Put Instance for update
-    Response putResponse = updateInstance(instanceForUpdate);
+    Response putResponse =
+      instancesClient.attemptToReplace(UUID.fromString(instanceForUpdate.getString("id")), instanceForUpdate);
 
     assertThat(putResponse.statusCode(), is(HttpResponseStatus.UNPROCESSABLE_ENTITY.code()));
     assertNotNull(putResponse.getJson().getJsonArray("errors"));
@@ -720,9 +676,7 @@ public class InstancesApiTest extends ApiTests {
       "alternativeTitles"));
 
     // Get existing Instance
-    final var getCompleted = okapiClient.get(instanceLocation);
-
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getResponse = instancesClient.getById(UUID.fromString(newInstance.getString("id")));
 
     assertThat(getResponse.statusCode(), is(200));
 
@@ -745,16 +699,14 @@ public class InstancesApiTest extends ApiTests {
 
     JsonObject instanceForUpdate = newInstance.copy()
       .put("sourceRecordFormat", "test-format-1");
-    URL instanceLocation = new URI(String.format("%s/%s", ApiRoot.instances(), newInstance.getString("id"))).toURL();
     // Put Instance for update
-    Response putResponse = updateInstance(instanceForUpdate);
+    Response putResponse =
+      instancesClient.attemptToReplace(UUID.fromString(instanceForUpdate.getString("id")), instanceForUpdate);
 
     assertThat(putResponse.statusCode(), is(HttpResponseStatus.NO_CONTENT.code()));
 
     // Get existing Instance
-    final var getCompleted = okapiClient.get(instanceLocation);
-
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getResponse = instancesClient.getById(UUID.fromString(newInstance.getString("id")));
 
     assertThat(getResponse.statusCode(), is(HttpResponseStatus.OK.code()));
 
@@ -779,7 +731,8 @@ public class InstancesApiTest extends ApiTests {
       .put("discoverySuppress", false)
       .put("staffSuppress", false);
 
-    Response putResponse = updateInstance(updateInstanceRequest);
+    Response putResponse =
+      instancesClient.attemptToReplace(UUID.fromString(updateInstanceRequest.getString("id")), updateInstanceRequest);
 
     assertThat(putResponse.statusCode(), is(400));
     assertTrue(putResponse.hasBody());
@@ -793,17 +746,13 @@ public class InstancesApiTest extends ApiTests {
     createInstance(nod(UUID.randomUUID()));
     createInstance(leviathanWakes(UUID.randomUUID()));
 
-    final var deleteCompleted = okapiClient.delete(
-      ApiRoot.instances() + "?query=" + PercentCodec.encode("cql.allRecords=1"));
-
-    Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
+    Response deleteResponse = FutureAssistance.getOnCompletion(okapiClient.delete(
+      ApiRoot.instances() + "?query=" + PercentCodec.encode("cql.allRecords=1")), 5, SECONDS);
 
     assertThat(deleteResponse.statusCode(), is(204));
     assertThat(deleteResponse.hasBody(), is(false));
 
-    final var getAllCompleted = okapiClient.get(ApiRoot.instances());
-
-    Response getAllResponse = getAllCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getAllResponse = FutureAssistance.getOnCompletion(okapiClient.get(ApiRoot.instances()), 5, SECONDS);
 
     assertThat(getAllResponse.getJson().getJsonArray("instances").size(), is(0));
     assertThat(getAllResponse.getJson().getInteger("totalRecords"), is(0));
@@ -817,25 +766,19 @@ public class InstancesApiTest extends ApiTests {
 
     JsonObject instanceToDelete = createInstance(leviathanWakes(UUID.randomUUID()));
 
-    URL instanceToDeleteLocation = new URI(String.format("%s/%s",
-      ApiRoot.instances(), instanceToDelete.getString("id"))).toURL();
+    URL instanceToDeleteLocation = ApiRoot.instance(instanceToDelete.getString("id"));
 
-    final var deleteCompleted = okapiClient.delete(instanceToDeleteLocation);
-
-    Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
+    Response deleteResponse =
+      FutureAssistance.getOnCompletion(okapiClient.delete(instanceToDeleteLocation), 5, SECONDS);
 
     assertThat(deleteResponse.statusCode(), is(204));
     assertThat(deleteResponse.hasBody(), is(false));
 
-    final var getCompleted = okapiClient.get(instanceToDeleteLocation);
-
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getResponse = instancesClient.getById(UUID.fromString(instanceToDelete.getString("id")));
 
     assertThat(getResponse.statusCode(), is(404));
 
-    final var getAllCompleted = okapiClient.get(ApiRoot.instances());
-
-    Response getAllResponse = getAllCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getAllResponse = FutureAssistance.getOnCompletion(okapiClient.get(ApiRoot.instances()), 5, SECONDS);
 
     assertThat(getAllResponse.getJson().getJsonArray("instances").size(), is(2));
     assertThat(getAllResponse.getJson().getInteger("totalRecords"), is(2));
@@ -857,19 +800,12 @@ public class InstancesApiTest extends ApiTests {
     URL softDeleteUrl = new URI(String.format("%s/%s/%s",
       ApiRoot.instances(), instanceToDelete.getString("id"), "mark-deleted")).toURL();
 
-    URL getByIdUrl = new URI(String.format("%s/%s",
-      ApiRoot.instances(), instanceToDelete.getString("id"))).toURL();
-
-    final var deleteCompleted = okapiClient.delete(softDeleteUrl);
-
-    Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
+    Response deleteResponse = FutureAssistance.getOnCompletion(okapiClient.delete(softDeleteUrl), 5, SECONDS);
 
     assertThat(deleteResponse.statusCode(), is(204));
     assertThat(deleteResponse.hasBody(), is(false));
 
-    final var getCompleted = okapiClient.get(getByIdUrl);
-
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getResponse = instancesClient.getById(UUID.fromString(instanceToDelete.getString("id")));
 
     assertTrue(getResponse.getJson().getBoolean("staffSuppress"));
     assertTrue(getResponse.getJson().getBoolean("discoverySuppress"));
@@ -891,12 +827,7 @@ public class InstancesApiTest extends ApiTests {
     URL softDeleteUrl = new URI(format("%s/%s/%s",
       ApiRoot.instances(), instanceToDelete.getString("id"), "mark-deleted")).toURL();
 
-    URL getByIdUrl = new URI(format("%s/%s",
-      ApiRoot.instances(), instanceToDelete.getString("id"))).toURL();
-
-    final var deleteCompleted = okapiClient.delete(softDeleteUrl);
-
-    Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
+    Response deleteResponse = FutureAssistance.getOnCompletion(okapiClient.delete(softDeleteUrl), 5, SECONDS);
 
     String expectedMessage = String.format(
       "MARC record was not set for deletion because it was not found by instance ID: %s", instanceId);
@@ -904,9 +835,7 @@ public class InstancesApiTest extends ApiTests {
     assertThat(deleteResponse.hasBody(), is(true));
     assertThat(deleteResponse.body(), is(expectedMessage));
 
-    final var getCompleted = okapiClient.get(getByIdUrl);
-
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getResponse = instancesClient.getById(UUID.fromString(instanceToDelete.getString("id")));
 
     assertTrue(getResponse.getJson().getBoolean("staffSuppress"));
     assertTrue(getResponse.getJson().getBoolean("discoverySuppress"));
@@ -921,27 +850,17 @@ public class InstancesApiTest extends ApiTests {
     UUID instanceId = UUID.randomUUID();
     JsonObject instanceToDelete = createInstance(marcInstanceWithDefaultBlockedFields(instanceId));
 
-    sourceRecordStorageClient.emulateFailure(new EndpointFailureDescriptor()
-      .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
-      .setBody("Internal server error")
-      .setContentType("plain/text")
-      .setStatusCode(500)
-      .setMethod(DELETE.name()));
+    sourceRecordStorageClient.emulateFailure(500, DELETE.name(), "Internal server error", "plain/text");
 
     URL softDeleteUrl = URI.create(String.format("%s/%s/%s",
       ApiRoot.instances(), instanceToDelete.getString("id"), "mark-deleted")).toURL();
-    URL getByIdUrl = URI.create(
-      String.format("%s/%s", ApiRoot.instances(), instanceToDelete.getString("id"))).toURL();
 
-    final var deleteCompleted = okapiClient.delete(softDeleteUrl);
-    Response deleteResponse = deleteCompleted.toCompletableFuture().get(5, SECONDS);
+    Response deleteResponse = FutureAssistance.getOnCompletion(okapiClient.delete(softDeleteUrl), 5, SECONDS);
 
     assertThat(deleteResponse.statusCode(), is(HTTP_INTERNAL_SERVER_ERROR.toInt()));
     assertThat(deleteResponse.hasBody(), is(true));
 
-    final var getCompleted = okapiClient.get(getByIdUrl);
-
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getResponse = instancesClient.getById(UUID.fromString(instanceToDelete.getString("id")));
     assertTrue(getResponse.getJson().getBoolean("staffSuppress"));
     assertTrue(getResponse.getJson().getBoolean("discoverySuppress"));
   }
@@ -953,9 +872,7 @@ public class InstancesApiTest extends ApiTests {
     createInstance(nod(UUID.randomUUID()));
     createInstance(temeraire(UUID.randomUUID()));
 
-    final var getAllCompleted = okapiClient.get(ApiRoot.instances());
-
-    Response getAllResponse = getAllCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getAllResponse = FutureAssistance.getOnCompletion(okapiClient.get(ApiRoot.instances()), 5, SECONDS);
 
     assertThat(getAllResponse.statusCode(), is(200));
 
@@ -975,14 +892,11 @@ public class InstancesApiTest extends ApiTests {
     createInstance(leviathanWakes(UUID.randomUUID()));
     createInstance(taoOfPooh(UUID.randomUUID()));
 
-    final var firstPageGetCompleted
-      = okapiClient.get(ApiRoot.instances("limit=3"));
+    Response firstPageResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.instances("limit=3")), 5, SECONDS);
 
-    final var secondPageGetCompleted
-      = okapiClient.get(ApiRoot.instances("limit=3&offset=3"));
-
-    Response firstPageResponse = firstPageGetCompleted.toCompletableFuture().get(5, SECONDS);
-    Response secondPageResponse = secondPageGetCompleted.toCompletableFuture().get(5, SECONDS);
+    Response secondPageResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.instances("limit=3&offset=3")), 5, SECONDS);
 
     assertThat(firstPageResponse.statusCode(), is(200));
     assertThat(secondPageResponse.statusCode(), is(200));
@@ -1003,9 +917,8 @@ public class InstancesApiTest extends ApiTests {
   @Test
   @SneakyThrows
   void pageParametersMustBeNumeric() {
-    final var getPagedCompleted = okapiClient.get(ApiRoot.instances("limit=&offset="));
-
-    Response getPagedResponse = getPagedCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getPagedResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.instances("limit=&offset=")), 5, SECONDS);
 
     assertThat(getPagedResponse.statusCode(), is(400));
     assertThat(getPagedResponse.body(),
@@ -1019,10 +932,8 @@ public class InstancesApiTest extends ApiTests {
     createInstance(nod(UUID.randomUUID()));
     createInstance(uprooted(UUID.randomUUID()));
 
-    final var searchGetCompleted
-      = okapiClient.get(ApiRoot.instances("query=title=Small%20Angry*"));
-
-    Response searchGetResponse = searchGetCompleted.toCompletableFuture().get(5, SECONDS);
+    Response searchGetResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.instances("query=title=Small%20Angry*")), 5, SECONDS);
 
     assertThat(searchGetResponse.statusCode(), is(200));
 
@@ -1037,10 +948,7 @@ public class InstancesApiTest extends ApiTests {
   @Test
   @SneakyThrows
   void cannotFindAnUnknownInstance() {
-    final var getCompleted
-      = okapiClient.get(String.format("%s/%s", ApiRoot.instances(), UUID.randomUUID()));
-
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getResponse = instancesClient.getById(UUID.randomUUID());
 
     assertThat(getResponse.statusCode(), is(404));
   }
@@ -1057,7 +965,8 @@ public class InstancesApiTest extends ApiTests {
       .put("title", "updatedTitle")
       .put("hrid", "updatedHrid");
 
-    Response instanceUpdateResponse = updateInstance(instanceToUpdate);
+    Response instanceUpdateResponse =
+      instancesClient.attemptToReplace(UUID.fromString(instanceToUpdate.getString("id")), instanceToUpdate);
 
     String expectedMessage = String.format("HRID change detected: existing=%s, updated=%s",
       createdInstance.getString("hrid"), instanceToUpdate.getString("hrid"));
@@ -1082,7 +991,8 @@ public class InstancesApiTest extends ApiTests {
 
     instanceToUpdate.remove("hrid");
 
-    Response instanceUpdateResponse = updateInstance(instanceToUpdate);
+    Response instanceUpdateResponse =
+      instancesClient.attemptToReplace(UUID.fromString(instanceToUpdate.getString("id")), instanceToUpdate);
 
     String expectedMessage = String.format("HRID change detected: existing=%s, updated=%s",
       createdInstance.getString("hrid"), instanceToUpdate.getString("hrid"));
@@ -1099,12 +1009,7 @@ public class InstancesApiTest extends ApiTests {
   void canFrowardInstanceCreateFailureFromStorage() {
     final String expectedErrorMessage = "Instance-storage is temporary unavailable for create";
 
-    instancesStorageClient.emulateFailure(new EndpointFailureDescriptor()
-      .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
-      .setBody(expectedErrorMessage)
-      .setContentType("plain/text")
-      .setStatusCode(500)
-      .setMethod(POST.name()));
+    instancesStorageClient.emulateFailure(500, POST.name(), expectedErrorMessage, "plain/text");
 
     final Response response = instancesClient.attemptToCreate(smallAngryPlanet(UUID.randomUUID()));
 
@@ -1120,12 +1025,7 @@ public class InstancesApiTest extends ApiTests {
     final IndividualResource instance = instancesClient
       .create(smallAngryPlanet(UUID.randomUUID()));
 
-    instancesStorageClient.emulateFailure(new EndpointFailureDescriptor()
-      .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
-      .setBody(expectedErrorMessage)
-      .setContentType("plain/text")
-      .setStatusCode(500)
-      .setMethod(PUT.name()));
+    instancesStorageClient.emulateFailure(500, PUT.name(), expectedErrorMessage, "plain/text");
 
     final Response updateResponse = instancesClient
       .attemptToReplace(instance.getId(), instance.getJson().copy()
@@ -1140,12 +1040,7 @@ public class InstancesApiTest extends ApiTests {
   void canFrowardInstanceCreateValidationErrorFromStorage() {
     final String expectedErrorMessage = "A note has exceeded the 32000 character limit.";
 
-    instancesStorageClient.emulateFailure(new EndpointFailureDescriptor()
-      .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
-      .setBody(expectedErrorMessage)
-      .setContentType("plain/text")
-      .setStatusCode(422)
-      .setMethod(POST.name()));
+    instancesStorageClient.emulateFailure(422, POST.name(), expectedErrorMessage, "plain/text");
 
     final Response response = instancesClient.attemptToCreate(smallAngryPlanet(UUID.randomUUID()));
 
@@ -1161,12 +1056,7 @@ public class InstancesApiTest extends ApiTests {
     final IndividualResource instance = instancesClient
       .create(smallAngryPlanet(UUID.randomUUID()));
 
-    instancesStorageClient.emulateFailure(new EndpointFailureDescriptor()
-      .setFailureExpireDate(DateTime.now(UTC).plusSeconds(2).toDate())
-      .setBody(expectedErrorMessage)
-      .setContentType("plain/text")
-      .setStatusCode(422)
-      .setMethod(PUT.name()));
+    instancesStorageClient.emulateFailure(422, PUT.name(), expectedErrorMessage, "plain/text");
 
     final Response updateResponse = instancesClient
       .attemptToReplace(instance.getId(), instance.getJson().copy()
@@ -1205,16 +1095,11 @@ public class InstancesApiTest extends ApiTests {
       .put("discoverySuppress", true)
       .put("deleted", true);
 
-    URL instanceLocation = URI.create(String.format("%s/%s", ApiRoot.instances(),
-      instanceId)).toURL();
-
     Response patchResponse = patchInstance(instanceId, patchRequest);
 
     assertThat(patchResponse.statusCode(), is(204));
 
-    final var getCompleted = okapiClient.get(instanceLocation);
-
-    Response getResponse = getCompleted.toCompletableFuture().get(5, SECONDS);
+    Response getResponse = instancesClient.getById(UUID.fromString(instanceId));
 
     assertThat(getResponse.statusCode(), is(200));
 
@@ -1253,22 +1138,7 @@ public class InstancesApiTest extends ApiTests {
   }
 
   @SneakyThrows
-  private Response updateInstance(JsonObject instance) {
-    String instanceUpdateUri = String
-      .format("%s/%s", ApiRoot.instances(), instance.getString("id"));
-
-    final var putFuture = okapiClient.put(instanceUpdateUri, instance);
-
-    return putFuture.toCompletableFuture().get(5, SECONDS);
-  }
-
-  @SneakyThrows
   private Response patchInstance(String id, JsonObject patchJson) {
-    String instancePatchUri = String
-      .format("%s/%s", ApiRoot.instances(), id);
-
-    final var patchFuture = okapiClient.patch(instancePatchUri, patchJson);
-
-    return patchFuture.toCompletableFuture().get(5, SECONDS);
+    return instancesClient.attemptToPatch(UUID.fromString(id), patchJson);
   }
 }

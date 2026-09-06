@@ -74,6 +74,91 @@ public class ResponseMatchers {
     };
   }
 
+  public static Matcher<Response> hasStatusAndJsonBody(int statusCode) {
+    return new TypeSafeMatcher<>() {
+      @Override
+      public void describeTo(Description description) {
+        description
+          .appendText("Response has status - ").appendValue(statusCode)
+          .appendText(" and a JSON body");
+      }
+
+      @Override
+      protected boolean matchesSafely(Response response) {
+        return response.statusCode() == statusCode && isJsonContent(response);
+      }
+
+      @Override
+      protected void describeMismatchSafely(Response response,
+                                            Description mismatchDescription) {
+        mismatchDescription.appendText("Status: ")
+          .appendValue(response.statusCode())
+          .appendText(", content type: ")
+          .appendValue(response.contentType())
+          .appendText(", body: ");
+
+        if (isJsonContent(response)) {
+          mismatchDescription.appendValue(response.getJson());
+        } else {
+          mismatchDescription.appendValue(response.body());
+        }
+      }
+    };
+  }
+
+  public static Matcher<Response> hasNotUpdatedEntity(
+    String expectedEntityId, String expectedErrorMessageFragment) {
+
+    return new TypeSafeMatcher<>() {
+      @Override
+      public void describeTo(Description description) {
+        description
+          .appendText("Response has a single 'notUpdatedEntities' entry with 'entityId' - ")
+          .appendValue(expectedEntityId)
+          .appendText(" and 'errorMessage' containing - ")
+          .appendValue(expectedErrorMessageFragment);
+      }
+
+      @Override
+      protected boolean matchesSafely(Response response) {
+        if (!isJsonContent(response)) {
+          return false;
+        }
+
+        try {
+          JsonArray notUpdatedEntities = response.getJson().getJsonArray("notUpdatedEntities");
+
+          if (notUpdatedEntities == null || notUpdatedEntities.size() != 1) {
+            return false;
+          }
+
+          JsonObject notUpdatedEntity = notUpdatedEntities.getJsonObject(0);
+          String entityId = notUpdatedEntity.getString("entityId");
+          String errorMessage = notUpdatedEntity.getString("errorMessage");
+
+          return Objects.equals(expectedEntityId, entityId)
+                 && errorMessage != null && errorMessage.contains(expectedErrorMessageFragment);
+        } catch (DecodeException ex) {
+          return false;
+        }
+      }
+
+      @Override
+      protected void describeMismatchSafely(Response response,
+                                            Description mismatchDescription) {
+        mismatchDescription.appendText("Status: ")
+          .appendValue(response.statusCode())
+          .appendText(", body: ");
+
+        if (isJsonContent(response)) {
+          mismatchDescription.appendValue(response.getJson());
+        } else {
+          mismatchDescription.appendValue(response.body());
+        }
+      }
+    };
+  }
+
   private static boolean isJsonContent(Response response) {
     return response.contentType().startsWith(HttpHeaderValues.APPLICATION_JSON.toString());
   }

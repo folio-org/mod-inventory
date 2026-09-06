@@ -11,9 +11,10 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static support.FutureAssistance.getOnCompletion;
 import static support.fixtures.InstanceFixture.smallAngryPlanet;
+import static support.matchers.ResponseMatchers.hasValidationError;
 
-import api.ApiTestSuite;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.json.JsonObject;
 import java.util.Arrays;
@@ -28,8 +29,8 @@ import org.junit.jupiter.api.Test;
 import support.ApiRoot;
 import support.ApiTests;
 import support.InstanceApiClient;
-import support.builders.AbstractBuilder;
 import support.builders.HoldingRequestBuilder;
+import support.builders.InvalidHoldingRequestBuilder;
 import support.builders.ItemRequestBuilder;
 import support.builders.ItemsMoveRequestBuilder;
 
@@ -107,12 +108,8 @@ public class ItemsApiMoveTest extends ApiTests {
   void cannotMoveItemsToUnspecifiedHoldingsRecord() {
     final var moveItemsResponse = moveItems(null, UUID.randomUUID());
 
-    assertThat(moveItemsResponse.statusCode(), is(422));
-    assertThat(moveItemsResponse.contentType(), containsString(HttpHeaderValues.APPLICATION_JSON.toString()));
-
-    assertThat(moveItemsResponse.body(), containsString("errors"));
-    assertThat(moveItemsResponse.body(), containsString("toHoldingsRecordId"));
-    assertThat(moveItemsResponse.body(), containsString("toHoldingsRecordId is a required field"));
+    assertThat(moveItemsResponse,
+      hasValidationError("toHoldingsRecordId is a required field", "toHoldingsRecordId", null));
   }
 
   @Test
@@ -230,8 +227,7 @@ public class ItemsApiMoveTest extends ApiTests {
 
   @SneakyThrows
   private Response moveItems(JsonObject body) {
-    return okapiClient.post(ApiRoot.moveItems(), body)
-      .toCompletableFuture().get(5, SECONDS);
+    return getOnCompletion(okapiClient.post(ApiRoot.moveItems(), body), 5, SECONDS);
   }
 
   private static UUID createInstance() {
@@ -253,39 +249,5 @@ public class ItemsApiMoveTest extends ApiTests {
       .forInstance(instanceId);
 
     return holdingsStorageClient.create(builder).getId();
-  }
-
-  private static class InvalidHoldingRequestBuilder extends AbstractBuilder {
-    private final UUID instanceId;
-    private final UUID permanentLocationId;
-
-    InvalidHoldingRequestBuilder() {
-      this(null, UUID.fromString(ApiTestSuite.getThirdFloorLocation()));
-    }
-
-    InvalidHoldingRequestBuilder(
-      UUID instanceId,
-      UUID permanentLocationId) {
-      this.instanceId = instanceId;
-      this.permanentLocationId = permanentLocationId;
-    }
-
-    public InvalidHoldingRequestBuilder forInstance(UUID instanceId) {
-      return new InvalidHoldingRequestBuilder(
-        instanceId,
-        this.permanentLocationId);
-    }
-
-    @Override
-    public JsonObject create() {
-      JsonObject holding = new JsonObject();
-
-      holding.put("instanceId", instanceId.toString())
-        .put("permanentLocationId", permanentLocationId.toString());
-
-      holding.put("unspecified", "unspecified");
-
-      return holding;
-    }
   }
 }

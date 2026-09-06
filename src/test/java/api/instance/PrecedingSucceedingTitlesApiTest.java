@@ -553,16 +553,18 @@ public class PrecedingSucceedingTitlesApiTest extends ApiTests {
       precedingInstance.getId().toString());
   }
 
-  private JsonObject createConnectedPrecedingTitle(String id, String precedingInstanceId) {
+  private JsonObject createConnectedTitle(String id, String linkedInstanceId, String linkedInstanceIdKey) {
     return new JsonObject()
       .put("id", id)
-      .put("precedingInstanceId", precedingInstanceId);
+      .put(linkedInstanceIdKey, linkedInstanceId);
+  }
+
+  private JsonObject createConnectedPrecedingTitle(String id, String precedingInstanceId) {
+    return createConnectedTitle(id, precedingInstanceId, "precedingInstanceId");
   }
 
   private JsonObject createConnectedSucceedingTitle(String id, String succeedingInstanceId) {
-    return new JsonObject()
-      .put("id", id)
-      .put("succeedingInstanceId", succeedingInstanceId);
+    return createConnectedTitle(id, succeedingInstanceId, "succeedingInstanceId");
   }
 
   private JsonObject getRecordById(JsonArray collection, String id) {
@@ -584,26 +586,28 @@ public class PrecedingSucceedingTitlesApiTest extends ApiTests {
     return precedingSucceedingTitles;
   }
 
-  private JsonObject createOpenBibliographyUnconnectedTitle(String precedingSucceedingTitleId2) {
+  private JsonObject createUnconnectedTitle(String id, String title, String hrid,
+                                            String identifierTypeId, String identifierValue) {
     return new JsonObject()
-      .put("id", precedingSucceedingTitleId2)
-      .put("title", "Open Bibliography for Science, Technology and Medicine")
-      .put("hrid", "inst000000000555")
+      .put("id", id)
+      .put("title", title)
+      .put("hrid", hrid)
       .put("identifiers", new JsonArray().add(
         new JsonObject()
-          .put("identifierTypeId", "8261054f-be78-422d-bd51-4ed9f33c8012")
-          .put("value", "0662012103")));
+          .put("identifierTypeId", identifierTypeId)
+          .put("value", identifierValue)));
+  }
+
+  private JsonObject createOpenBibliographyUnconnectedTitle(String precedingSucceedingTitleId2) {
+    return createUnconnectedTitle(precedingSucceedingTitleId2,
+      "Open Bibliography for Science, Technology and Medicine", "inst000000000555",
+      "8261054f-be78-422d-bd51-4ed9f33c8012", "0662012103");
   }
 
   private JsonObject createSemanticWebUnconnectedTitle(String precedingSucceedingTitleId1) {
-    return new JsonObject()
-      .put("id", precedingSucceedingTitleId1)
-      .put("title", "A semantic web prime")
-      .put("hrid", "inst000000000022")
-      .put("identifiers", new JsonArray().add(
-        new JsonObject()
-          .put("identifierTypeId", "8261054f-be78-422d-bd51-4ed9f33c3422")
-          .put("value", "0262012103")));
+    return createUnconnectedTitle(precedingSucceedingTitleId1,
+      "A semantic web prime", "inst000000000022",
+      "8261054f-be78-422d-bd51-4ed9f33c3422", "0262012103");
   }
 
   private void assertPrecedingTitles(JsonObject actualPrecedingTitle,

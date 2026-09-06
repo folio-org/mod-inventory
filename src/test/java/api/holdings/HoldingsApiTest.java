@@ -16,11 +16,9 @@ import api.ApiTestSuite;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
 import org.folio.inventory.config.InventoryConfiguration;
 import org.folio.inventory.config.InventoryConfigurationImpl;
@@ -34,12 +32,9 @@ import support.ApiTests;
 import support.InstanceApiClient;
 import support.builders.HoldingRequestBuilder;
 import support.builders.SourceRecordRequestBuilder;
-import support.fakes.FakeOkapi;
 import support.fixtures.InstanceRequestFixture;
 
 public class HoldingsApiTest extends ApiTests {
-
-  private static final String HOLDINGS_URL = FakeOkapi.getADDRESS() + "/holdings-storage/holdings";
 
   private static final InventoryConfiguration config = new InventoryConfigurationImpl();
 
@@ -221,6 +216,7 @@ public class HoldingsApiTest extends ApiTests {
   }
 
   @Test
+  @SneakyThrows
   void cannotCreateAHoldingWithoutPermanentLocationId() {
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
@@ -229,10 +225,11 @@ public class HoldingsApiTest extends ApiTests {
 
     holdingAsJson.remove("permanentLocationId");
 
-    assertThat(createHolding(holdingAsJson).statusCode(), is(422));
+    assertThat(holdingsStorageClient.attemptToCreate(holdingAsJson).statusCode(), is(422));
   }
 
   @Test
+  @SneakyThrows
   void cannotCreateAHoldingWithoutInstanceId() {
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
@@ -242,10 +239,11 @@ public class HoldingsApiTest extends ApiTests {
 
     holdingAsJson.remove("instanceId");
 
-    assertThat(createHolding(holdingAsJson).statusCode(), is(422));
+    assertThat(holdingsStorageClient.attemptToCreate(holdingAsJson).statusCode(), is(422));
   }
 
   @Test
+  @SneakyThrows
   void cannotUpdateAHoldingWithOptimisticLockingFailure() {
 
     JsonObject instance = createInstance(smallAngryPlanet(UUID.randomUUID()));
@@ -254,12 +252,14 @@ public class HoldingsApiTest extends ApiTests {
       .permanentlyInMainLibrary()
       .create()
       .put("id", ApiTestSuite.ID_FOR_OPTIMISTIC_LOCKING_FAILURE);
-    assertThat(createHolding(holding).statusCode(), is(201));
+    assertThat(holdingsStorageClient.attemptToCreate(holding).statusCode(), is(201));
 
-    assertThat(updateHolding(holding).statusCode(), is(409));
+    assertThat(holdingsStorageClient.attemptToReplace(UUID.fromString(holding.getString("id")), holding).statusCode(),
+      is(409));
   }
 
   @Test
+  @SneakyThrows
   void canCreateHoldingWithAdditionalCallNumbers() {
     JsonObject instance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
@@ -267,7 +267,7 @@ public class HoldingsApiTest extends ApiTests {
     additionalCallNumbers.add(new EffectiveCallNumberComponents("123", "prefix", "suffix", "typeId"));
     JsonObject holding = new HoldingRequestBuilder().forInstance(UUID.fromString(instance.getString("id")))
       .withAdditionalCallNumbers(additionalCallNumbers).create();
-    assertThat(createHolding(holding).statusCode(), is(201));
+    assertThat(holdingsStorageClient.attemptToCreate(holding).statusCode(), is(201));
   }
 
   private UUID getId(JsonObject newHoldings) {
@@ -306,17 +306,5 @@ public class HoldingsApiTest extends ApiTests {
 
   private JsonObject createInstance(JsonObject newInstanceRequest) {
     return InstanceApiClient.createInstance(okapiClient, newInstanceRequest);
-  }
-
-  @SneakyThrows
-  private Response createHolding(JsonObject newHoldingRequest) {
-    final var postCompleted = okapiClient.post(new URI(HOLDINGS_URL).toURL(), newHoldingRequest);
-    return postCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
-  }
-
-  @SneakyThrows
-  private Response updateHolding(JsonObject holding) {
-    final var putCompleted = okapiClient.put(new URI(HOLDINGS_URL + "/" + holding.getString("id")).toURL(), holding);
-    return putCompleted.toCompletableFuture().get(5, TimeUnit.SECONDS);
   }
 }

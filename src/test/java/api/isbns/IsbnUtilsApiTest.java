@@ -19,6 +19,7 @@ import org.folio.inventory.support.http.client.Response;
 import org.junit.jupiter.api.Test;
 import support.ApiRoot;
 import support.ApiTests;
+import support.FutureAssistance;
 
 public class IsbnUtilsApiTest extends ApiTests {
 
@@ -60,10 +61,8 @@ public class IsbnUtilsApiTest extends ApiTests {
   @Test
   void testIsbnConvertTo10FromIsbn13WithValidIsbnWithoutHyphens()
     throws InterruptedException, ExecutionException, TimeoutException {
-    final var conversionCompleted
-      = okapiClient.get(ApiRoot.isbnConvertTo10("isbn=9781930110991"));
-
-    Response conversionResponse = conversionCompleted.toCompletableFuture().get(5, SECONDS);
+    Response conversionResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.isbnConvertTo10("isbn=9781930110991")), 5, SECONDS);
 
     checkThatResultIsExpected(conversionResponse, "1930110995");
   }
@@ -71,10 +70,8 @@ public class IsbnUtilsApiTest extends ApiTests {
   @Test
   void testIsbnConvertTo10FromIsbn13WithValidIsbnWithHyphensTrue()
     throws InterruptedException, ExecutionException, TimeoutException {
-    final var conversionCompleted
-      = okapiClient.get(ApiRoot.isbnConvertTo10("isbn=9781930110991&hyphens=true"));
-
-    Response conversionResponse = conversionCompleted.toCompletableFuture().get(5, SECONDS);
+    Response conversionResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.isbnConvertTo10("isbn=9781930110991&hyphens=true")), 5, SECONDS);
 
     checkThatResultIsExpected(conversionResponse, "1-930110-99-5");
   }
@@ -82,10 +79,8 @@ public class IsbnUtilsApiTest extends ApiTests {
   @Test
   void testIsbnConvertTo10FromIsbn13WithValidIsbnWithHyphensFalse()
     throws InterruptedException, ExecutionException, TimeoutException {
-    final var conversionCompleted
-      = okapiClient.get(ApiRoot.isbnConvertTo10("isbn=9781930110991&hyphens=false"));
-
-    Response conversionResponse = conversionCompleted.toCompletableFuture().get(5, SECONDS);
+    Response conversionResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.isbnConvertTo10("isbn=9781930110991&hyphens=false")), 5, SECONDS);
 
     checkThatResultIsExpected(conversionResponse, "1930110995");
   }
@@ -93,10 +88,8 @@ public class IsbnUtilsApiTest extends ApiTests {
   @Test
   void testIsbnConvertTo10FromIsbn10WithValidIsbnWithHyphensTrue()
     throws InterruptedException, ExecutionException, TimeoutException {
-    final var conversionCompleted
-      = okapiClient.get(ApiRoot.isbnConvertTo10("isbn=9999999999&hyphens=true"));
-
-    Response conversionResponse = conversionCompleted.toCompletableFuture().get(5, SECONDS);
+    Response conversionResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.isbnConvertTo10("isbn=9999999999&hyphens=true")), 5, SECONDS);
 
     checkThatResultIsExpected(conversionResponse, "999999999-9");
   }
@@ -104,10 +97,8 @@ public class IsbnUtilsApiTest extends ApiTests {
   @Test
   void testIsbnConvertTo13FromIsbn10WithValidIsbnWithoutHyphens()
     throws InterruptedException, ExecutionException, TimeoutException {
-    final var conversionCompleted
-      = okapiClient.get(ApiRoot.isbnConvertTo13("isbn=1930110995"));
-
-    Response conversionResponse = conversionCompleted.toCompletableFuture().get(5, SECONDS);
+    Response conversionResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.isbnConvertTo13("isbn=1930110995")), 5, SECONDS);
 
     checkThatResultIsExpected(conversionResponse, "9781930110991");
   }
@@ -115,10 +106,8 @@ public class IsbnUtilsApiTest extends ApiTests {
   @Test
   void testIsbnConvertTo13FromIsbn10WithValidIsbnWithHyphensTrue()
     throws InterruptedException, ExecutionException, TimeoutException {
-    final var conversionCompleted
-      = okapiClient.get(ApiRoot.isbnConvertTo13("isbn=1930110995&hyphens=true"));
-
-    Response conversionResponse = conversionCompleted.toCompletableFuture().get(5, SECONDS);
+    Response conversionResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.isbnConvertTo13("isbn=1930110995&hyphens=true")), 5, SECONDS);
 
     checkThatResultIsExpected(conversionResponse, "978-1-930110-99-1");
   }
@@ -126,20 +115,16 @@ public class IsbnUtilsApiTest extends ApiTests {
   @Test
   void testIsbnConvertTo13FromIsbn13WithValidIsbnWithHyphensTrue()
     throws InterruptedException, ExecutionException, TimeoutException {
-    final var conversionCompleted
-      = okapiClient.get(ApiRoot.isbnConvertTo13("isbn=9781930110991&hyphens=true"));
-
-    Response conversionResponse = conversionCompleted.toCompletableFuture().get(5, SECONDS);
+    Response conversionResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.isbnConvertTo13("isbn=9781930110991&hyphens=true")), 5, SECONDS);
 
     checkThatResultIsExpected(conversionResponse, "978-1-930110-99-1");
   }
 
   @Test
   void testIsbnConvertTo13InvalidHyphens() throws InterruptedException, ExecutionException, TimeoutException {
-    final var conversionCompleted
-      = okapiClient.get(ApiRoot.isbnConvertTo13("isbn=9781930110991&hyphens=123"));
-
-    Response conversionResponse = conversionCompleted.toCompletableFuture().get(5, SECONDS);
+    Response conversionResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.isbnConvertTo13("isbn=9781930110991&hyphens=123")), 5, SECONDS);
 
     checkErrorResponse(conversionResponse, INVALID_HYPHENS_VALUE_MSG);
   }
@@ -147,10 +132,8 @@ public class IsbnUtilsApiTest extends ApiTests {
   @Test
   void testIsbnConvertTo13FromIsbn10WithInvalidIsbn()
     throws InterruptedException, ExecutionException, TimeoutException {
-    final var conversionCompleted
-      = okapiClient.get(ApiRoot.isbnConvertTo13("isbn=1930211099&hyphens=true"));
-
-    Response conversionResponse = conversionCompleted.toCompletableFuture().get(5, SECONDS);
+    Response conversionResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.isbnConvertTo13("isbn=1930211099&hyphens=true")), 5, SECONDS);
 
     checkErrorResponse(conversionResponse, String.format(INVALID_ISBN_MESSAGE, "1930211099"));
   }
@@ -158,10 +141,8 @@ public class IsbnUtilsApiTest extends ApiTests {
   @Test
   void testIsbnConvertTo10FromIsbn13WithInvalidIsbn()
     throws InterruptedException, ExecutionException, TimeoutException {
-    final var conversionCompleted
-      = okapiClient.get(ApiRoot.isbnConvertTo10("isbn=97819301109911&hyphens=true"));
-
-    Response conversionResponse = conversionCompleted.toCompletableFuture().get(5, SECONDS);
+    Response conversionResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.isbnConvertTo10("isbn=97819301109911&hyphens=true")), 5, SECONDS);
 
     checkErrorResponse(conversionResponse, String.format(INVALID_ISBN_MESSAGE, "97819301109911"));
   }
@@ -169,28 +150,24 @@ public class IsbnUtilsApiTest extends ApiTests {
   @Test
   void testIsbnConvertTo10FromIsbn13IsbnQueryParamIsMissing()
     throws InterruptedException, ExecutionException, TimeoutException {
-    final var conversionCompleted = okapiClient.get(ApiRoot.isbnConvertTo10(EMPTY));
-
-    Response conversionResponse = conversionCompleted.toCompletableFuture().get(5, SECONDS);
+    Response conversionResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.isbnConvertTo10(EMPTY)), 5, SECONDS);
 
     checkErrorResponse(conversionResponse, CONVERTER_MISSING_REQUIRED_PARAM_MSG);
   }
 
   @Test
   void testIsbnValidatorQueryParamIsMissing() throws InterruptedException, ExecutionException, TimeoutException {
-    final var conversionCompleted = okapiClient.get(ApiRoot.isbnValidate(EMPTY));
-
-    Response conversionResponse = conversionCompleted.toCompletableFuture().get(5, SECONDS);
+    Response conversionResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.isbnValidate(EMPTY)), 5, SECONDS);
 
     checkErrorResponse(conversionResponse, VALIDATOR_MISSING_REQUIRED_PARAMS_MSG);
   }
 
   @Test
   void testIsbnValidatorQueryMoreThanOneParam() throws InterruptedException, ExecutionException, TimeoutException {
-    final var conversionCompleted
-      = okapiClient.get(ApiRoot.isbnValidate("isbn10=109310410&isbn13=07417041"));
-
-    Response conversionResponse = conversionCompleted.toCompletableFuture().get(5, SECONDS);
+    Response conversionResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.isbnValidate("isbn10=109310410&isbn13=07417041")), 5, SECONDS);
 
     checkErrorResponse(conversionResponse, VALIDATOR_MISSING_REQUIRED_PARAMS_MSG);
   }
@@ -208,9 +185,8 @@ public class IsbnUtilsApiTest extends ApiTests {
 
   @SneakyThrows
   private void verifyValidator(String isbnParam, boolean isValid) {
-    final var validateGetCompleted = okapiClient.get(ApiRoot.isbnValidate(isbnParam));
-
-    Response validateGetResponse = validateGetCompleted.toCompletableFuture().get(5, SECONDS);
+    Response validateGetResponse = FutureAssistance.getOnCompletion(
+      okapiClient.get(ApiRoot.isbnValidate(isbnParam)), 5, SECONDS);
 
     assertThat(validateGetResponse.statusCode(), is(200));
     JsonObject result = validateGetResponse.getJson();

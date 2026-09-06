@@ -31,11 +31,16 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static support.fixtures.InstanceFixture.girlOnTheTrain;
 import static support.fixtures.InstanceFixture.nod;
 import static support.fixtures.InstanceFixture.smallAngryPlanet;
 import static support.http.BusinessLogicInterfaceUrls.items;
+import static support.matchers.ItemMatchers.hasCallNumbers;
+import static support.matchers.ItemMatchers.hasConsistentMaterialType;
+import static support.matchers.ItemMatchers.hasConsistentPermanentLoanType;
+import static support.matchers.ItemMatchers.hasConsistentPermanentLocation;
+import static support.matchers.ItemMatchers.hasConsistentTemporaryLoanType;
+import static support.matchers.ItemMatchers.hasConsistentTemporaryLocation;
 import static support.matchers.ResponseMatchers.hasValidationError;
 import static support.matchers.TextDateTimeMatcher.withinSecondsAfter;
 
@@ -107,7 +112,8 @@ public class ItemsApiTest extends ApiTests {
       .withCopyNumber("cp")
     );
 
-    assertCallNumbers(postResponse.getJson());
+    assertThat(postResponse.getJson(),
+      hasCallNumbers(CALL_NUMBER, CALL_NUMBER_SUFFIX, CALL_NUMBER_PREFIX, CALL_NUMBER_TYPE_ID));
 
     JsonObject createdItem = itemsClient.getById(postResponse.getId()).getJson();
 
@@ -148,7 +154,8 @@ public class ItemsApiTest extends ApiTests {
 
     assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Reading Room"));
 
-    assertCallNumbers(createdItem);
+    assertThat(createdItem,
+      hasCallNumbers(CALL_NUMBER, CALL_NUMBER_SUFFIX, CALL_NUMBER_PREFIX, CALL_NUMBER_TYPE_ID));
 
     assertThat("Item should contain an effective shelving order",
       createdItem.containsKey("effectiveShelvingOrder"), is(true));
@@ -366,10 +373,7 @@ public class ItemsApiTest extends ApiTests {
     UUID holdingId = createInstanceAndHolding();
     UUID itemId = UUID.randomUUID();
 
-    JsonObject lastCheckIn = new JsonObject()
-      .put("servicePointId", "7c5abc9f-f3d7-4856-b8d7-6712462ca007")
-      .put("staffMemberId", "12115707-d7c8-54e7-8287-22e97f7250a4")
-      .put("dateTime", "2020-01-02T13:02:46.000Z");
+    JsonObject lastCheckIn = defaultLastCheckIn();
 
     JsonObject newItemRequest = new ItemRequestBuilder()
       .withId(itemId)
@@ -469,7 +473,7 @@ public class ItemsApiTest extends ApiTests {
       .create();
     item = itemsClient.create(item).getJson();
 
-    assertThat(updateItem(item).statusCode(), is(409));
+    assertThat(itemsClient.attemptToReplace(UUID.fromString(item.getString("id")), item).statusCode(), is(409));
   }
 
   @Test
@@ -624,22 +628,24 @@ public class ItemsApiTest extends ApiTests {
     assertThat(secondPageItems.size(), is(2));
     assertThat(secondPageResponse.getJson().getInteger("totalRecords"), is(5));
 
-    firstPageItems.forEach(ItemsApiTest::hasConsistentMaterialType);
-    firstPageItems.forEach(ItemsApiTest::hasConsistentPermanentLoanType);
-    firstPageItems.forEach(ItemsApiTest::hasConsistentTemporaryLoanType);
+    firstPageItems.forEach(item -> assertThat(item, hasConsistentMaterialType()));
+    firstPageItems.forEach(item -> assertThat(item, hasConsistentPermanentLoanType()));
+    firstPageItems.forEach(item -> assertThat(item, hasConsistentTemporaryLoanType()));
 
     firstPageItems.forEach(ItemsApiTest::hasStatus);
-    firstPageItems.forEach(ItemsApiTest::hasConsistentPermanentLocation);
-    firstPageItems.forEach(ItemsApiTest::hasConsistentTemporaryLocation);
-    firstPageItems.forEach(this::assertCallNumbers);
+    firstPageItems.forEach(item -> assertThat(item, hasConsistentPermanentLocation()));
+    firstPageItems.forEach(item -> assertThat(item, hasConsistentTemporaryLocation()));
+    firstPageItems.forEach(item -> assertThat(item,
+      hasCallNumbers(CALL_NUMBER, CALL_NUMBER_SUFFIX, CALL_NUMBER_PREFIX, CALL_NUMBER_TYPE_ID)));
 
-    secondPageItems.forEach(ItemsApiTest::hasConsistentMaterialType);
-    secondPageItems.forEach(ItemsApiTest::hasConsistentPermanentLoanType);
-    secondPageItems.forEach(ItemsApiTest::hasConsistentTemporaryLoanType);
+    secondPageItems.forEach(item -> assertThat(item, hasConsistentMaterialType()));
+    secondPageItems.forEach(item -> assertThat(item, hasConsistentPermanentLoanType()));
+    secondPageItems.forEach(item -> assertThat(item, hasConsistentTemporaryLoanType()));
     secondPageItems.forEach(ItemsApiTest::hasStatus);
-    secondPageItems.forEach(ItemsApiTest::hasConsistentPermanentLocation);
-    secondPageItems.forEach(ItemsApiTest::hasConsistentTemporaryLocation);
-    secondPageItems.forEach(this::assertCallNumbers);
+    secondPageItems.forEach(item -> assertThat(item, hasConsistentPermanentLocation()));
+    secondPageItems.forEach(item -> assertThat(item, hasConsistentTemporaryLocation()));
+    secondPageItems.forEach(item -> assertThat(item,
+      hasCallNumbers(CALL_NUMBER, CALL_NUMBER_SUFFIX, CALL_NUMBER_PREFIX, CALL_NUMBER_TYPE_ID)));
   }
 
   @Test
@@ -696,10 +702,10 @@ public class ItemsApiTest extends ApiTests {
         .findFirst().orElse(new JsonObject()).getJsonObject("temporaryLoanType").getString("id"),
       is(ApiTestSuite.getCourseReserveLoanType()));
 
-    items.forEach(ItemsApiTest::hasConsistentPermanentLoanType);
-    items.forEach(ItemsApiTest::hasConsistentTemporaryLoanType);
-    items.forEach(ItemsApiTest::hasConsistentPermanentLocation);
-    items.forEach(ItemsApiTest::hasConsistentTemporaryLocation);
+    items.forEach(item -> assertThat(item, hasConsistentPermanentLoanType()));
+    items.forEach(item -> assertThat(item, hasConsistentTemporaryLoanType()));
+    items.forEach(item -> assertThat(item, hasConsistentPermanentLocation()));
+    items.forEach(item -> assertThat(item, hasConsistentTemporaryLocation()));
   }
 
   @Test
@@ -1218,14 +1224,7 @@ public class ItemsApiTest extends ApiTests {
   void canPopulateLocationProperties() {
     UUID itemId = UUID.randomUUID();
 
-    JsonObject newItemRequest = new JsonObject()
-      .put("id", itemId.toString())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("holdingsRecordId", createInstanceAndHolding().toString())
-      .put("materialTypeId", getDvdMaterialType())
-      .put("permanentLoanTypeId", getCanCirculateLoanType())
-      .put("permanentLocationId", getMainLibraryLocation())
-      .put("temporaryLocationId", getReadingRoomLocation());
+    JsonObject newItemRequest = newDvdItemAtReadingRoom(itemId.toString());
 
     itemsStorageClient.create(newItemRequest);
 
@@ -1253,14 +1252,7 @@ public class ItemsApiTest extends ApiTests {
   @Test
   @SneakyThrows
   void canSearchItemsByLocation() {
-    JsonObject readingRoomItem = new JsonObject()
-      .put("id", UUID.randomUUID().toString())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("holdingsRecordId", createInstanceAndHolding().toString())
-      .put("materialTypeId", getDvdMaterialType())
-      .put("permanentLoanTypeId", getCanCirculateLoanType())
-      .put("permanentLocationId", getMainLibraryLocation())
-      .put("temporaryLocationId", getReadingRoomLocation());
+    JsonObject readingRoomItem = newDvdItemAtReadingRoom(UUID.randomUUID().toString());
 
     JsonObject thirdFloorItem = readingRoomItem.copy()
       .put("id", UUID.randomUUID().toString())
@@ -1295,14 +1287,7 @@ public class ItemsApiTest extends ApiTests {
   @SneakyThrows
   void itemHasLastCheckInPropertiesWhenTheyAreSet() {
 
-    JsonObject readingRoomItem = new JsonObject()
-      .put("id", UUID.randomUUID().toString())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("holdingsRecordId", createInstanceAndHolding().toString())
-      .put("materialTypeId", getDvdMaterialType())
-      .put("permanentLoanTypeId", getCanCirculateLoanType())
-      .put("permanentLocationId", getMainLibraryLocation())
-      .put("temporaryLocationId", getReadingRoomLocation());
+    JsonObject readingRoomItem = newDvdItemAtReadingRoom(UUID.randomUUID().toString());
 
     JsonObject lastCheckInObj = new JsonObject();
     UUID userId = UUID.randomUUID();
@@ -1329,14 +1314,7 @@ public class ItemsApiTest extends ApiTests {
   @Test
   @SneakyThrows
   void itemHasNoLastCheckInPropertiesWhenNotSet() {
-    JsonObject readingRoomItem = new JsonObject()
-      .put("id", UUID.randomUUID().toString())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("holdingsRecordId", createInstanceAndHolding().toString())
-      .put("materialTypeId", getDvdMaterialType())
-      .put("permanentLoanTypeId", getCanCirculateLoanType())
-      .put("permanentLocationId", getMainLibraryLocation())
-      .put("temporaryLocationId", getReadingRoomLocation());
+    JsonObject readingRoomItem = newDvdItemAtReadingRoom(UUID.randomUUID().toString());
 
     itemsStorageClient.create(readingRoomItem);
 
@@ -1366,7 +1344,7 @@ public class ItemsApiTest extends ApiTests {
       .put("itemLevelCallNumber", "callNumber")
       .put("hrid", "updatedHrid");
 
-    Response updateResponse = updateItem(updatedItem);
+    Response updateResponse = itemsClient.attemptToReplace(UUID.fromString(updatedItem.getString("id")), updatedItem);
 
     assertThat(updateResponse,
       hasValidationError("HRID can not be updated", "hrid", "updatedHrid")
@@ -1397,7 +1375,7 @@ public class ItemsApiTest extends ApiTests {
 
     updatedItem.remove("hrid");
 
-    Response updateResponse = updateItem(updatedItem);
+    Response updateResponse = itemsClient.attemptToReplace(UUID.fromString(updatedItem.getString("id")), updatedItem);
 
     assertThat(updateResponse,
       hasValidationError("HRID can not be updated", "hrid", null)
@@ -1443,7 +1421,7 @@ public class ItemsApiTest extends ApiTests {
     JsonObject updatedItem = createdItem.copy()
       .put("status", new JsonObject().put("name", "Unrecognized name"));
 
-    Response updateResponse = updateItem(updatedItem);
+    Response updateResponse = itemsClient.attemptToReplace(UUID.fromString(updatedItem.getString("id")), updatedItem);
     assertThat(updateResponse, hasValidationError(
       "Undefined status specified",
       "status.name",
@@ -1466,7 +1444,7 @@ public class ItemsApiTest extends ApiTests {
     JsonObject updatedItem = createdItem.copy();
     updatedItem.remove("status");
 
-    Response updateResponse = updateItem(updatedItem);
+    Response updateResponse = itemsClient.attemptToReplace(UUID.fromString(updatedItem.getString("id")), updatedItem);
     assertThat(updateResponse,
       hasValidationError("Status is a required field", "status", null)
     );
@@ -1487,7 +1465,7 @@ public class ItemsApiTest extends ApiTests {
     JsonObject updatedItem = createdItem.copy()
       .put("status", new JsonObject());
 
-    Response updateResponse = updateItem(updatedItem);
+    Response updateResponse = itemsClient.attemptToReplace(UUID.fromString(updatedItem.getString("id")), updatedItem);
     assertThat(updateResponse,
       hasValidationError("Status is a required field", "status", null)
     );
@@ -1540,7 +1518,7 @@ public class ItemsApiTest extends ApiTests {
     JsonObject updatedItem = createdItem.getJson().copy()
       .put("status", new JsonObject().put("name", "Missing"));
 
-    Response updateResponse = updateItem(updatedItem);
+    Response updateResponse = itemsClient.attemptToReplace(UUID.fromString(updatedItem.getString("id")), updatedItem);
     assertThat(updateResponse,
       hasValidationError("Claimed returned item cannot be marked as missing",
         "status.name", "Missing")
@@ -1565,7 +1543,7 @@ public class ItemsApiTest extends ApiTests {
     JsonObject updatedItem = createdItem.getJson().copy()
       .put("status", new JsonObject().put("name", "Available"));
 
-    Response updateResponse = updateItem(updatedItem);
+    Response updateResponse = itemsClient.attemptToReplace(UUID.fromString(updatedItem.getString("id")), updatedItem);
     assertThat(updateResponse.statusCode(), is(204));
   }
 
@@ -1703,10 +1681,7 @@ public class ItemsApiTest extends ApiTests {
     UUID holdingId = createInstanceAndHolding();
     UUID itemId = UUID.randomUUID();
 
-    JsonObject lastCheckIn = new JsonObject()
-      .put("servicePointId", "7c5abc9f-f3d7-4856-b8d7-6712462ca007")
-      .put("staffMemberId", "12115707-d7c8-54e7-8287-22e97f7250a4")
-      .put("dateTime", "2020-01-02T13:02:46.000Z");
+    JsonObject lastCheckIn = defaultLastCheckIn();
 
     JsonObject newItemRequest = new ItemRequestBuilder()
       .withId(itemId)
@@ -1806,10 +1781,7 @@ public class ItemsApiTest extends ApiTests {
     UUID holdingId = createInstanceAndHolding();
     UUID itemId = UUID.randomUUID();
 
-    JsonObject lastCheckIn = new JsonObject()
-      .put("servicePointId", "7c5abc9f-f3d7-4856-b8d7-6712462ca007")
-      .put("staffMemberId", "12115707-d7c8-54e7-8287-22e97f7250a4")
-      .put("dateTime", "2020-01-02T13:02:46.000Z");
+    JsonObject lastCheckIn = defaultLastCheckIn();
 
     JsonObject newItemRequest = new ItemRequestBuilder()
       .withId(itemId)
@@ -1855,10 +1827,7 @@ public class ItemsApiTest extends ApiTests {
     UUID holdingId = createInstanceAndHolding();
     UUID itemId = UUID.randomUUID();
 
-    JsonObject lastCheckIn = new JsonObject()
-      .put("servicePointId", "7c5abc9f-f3d7-4856-b8d7-6712462ca007")
-      .put("staffMemberId", "12115707-d7c8-54e7-8287-22e97f7250a4")
-      .put("dateTime", "2020-01-02T13:02:46.000Z");
+    JsonObject lastCheckIn = defaultLastCheckIn();
 
     JsonObject newItemRequest = new ItemRequestBuilder()
       .withId(UUID.randomUUID())
@@ -1919,10 +1888,7 @@ public class ItemsApiTest extends ApiTests {
     UUID holdingId = createInstanceAndHolding();
     UUID itemId = UUID.randomUUID();
 
-    JsonObject lastCheckIn = new JsonObject()
-      .put("servicePointId", "7c5abc9f-f3d7-4856-b8d7-6712462ca007")
-      .put("staffMemberId", "12115707-d7c8-54e7-8287-22e97f7250a4")
-      .put("dateTime", "2020-01-02T13:02:46.000Z");
+    JsonObject lastCheckIn = defaultLastCheckIn();
 
     JsonObject newItemRequest = new ItemRequestBuilder()
       .withId(itemId)
@@ -2069,89 +2035,27 @@ public class ItemsApiTest extends ApiTests {
       storedItemResponse.getJson().containsKey("title"), Is.is(false));
   }
 
-  @SneakyThrows
-  private Response updateItem(JsonObject item) {
-
-    String itemUpdateUri = String.format("%s/%s", ApiRoot.items(), item.getString("id"));
-    final var putItemCompleted = okapiClient.put(itemUpdateUri, item);
-
-    return putItemCompleted.toCompletableFuture().get(5, SECONDS);
-  }
-
   private static void hasStatus(JsonObject item) {
     assertThat(item.containsKey("status"), is(true));
     assertThat(item.getJsonObject("status").containsKey("name"), is(true));
   }
 
-  private static void hasConsistentMaterialType(JsonObject item) {
-    JsonObject materialType = item.getJsonObject("materialType");
-
-    String materialTypeId = materialType.getString("id");
-
-    if (materialTypeId.equals(ApiTestSuite.getBookMaterialType())) {
-      assertThat(materialType.getString("id"), is(ApiTestSuite.getBookMaterialType()));
-      assertThat(materialType.getString("name"), is("Book"));
-    } else if (materialTypeId.equals(ApiTestSuite.getDvdMaterialType())) {
-      assertThat(materialType.getString("id"), is(ApiTestSuite.getDvdMaterialType()));
-      assertThat(materialType.getString("name"), is("DVD"));
-    } else {
-      assertThat(materialType.getString("id"), is(nullValue()));
-      assertThat(materialType.getString("name"), is(nullValue()));
-    }
+  private JsonObject newDvdItemAtReadingRoom(String id) {
+    return new JsonObject()
+      .put("id", id)
+      .put("status", new JsonObject().put("name", "Available"))
+      .put("holdingsRecordId", createInstanceAndHolding().toString())
+      .put("materialTypeId", getDvdMaterialType())
+      .put("permanentLoanTypeId", getCanCirculateLoanType())
+      .put("permanentLocationId", getMainLibraryLocation())
+      .put("temporaryLocationId", getReadingRoomLocation());
   }
 
-  private static void hasConsistentPermanentLoanType(JsonObject item) {
-    hasConsistentLoanType(item.getJsonObject("permanentLoanType"));
-  }
-
-  private static void hasConsistentTemporaryLoanType(JsonObject item) {
-    hasConsistentLoanType(item.getJsonObject("temporaryLoanType"));
-  }
-
-  private static void hasConsistentLoanType(JsonObject loanType) {
-    if (loanType == null) {
-      return;
-    }
-
-    String loanTypeId = loanType.getString("id");
-
-    if (loanTypeId.equals(ApiTestSuite.getCanCirculateLoanType())) {
-      assertThat(loanType.getString("id"), is(ApiTestSuite.getCanCirculateLoanType()));
-      assertThat(loanType.getString("name"), is("Can Circulate"));
-    } else if (loanTypeId.equals(ApiTestSuite.getCourseReserveLoanType())) {
-      assertThat(loanType.getString("id"), is(ApiTestSuite.getCourseReserveLoanType()));
-      assertThat(loanType.getString("name"), is("Course Reserves"));
-    } else {
-      assertThat(loanType.getString("id"), is(nullValue()));
-      assertThat(loanType.getString("name"), is(nullValue()));
-    }
-  }
-
-  private static void hasConsistentPermanentLocation(JsonObject item) {
-    hasConsistentLocation(item.getJsonObject("permanentLocation"));
-  }
-
-  private static void hasConsistentTemporaryLocation(JsonObject item) {
-    hasConsistentLocation(item.getJsonObject("temporaryLocation"));
-  }
-
-  private static void hasConsistentLocation(JsonObject location) {
-    if (location == null) {
-      return;
-    }
-
-    String locationId = location.getString("id");
-
-    if (locationId.equals(ApiTestSuite.getThirdFloorLocation())) {
-      assertThat(location.getString("id"), is(ApiTestSuite.getThirdFloorLocation()));
-      assertThat(location.getString("name"), is("3rd Floor"));
-    } else if (locationId.equals(ApiTestSuite.getMezzanineDisplayCaseLocation())) {
-      assertThat(location.getString("id"), is(ApiTestSuite.getMezzanineDisplayCaseLocation()));
-      assertThat(location.getString("name"), is("Display Case, Mezzanine"));
-    } else {
-      assertThat(location.getString("id"), is(nullValue()));
-      assertThat(location.getString("name"), is(nullValue()));
-    }
+  private JsonObject defaultLastCheckIn() {
+    return new JsonObject()
+      .put("servicePointId", "7c5abc9f-f3d7-4856-b8d7-6712462ca007")
+      .put("staffMemberId", "12115707-d7c8-54e7-8287-22e97f7250a4")
+      .put("dateTime", "2020-01-02T13:02:46.000Z");
   }
 
   private JsonObject createInstance(JsonObject newInstanceRequest) {
@@ -2171,17 +2075,6 @@ public class ItemsApiTest extends ApiTests {
     final var getCompleted = okapiClient.get(items("?query=") + urlEncode(searchQuery));
 
     return getCompleted.toCompletableFuture().get(5, SECONDS).getJson();
-  }
-
-  private void assertCallNumbers(JsonObject item) {
-    JsonObject callNumberComponents = item.getJsonObject("effectiveCallNumberComponents");
-
-    assertNotNull(callNumberComponents);
-
-    assertThat(callNumberComponents.getString("callNumber"), is(CALL_NUMBER));
-    assertThat(callNumberComponents.getString("suffix"), is(CALL_NUMBER_SUFFIX));
-    assertThat(callNumberComponents.getString("prefix"), is(CALL_NUMBER_PREFIX));
-    assertThat(callNumberComponents.getString("typeId"), is(CALL_NUMBER_TYPE_ID));
   }
 
   private List<String> getTags(JsonObject item) {

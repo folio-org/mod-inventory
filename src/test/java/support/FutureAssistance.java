@@ -2,6 +2,7 @@ package support;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -17,6 +18,12 @@ public class FutureAssistance {
     throws InterruptedException, ExecutionException, TimeoutException {
 
     return future.get(2000, TimeUnit.MILLISECONDS);
+  }
+
+  public static <T> T getOnCompletion(CompletionStage<T> stage, long timeout, TimeUnit unit)
+    throws InterruptedException, ExecutionException, TimeoutException {
+
+    return stage.toCompletableFuture().get(timeout, unit);
   }
 
   public static <T> T getOnCompletion(Consumer<CompletableFuture<T>> task)

@@ -3,6 +3,7 @@ package support;
 import api.ApiTestSuite;
 import java.net.URI;
 import java.net.URL;
+import java.util.UUID;
 import lombok.SneakyThrows;
 
 public class ApiRoot {
@@ -31,6 +32,16 @@ public class ApiRoot {
   @SneakyThrows
   public static URL instances(String query) {
     return new URI(String.format("%s/instances?%s", inventory(), query)).toURL();
+  }
+
+  @SneakyThrows
+  public static URL instance(UUID id) {
+    return instance(id.toString());
+  }
+
+  @SneakyThrows
+  public static URL instance(String id) {
+    return new URI(String.format("%s/%s", instances(), id)).toURL();
   }
 
   @SneakyThrows

@@ -342,6 +342,21 @@ public class ResourceClient {
       .setFailureExpireDate(DateTime.now().minusMinutes(1).toDate()));
   }
 
+  public void emulateFailure(int statusCode, String method, String body)
+    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+
+    emulateFailure(statusCode, method, body, "application/json");
+  }
+
+  public void emulateFailure(int statusCode, String method, String body, String contentType)
+    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+
+    emulateFailure(new EndpointFailureDescriptor()
+      .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
+      .setStatusCode(statusCode).setContentType(contentType)
+      .setBody(body).setMethod(method));
+  }
+
   @FunctionalInterface
   public interface UrlMaker {
     URL combine(String subPath) throws MalformedURLException;

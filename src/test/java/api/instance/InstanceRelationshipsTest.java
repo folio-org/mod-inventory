@@ -26,11 +26,9 @@ import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
-import org.joda.time.DateTime;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import support.ApiTests;
-import support.fakes.EndpointFailureDescriptor;
 
 public class InstanceRelationshipsTest extends ApiTests {
 
@@ -87,13 +85,7 @@ public class InstanceRelationshipsTest extends ApiTests {
     createSuperInstanceSubInstance(expectedCount);
 
     final JsonObject expectedErrorResponse = new JsonObject().put("message", "Can not fetch relationships");
-    instanceRelationshipClient.emulateFailure(
-      new EndpointFailureDescriptor()
-        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
-        .setStatusCode(500)
-        .setContentType("application/json")
-        .setBody(expectedErrorResponse.toString())
-        .setMethod(HttpMethod.GET.name()));
+    instanceRelationshipClient.emulateFailure(500, HttpMethod.GET.name(), expectedErrorResponse.toString());
 
     Response response = instancesClient
       .attemptGetMany("title=(\"super\" or \"sub\"", expectedCount);
@@ -129,13 +121,7 @@ public class InstanceRelationshipsTest extends ApiTests {
     createPrecedingSucceedingInstances(expectedCount);
 
     final JsonObject expectedErrorResponse = new JsonObject().put("message", "Server error");
-    precedingSucceedingTitlesClient.emulateFailure(
-      new EndpointFailureDescriptor()
-        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
-        .setStatusCode(500)
-        .setContentType("application/json")
-        .setBody(expectedErrorResponse.toString())
-        .setMethod(HttpMethod.GET.name()));
+    precedingSucceedingTitlesClient.emulateFailure(500, HttpMethod.GET.name(), expectedErrorResponse.toString());
 
     Response response = instancesClient
       .attemptGetMany("title=(\"preceding\" or \"succeeding\"", expectedCount);
@@ -284,13 +270,7 @@ public class InstanceRelationshipsTest extends ApiTests {
 
     final JsonObject expectedErrorResponse = new JsonObject()
       .put("message", "Server error");
-    precedingSucceedingTitlesClient.emulateFailure(
-      new EndpointFailureDescriptor()
-        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
-        .setStatusCode(500)
-        .setContentType("application/json")
-        .setBody(expectedErrorResponse.toString())
-        .setMethod(HttpMethod.PUT.name()));
+    precedingSucceedingTitlesClient.emulateFailure(500, HttpMethod.PUT.name(), expectedErrorResponse.toString());
 
     JsonObject newSucceedingTitle = new JsonObject()
       .put("id", titleId)
@@ -324,13 +304,7 @@ public class InstanceRelationshipsTest extends ApiTests {
 
     final JsonObject expectedErrorResponse = new JsonObject()
       .put("message", "Server error");
-    precedingSucceedingTitlesClient.emulateFailure(
-      new EndpointFailureDescriptor()
-        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
-        .setStatusCode(500)
-        .setContentType("application/json")
-        .setBody(expectedErrorResponse.toString())
-        .setMethod(HttpMethod.DELETE.name()));
+    precedingSucceedingTitlesClient.emulateFailure(500, HttpMethod.DELETE.name(), expectedErrorResponse.toString());
 
     JsonObject newNod = nod.copy();
     newNod.put("succeedingTitles", new JsonArray());
@@ -362,13 +336,7 @@ public class InstanceRelationshipsTest extends ApiTests {
 
     final JsonObject expectedErrorResponse = new JsonObject()
       .put("message", "Server error");
-    instanceRelationshipClient.emulateFailure(
-      new EndpointFailureDescriptor()
-        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
-        .setStatusCode(500)
-        .setContentType("application/json")
-        .setBody(expectedErrorResponse.toString())
-        .setMethod(HttpMethod.PUT.name()));
+    instanceRelationshipClient.emulateFailure(500, HttpMethod.PUT.name(), expectedErrorResponse.toString());
 
     JsonObject newParentInstances = new JsonObject()
       .put("id", parentInstanceId)
@@ -406,13 +374,7 @@ public class InstanceRelationshipsTest extends ApiTests {
 
     final JsonObject expectedErrorResponse = new JsonObject()
       .put("message", "Server error");
-    instanceRelationshipClient.emulateFailure(
-      new EndpointFailureDescriptor()
-        .setFailureExpireDate(DateTime.now().plusSeconds(2).toDate())
-        .setStatusCode(500)
-        .setContentType("application/json")
-        .setBody(expectedErrorResponse.toString())
-        .setMethod(HttpMethod.DELETE.name()));
+    instanceRelationshipClient.emulateFailure(500, HttpMethod.DELETE.name(), expectedErrorResponse.toString());
 
     JsonObject newNod = nod.copy();
     newNod.put(PARENT_INSTANCES, new JsonArray());
