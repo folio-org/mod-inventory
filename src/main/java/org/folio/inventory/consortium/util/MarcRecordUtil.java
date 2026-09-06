@@ -7,11 +7,11 @@ import io.vertx.core.json.JsonObject;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.Record;
+import org.folio.inventory.dataimport.util.MarcFieldEditor;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.marc4j.MarcException;
 import org.marc4j.MarcJsonReader;
@@ -19,9 +19,6 @@ import org.marc4j.MarcJsonWriter;
 import org.marc4j.MarcReader;
 import org.marc4j.MarcStreamWriter;
 import org.marc4j.MarcWriter;
-import org.marc4j.marc.DataField;
-import org.marc4j.marc.Subfield;
-import org.marc4j.marc.VariableField;
 
 /**
  * Util to work with marc records
@@ -47,17 +44,7 @@ public final class MarcRecordUtil {
       MarcJsonWriter marcJsonWriter = new MarcJsonWriter(baos);
       org.marc4j.marc.Record marcRecord = computeMarcRecord(record);
       if (marcRecord != null) {
-        for (VariableField variableField : marcRecord.getVariableFields(fields.toArray(new String[0]))) {
-          if (!(variableField instanceof DataField dataField)) {
-            continue;
-          }
-          List<Subfield> subfields = dataField.getSubfields(subfieldCode);
-          for (Subfield subfield : subfields) {
-            if (subfield != null && values.contains(subfield.getData())) {
-              dataField.removeSubfield(subfield);
-            }
-          }
-        }
+        MarcFieldEditor.removeSubfieldValues(marcRecord, fields, subfieldCode, values);
 
         // use stream writer to recalculate leader
         marcStreamWriter.write(marcRecord);
@@ -80,10 +67,8 @@ public final class MarcRecordUtil {
   public static Record removeFieldFromMarcRecord(Record marcRecord, String fieldTag) {
     org.marc4j.marc.Record parsedMarcRecord = computeMarcRecord(marcRecord);
     if (parsedMarcRecord != null) {
-      List<VariableField> fieldsToRemove = new ArrayList<>(parsedMarcRecord.getVariableFields(fieldTag));
-      if (!fieldsToRemove.isEmpty()) {
-        fieldsToRemove.forEach(parsedMarcRecord::removeVariableField);
-
+      boolean fieldsRemoved = MarcFieldEditor.removeAllFieldsWithTag(parsedMarcRecord, fieldTag);
+      if (fieldsRemoved) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
           MarcWriter marcStreamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
           MarcWriter marcJsonWriter = new MarcJsonWriter(baos);
@@ -129,12 +114,7 @@ public final class MarcRecordUtil {
     try {
       org.marc4j.marc.Record marcRecord = computeMarcRecord(sourceRecord);
       if (marcRecord != null) {
-        for (DataField dataField : marcRecord.getDataFields()) {
-          Subfield subfield = dataField.getSubfield(subFieldCode);
-          if (subfield != null) {
-            return true;
-          }
-        }
+        return MarcFieldEditor.subfieldExists(marcRecord, subFieldCode);
       }
     } catch (Exception e) {
       LOGGER.warn("isSubfieldExist:: Error during the search a subfield in the record", e);
