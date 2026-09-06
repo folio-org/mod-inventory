@@ -3,6 +3,10 @@ package org.folio.inventory.dataimport.handlers.matching;
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
+import static org.folio.dataimport.util.marc.MarcConstants.INDICATOR_F;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_I;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_S;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.buildMultiMatchErrorMessage;
 import static org.folio.processing.value.Value.ValueType.MISSING;
 import static org.folio.rest.jaxrs.model.Filter.ComparisonPartType;
@@ -71,10 +75,6 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   private static final String MATCH_RESULT_KEY_PREFIX = "MATCHED_%s";
   private static final int EXPECTED_MATCH_EXPRESSION_FIELDS_NUMBER = 4;
   private static final String DEFAULT_RECORDS_IDENTIFIERS_LIMIT = "5000";
-  private static final String FIELD_999 = "999";
-  private static final String INDICATOR_F = "f";
-  private static final String SUBFIELD_I = "i";
-  private static final String SUBFIELD_S = "s";
 
   protected final ConsortiumService consortiumService;
   private final DataImportEventTypes matchedEventType;
@@ -280,13 +280,13 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     return buildFilter(List.of(matchedId), FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_S);
   }
 
-  private Filter buildFilter(List<String> values, String field, String ind1, String ind2, String subfield) {
+  private Filter buildFilter(List<String> values, String field, char ind1, char ind2, char subfield) {
     return new Filter()
       .withValues(values)
       .withField(field)
-      .withIndicator1(ind1)
-      .withIndicator2(ind2)
-      .withSubfield(subfield);
+      .withIndicator1(String.valueOf(ind1))
+      .withIndicator2(String.valueOf(ind2))
+      .withSubfield(String.valueOf(subfield));
   }
 
   private Future<RecordsMatchingContext> createRecordsMatchingContext(DataImportEventPayload payload) {

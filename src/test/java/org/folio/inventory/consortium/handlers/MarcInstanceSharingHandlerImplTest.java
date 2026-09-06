@@ -35,11 +35,11 @@ import org.folio.HttpStatus;
 import org.folio.Link;
 import org.folio.LinkingRuleDto;
 import org.folio.Record;
+import org.folio.dataimport.util.marc.MarcContentCodec;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.util.ParsedRecordUtil;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
@@ -60,7 +60,6 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import support.TestUtil;
 
-// TODO: Move json constants to separate files
 @ExtendWith({VertxExtension.class, MockitoExtension.class})
 @MockitoSettings(strictness = Strictness.LENIENT)
 class MarcInstanceSharingHandlerImplTest {
@@ -221,7 +220,7 @@ class MarcInstanceSharingHandlerImplTest {
 
     verify(restDataImportHelper, times(1))
       .importMarcRecord(Mockito.argThat(marcRecord ->
-          ParsedRecordUtil.normalize(marcRecord.getParsedRecord().getContent()).getJsonArray("fields").encode()
+          MarcContentCodec.canonicalizeJson(marcRecord.getParsedRecord().getContent()).getJsonArray("fields").encode()
             .equals(PARSED_RECORD_FIELDS_AFTER_UNLINK)),
         any(), any());
 
@@ -281,7 +280,7 @@ class MarcInstanceSharingHandlerImplTest {
 
       verify(restDataImportHelper, times(1))
         .importMarcRecord(Mockito.argThat(marcRecord ->
-            ParsedRecordUtil.normalize(marcRecord.getParsedRecord().getContent())
+            MarcContentCodec.canonicalizeJson(marcRecord.getParsedRecord().getContent())
               .getJsonArray("fields").encode().equals(PARSED_RECORD_FIELDS_AFTER_UNLINK_LOCAL_LINKS)),
           any(), any());
 
@@ -491,7 +490,7 @@ class MarcInstanceSharingHandlerImplTest {
     verify(restDataImportHelper, times(1))
       .importMarcRecord(Mockito.argThat(marcRecord -> {
         String fields =
-          ParsedRecordUtil.normalize(marcRecord.getParsedRecord().getContent()).getJsonArray("fields").encode();
+          MarcContentCodec.canonicalizeJson(marcRecord.getParsedRecord().getContent()).getJsonArray("fields").encode();
         return fields.contains(AUTHORITY_ID_1) && fields.contains(AUTHORITY_ID_2);
       }), any(), any());
 

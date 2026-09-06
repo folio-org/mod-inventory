@@ -10,7 +10,7 @@ import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_005;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.DATE_TIME_005_FORMATTER;
 import static org.folio.inventory.dataimport.util.DataImportConstants.ALREADY_EXISTS_ERROR_MSG;
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.LEADER_STATUS_DELETED;
@@ -118,8 +118,6 @@ import support.TestUtil;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-//TODO move parsed content strings somewhere/simplify
-//TODO do something with profile definitions - util methods?
 class CreateInstanceEventHandlerTest extends BaseWireMockTest {
 
   private static final String PARSED_CONTENT =
@@ -357,7 +355,7 @@ class CreateInstanceEventHandlerTest extends BaseWireMockTest {
         instanceIdStorageService, orderHelperService, snapshotService, httpClient));
 
     doReturn(sourceStorageClient).when(createInstanceEventHandler)
-      .getSourceStorageRecordsClient(any(), any(), any(), any(), any());
+      .getSourceStorageClient(any(), any(), any(), any(), any());
     doAnswer(invocationOnMock -> {
       Instance instanceRecord = invocationOnMock.getArgument(0);
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
@@ -458,7 +456,7 @@ class CreateInstanceEventHandlerTest extends BaseWireMockTest {
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(0).getString("instanceNoteTypeId"), notNullValue());
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
-    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(),
+    verify(createInstanceEventHandler).getSourceStorageClient(any(), any(),
       argThat(tenantId -> tenantId.equals(TENANT_ID)), argThat(USER_ID::equals), argThat(REQUEST_ID::equals));
   }
 
@@ -508,7 +506,7 @@ class CreateInstanceEventHandlerTest extends BaseWireMockTest {
     String actualInstanceId = createdInstance.getString("id");
     assertNotNull(actualInstanceId);
     assertEquals(instanceId, actualInstanceId);
-    String actualDate = AdditionalFieldsUtil.getValueFromControlledField(recordCaptor.getValue(), TAG_005);
+    String actualDate = AdditionalFieldsUtil.getValueFromControlledField(recordCaptor.getValue(), FIELD_005);
     assertNotNull(actualDate);
     assertEquals(expectedDate.substring(0, 10), actualDate.substring(0, 10));
     assertEquals(recordId, recordCaptor.getValue().getMatchedId());
@@ -578,7 +576,7 @@ class CreateInstanceEventHandlerTest extends BaseWireMockTest {
     assertEquals("MARC", createdInstance.getString("source"));
     assertThat(createdInstance.getString("discoverySuppress"), is("true"));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
-    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(),
+    verify(createInstanceEventHandler).getSourceStorageClient(any(), any(),
       argThat(tenantId -> tenantId.equals(TENANT_ID)), argThat(USER_ID::equals), argThat(REQUEST_ID::equals));
   }
 
@@ -761,7 +759,7 @@ class CreateInstanceEventHandlerTest extends BaseWireMockTest {
     assertEquals("true", createdInstance.getString("discoverySuppress"));
     assertEquals("true", createdInstance.getString("deleted"));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
-    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(),
+    verify(createInstanceEventHandler).getSourceStorageClient(any(), any(),
       argThat(tenantId -> tenantId.equals(TENANT_ID)), argThat(USER_ID::equals), argThat(REQUEST_ID::equals));
     verify(sourceStorageClient).postSourceStorageRecords(argThat(r -> {
       Optional<Character> leader = ParsedRecordUtil.getLeaderStatus(r.getParsedRecord());
@@ -834,7 +832,7 @@ class CreateInstanceEventHandlerTest extends BaseWireMockTest {
     assertEquals("true", createdInstance.getString("discoverySuppress"));
     assertEquals("true", createdInstance.getString("deleted"));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
-    verify(createInstanceEventHandler).getSourceStorageRecordsClient(any(), any(),
+    verify(createInstanceEventHandler).getSourceStorageClient(any(), any(),
       argThat(tenantId -> tenantId.equals(TENANT_ID)), argThat(USER_ID::equals), argThat(REQUEST_ID::equals));
     verify(sourceStorageClient).postSourceStorageRecords(argThat(r -> {
       Optional<Character> leader = ParsedRecordUtil.getLeaderStatus(r.getParsedRecord());

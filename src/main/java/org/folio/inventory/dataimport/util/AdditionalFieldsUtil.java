@@ -3,6 +3,12 @@ package org.folio.inventory.dataimport.util;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_001;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_003;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_005;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_035;
+import static org.folio.dataimport.util.marc.MarcConstants.INDICATOR_EMPTY;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_A;
 
 import java.time.Clock;
 import java.time.ZonedDateTime;
@@ -15,6 +21,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.folio.dataimport.util.marc.MarcContentCacheStats;
+import org.folio.dataimport.util.marc.MarcFieldEditor;
+import org.folio.dataimport.util.marc.MarcJsonFieldOrderer;
+import org.folio.dataimport.util.marc.MarcRecordEditor;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
@@ -40,27 +50,15 @@ import org.marc4j.marc.VariableField;
 public final class AdditionalFieldsUtil {
 
   public static final DateTimeFormatter DATE_TIME_005_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss.S");
-  public static final String TAG_00X_PREFIX = "00";
-  public static final String TAG_005 = "005";
-  public static final String TAG_999 = "999";
-  public static final String TAG_001 = "001";
-  public static final String TAG_035 = "035";
-  public static final char TAG_035_SUB = 'a';
-  public static final char INDICATOR_F = 'f';
-  public static final char SUBFIELD_I = 'i';
-  public static final char SUBFIELD_L = 'l';
-  public static final String FIELDS = "fields";
   static final String INVALID_DATA_FIELD_MSG = "Field '%s' is not a data field.";
   private static final Logger LOGGER = LogManager.getLogger();
-  private static final String TAG_003 = "003";
-  private static final char TAG_035_IND = ' ';
   private static final String ANY_STRING = "*";
   private static final String OCLC_PREFIX = "(OCoLC)";
 
   private AdditionalFieldsUtil() {
   }
 
-  public static AdditionalFieldsUtilCacheStats getCacheStats() {
+  public static MarcContentCacheStats getCacheStats() {
     return MarcRecordEditor.getCacheStats();
   }
 
@@ -100,7 +98,7 @@ public final class AdditionalFieldsUtil {
     if (isField005NeedToUpdate(recordForUpdate, mappingParameters)) {
       String date = DATE_TIME_005_FORMATTER.format(ZonedDateTime.now(clock));
       try {
-        MarcRecordEditor.addControlledFieldToMarcRecordOrThrow(new JaxrsRecordHolder(recordForUpdate), TAG_005,
+        MarcRecordEditor.addControlledFieldToMarcRecordOrThrow(new JaxrsRecordHolder(recordForUpdate), FIELD_005,
           date, true);
       } catch (Exception e) {
         throw new EventProcessingException(format("Failed to update field '005' to record with id '%s'",
@@ -119,7 +117,7 @@ public final class AdditionalFieldsUtil {
    * @return true if succeeded, false otherwise
    */
   public static boolean addControlledFieldToMarcRecord(Record recordForUpdate, String field, String value,
-                                                        boolean replace) {
+                                                       boolean replace) {
     return MarcRecordEditor.addControlledFieldToMarcRecord(new JaxrsRecordHolder(recordForUpdate), field, value,
       replace);
   }
@@ -130,15 +128,15 @@ public final class AdditionalFieldsUtil {
    * @param srcRecord input record to modify
    */
   public static void move001To035(Record srcRecord) {
-    String valueFrom001 = getValueFromControlledField(srcRecord, TAG_001);
+    String valueFrom001 = getValueFromControlledField(srcRecord, FIELD_001);
     if (StringUtils.isNotEmpty(valueFrom001)) {
-      String valueFrom003 = getValueFromControlledField(srcRecord, TAG_003);
+      String valueFrom003 = getValueFromControlledField(srcRecord, FIELD_003);
       String new035Value = mergeFieldsFor035(valueFrom003, valueFrom001);
-      if (!isFieldExist(srcRecord, TAG_035, TAG_035_SUB, new035Value)) {
-        addDataFieldToMarcRecord(srcRecord, TAG_035, TAG_035_IND, TAG_035_IND, TAG_035_SUB, new035Value);
+      if (!isFieldExist(srcRecord, FIELD_035, SUBFIELD_A, new035Value)) {
+        addDataFieldToMarcRecord(srcRecord, FIELD_035, INDICATOR_EMPTY, INDICATOR_EMPTY, SUBFIELD_A, new035Value);
       }
     }
-    removeField(srcRecord, TAG_003);
+    removeField(srcRecord, FIELD_003);
   }
 
   public static void normalize035(Record srcRecord) {
@@ -163,7 +161,7 @@ public final class AdditionalFieldsUtil {
    *                                  final write-back failed
    */
   public static void executeStandardFieldsManipulation(Record targetRecord, MappingParameters mappingParameters,
-                                                        Clock clock) {
+                                                       Clock clock) {
     JaxrsRecordHolder holder = new JaxrsRecordHolder(targetRecord);
     org.marc4j.marc.Record marcRecord = MarcRecordEditor.computeMarcRecord(holder);
     boolean needsDate = isField005NeedToUpdate(marcRecord, mappingParameters);
@@ -176,7 +174,7 @@ public final class AdditionalFieldsUtil {
     }
     if (needsDate) {
       String date = DATE_TIME_005_FORMATTER.format(ZonedDateTime.now(clock));
-      MarcFieldEditor.addOrReplaceControlField(marcRecord, TAG_005, date, true);
+      MarcFieldEditor.addOrReplaceControlField(marcRecord, FIELD_005, date, true);
     }
     move001To035OnRecord(marcRecord);
     normalize035OnRecord(marcRecord);
@@ -199,7 +197,7 @@ public final class AdditionalFieldsUtil {
    *                                  final write-back failed
    */
   public static void executeReplaceFieldsManipulation(Record targetRecord, MappingParameters mappingParameters,
-                                                       Clock clock) {
+                                                      Clock clock) {
     JaxrsRecordHolder holder = new JaxrsRecordHolder(targetRecord);
     org.marc4j.marc.Record marcRecord = MarcRecordEditor.computeMarcRecord(holder);
     boolean needsDate = isField005NeedToUpdate(marcRecord, mappingParameters);
@@ -212,18 +210,18 @@ public final class AdditionalFieldsUtil {
     }
     if (needsDate) {
       String date = DATE_TIME_005_FORMATTER.format(ZonedDateTime.now(clock));
-      MarcFieldEditor.addOrReplaceControlField(marcRecord, TAG_005, date, true);
+      MarcFieldEditor.addOrReplaceControlField(marcRecord, FIELD_005, date, true);
     }
     normalize035OnRecord(marcRecord);
     if (Record.RecordType.MARC_BIB.equals(targetRecord.getRecordType())) {
-      String hrid = MarcFieldEditor.getControlFieldValue(marcRecord, TAG_001);
+      String hrid = MarcFieldEditor.getControlFieldValue(marcRecord, FIELD_001);
       // matches MarcRecordEditor.removeField's branching: remove035WithActualHrId ultimately calls
-      // removeField(holder, TAG_035, TAG_035_SUB, actualHrId), which removes the whole first 035 field
+      // removeField(holder, FIELD_035, SUBFIELD_A, actualHrId), which removes the whole first 035 field
       // when actualHrId is empty, rather than trying (and NPE-ing) to match an empty subfield value.
       if (StringUtils.isEmpty(hrid)) {
-        MarcFieldEditor.removeFirstField(marcRecord, TAG_035);
+        MarcFieldEditor.removeFirstField(marcRecord, FIELD_035);
       } else {
-        MarcFieldEditor.removeFieldWithSubfieldValue(marcRecord, TAG_035, TAG_035_SUB, hrid);
+        MarcFieldEditor.removeFieldWithSubfieldValue(marcRecord, FIELD_035, SUBFIELD_A, hrid);
       }
     }
     if (!MarcRecordEditor.recalculateAndWriteBack(holder, marcRecord)) {
@@ -232,33 +230,12 @@ public final class AdditionalFieldsUtil {
     }
   }
 
-  private static void move001To035OnRecord(org.marc4j.marc.Record marcRecord) {
-    String valueFrom001 = MarcFieldEditor.getControlFieldValue(marcRecord, TAG_001);
-    if (StringUtils.isNotEmpty(valueFrom001)) {
-      String valueFrom003 = MarcFieldEditor.getControlFieldValue(marcRecord, TAG_003);
-      String new035Value = mergeFieldsFor035(valueFrom003, valueFrom001);
-      if (!MarcFieldEditor.fieldExists(marcRecord, TAG_035, TAG_035_SUB, new035Value)) {
-        MarcFactory factory = MarcFactory.newInstance();
-        DataField dataField = factory.newDataField(TAG_035, TAG_035_IND, TAG_035_IND);
-        dataField.addSubfield(factory.newSubfield(TAG_035_SUB, new035Value));
-        MarcFieldEditor.addDataFieldInOrder(marcRecord, dataField);
-      }
-    }
-    MarcFieldEditor.removeFirstField(marcRecord, TAG_003);
-  }
-
-  private static void normalize035OnRecord(org.marc4j.marc.Record marcRecord) {
-    if (has035SubfieldWithOclcPrefix(marcRecord)) {
-      MarcRecordNormalizer.normalize035Field(marcRecord);
-    }
-  }
-
   public static void fill001FieldInMarcRecord(Record marcRecord, String hrId) {
-    String valueFrom001 = getValueFromControlledField(marcRecord, TAG_001);
+    String valueFrom001 = getValueFromControlledField(marcRecord, FIELD_001);
     if (!Strings.CS.equals(hrId, valueFrom001)) {
-      removeField(marcRecord, TAG_001);
+      removeField(marcRecord, FIELD_001);
       if (StringUtils.isNotEmpty(hrId)) {
-        addControlledFieldToMarcRecord(marcRecord, TAG_001, hrId, false);
+        addControlledFieldToMarcRecord(marcRecord, FIELD_001, hrId, false);
       }
     }
   }
@@ -388,13 +365,13 @@ public final class AdditionalFieldsUtil {
 
   public static void remove035FieldWhenRecordContainsHrId(Record srcRecord) {
     if (Record.RecordType.MARC_BIB.equals(srcRecord.getRecordType())) {
-      String hrid = getValueFromControlledField(srcRecord, TAG_001);
+      String hrid = getValueFromControlledField(srcRecord, FIELD_001);
       remove035WithActualHrId(srcRecord, hrid);
     }
   }
 
   public static void remove035WithActualHrId(Record srcRecord, String actualHrId) {
-    removeField(srcRecord, TAG_035, TAG_035_SUB, actualHrId);
+    removeField(srcRecord, FIELD_035, SUBFIELD_A, actualHrId);
   }
 
   /**
@@ -404,23 +381,23 @@ public final class AdditionalFieldsUtil {
    * @param hrid      hrid to assign into the 001 tag
    */
   public static void fillHrIdFieldInMarcRecord(Record srcRecord, String hrid) {
-    String valueFrom001 = getValueFromControlledField(srcRecord, TAG_001);
+    String valueFrom001 = getValueFromControlledField(srcRecord, FIELD_001);
     if (!Strings.CS.equals(hrid, valueFrom001)) {
       if (StringUtils.isNotEmpty(valueFrom001)) {
-        String originalHrIdPrefix = getValueFromControlledField(srcRecord, TAG_003);
+        String originalHrIdPrefix = getValueFromControlledField(srcRecord, FIELD_003);
         String originalHrId = mergeFieldsFor035(originalHrIdPrefix, valueFrom001);
-        if (!isFieldExist(srcRecord, TAG_035, TAG_035_SUB, originalHrId)) {
-          addDataFieldToMarcRecord(srcRecord, TAG_035, TAG_035_IND, TAG_035_IND, TAG_035_SUB, originalHrId);
+        if (!isFieldExist(srcRecord, FIELD_035, SUBFIELD_A, originalHrId)) {
+          addDataFieldToMarcRecord(srcRecord, FIELD_035, INDICATOR_EMPTY, INDICATOR_EMPTY, SUBFIELD_A, originalHrId);
         }
       }
-      removeField(srcRecord, TAG_001);
+      removeField(srcRecord, FIELD_001);
       if (StringUtils.isNotEmpty(hrid)) {
-        addControlledFieldToMarcRecord(srcRecord, TAG_001, hrid, false);
+        addControlledFieldToMarcRecord(srcRecord, FIELD_001, hrid, false);
       }
     } else {
       remove035WithActualHrId(srcRecord, hrid);
     }
-    removeField(srcRecord, TAG_003);
+    removeField(srcRecord, FIELD_003);
   }
 
   /**
@@ -438,13 +415,34 @@ public final class AdditionalFieldsUtil {
       return MarcJsonFieldOrderer.reorderFields(sourceOrderContent, systemOrderContent);
     } catch (Exception e) {
       LOGGER.error("reorderMarcRecordFields:: Failed to reorder Marc record fields for record '{}', falling back "
-        + "to the un-reordered system field order: {}", recordId, e.getMessage(), e);
+                   + "to the un-reordered system field order: {}", recordId, e.getMessage(), e);
       return systemOrderContent;
     }
   }
 
+  private static void move001To035OnRecord(org.marc4j.marc.Record marcRecord) {
+    String valueFrom001 = MarcFieldEditor.getControlFieldValue(marcRecord, FIELD_001);
+    if (StringUtils.isNotEmpty(valueFrom001)) {
+      String valueFrom003 = MarcFieldEditor.getControlFieldValue(marcRecord, FIELD_003);
+      String new035Value = mergeFieldsFor035(valueFrom003, valueFrom001);
+      if (!MarcFieldEditor.fieldExists(marcRecord, FIELD_035, SUBFIELD_A, new035Value)) {
+        MarcFactory factory = MarcFactory.newInstance();
+        DataField dataField = factory.newDataField(FIELD_035, INDICATOR_EMPTY, INDICATOR_EMPTY);
+        dataField.addSubfield(factory.newSubfield(SUBFIELD_A, new035Value));
+        MarcFieldEditor.addDataFieldInOrder(marcRecord, dataField);
+      }
+    }
+    MarcFieldEditor.removeFirstField(marcRecord, FIELD_003);
+  }
+
+  private static void normalize035OnRecord(org.marc4j.marc.Record marcRecord) {
+    if (has035SubfieldWithOclcPrefix(marcRecord)) {
+      MarcRecordNormalizer.normalize035Field(marcRecord);
+    }
+  }
+
   private static boolean has035SubfieldWithOclcPrefix(org.marc4j.marc.Record marcRecord) {
-    return marcRecord.getVariableFields(TAG_035).stream()
+    return marcRecord.getVariableFields(FIELD_035).stream()
       .filter(DataField.class::isInstance)
       .map(DataField.class::cast)
       .flatMap(dataField -> dataField.getSubfields().stream())
@@ -474,11 +472,11 @@ public final class AdditionalFieldsUtil {
    * @return true for case when field 005 have to updated
    */
   private static boolean isField005NeedToUpdate(org.marc4j.marc.Record marcRecord,
-                                                 MappingParameters mappingParameters) {
+                                                MappingParameters mappingParameters) {
     boolean needToUpdate = true;
     List<MarcFieldProtectionSetting> fieldProtectionSettings = mappingParameters.getMarcFieldProtectionSettings();
     if (CollectionUtils.isNotEmpty(fieldProtectionSettings) && marcRecord != null) {
-      List<VariableField> variableFields = marcRecord.getVariableFields(TAG_005);
+      List<VariableField> variableFields = marcRecord.getVariableFields(FIELD_005);
       if (!variableFields.isEmpty()) {
         VariableField field = variableFields.getFirst();
         needToUpdate = isNotProtected(fieldProtectionSettings, (ControlField) field);
@@ -503,5 +501,4 @@ public final class AdditionalFieldsUtil {
   private static boolean isValidIdAndHrid(String id, String hrid, String externalId, String externalHrid) {
     return isNotEmpty(externalId) && (Objects.equals(id, externalId) && !Objects.equals(hrid, externalHrid));
   }
-
 }

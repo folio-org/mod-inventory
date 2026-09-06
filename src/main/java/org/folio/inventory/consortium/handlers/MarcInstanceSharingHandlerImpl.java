@@ -1,7 +1,9 @@
 package org.folio.inventory.consortium.handlers;
 
 import static java.lang.String.format;
-import static org.folio.inventory.consortium.util.MarcRecordUtil.removeFieldFromMarcRecord;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_001;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_9;
+import static org.folio.dataimport.util.marc.MarcRecordEditor.removeSubfieldsThatContainsValues;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
@@ -20,14 +22,15 @@ import org.folio.Authority;
 import org.folio.Link;
 import org.folio.LinkingRuleDto;
 import org.folio.Record;
+import org.folio.dataimport.util.marc.MarcRecordEditor;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.exceptions.ConsortiumException;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
-import org.folio.inventory.consortium.util.MarcRecordUtil;
 import org.folio.inventory.consortium.util.RestDataImportHelper;
 import org.folio.inventory.consortium.util.SourceStorageHelper;
+import org.folio.inventory.dataimport.util.FolioRecordHolder;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceSource;
@@ -76,7 +79,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
   private Future<String> importAndCommit(Record marcRecord, Instance instance, SharingInstance sharingInstanceMetadata,
                                          SourceTenantProvider sourceTenantProvider,
                                          TargetTenantProvider targetTenantProvider, Map<String, String> kafkaHeaders) {
-    removeFieldFromMarcRecord(marcRecord, "001");
+    MarcRecordEditor.removeFieldFromMarcRecord(new FolioRecordHolder(marcRecord), FIELD_001);
     return restDataImportHelper.importMarcRecord(marcRecord, sharingInstanceMetadata, kafkaHeaders)
       .compose(importStatus -> commitIfImportSucceeded(importStatus, marcRecord, instance, sharingInstanceMetadata,
         sourceTenantProvider, targetTenantProvider, kafkaHeaders));
@@ -210,7 +213,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       localAuthoritiesIds, instanceId, context.getTenantId());
 
     try {
-      MarcRecordUtil.removeSubfieldsThatContainsValues(marcRecord, fields, '9', localAuthoritiesIds);
+      removeSubfieldsThatContainsValues(new FolioRecordHolder(marcRecord), fields, SUBFIELD_9, localAuthoritiesIds);
       return Future.succeededFuture();
     } catch (Exception e) {
       LOGGER.warn("unlinkLocalAuthorities:: Error removing $9 subfields from record: {}", marcRecord.getId(), e);

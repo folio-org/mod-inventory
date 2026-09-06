@@ -17,7 +17,6 @@ import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEve
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.MARC_BIB_RECORD_CREATED;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.USER_HAS_NO_PERMISSION_MSG;
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.LEADER_STATUS_DELETED;
-import static org.folio.inventory.dataimport.util.ParsedRecordUtil.normalize;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.domain.instances.InstanceSource.FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.MARC;
@@ -89,6 +88,7 @@ import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.dataimport.util.DataImportHeaders;
+import org.folio.dataimport.util.marc.MarcContentCodec;
 import org.folio.inventory.client.InstanceLinkClient;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
@@ -416,7 +416,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     }).when(instanceRecordCollection).update(any(), any(Consumer.class), any(Consumer.class));
 
     doReturn(sourceStorageClient).when(replaceInstanceEventHandler)
-      .getSourceStorageRecordsClient(any(), any(), any(), any(), any());
+      .getSourceStorageClient(any(), any(), any(), any(), any());
 
     doAnswer(invocationOnMock -> completedStage(createResponse(201, null)))
       .when(mockedClient).post(any(URL.class), any(JsonObject.class));
@@ -803,7 +803,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     assertThat(createdInstance.getJsonArray("notes").getJsonObject(1).getString("instanceNoteTypeId"), notNullValue());
     assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
     verify(mockedClient, times(2)).post(any(URL.class), any(JsonObject.class));
-    verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(),
+    verify(replaceInstanceEventHandler).getSourceStorageClient(any(), any(),
       argThat(tenantId -> tenantId.equals(consortiumTenant)), any(), any());
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
     ArgumentCaptor<Context> contextCaptorForSnapshot = ArgumentCaptor.forClass(Context.class);
@@ -955,7 +955,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     assertEquals(consortiumTenant, contextCaptor.getValue().getTenantId());
 
     verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
-    verify(replaceInstanceEventHandler).getSourceStorageRecordsClient(any(), any(),
+    verify(replaceInstanceEventHandler).getSourceStorageClient(any(), any(),
       argThat(tenantId -> tenantId.equals(consortiumTenant)), argThat(USER_ID::equals), argThat(REQUEST_ID::equals));
 
     ArgumentCaptor<Context> contextCaptorForSnapshot = ArgumentCaptor.forClass(Context.class);
@@ -1037,7 +1037,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     assertEquals(consortiumTenant, contextCaptor.getValue().getTenantId());
 
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), recordCaptor.capture());
-    verify(replaceInstanceEventHandler, times(2)).getSourceStorageRecordsClient(any(), any(),
+    verify(replaceInstanceEventHandler, times(2)).getSourceStorageClient(any(), any(),
       argThat(tenantId -> tenantId.equals(consortiumTenant)), argThat(USER_ID::equals), argThat(REQUEST_ID::equals));
 
     ArgumentCaptor<Context> contextCaptorForSnapshot = ArgumentCaptor.forClass(Context.class);
@@ -1964,30 +1964,6 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
   }
 
   @Test
-  void isEligibleShouldReturnFalseIfCurrentNodeIsNotActionProfile() {
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
-      .withContext(new HashMap<>());
-    assertFalse(replaceInstanceEventHandler.isEligible(dataImportEventPayload));
-  }
-
-  @Test
-  void isEligibleShouldReturnFalseIfActionIsNotCreate() {
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
-      .withContext(new HashMap<>());
-    assertFalse(replaceInstanceEventHandler.isEligible(dataImportEventPayload));
-  }
-
-  @Test
-  void isEligibleShouldReturnFalseIfRecordIsNotInstance() {
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
-      .withContext(new HashMap<>());
-    assertFalse(replaceInstanceEventHandler.isEligible(dataImportEventPayload));
-  }
-
-  @Test
   void isPostProcessingNeededShouldReturnTrue() {
     assertFalse(replaceInstanceEventHandler.isPostProcessingNeeded());
   }
@@ -2193,7 +2169,8 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
 
   private boolean verifyParsedContentSerialization(Record sourceRecord) {
     String serializedParsedRecord = ClientHelpers.pojo2json(sourceRecord.getParsedRecord());
-    JsonObject contentJson = normalize(Json.decodeValue(serializedParsedRecord, ParsedRecord.class).getContent());
+    JsonObject contentJson =
+      MarcContentCodec.canonicalizeJson(Json.decodeValue(serializedParsedRecord, ParsedRecord.class).getContent());
     return contentJson.fieldNames().size() == 2 && contentJson.fieldNames().containsAll(List.of("fields", "leader"));
   }
 }

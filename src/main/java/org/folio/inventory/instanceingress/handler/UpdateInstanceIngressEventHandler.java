@@ -2,7 +2,8 @@ package org.folio.inventory.instanceingress.handler;
 
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_S;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.reorderMarcRecordFields;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 
@@ -134,7 +135,7 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
   private Future<Instance> putRecordInSrsAndHandleResponse(Record targetRecord, Instance instance) {
     Promise<Instance> promise = Promise.promise();
     var sourceStorageRecordsClient =
-      getSourceStorageRecordsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId(),
+      getSourceStorageClient(context.getOkapiLocation(), context.getToken(), context.getTenantId(),
         context.getUserId(), context.getRequestId());
     postSnapshotInSrsAndHandleResponse(targetRecord.getSnapshotId(), context,
       snapshotService::postSnapshotInSrsAndHandleResponse)
@@ -146,7 +147,7 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
           int incrementedGeneration = existingRecord.getGeneration();
           targetRecord.setGeneration(++incrementedGeneration);
         }
-        AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, TAG_999, 's', targetRecord.getMatchedId());
+        AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, FIELD_999, SUBFIELD_S, targetRecord.getMatchedId());
         return Future.succeededFuture(targetRecord.getMatchedId());
       })
       .compose(matchedId ->

@@ -1,23 +1,18 @@
 package org.folio.inventory.dataimport.util;
 
 import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
+import static org.folio.dataimport.util.marc.MarcConstants.INDICATOR_F;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.Optional;
+import org.folio.dataimport.util.marc.MarcContentCodec;
 import org.folio.rest.jaxrs.model.ParsedRecord;
-import org.folio.rest.jaxrs.model.Record;
-import org.marc4j.MarcJsonReader;
-import org.marc4j.MarcReader;
-import org.marc4j.marc.ControlField;
 
 public final class ParsedRecordUtil {
 
-  public static final String TAG_999 = "999";
-  public static final String INDICATOR_F = "f";
   public static final char LEADER_STATUS_DELETED = 'd';
   private static final String LEADER = "leader";
   private static final int LEADER_STATUS_SUBFIELD_POSITION = 5;
@@ -25,8 +20,8 @@ public final class ParsedRecordUtil {
   private ParsedRecordUtil() {
   }
 
-  public static String getAdditionalSubfieldValue(ParsedRecord parsedRecord, AdditionalSubfields additionalSubfield) {
-    JsonObject parsedContent = normalize(parsedRecord.getContent());
+  public static String getAdditionalSubfieldValue(ParsedRecord parsedRecord, char subfieldValue) {
+    JsonObject parsedContent = MarcContentCodec.canonicalizeJson(parsedRecord.getContent());
     JsonArray fields = parsedContent.getJsonArray("fields");
     if (fields == null) {
       return EMPTY;
@@ -34,47 +29,15 @@ public final class ParsedRecordUtil {
 
     return fields.stream()
       .map(o -> (JsonObject) o)
-      .filter(field -> field.containsKey(TAG_999)
-                       && INDICATOR_F.equals(field.getJsonObject(TAG_999).getString("ind1"))
-                       && INDICATOR_F.equals(field.getJsonObject(TAG_999).getString("ind2")))
-      .flatMap(targetField -> targetField.getJsonObject(TAG_999).getJsonArray("subfields").stream())
+      .filter(field -> field.containsKey(FIELD_999)
+                       && INDICATOR_F == (field.getJsonObject(FIELD_999).getString("ind1")).charAt(0)
+                       && INDICATOR_F == (field.getJsonObject(FIELD_999).getString("ind2")).charAt(0))
+      .flatMap(targetField -> targetField.getJsonObject(FIELD_999).getJsonArray("subfields").stream())
       .map(JsonObject.class::cast)
-      .filter(subfield -> subfield.containsKey(additionalSubfield.subfieldCode))
+      .filter(subfield -> subfield.containsKey(String.valueOf(subfieldValue)))
       .findFirst()
-      .map(targetSubfield -> targetSubfield.getString(additionalSubfield.subfieldCode))
+      .map(targetSubfield -> targetSubfield.getString(String.valueOf(subfieldValue)))
       .orElse(EMPTY);
-  }
-
-  public static JsonObject normalize(Object content) {
-    return (content instanceof String s)
-           ? new JsonObject(s)
-           : JsonObject.mapFrom(content);
-  }
-
-  /**
-   * Extracts value from specified field
-   *
-   * @param dataRecord record
-   * @param tag    tag of data field
-   * @return value from the specified field, or null
-   */
-  public static String getControlFieldValue(Record dataRecord, String tag) {
-    if (dataRecord != null && dataRecord.getParsedRecord() != null && dataRecord.getParsedRecord().getContent() != null) {
-      MarcReader reader = buildMarcReader(dataRecord);
-      try {
-        if (reader.hasNext()) {
-          org.marc4j.marc.Record marcRecord = reader.next();
-          return marcRecord.getControlFields().stream()
-            .filter(controlField -> controlField.getTag().equals(tag))
-            .findFirst()
-            .map(ControlField::getData)
-            .orElse(null);
-        }
-      } catch (Exception e) {
-        return null;
-      }
-    }
-    return null;
   }
 
   /**
@@ -85,7 +48,7 @@ public final class ParsedRecordUtil {
    */
   public static Optional<Character> getLeaderStatus(ParsedRecord parsedRecord) {
     if (Objects.nonNull(parsedRecord)) {
-      JsonObject marcJson = normalize(parsedRecord.getContent());
+      JsonObject marcJson = MarcContentCodec.canonicalizeJson(parsedRecord.getContent());
       String leader = marcJson.getString(LEADER);
       if (Objects.nonNull(leader) && leader.length() > LEADER_STATUS_SUBFIELD_POSITION) {
         return Optional.of(leader.charAt(LEADER_STATUS_SUBFIELD_POSITION));
@@ -105,28 +68,13 @@ public final class ParsedRecordUtil {
       return;
     }
 
-    JsonObject marcJson = normalize(parsedRecord.getContent());
+    JsonObject marcJson = MarcContentCodec.canonicalizeJson(parsedRecord.getContent());
     String leader = marcJson.getString(LEADER);
     if (Objects.nonNull(leader) && leader.length() > LEADER_STATUS_SUBFIELD_POSITION) {
       StringBuilder builder = new StringBuilder(leader);
       builder.setCharAt(LEADER_STATUS_SUBFIELD_POSITION, status);
       marcJson.put(LEADER, builder.toString());
       parsedRecord.setContent(marcJson.encode());
-    }
-  }
-
-  private static MarcReader buildMarcReader(Record dataRecord) {
-    return new MarcJsonReader(
-      new ByteArrayInputStream(dataRecord.getParsedRecord().getContent().toString().getBytes(StandardCharsets.UTF_8)));
-  }
-
-  public enum AdditionalSubfields {
-    H("h"), I("i");
-
-    private final String subfieldCode;
-
-    AdditionalSubfields(String subfieldCode) {
-      this.subfieldCode = subfieldCode;
     }
   }
 }

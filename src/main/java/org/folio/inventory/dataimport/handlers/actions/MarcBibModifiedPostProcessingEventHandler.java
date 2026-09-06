@@ -5,6 +5,7 @@ import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_I;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.getTenant;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
@@ -26,10 +27,10 @@ import org.folio.MappingProfile;
 import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -75,14 +76,13 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
 
       LOGGER.info("Processing starting with jobExecutionId: {}.", dataImportEventPayload.getJobExecutionId());
 
-      Record record = new JsonObject(payloadContext.get(MARC_BIBLIOGRAPHIC.value())).mapTo(Record.class);
-      String instanceId =
-        ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
+      Record marcRecord = new JsonObject(payloadContext.get(MARC_BIBLIOGRAPHIC.value())).mapTo(Record.class);
+      String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(marcRecord.getParsedRecord(), SUBFIELD_I);
       if (isBlank(instanceId)) {
         return CompletableFuture.completedFuture(dataImportEventPayload);
       }
 
-      record.setExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
+      marcRecord.setExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
       Context localTenantContext =
         EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(),
           dataImportEventPayload.getOkapiUrl(),
@@ -98,7 +98,7 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
           new EventProcessingException(
             format(MAPPING_METADATA_NOT_FOUND_MSG, dataImportEventPayload.getJobExecutionId()))))
         .map(mappingMetadataDto -> buildPayloadForInstanceUpdate(dataImportEventPayload, mappingMetadataDto))
-        .compose(payloadForUpdate -> instanceUpdateDelegate.handle(payloadForUpdate, record, targetInstanceContext))
+        .compose(payloadForUpdate -> instanceUpdateDelegate.handle(payloadForUpdate, marcRecord, targetInstanceContext))
         .onSuccess(instanceUpdatePromise::complete)
         .compose(
           updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(updatedInstance,

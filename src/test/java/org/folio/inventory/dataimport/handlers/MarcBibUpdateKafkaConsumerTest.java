@@ -1,8 +1,8 @@
 package org.folio.inventory.dataimport.handlers;
 
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
+import static org.folio.dataimport.util.marc.MarcConstants.INDICATOR_F;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
 import static org.folio.inventory.kafka.EntityLinksKafkaTopic.LINKS_STATS;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.FAIL;
@@ -36,12 +36,12 @@ import org.folio.MappingMetadataDto;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.consumers.MarcBibUpdateKafkaConsumer;
-import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.exceptions.NotFoundException;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.LinkUpdateReport;
@@ -241,7 +241,7 @@ class MarcBibUpdateKafkaConsumerTest extends KafkaTest {
   void shouldSendFailedLinkReportEvent(VertxTestContext testContext) {
     // given
     var instanceId =
-      AdditionalFieldsUtil.getValueFromDataField(marcRecord, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I)
+      AdditionalFieldsUtil.getValueFromDataField(marcRecord, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I)
         .orElse(null);
 
     marcRecord.setId(INVALID_INSTANCE_ID);

@@ -2,12 +2,12 @@ package org.folio.inventory.dataimport.consumers;
 
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
-import static org.folio.inventory.kafka.EntityLinksKafkaTopic.LINKS_STATS;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
+import static org.folio.dataimport.util.marc.MarcConstants.INDICATOR_F;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_I;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
+import static org.folio.inventory.kafka.EntityLinksKafkaTopic.LINKS_STATS;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.FAIL;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.SUCCESS;
 
@@ -32,10 +32,10 @@ import org.folio.MappingMetadataDto;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaHeaderUtils;
@@ -227,7 +227,7 @@ public class MarcBibUpdateKafkaConsumer implements AsyncRecordHandler<String, St
 
   private LinkUpdateReport mapToLinkReport(MarcBibUpdate marcBibUpdate, String errMessage) {
     var instanceId =
-      AdditionalFieldsUtil.getValueFromDataField(marcBibUpdate.getRecord(), TAG_999, INDICATOR_F, INDICATOR_F,
+      AdditionalFieldsUtil.getValueFromDataField(marcBibUpdate.getRecord(), FIELD_999, INDICATOR_F, INDICATOR_F,
           SUBFIELD_I)
         .orElse(null);
     return new LinkUpdateReport()

@@ -5,10 +5,10 @@ import static io.vertx.core.Future.succeededFuture;
 import static io.vertx.core.buffer.Buffer.buffer;
 import static java.lang.String.format;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_L;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
+import static org.folio.dataimport.util.marc.MarcConstants.INDICATOR_F;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_I;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_L;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
 import static org.folio.rest.jaxrs.model.InstanceIngressPayload.SourceType.LINKED_DATA;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -325,7 +325,7 @@ class CreateInstanceIngressEventHandlerUnitTest {
       return null;
     }).when(instanceCollection).add(any(), any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
-    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageClient(any(), any(), any(), any(), any());
     var sourceStorageHttpResponse = buildHttpResponseWithBuffer(HttpStatus.SC_BAD_REQUEST);
     doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).postSourceStorageRecords(any());
     doReturn(succeededFuture()).when(handler).postSnapshotInSrsAndHandleResponse(anyString(), any(), any());
@@ -369,7 +369,7 @@ class CreateInstanceIngressEventHandlerUnitTest {
       return null;
     }).when(instanceCollection).add(any(), any(), any());
     doReturn(succeededFuture()).when(precedingSucceedingTitlesHelper).createPrecedingSucceedingTitles(any(), any());
-    doReturn(sourceStorageClient).when(handler).getSourceStorageRecordsClient(any(), any(), any(), any(), any());
+    doReturn(sourceStorageClient).when(handler).getSourceStorageClient(any(), any(), any(), any(), any());
     var sourceStorageHttpResponse =
       buildHttpResponseWithBuffer(buffer(Json.encode(new Record())), HttpStatus.SC_CREATED);
     doReturn(succeededFuture(sourceStorageHttpResponse)).when(sourceStorageClient).postSourceStorageRecords(any());
@@ -385,7 +385,7 @@ class CreateInstanceIngressEventHandlerUnitTest {
     assertThat(instance.getId()).isEqualTo(instanceId);
     assertThat(instance.getSource()).isEqualTo("LINKED_DATA");
     assertThat(instance.getIdentifiers().stream().anyMatch(i -> i.value().equals("(ld) " + linkedDataId))).isTrue();
-    verify(handler).getSourceStorageRecordsClient(any(), any(), argThat(TENANT::equals), argThat(USER_ID::equals),
+    verify(handler).getSourceStorageClient(any(), any(), argThat(TENANT::equals), argThat(USER_ID::equals),
       any());
 
     var recordCaptor = ArgumentCaptor.forClass(Record.class);
@@ -394,10 +394,10 @@ class CreateInstanceIngressEventHandlerUnitTest {
     assertThat(recordSentToSRS.getId()).isEqualTo(event.getEventPayload().getSourceRecordIdentifier());
     assertThat(recordSentToSRS.getRecordType()).isEqualTo(Record.RecordType.MARC_BIB);
     assertThat(
-      AdditionalFieldsUtil.getValueFromDataField(recordSentToSRS, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I))
+      AdditionalFieldsUtil.getValueFromDataField(recordSentToSRS, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I))
       .hasValue(instance.getId());
     assertThat(
-      AdditionalFieldsUtil.getValueFromDataField(recordSentToSRS, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_L))
+      AdditionalFieldsUtil.getValueFromDataField(recordSentToSRS, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_L))
       .hasValue(linkedDataId);
   }
 

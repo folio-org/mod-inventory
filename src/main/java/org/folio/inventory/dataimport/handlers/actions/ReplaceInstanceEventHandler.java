@@ -12,7 +12,7 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_UPDATED_READY_FOR_POST_PROCESSING;
-import static org.folio.inventory.consortium.util.MarcRecordUtil.isSubfieldExist;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_9;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
@@ -54,18 +54,20 @@ import org.folio.MappingMetadataDto;
 import org.folio.ParsedRecord;
 import org.folio.Record;
 import org.folio.dataimport.util.DataImportHeaders;
+import org.folio.dataimport.util.marc.MarcRecordEditor;
 import org.folio.inventory.client.InstanceLinkClient;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.exceptions.DataImportException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
+import org.folio.inventory.dataimport.util.FolioRecordHolder;
 import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.exceptions.DataImportException;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.InstanceUtil;
@@ -82,7 +84,7 @@ import org.folio.rest.jaxrs.model.MarcFieldProtectionSetting;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Snapshot;
 
-public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { // NOSONAR
+public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
 
   public static final String INSTANCE_ID_TYPE = "INSTANCE";
   public static final String CENTRAL_TENANT_INSTANCE_UPDATED_FLAG = "CENTRAL_TENANT_INSTANCE_UPDATED";
@@ -117,7 +119,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   }
 
   @Override
-  public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) { // NOSONAR
+  public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     logParametersEventHandler(LOGGER, dataImportEventPayload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     String jobExecutionId = dataImportEventPayload.getJobExecutionId();
@@ -133,15 +135,16 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG + " jobExecutionId: {}", jobExecutionId);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
-      String recordId = payloadContext.get(DataImportHeaders.RECORD_ID);
-      String chunkId = payloadContext.get(DataImportHeaders.CHUNK_ID);
+      var instanceRecordId = payloadContext.get(DataImportHeaders.RECORD_ID);
+      var eventChunkId = payloadContext.get(DataImportHeaders.CHUNK_ID);
+      String chunkId = eventChunkId;
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
-        LOGGER.error(ACTION_HAS_NO_MAPPING_MSG + " jobExecutionId: {} recordId: {}", jobExecutionId, recordId);
+        LOGGER.error(ACTION_HAS_NO_MAPPING_MSG + " jobExecutionId: {} recordId: {}", jobExecutionId, instanceRecordId);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
-      LOGGER.info(
-        "handle:: Processing ReplaceInstanceEventHandler starting with jobExecutionId: {} recordId: {} incomingRecordId: {}",
-        jobExecutionId, recordId, payloadContext.get(INCOMING_RECORD_ID));
+      var incomingRecordId = payloadContext.get(INCOMING_RECORD_ID);
+      LOGGER.info("handle:: Processing ReplaceInstanceEventHandler starting with jobExecutionId: "
+                  + "{} recordId: {} incomingRecordId: {}", jobExecutionId, instanceRecordId, incomingRecordId);
 
       Context context =
         EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(),
@@ -151,9 +154,10 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
         Instance.fromJson(new JsonObject(dataImportEventPayload.getContext().get(INSTANCE.value())));
 
       if (instanceToUpdate.getSource() != null && instanceToUpdate.getSource().equals(LINKED_DATA.getValue())) {
-        String msg = format(
-          "handle:: Failed to update Instance with id = %s. Instance with source=LINKED_DATA cannot be updated using Data Import. Please use Linked Data Editor.",
-          instanceToUpdate.getId());
+        String msg = format("handle:: Failed to update Instance with id = %s. "
+                            + "Instance with source=LINKED_DATA "
+                            + "cannot be updated using Data Import. "
+                            + "Please use Linked Data Editor.", instanceToUpdate.getId());
         LOGGER.warn(msg);
         return CompletableFuture.failedFuture(new DataImportException(msg));
       }
@@ -161,18 +165,17 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
       if (isNotBlank(payloadContext.get(CENTRAL_TENANT_ID)) && isCentralTenantInstanceUpdateForbidden(payloadContext)) {
         LOGGER.warn(
           "handle:: Failed to process instance update, reason: '{}', jobExecutionId: '{}', recordId: '{}', chunkId: '{}'",
-          USER_HAS_NO_PERMISSION_MSG, jobExecutionId, recordId, chunkId);
+          USER_HAS_NO_PERMISSION_MSG, jobExecutionId, instanceRecordId, chunkId);
         return CompletableFuture.failedFuture(new EventProcessingException(USER_HAS_NO_PERMISSION_MSG));
       }
 
       if (isShadowInstance(instanceToUpdate)) {
         LOGGER.info("handle:: Processing Consortium Instance jobExecutionId: {} recordId: {}", jobExecutionId,
-          recordId);
+          instanceRecordId);
         if (isCentralTenantInstanceUpdateForbidden(payloadContext)) {
           LOGGER.warn(
             "handle:: Failed to process instance update, reason: '{}', jobExecutionId: '{}', recordId: '{}', chunkId: '{}'",
-            USER_HAS_NO_PERMISSION_MSG, dataImportEventPayload.getJobExecutionId(), payloadContext.get(
-              DataImportHeaders.RECORD_ID), payloadContext.get(DataImportHeaders.CHUNK_ID));
+            USER_HAS_NO_PERMISSION_MSG, dataImportEventPayload.getJobExecutionId(), instanceRecordId, eventChunkId);
           return CompletableFuture.failedFuture(new EventProcessingException(USER_HAS_NO_PERMISSION_MSG));
         }
 
@@ -197,13 +200,13 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
                 .onFailure(e -> {
                   LOGGER.warn(
                     "Error retrieving inventory Instance from central tenant jobExecutionId: '{}' recordId: '{}' chunkId: '{}'",
-                    jobExecutionId, recordId, chunkId, e);
+                    jobExecutionId, instanceRecordId, chunkId, e);
                   future.completeExceptionally(e);
                 });
             } else {
               LOGGER.warn(
                 "handle:: Can't retrieve centralTenantId updating Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
-                jobExecutionId, recordId, chunkId);
+                jobExecutionId, instanceRecordId, chunkId);
               future.completeExceptionally(new NotFoundException("Can't retrieve centralTenantId updating Instance"));
             }
             return Future.succeededFuture();
@@ -219,13 +222,14 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
 
         InstanceUtil.findInstanceById(instanceToUpdate.getId(), instanceCollection)
           .onSuccess(existingInstance -> {
-            LOGGER.info("handle:: Instance retrieved jobExecutionId: {} recordId: {}", jobExecutionId, recordId);
+            LOGGER.info("handle:: Instance retrieved jobExecutionId: {} recordId: {}", jobExecutionId,
+              instanceRecordId);
             processInstanceUpdate(dataImportEventPayload, instanceCollection, context, existingInstance, future,
               payloadContext, targetInstanceTenantId);
           })
           .onFailure(e -> {
             LOGGER.warn("Error retrieving inventory Instance jobExecutionId: '{}' recordId: '{}' chunkId: '{}'",
-              jobExecutionId, recordId, chunkId, e);
+              jobExecutionId, instanceRecordId, chunkId, e);
             future.completeExceptionally(e);
           });
       }
@@ -488,7 +492,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
     String requestId = eventPayload.getContext().get(XOkapiHeaders.REQUEST_ID.toLowerCase());
     if (MARC_INSTANCE_SOURCE.equals(instance.getSource()) || CONSORTIUM_MARC.getValue().equals(instance.getSource())) {
       SourceStorageRecordsClient client =
-        getSourceStorageRecordsClient(eventPayload.getOkapiUrl(), eventPayload.getToken(), tenantId, userId, requestId);
+        getSourceStorageClient(eventPayload.getOkapiUrl(), eventPayload.getToken(), tenantId, userId, requestId);
       return getRecordByInstanceId(client, instance.getId())
         .compose(existingRecord -> {
           var linkingRules = Optional.ofNullable(mappingParameters.getLinkingRules());
@@ -577,7 +581,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler { 
   private Future<Optional<InstanceLinkDtoCollection>> loadInstanceLink(Record oldRecord, String instanceId,
                                                                        Context context) {
     Promise<Optional<InstanceLinkDtoCollection>> promise = Promise.promise();
-    if (isSubfieldExist(oldRecord, '9')) {
+    if (MarcRecordEditor.isSubfieldExist(new FolioRecordHolder(oldRecord), SUBFIELD_9)) {
       if (isNull(instanceId) || isBlank(instanceId)) {
         instanceId = oldRecord.getExternalIdsHolder().getInstanceId();
       }

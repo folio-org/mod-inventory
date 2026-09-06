@@ -1,5 +1,8 @@
 package org.folio.inventory.dataimport.util;
 
+import org.folio.dataimport.util.marc.MarcContentHolder;
+import org.folio.dataimport.util.marc.MarcRecordEditor;
+
 /**
  * {@link MarcContentHolder} adapter over {@code org.folio.Record} (the jsonschema2pojo-generated FOLIO record type
  * used by {@code MarcRecordUtil}), so {@link MarcRecordEditor} can operate on it without depending on that type

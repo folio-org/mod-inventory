@@ -5,7 +5,8 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.codehaus.plexus.util.StringUtils.isNotEmpty;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_PATH;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
 import static org.folio.inventory.dataimport.util.ParsedRecordUtil.LEADER_STATUS_DELETED;
@@ -16,7 +17,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import java.util.HashMap;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.Getter;
@@ -75,8 +75,8 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     this.httpClient = httpClient;
   }
 
-  public SourceStorageRecordsClient getSourceStorageRecordsClient(String okapiUrl, String token, String tenantId,
-                                                                  String userId, String requestId) {
+  public SourceStorageRecordsClient getSourceStorageClient(String okapiUrl, String token, String tenantId,
+                                                           String userId, String requestId) {
     var folioHeaders = FolioHeaders.builder()
       .connectionUrl(okapiUrl)
       .userId(userId)
@@ -100,8 +100,8 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
                                                           JsonObject mappingRules,
                                                           MappingParameters mappingParameters) {
     try {
-      HashMap<String, String> context = dataImportEventPayload.getContext();
-      JsonObject parsedRecord = new JsonObject((String) new JsonObject(context.get(MARC_BIBLIOGRAPHIC.value()))
+      var context = dataImportEventPayload.getContext();
+      var parsedRecord = new JsonObject((String) new JsonObject(context.get(MARC_BIBLIOGRAPHIC.value()))
         .mapTo(Record.class).getParsedRecord().getContent());
       RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_BIB_RECORD_FORMAT);
       var instance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
@@ -118,7 +118,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
                                                               Instance instance, InstanceCollection instanceCollection,
                                                               String tenantId, String userId, String requestId) {
     Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId,
+    getSourceStorageClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId,
       requestId).postSourceStorageRecords(srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
@@ -129,8 +129,8 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
             srcRecord.getId(), instance.getId(), payload.getTenant(), payload.getJobExecutionId());
           promise.complete(instance);
         } else {
-          String msg = format(
-            "Failed to create MARC record in SRS, instanceId: '%s', jobExecutionId: '%s', status code: %s, Record: %s",
+          String msg = format("Failed to create MARC record in SRS, instanceId: '%s', jobExecutionId: '%s',"
+                              + " status code: %s, Record: %s",
             instance.getId(), payload.getJobExecutionId(), result != null ? result.statusCode() : "",
             result != null ? result.bodyAsString() : "");
           LOGGER.warn(msg);
@@ -156,7 +156,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected Future<Void> saveRecordInSrsOnly(DataImportEventPayload payload, Record srcRecord,
                                              String tenantId, String userId, String requestId) {
     Promise<Void> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId, requestId)
+    getSourceStorageClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId, requestId)
       .postSourceStorageRecords(srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
@@ -196,7 +196,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
                                         String matchedId, String tenantId, String userId, String requestId,
                                         String instanceId) {
     Promise<Void> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId, requestId)
+    getSourceStorageClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId, requestId)
       .putSourceStorageRecordsGenerationById(matchedId, srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
@@ -229,7 +229,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
       srcRecord.setMatchedId(srcRecord.getId());
     }
     setExternalIds(srcRecord, instance);
-    return AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, TAG_999, 'i', instance.getId())
+    return AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, FIELD_999, SUBFIELD_I, instance.getId())
            ? Future.succeededFuture(instance)
            : Future.failedFuture(
              format("Failed to add instance id '%s' to record with id '%s'", instance.getId(), srcRecord.getId()));
@@ -297,8 +297,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   }
 
   protected String getInstanceId(Record inputRecord) {
-    String subfield999ffi = ParsedRecordUtil.getAdditionalSubfieldValue(inputRecord.getParsedRecord(),
-      ParsedRecordUtil.AdditionalSubfields.I);
+    String subfield999ffi = ParsedRecordUtil.getAdditionalSubfieldValue(inputRecord.getParsedRecord(), SUBFIELD_I);
     return isEmpty(subfield999ffi) ? UUID.randomUUID().toString() : subfield999ffi;
   }
 
@@ -316,7 +315,7 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     var externalHrId = extractHridForInstance(externalEntity);
     var externalIdsHolder = srcRecord.getExternalIdsHolder();
     setExternalIdsForInstance(externalIdsHolder, externalId, externalHrId);
-    boolean isAddedField = AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, TAG_999, 'i', externalId);
+    boolean isAddedField = AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, FIELD_999, SUBFIELD_I, externalId);
     if (IS_HRID_FILLING_NEEDED_FOR_INSTANCE) {
       AdditionalFieldsUtil.fillHrIdFieldInMarcRecord(srcRecord, externalHrId);
     }

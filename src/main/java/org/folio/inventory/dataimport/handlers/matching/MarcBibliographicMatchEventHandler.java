@@ -7,6 +7,7 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_NOT_MATCHED;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_I;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.getTenant;
 
 import io.vertx.core.Future;
@@ -24,7 +25,6 @@ import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
-import org.folio.inventory.dataimport.util.ParsedRecordUtil.AdditionalSubfields;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
@@ -78,13 +78,12 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
   protected Future<Void> ensureRelatedEntities(Optional<Record> recordOptional, DataImportEventPayload eventPayload) {
     if (recordOptional.isPresent()) {
       Record matchedRecord = recordOptional.get();
-      String instanceId =
-        ParsedRecordUtil.getAdditionalSubfieldValue(matchedRecord.getParsedRecord(), AdditionalSubfields.I);
+      String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(matchedRecord.getParsedRecord(), SUBFIELD_I);
       String matchedRecordTenantId = getTenant(eventPayload);
       Context context =
         EventHandlingUtil.constructContext(matchedRecordTenantId, eventPayload.getToken(), eventPayload.getOkapiUrl(),
-          eventPayload.getContext().get(DataImportHeaders.USER_ID), eventPayload.getContext().get(
-            XOkapiHeaders.REQUEST_ID.toLowerCase()));
+          eventPayload.getContext().get(DataImportHeaders.USER_ID),
+          eventPayload.getContext().get(XOkapiHeaders.REQUEST_ID.toLowerCase()));
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
       if (isBlank(instanceId)) {
@@ -114,12 +113,11 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
     return getHoldingsByInstanceId(instanceId, eventPayload, context)
       .compose(holdingsRecords -> {
         if (holdingsRecords.size() > 1) {
-          LOG.info(
-            "loadHoldingsRecordByInstanceId:: Found multiple holdings records by instanceId: '{}' for matched MARC-BIB record, jobExecutionId: '{}'",
-            instanceId, eventPayload.getJobExecutionId());
+          LOG.info("loadHoldingsRecordByInstanceId:: Found multiple holdings records by instanceId: '{}' "
+                   + "for matched MARC-BIB record, jobExecutionId: '{}'", instanceId, eventPayload.getJobExecutionId());
         } else if (holdingsRecords.size() == 1) {
-          LOG.info(
-            "loadHoldingsRecordByInstanceId:: Found holdings record with id: '{}' by instanceId: '{}' for matched MARC-BIB record, jobExecutionId: '{}'",
+          LOG.info("loadHoldingsRecordByInstanceId:: Found holdings record with id: '{}' by instanceId: '{}' "
+                   + "for matched MARC-BIB record, jobExecutionId: '{}'",
             holdingsRecords.getFirst().getId(), instanceId, eventPayload.getJobExecutionId());
           eventPayload.getContext().put(HOLDINGS.value(), Json.encode(holdingsRecords.getFirst()));
         }

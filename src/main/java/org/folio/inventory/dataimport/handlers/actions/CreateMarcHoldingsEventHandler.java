@@ -11,7 +11,6 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
-import static org.folio.inventory.dataimport.util.ParsedRecordUtil.getControlFieldValue;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 
 import io.vertx.core.Future;
@@ -33,6 +32,7 @@ import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.HoldingsCollectionService;
@@ -240,7 +240,7 @@ public class CreateMarcHoldingsEventHandler implements EventHandler {
     if (StringUtils.isBlank(instanceId)) {
       var recordAsString = dataImportEventPayload.getContext().get(MARC_FORMAT);
       var decodedRecord = Json.decodeValue(recordAsString, Record.class);
-      var instanceHrid = getControlFieldValue(decodedRecord, "004");
+      var instanceHrid = AdditionalFieldsUtil.getValueFromControlledField(decodedRecord, "004");
       if (isBlank(instanceHrid)) {
         LOGGER.warn(FIELD_004_MARC_HOLDINGS_NOT_NULL);
         throw new EventProcessingException(FIELD_004_MARC_HOLDINGS_NOT_NULL);

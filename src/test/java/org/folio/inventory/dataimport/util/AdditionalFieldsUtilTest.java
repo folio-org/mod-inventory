@@ -1,16 +1,16 @@
 package org.folio.inventory.dataimport.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_001;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_005;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
+import static org.folio.dataimport.util.marc.MarcConstants.INDICATOR_F;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_I;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.DATE_TIME_005_FORMATTER;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INVALID_DATA_FIELD_MSG;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_001;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_005;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addControlledFieldToMarcRecord;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addDataFieldToMarcRecord;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.addFieldToMarcRecord;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.DATE_TIME_005_FORMATTER;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getCacheStats;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValueFromControlledField;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValueFromDataField;
@@ -42,6 +42,9 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.folio.dataimport.util.marc.MarcContentCacheStats;
+import org.folio.dataimport.util.marc.MarcContentException;
+import org.folio.dataimport.util.marc.MarcRecordEditor;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
@@ -77,8 +80,8 @@ class AdditionalFieldsUtilTest {
     String leader = new JsonObject(parsedRecordContent).getString("leader");
     var marcRecord = new Record().withId(recordId).withParsedRecord(parsedRecord);
     // when
-    boolean addedSourceRecordId = addFieldToMarcRecord(marcRecord, TAG_999, 's', recordId);
-    boolean addedInstanceId = addFieldToMarcRecord(marcRecord, TAG_999, 'i', instanceId);
+    boolean addedSourceRecordId = addFieldToMarcRecord(marcRecord, FIELD_999, 's', recordId);
+    boolean addedInstanceId = addFieldToMarcRecord(marcRecord, FIELD_999, 'i', instanceId);
     // then
     assertTrue(addedSourceRecordId);
     assertTrue(addedInstanceId);
@@ -90,8 +93,8 @@ class AdditionalFieldsUtilTest {
     int totalFieldsCount = 0;
     for (int i = fields.size(); i-- > 0; ) {
       JsonObject targetField = fields.getJsonObject(i);
-      if (targetField.containsKey(TAG_999)) {
-        JsonArray subfields = targetField.getJsonObject(TAG_999).getJsonArray("subfields");
+      if (targetField.containsKey(FIELD_999)) {
+        JsonArray subfields = targetField.getJsonObject(FIELD_999).getJsonArray("subfields");
         for (int j = subfields.size(); j-- > 0; ) {
           JsonObject targetSubfield = subfields.getJsonObject(j);
           if (targetSubfield.containsKey("i")) {
@@ -115,7 +118,7 @@ class AdditionalFieldsUtilTest {
     var marcRecord = new Record();
     String instanceId = UUID.randomUUID().toString();
     // when
-    boolean added = addFieldToMarcRecord(marcRecord, TAG_999, 'i', instanceId);
+    boolean added = addFieldToMarcRecord(marcRecord, FIELD_999, 'i', instanceId);
     // then
     assertFalse(added);
     assertNull(marcRecord.getParsedRecord());
@@ -129,7 +132,7 @@ class AdditionalFieldsUtilTest {
     marcRecord.setParsedRecord(new ParsedRecord().withContent(content));
     String instanceId = UUID.randomUUID().toString();
     // when
-    boolean added = addFieldToMarcRecord(marcRecord, TAG_999, 'i', instanceId);
+    boolean added = addFieldToMarcRecord(marcRecord, FIELD_999, 'i', instanceId);
     // then
     assertFalse(added);
     assertNotNull(marcRecord.getParsedRecord());
@@ -145,7 +148,7 @@ class AdditionalFieldsUtilTest {
     marcRecord.setParsedRecord(new ParsedRecord().withContent(content));
     String instanceId = UUID.randomUUID().toString();
     // when
-    boolean added = addFieldToMarcRecord(marcRecord, TAG_999, 'i', instanceId);
+    boolean added = addFieldToMarcRecord(marcRecord, FIELD_999, 'i', instanceId);
     // then
     assertFalse(added);
     assertNotNull(marcRecord.getParsedRecord());
@@ -161,7 +164,7 @@ class AdditionalFieldsUtilTest {
     marcRecord.setParsedRecord(new ParsedRecord().withContent(content));
     String instanceId = UUID.randomUUID().toString();
     // when
-    boolean added = addFieldToMarcRecord(marcRecord, TAG_999, 'i', instanceId);
+    boolean added = addFieldToMarcRecord(marcRecord, FIELD_999, 'i', instanceId);
     // then
     assertFalse(added);
     assertNotNull(marcRecord.getParsedRecord());
@@ -175,7 +178,7 @@ class AdditionalFieldsUtilTest {
     marcRecord.setParsedRecord(new ParsedRecord().withContent(null));
     String instanceId = UUID.randomUUID().toString();
     // when
-    boolean added = addFieldToMarcRecord(marcRecord, TAG_999, 'i', instanceId);
+    boolean added = addFieldToMarcRecord(marcRecord, FIELD_999, 'i', instanceId);
     // then
     assertFalse(added);
     assertNotNull(marcRecord.getParsedRecord());
@@ -496,9 +499,6 @@ class AdditionalFieldsUtilTest {
     // when
     AdditionalFieldsUtil.fill001FieldInMarcRecord(marcRecord, "in001");
     // then: 001 already equals the target hrid, so filling it again is a no-op
-    // (previously this test only passed by reading a stale cache entry left behind by
-    // shouldNotFill001IfHrIdIsNull mutating the same interned literal - see defect 1/cache aliasing;
-    // it failed in isolation even before the cache fix landed)
     assertEquals(parsedContent, parsedRecord.getContent());
   }
 
@@ -536,7 +536,7 @@ class AdditionalFieldsUtilTest {
       new MappingParameters().withMarcFieldProtectionSettings(
         List.of(new MarcFieldProtectionSetting().withField("*").withData("*"))));
 
-    String actualDate = getValueFromControlledField(marcRecord, TAG_005);
+    String actualDate = getValueFromControlledField(marcRecord, FIELD_005);
     assertNotNull(actualDate);
     assertEquals("20141107001016.0", actualDate);
   }
@@ -556,7 +556,7 @@ class AdditionalFieldsUtilTest {
 
     AdditionalFieldsUtil.updateLatestTransactionDate(marcRecord, new MappingParameters());
 
-    String actualDate = getValueFromControlledField(marcRecord, TAG_005);
+    String actualDate = getValueFromControlledField(marcRecord, FIELD_005);
     assertNotNull(actualDate);
     assertEquals(expectedDate.substring(0, 10), actualDate.substring(0, 10));
   }
@@ -578,7 +578,7 @@ class AdditionalFieldsUtilTest {
     AdditionalFieldsUtil.updateLatestTransactionDate(marcRecord, new MappingParameters(), fixedClock);
 
     // then
-    String actualDate = getValueFromControlledField(marcRecord, TAG_005);
+    String actualDate = getValueFromControlledField(marcRecord, FIELD_005);
     assertEquals("20240315103045.1", actualDate);
   }
 
@@ -592,8 +592,9 @@ class AdditionalFieldsUtilTest {
     var recordWithNoParsedRecord = new Record().withId(UUID.randomUUID().toString());
 
     // when
+    var mappingParameters = new MappingParameters();
     var exception = assertThrows(EventProcessingException.class,
-      () -> AdditionalFieldsUtil.updateLatestTransactionDate(recordWithNoParsedRecord, new MappingParameters()));
+      () -> AdditionalFieldsUtil.updateLatestTransactionDate(recordWithNoParsedRecord, mappingParameters));
 
     // then
     assertNotNull(exception.getCause());
@@ -609,7 +610,8 @@ class AdditionalFieldsUtilTest {
     // there as part of the Stage 4c extraction), so the warning is emitted under that class's logger.
     String hugeValue = "a".repeat(150_000);
     String parsedContent = "{\"leader\":\"00000nam a2200000 a 4500\",\"fields\":[{\"001\":\"in001\"},"
-                           + "{\"999\":{\"subfields\":[{\"a\":\"" + hugeValue + "\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+                           + "{\"999\":{\"subfields\":[{\"a\":\"" + hugeValue
+                           + "\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
     var marcRecord = new Record().withId(UUID.randomUUID().toString())
       .withParsedRecord(new ParsedRecord().withContent(parsedContent));
     var appender = LogCaptureTestAppender.attachTo(MarcRecordEditor.class);
@@ -648,7 +650,7 @@ class AdditionalFieldsUtilTest {
     var marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedContent));
 
     // when
-    var parsedId = getValueFromDataField(marcRecord, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I);
+    var parsedId = getValueFromDataField(marcRecord, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I);
 
     // then
     assertTrue(parsedId.isPresent());
@@ -717,8 +719,8 @@ class AdditionalFieldsUtilTest {
 
     // when / then
     var exception = assertThrows(IllegalArgumentException.class,
-      () -> getValueFromDataField(marcRecord, TAG_001, INDICATOR_F, INDICATOR_F, SUBFIELD_I));
-    assertEquals(INVALID_DATA_FIELD_MSG.formatted(TAG_001), exception.getMessage());
+      () -> getValueFromDataField(marcRecord, FIELD_001, INDICATOR_F, INDICATOR_F, SUBFIELD_I));
+    assertEquals(INVALID_DATA_FIELD_MSG.formatted(FIELD_001), exception.getMessage());
   }
 
   @Test
@@ -747,7 +749,7 @@ class AdditionalFieldsUtilTest {
     var srcRecord = new Record().withId(UUID.randomUUID().toString())
       .withParsedRecord(new ParsedRecord().withContent(null));
 
-    var result = getValueFromControlledField(srcRecord, TAG_001);
+    var result = getValueFromControlledField(srcRecord, FIELD_001);
 
     assertNull(result);
   }
@@ -763,7 +765,7 @@ class AdditionalFieldsUtilTest {
 
     // when: no data field with tag "001" is found (the existing "001" is a control field, filtered out by the
     // instanceof guard), so addFieldToMarcRecord deterministically falls through to adding a new one
-    boolean added = assertDoesNotThrow(() -> addFieldToMarcRecord(marcRecord, TAG_001, 'z', "value"));
+    boolean added = assertDoesNotThrow(() -> addFieldToMarcRecord(marcRecord, FIELD_001, 'z', "value"));
 
     // then
     assertTrue(added);
@@ -773,8 +775,7 @@ class AdditionalFieldsUtilTest {
   void mutatingRecordViaWritePathMustNotCorruptAnotherRecordSharingSameContentString() {
     // given: two distinct FOLIO Records whose ParsedRecord content is the exact same String instance,
     // which can legitimately happen when a record is copied/cloned before either copy is mutated.
-    String parsedRecordContent = TestUtil.readFileFromPath(PARSED_MARC_RECORD_PATH);
-    String sharedContent = new String(parsedRecordContent);
+    String sharedContent = TestUtil.readFileFromPath(PARSED_MARC_RECORD_PATH);
     var recordToMutate = new Record().withId(UUID.randomUUID().toString())
       .withParsedRecord(new ParsedRecord().withContent(sharedContent));
     var untouchedRecord = new Record().withId(UUID.randomUUID().toString())
@@ -806,12 +807,12 @@ class AdditionalFieldsUtilTest {
     var marcRecord = new Record().withId(UUID.randomUUID().toString()).withParsedRecord(parsedRecord);
     String instanceId = UUID.randomUUID().toString();
 
-    AdditionalFieldsUtilCacheStats initialCacheStats = getCacheStats();
+    MarcContentCacheStats initialCacheStats = getCacheStats();
 
     // record with null parsed content
     assertFalse(
       isFieldExist(new Record().withId(UUID.randomUUID().toString()), "035", 'a', instanceId));
-    AdditionalFieldsUtilCacheStats cacheStats = getCacheStats().minus(initialCacheStats);
+    MarcContentCacheStats cacheStats = getCacheStats().minus(initialCacheStats);
     assertEquals(0, cacheStats.hitCount());
     assertEquals(0, cacheStats.missCount());
     assertEquals(0, cacheStats.loadCount());
@@ -887,7 +888,7 @@ class AdditionalFieldsUtilTest {
     assertEquals(1, cacheStats.missCount());
     assertEquals(1, cacheStats.loadCount());
     // add field to marc record
-    assertTrue(addFieldToMarcRecord(marcRecord, TAG_999, 'i', instanceId));
+    assertTrue(addFieldToMarcRecord(marcRecord, FIELD_999, 'i', instanceId));
     cacheStats = getCacheStats().minus(initialCacheStats);
     assertEquals(8, cacheStats.requestCount());
     assertEquals(7, cacheStats.hitCount());
@@ -1018,7 +1019,8 @@ class AdditionalFieldsUtilTest {
     // reorderMarcRecordFields' own catch-all then swallowed into the un-reordered systemOrderContent fallback -
     // so this scenario was already "safe" from a crash-propagation standpoint, but only by accident. This test
     // pins the actual (post-guard) behaviour instead of just asserting "doesn't throw".
-    var sourceOrderContent = "{\"fields\":[{\"245\":{\"subfields\":[{\"a\":\"Title\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    var sourceOrderContent =
+      "{\"fields\":[{\"245\":{\"subfields\":[{\"a\":\"Title\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
     var systemOrderContent = "{\"leader\":\"00000nam a2200000 a 4500\",\"fields\":["
                              + "{\"001\":\"in001\"},{},"
                              + "{\"245\":{\"subfields\":[{\"a\":\"Title\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
@@ -1036,19 +1038,8 @@ class AdditionalFieldsUtilTest {
     assertEquals(formatContent(expectedReorderedContent), formatContent(actualReorderedContent));
   }
 
-  private void shouldReturnEmptyOptional(String parsedContent) {
-    // given
-    var marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedContent));
-
-    // when
-    var result = getValueFromDataField(marcRecord, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I);
-
-    // then
-    assertTrue(result.isEmpty());
-  }
-
   @DisplayName("should produce content identical to the sequential update005/move001To035/normalize035 calls "
-    + "when 005 needs updating, 001 is present, and an OCoLC-prefixed 035 exists")
+               + "when 005 needs updating, 001 is present, and an OCoLC-prefixed 035 exists")
   @Test
   void shouldProduceSameContentAsSequentialCalls_whenStandardManipulationUpdates005Moves001AndNormalizes035() {
     // given: two identical records - a 001 to move to 035, an existing OCoLC-prefixed 035 to normalize, and no
@@ -1077,7 +1068,7 @@ class AdditionalFieldsUtilTest {
   }
 
   @DisplayName("should produce content identical to the sequential update005/move001To035/normalize035 calls "
-    + "when 005 is protected, 001 is absent, and no OCoLC-prefixed 035 exists")
+               + "when 005 is protected, 001 is absent, and no OCoLC-prefixed 035 exists")
   @Test
   void shouldProduceSameContentAsSequentialCalls_whenStandardManipulationSkipsAllThreeSteps() {
     // given: two identical records - no 001 (move001To035 only removes 003), no OCoLC-prefixed 035
@@ -1088,7 +1079,7 @@ class AdditionalFieldsUtilTest {
       + "{\"035\":{\"subfields\":[{\"a\":\"(NhFolYBP)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
       + "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
     var mappingParameters = new MappingParameters().withMarcFieldProtectionSettings(
-      List.of(new MarcFieldProtectionSetting().withField(TAG_005).withData("*")));
+      List.of(new MarcFieldProtectionSetting().withField(FIELD_005).withData("*")));
     Clock fixedClock = Clock.fixed(Instant.parse("2024-03-15T10:30:45.123Z"), ZoneId.of("UTC"));
 
     var sequentialRecord = buildMarcRecordWithContent(parsedContent);
@@ -1107,7 +1098,7 @@ class AdditionalFieldsUtilTest {
   }
 
   @DisplayName("should produce content identical to the sequential update005/normalize035/remove035WithHrId calls "
-    + "when the record is a MARC_BIB and the 035-with-hrid removal actually runs")
+               + "when the record is a MARC_BIB and the 035-with-hrid removal actually runs")
   @Test
   void shouldProduceSameContentAsSequentialCalls_whenReplaceManipulationRunsHrIdRemovalOnMarcBib() {
     // given: two identical MARC_BIB records - an OCoLC-prefixed 035 to normalize, and a second 035 whose
@@ -1137,7 +1128,7 @@ class AdditionalFieldsUtilTest {
   }
 
   @DisplayName("should produce content identical to the sequential update005/normalize035/remove035WithHrId calls "
-    + "when the record is not a MARC_BIB and the 035-with-hrid removal is skipped")
+               + "when the record is not a MARC_BIB and the 035-with-hrid removal is skipped")
   @Test
   void shouldProduceSameContentAsSequentialCalls_whenReplaceManipulationSkipsHrIdRemovalOnNonMarcBib() {
     // given: same fixture as the MARC_BIB case, but recorded as a MARC_AUTHORITY record, so
@@ -1178,12 +1169,25 @@ class AdditionalFieldsUtilTest {
     var recordWithNoParsedRecord = new Record().withId(UUID.randomUUID().toString());
 
     // when
+    var clock = Clock.systemDefaultZone();
+    var mappingParameters = new MappingParameters();
     var exception = assertThrows(EventProcessingException.class,
-      () -> AdditionalFieldsUtil.executeStandardFieldsManipulation(recordWithNoParsedRecord, new MappingParameters(),
-        Clock.systemDefaultZone()));
+      () -> AdditionalFieldsUtil
+        .executeStandardFieldsManipulation(recordWithNoParsedRecord, mappingParameters, clock));
 
     // then
     assertThat(exception.getMessage()).contains(recordWithNoParsedRecord.getId());
+  }
+
+  private void shouldReturnEmptyOptional(String parsedContent) {
+    // given
+    var marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedContent));
+
+    // when
+    var result = getValueFromDataField(marcRecord, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I);
+
+    // then
+    assertTrue(result.isEmpty());
   }
 
   private static Record buildMarcRecordWithContent(String parsedContent) {

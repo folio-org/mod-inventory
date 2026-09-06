@@ -11,7 +11,6 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.LoggerUtil.INCOMING_RECORD_ID;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
-import static org.folio.inventory.dataimport.util.ParsedRecordUtil.getControlFieldValue;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -34,12 +33,13 @@ import org.folio.MappingProfile;
 import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.exceptions.DataImportException;
+import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.exceptions.DataImportException;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.folio.okapi.common.XOkapiHeaders;
@@ -106,8 +106,9 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
         payload.getContext().get(DataImportHeaders.USER_ID),
         payload.getContext().get(XOkapiHeaders.REQUEST_ID.toLowerCase()));
       var jobExecutionId = payload.getJobExecutionId();
+      var incomingRecordId = payload.getContext().get(INCOMING_RECORD_ID);
       LOGGER.info("Update marc holding with jobExecutionId: {}, incomingRecordId: {}",
-        jobExecutionId, payload.getContext().get(INCOMING_RECORD_ID));
+        jobExecutionId, incomingRecordId);
 
       mappingMetadataCache.get(jobExecutionId, context)
         .map(mapMetadataOrFail())
@@ -217,7 +218,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
     Promise<HoldingsRecord> promise = Promise.promise();
     if (StringUtils.isBlank(holdings.getInstanceId())) {
       var rec = Json.decodeValue(getMarcHoldingRecordAsString(dataImportEventPayload), Record.class);
-      var instanceHrid = getControlFieldValue(rec, INSTANCE_HRID_TAG);
+      var instanceHrid = AdditionalFieldsUtil.getValueFromControlledField(rec, INSTANCE_HRID_TAG);
       if (isBlank(instanceHrid)) {
         LOGGER.warn("FIELD_004_MARC_HOLDINGS_NOT_NULL");
         promise.fail(new EventProcessingException(FIELD_004_MARC_HOLDINGS_NOT_NULL));

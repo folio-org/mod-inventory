@@ -1,5 +1,8 @@
 package org.folio.inventory.dataimport.util;
 
+import org.folio.dataimport.util.marc.MarcContentHolder;
+import org.folio.dataimport.util.marc.MarcRecordEditor;
+
 /**
  * {@link MarcContentHolder} adapter over {@code org.folio.rest.jaxrs.model.Record} (the FOLIO record type used by
  * {@link AdditionalFieldsUtil}), so {@link MarcRecordEditor} can operate on it without depending on that type

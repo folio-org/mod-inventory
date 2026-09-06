@@ -8,9 +8,9 @@ import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_INSTANCE_CREATED_READY_FOR_POST_PROCESSING;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
+import static org.folio.dataimport.util.marc.MarcConstants.INDICATOR_F;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.reorderMarcRecordFields;
 import static org.folio.inventory.dataimport.util.DataImportConstants.ALREADY_EXISTS_ERROR_MSG;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
@@ -244,7 +244,7 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   }
 
   private boolean contains999ffSubfieldIValue(Record targetRecord) {
-    return AdditionalFieldsUtil.getValueFromDataField(targetRecord, TAG_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I)
+    return AdditionalFieldsUtil.getValueFromDataField(targetRecord, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I)
       .isPresent();
   }
 

@@ -1,8 +1,11 @@
 package org.folio.inventory.resources;
 
 import static java.lang.String.format;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_001;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_852;
+import static org.folio.dataimport.util.marc.MarcConstants.INDICATOR_EMPTY;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_B;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_001;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
 import static org.folio.inventory.resources.HoldingsApi.MARC_SOURCE_ID;
@@ -45,8 +48,8 @@ import org.folio.NotUpdatedEntity;
 import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.WebContext;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.services.SnapshotService;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
@@ -91,9 +94,6 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   private static final String ITEM_ID = "itemId";
   private static final String INSTANCE_ID = "instanceId";
   private static final String LOCATION_CODE_FIELD = "code";
-  private static final String MARC_TAG_852 = "852";
-  private static final char INDICATOR_BLANK = ' ';
-  private static final char SUBFIELD_B = 'b';
   private static final int HOLDINGS_PAGE_SIZE = 100;
 
   private final ConsortiumService consortiumService;
@@ -620,9 +620,9 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     Map<String, Record> holdingMarcSources = new HashMap<>();
     List<CompletableFuture<Void>> srsFutures = marcHoldings.stream()
       .map(h -> getSourceRecordByExternalId(h.getId(), updateContext.sourceSrsClient)
-        .thenAccept(record -> {
-          if (record != null) {
-            holdingMarcSources.put(h.getId(), record);
+        .thenAccept(dataRecord -> {
+          if (dataRecord != null) {
+            holdingMarcSources.put(h.getId(), dataRecord);
           } else {
             String errorMessage = "Failed to fetch MARC source record for holdings id: " + h.getId();
             LOGGER.warn(errorMessage);
@@ -889,23 +889,23 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     ExternalIdsHolder newExternalIds = sourceSrsRecord.getExternalIdsHolder();
     newExternalIds.setHoldingsHrid(targetHolding.getHrid());
 
-    AdditionalFieldsUtil.addControlledFieldToMarcRecord(sourceSrsRecord, TAG_001, targetHolding.getHrid(), true);
+    AdditionalFieldsUtil.addControlledFieldToMarcRecord(sourceSrsRecord, FIELD_001, targetHolding.getHrid(), true);
     LOGGER.info("buildTargetSrsRecord:: Updated field 001 with new HRID: {}", targetHolding.getHrid());
 
     // Replace existing 852$b values (regardless of indicators) and set target holding permanent location code.
     if (locationCode != null && !locationCode.isEmpty()) {
       Optional<String> existing852b =
-        AdditionalFieldsUtil.getValueFromDataField(sourceSrsRecord, MARC_TAG_852, SUBFIELD_B);
+        AdditionalFieldsUtil.getValueFromDataField(sourceSrsRecord, FIELD_852, SUBFIELD_B);
       while (existing852b.isPresent()) {
         boolean removed =
-          AdditionalFieldsUtil.removeField(sourceSrsRecord, MARC_TAG_852, SUBFIELD_B, existing852b.get());
+          AdditionalFieldsUtil.removeField(sourceSrsRecord, FIELD_852, SUBFIELD_B, existing852b.get());
         if (!removed) {
           break;
         }
-        existing852b = AdditionalFieldsUtil.getValueFromDataField(sourceSrsRecord, MARC_TAG_852, SUBFIELD_B);
+        existing852b = AdditionalFieldsUtil.getValueFromDataField(sourceSrsRecord, FIELD_852, SUBFIELD_B);
       }
-      AdditionalFieldsUtil.addDataFieldToMarcRecord(sourceSrsRecord, MARC_TAG_852,
-        INDICATOR_BLANK, INDICATOR_BLANK, SUBFIELD_B, locationCode);
+      AdditionalFieldsUtil.addDataFieldToMarcRecord(sourceSrsRecord, FIELD_852, INDICATOR_EMPTY, INDICATOR_EMPTY,
+        SUBFIELD_B, locationCode);
       LOGGER.info("buildTargetSrsRecord:: Updated field 852 subfield 'b' with location code: {}", locationCode);
     }
 
@@ -1063,7 +1063,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .thenApply(v -> deleteFutures.stream()
         .map(CompletableFuture::join)
         .filter(Objects::nonNull)
-        .collect(Collectors.toList()));
+        .toList());
   }
 
   private CompletableFuture<List<String>> deleteSourceItems(List<Item> items,
@@ -1095,7 +1095,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .thenApply(v -> deleteFutures.stream()
         .map(CompletableFuture::join)
         .filter(Objects::nonNull)
-        .collect(Collectors.toList()));
+        .toList());
   }
 
   private CompletableFuture<List<HoldingsRecord>> validateHoldingsRecordsBoundWith(List<HoldingsRecord> holdingsRecords,

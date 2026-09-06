@@ -5,6 +5,7 @@ import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.ActionProfile.Action.MODIFY;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_I;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.getTenant;
 import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
@@ -35,11 +36,11 @@ import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.DeleteRuleFor999FieldCache;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
@@ -178,8 +179,7 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
     Map<String, String> payloadForInstanceUpdate = buildPayloadForInstanceUpdate(payload, mappingMetadataDto);
 
     Record dataRecord = getRecord(payloadForInstanceUpdate);
-    String instanceId =
-      ParsedRecordUtil.getAdditionalSubfieldValue(dataRecord.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
+    String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(dataRecord.getParsedRecord(), SUBFIELD_I);
     if (isBlank(instanceId)) {
       LOGGER.warn(
         "updateRelatedEntity:: Cannot update Instance during modify, 999ff$i is blank, tenant: {}, jobExecutionId: {}",
@@ -193,16 +193,15 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
 
     instanceUpdateDelegate.handle(payloadForInstanceUpdate, dataRecord, context)
       .onSuccess(instanceUpdatePromise::complete)
-      .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(updatedInstance,
-        context))
+      .compose(updatedInstance -> precedingSucceedingTitlesHelper
+        .getExistingPrecedingSucceedingTitles(updatedInstance, context))
       .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
         .map(titleJson -> titleJson.getString("id"))
         .collect(Collectors.toSet()))
-      .compose(precedingSucceedingTitles -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(
-        precedingSucceedingTitles, context))
-      .compose(
-        ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(instanceUpdatePromise.future().result(),
-          context))
+      .compose(precedingSucceedingTitles -> precedingSucceedingTitlesHelper
+        .deletePrecedingSucceedingTitles(precedingSucceedingTitles, context))
+      .compose(ar -> precedingSucceedingTitlesHelper
+        .createPrecedingSucceedingTitles(instanceUpdatePromise.future().result(), context))
       .onSuccess(updateAr -> {
         LOGGER.debug("updateRelatedEntity:: Instance with id: '{}' successfully updated by jobExecutionId: '{}'",
           instanceId, payload.getJobExecutionId());
@@ -272,8 +271,7 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
         return;
       }
       Record parsedRecord = Json.decodeValue(recordAsString, Record.class);
-      String subfield999ffI = ParsedRecordUtil.getAdditionalSubfieldValue(parsedRecord.getParsedRecord(),
-        ParsedRecordUtil.AdditionalSubfields.I);
+      var subfield999ffI = ParsedRecordUtil.getAdditionalSubfieldValue(parsedRecord.getParsedRecord(), SUBFIELD_I);
       ExternalIdsHolder holder = parsedRecord.getExternalIdsHolder();
       if (isBlank(subfield999ffI) && holder != null
           && (!isBlank(holder.getInstanceId()) || !isBlank(holder.getInstanceHrid()))) {

@@ -3,10 +3,10 @@ package org.folio.inventory.instanceingress.handler;
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
 import static java.util.Optional.ofNullable;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_L;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_035;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_035_SUB;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_035;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_A;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_L;
 import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_REQUIRED_FIELDS;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
@@ -130,7 +130,7 @@ public interface InstanceIngressEventHandler {
       AdditionalFieldsUtil.executeStandardFieldsManipulation(targetRecord, mappingParameters,
         Clock.systemDefaultZone());
       if (event.getEventPayload().getAdditionalProperties().containsKey(LINKED_DATA_ID)) {
-        AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, TAG_035, TAG_035_SUB,
+        AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, FIELD_035, SUBFIELD_A,
           "(ld) " + event.getEventPayload().getAdditionalProperties().get(LINKED_DATA_ID));
       }
 
@@ -153,7 +153,7 @@ public interface InstanceIngressEventHandler {
                                                      Map<String, Object> eventProperties,
                                                      BiFunction<Instance, Record, Future<Instance>> fieldsManipulationFunction) {
     if (eventProperties.containsKey(LINKED_DATA_ID)) {
-      AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, TAG_999, SUBFIELD_L,
+      AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, FIELD_999, SUBFIELD_L,
         String.valueOf(eventProperties.get(LINKED_DATA_ID)));
     }
     return fieldsManipulationFunction.apply(instance, srcRecord);

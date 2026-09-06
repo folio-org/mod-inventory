@@ -7,6 +7,7 @@ import static org.apache.logging.log4j.util.Strings.isNotEmpty;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_I;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
@@ -235,7 +236,7 @@ public class CreateHoldingEventHandler implements EventHandler {
       String recordAsString = dataImportEventPayload.getContext().get(EntityType.MARC_BIBLIOGRAPHIC.value());
       Record recordData = Json.decodeValue(recordAsString, Record.class);
       instanceId =
-        ParsedRecordUtil.getAdditionalSubfieldValue(recordData.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
+        ParsedRecordUtil.getAdditionalSubfieldValue(recordData.getParsedRecord(), SUBFIELD_I);
     }
     return instanceId;
   }

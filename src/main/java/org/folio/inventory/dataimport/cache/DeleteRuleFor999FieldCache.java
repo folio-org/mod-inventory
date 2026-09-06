@@ -1,5 +1,7 @@
 package org.folio.inventory.dataimport.cache;
 
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Vertx;
@@ -32,7 +34,6 @@ public final class DeleteRuleFor999FieldCache {
   private static final Logger LOGGER = LogManager.getLogger(DeleteRuleFor999FieldCache.class);
   private static final String CACHE_EXPIRATION_TIME_ENV = "inventory.delete-999-rule-cache.expiration.time.seconds";
   private static final String DEFAULT_EXPIRATION_TIME_SECONDS = "3600";
-  private static final String TAG_999 = "999";
   /**
    * Subfield codes that make the DELETE-999 rule relevant to {@code externalIdsHolder} sync:
    * {@code i} (instance id backlink), {@code s} (matched id / SRS record id), and {@code *}
@@ -94,7 +95,7 @@ public final class DeleteRuleFor999FieldCache {
       if (detail == null || detail.getAction() != MarcMappingDetail.Action.DELETE || detail.getField() == null) {
         continue;
       }
-      if (!TAG_999.equals(detail.getField().getField())) {
+      if (!FIELD_999.equals(detail.getField().getField())) {
         continue;
       }
       if (ruleTargetsRelevantSubfield(detail)) {

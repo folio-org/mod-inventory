@@ -109,7 +109,7 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
     postSnapshotInSrsAndHandleResponse(srcRecord.getSnapshotId(), context, super::postSnapshotInSrsAndHandleResponse)
       .onFailure(promise::fail)
       .compose(snapshot -> {
-        getSourceStorageRecordsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId(),
+        getSourceStorageClient(context.getOkapiLocation(), context.getToken(), context.getTenantId(),
           context.getUserId(), context.getRequestId())
           .postSourceStorageRecords(srcRecord)
           .onComplete(ar -> {
