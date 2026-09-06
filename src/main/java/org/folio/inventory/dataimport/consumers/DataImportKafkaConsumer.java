@@ -93,10 +93,11 @@ import org.folio.processing.matching.reader.MatchValueReaderFactory;
 import org.folio.processing.matching.reader.StaticValueReaderImpl;
 import org.folio.rest.jaxrs.model.Event;
 
-public class DataImportKafkaHandler implements AsyncRecordHandler<String, String> {
+public class DataImportKafkaConsumer implements AsyncRecordHandler<String, String> {
 
   public static final String PROFILE_SNAPSHOT_ID_KEY = "JOB_PROFILE_SNAPSHOT_ID";
-  private static final Logger LOGGER = LogManager.getLogger(DataImportKafkaHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(DataImportKafkaConsumer.class);
+
   private static final Set<String> CANCELLED_JOB_ALLOWED_EVENTS = Set.of(
     DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING.value()
   );
@@ -110,21 +111,15 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
   private final ConsortiumService consortiumService;
   private final CancelledJobsIdsCache cancelledJobsIdCache;
 
-  public DataImportKafkaHandler(Vertx vertx, Storage storage, HttpClient client,
-                                ProfileSnapshotCache profileSnapshotCache,
-                                KafkaConfig kafkaConfig,
-                                MappingMetadataCache mappingMetadataCache,
-                                DeleteRuleFor999FieldCache deleteRuleFor999FieldCache,
-                                ConsortiumDataCache consortiumDataCache,
-                                CancelledJobsIdsCache cancelledJobsIdCache) {
+  public DataImportKafkaConsumer(Vertx vertx, Storage storage, HttpClient client, KafkaConfig kafkaConfig) {
     this.vertx = vertx;
-    this.profileSnapshotCache = profileSnapshotCache;
-    this.mappingMetadataCache = mappingMetadataCache;
-    this.deleteRuleFor999FieldCache = deleteRuleFor999FieldCache;
+    this.profileSnapshotCache = ProfileSnapshotCache.getInstance(vertx, client);
+    this.mappingMetadataCache = MappingMetadataCache.getInstance(vertx);
+    this.deleteRuleFor999FieldCache = DeleteRuleFor999FieldCache.getInstance(vertx);
     this.kafkaConfig = kafkaConfig;
-    this.cancelledJobsIdCache = cancelledJobsIdCache;
-    orderHelperService = new OrderHelperServiceImpl(profileSnapshotCache);
-    consortiumService = new ConsortiumServiceImpl(client, consortiumDataCache);
+    this.cancelledJobsIdCache = CancelledJobsIdsCache.getInstance();
+    this.orderHelperService = new OrderHelperServiceImpl(this.profileSnapshotCache);
+    this.consortiumService = new ConsortiumServiceImpl(client, ConsortiumDataCache.getInstance(vertx, client));
     registerDataImportProcessingHandlers(storage, client);
   }
 
@@ -183,7 +178,7 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
             LOGGER.error("jobExecutionId: {} recordId: {} {}", jobExecutionId, recordId, throwable.getMessage());
             promise.fail(throwable);
           } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
-            LOGGER.warn("Failed to process data import event payload: {} jobExecutionId: {} recordId: {}",
+            LOGGER.warn("Failed to process data import e60Lvent payload: {} jobExecutionId: {} recordId: {}",
               processedPayload.getEventType(), jobExecutionId, recordId);
             promise.fail("Failed to process data import event payload");
           } else {
@@ -197,7 +192,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     }
   }
 
-  // TODO: generalize userId header in events
   private String extractUserId(DataImportEventPayload eventPayload, Map<String, String> headersMap) {
     String userId = headersMap.get(DataImportHeaders.USER_ID);
     if (isNull(userId)) {
@@ -212,7 +206,6 @@ public class DataImportKafkaHandler implements AsyncRecordHandler<String, String
     return userId;
   }
 
-  // TODO: possible wrong placement of entity logs when cache error
   private void sendPayloadWithDiError(DataImportEventPayload eventPayload) {
     eventPayload.setEventType(DI_ERROR.value());
     try (var eventPublisher = new KafkaEventPublisher(kafkaConfig, vertx, 100)) {

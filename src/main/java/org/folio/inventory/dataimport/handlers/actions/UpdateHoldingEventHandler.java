@@ -36,7 +36,7 @@ import org.folio.HttpStatus;
 import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.entities.OlHoldingsAccumulativeResults;
 import org.folio.inventory.dataimport.entities.PartialError;

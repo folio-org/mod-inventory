@@ -6,15 +6,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 public class WebRequestDiagnostics {
+
   private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-  private WebRequestDiagnostics() {
-
-  }
+  private WebRequestDiagnostics() { }
 
   public static void outputDiagnostics(RoutingContext routingContext) {
-
-    log.info("Handling {} {}", routingContext.request().method().name(), routingContext.normalizedPath());
+    var httpMethod = routingContext.request().method().name();
+    var requestPath = routingContext.normalizedPath();
+    log.info("Handling {} {}", httpMethod, requestPath);
 
     outputHeaders(routingContext);
 
@@ -26,7 +26,7 @@ public class WebRequestDiagnostics {
 
     for (String name : routingContext.request().headers().names()) {
       for (String entry : routingContext.request().headers().getAll(name)) {
-        log.debug(String.format("%s : %s", name, entry));
+        log.debug("{} : {}", name, entry);
       }
     }
   }

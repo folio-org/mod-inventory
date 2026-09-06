@@ -30,8 +30,7 @@ import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.dataimport.util.DataImportHeaders;
-import org.folio.inventory.DataImportConsumerVerticle;
-import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
+import org.folio.inventory.verticle.DataImportConsumerVerticle;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.rest.jaxrs.model.Event;
@@ -88,13 +87,14 @@ class DataImportConsumerVerticleTest extends KafkaTest {
   @BeforeAll
   static void setUpClass() throws Exception {
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertxAssistant.getVertx(), 1);
-    CancelledJobsIdsCache cancelledJobsIdsCache = new CancelledJobsIdsCache();
 
     CompletableFuture<String> deployFuture = new CompletableFuture<>();
     vertxAssistant.getVertx()
-      .deployVerticle(() -> new DataImportConsumerVerticle(cancelledJobsIdsCache), deploymentOptions)
+      .deployVerticle(DataImportConsumerVerticle::new, deploymentOptions)
       .onComplete(ar -> {
-        if (ar.succeeded()) { deployFuture.complete(ar.result()); } else {
+        if (ar.succeeded()) {
+          deployFuture.complete(ar.result());
+        } else {
           deployFuture.completeExceptionally(ar.cause());
         }
       });

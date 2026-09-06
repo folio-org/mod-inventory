@@ -1,4 +1,4 @@
-package org.folio.inventory;
+package org.folio.inventory.verticle;
 
 import static org.folio.DataImportEventTypes.DI_JOB_CANCELLED;
 
@@ -25,11 +25,7 @@ public class CancelledJobExecutionConsumerVerticle extends KafkaConsumerVerticle
   private static final String LOAD_LIMIT_PROPERTY = "CancelledJobExecutionConsumer";
   private static final String DEFAULT_LOAD_LIMIT = "1000";
 
-  private final CancelledJobsIdsCache cancelledJobsIdsCache;
-
-  public CancelledJobExecutionConsumerVerticle(CancelledJobsIdsCache cancelledJobsIdsCache) {
-    this.cancelledJobsIdsCache = cancelledJobsIdsCache;
-  }
+  private final CancelledJobsIdsCache cancelledJobsIdsCache = CancelledJobsIdsCache.getInstance();
 
   @Override
   public void start(Promise<Void> startPromise) {

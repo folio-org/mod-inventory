@@ -13,9 +13,19 @@ public class SingleConnectionProvider {
 
   private static final String JDBC_DRIVER = "jdbc:postgresql";
 
+  private final PostgresConnectionOptions connectionOptions;
+
+  public SingleConnectionProvider() {
+    this(new PostgresConnectionOptions());
+  }
+
+  public SingleConnectionProvider(PostgresConnectionOptions connectionOptions) {
+    this.connectionOptions = connectionOptions;
+  }
+
   public Connection getConnection(String tenantId) throws SQLException {
     LOGGER.info("Attempting to get connection for tenant {}", tenantId);
-    PgConnectOptions connectOptions = PostgresConnectionOptions.getConnectionOptions(tenantId);
+    PgConnectOptions connectOptions = connectionOptions.getConnectionOptions(tenantId);
     return getConnectionInternal(connectOptions);
   }
 

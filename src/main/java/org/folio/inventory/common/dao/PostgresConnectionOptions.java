@@ -3,19 +3,27 @@ package org.folio.inventory.common.dao;
 import static java.lang.String.format;
 
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.ClientSSLOptions;
 import io.vertx.core.net.PemTrustOptions;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.SslMode;
 import io.vertx.sqlclient.PoolOptions;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import lombok.Setter;
+import java.util.function.Consumer;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * Utility class to get connection properties used to connect to Postgres DB.
+ * Resolves the Postgres connection properties used to connect to the database.
+ *
+ * <p>Values are read from an environment source ({@link System#getenv()} by default). Supply an
+ * explicit {@link Map} to point the module at a different environment (e.g. an embedded database in
+ * tests), or use {@link #fromConfig(JsonObject)} to let Vert.x deployment config override the
+ * environment on a per-key basis.
  */
 public class PostgresConnectionOptions {
   public static final String DB_HOST = "DB_HOST";
@@ -30,17 +38,42 @@ public class PostgresConnectionOptions {
   private static final String DEFAULT_IDLE_TIMEOUT = "60000";
   private static final String DEFAULT_MAX_POOL_SIZE = "5";
   private static final String MODULE_NAME = "mod_inventory";
+  private static final List<String> DB_KEYS = List.of(DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME,
+    DB_PASSWORD, DB_MAXPOOLSIZE, DB_SERVER_PEM, DB_IDLETIMEOUT);
+
+  private final Map<String, String> environment;
+
   /**
-   * -- SETTER --
-   * For test usage only.
-   *
-   * @param newSystemProperties Map of system properties to set.
+   * Read connection properties from the process environment ({@link System#getenv()}).
    */
-  @Setter
-  private static Map<String, String> systemProperties = System.getenv();
+  public PostgresConnectionOptions() {
+    this(System.getenv());
+  }
 
-  private PostgresConnectionOptions() {
+  /**
+   * Read connection properties from the supplied environment.
+   *
+   * @param environment map of {@code DB_*} properties to connection values.
+   */
+  public PostgresConnectionOptions(Map<String, String> environment) {
+    this.environment = environment;
+  }
 
+  /**
+   * Build options from Vert.x deployment {@code config}, falling back to the process environment for
+   * any {@code DB_*} key not present in the config.
+   *
+   * @param config verticle deployment configuration.
+   * @return connection options resolved from config overlaid on the environment.
+   */
+  public static PostgresConnectionOptions fromConfig(JsonObject config) {
+    var environment = new HashMap<>(System.getenv());
+    DB_KEYS.forEach(key -> {
+      if (config.containsKey(key)) {
+        environment.put(key, config.getString(key));
+      }
+    });
+    return new PostgresConnectionOptions(environment);
   }
 
   /**
@@ -49,57 +82,38 @@ public class PostgresConnectionOptions {
    * @param tenantId tenant id.
    * @return postgres connection options.
    */
-  public static PgConnectOptions getConnectionOptions(String tenantId) {
+  public PgConnectOptions getConnectionOptions(String tenantId) {
     PgConnectOptions pgConnectionOptions = new PgConnectOptions();
-
     pgConnectionOptions.getProperties().put("application_name", MODULE_NAME);
-    if (StringUtils.isNotBlank(getSystemProperty(DB_HOST))) {
-      pgConnectionOptions.setHost(getSystemProperty(DB_HOST));
-    }
-    if (StringUtils.isNotBlank(getSystemProperty(DB_PORT))) {
-      pgConnectionOptions.setPort(Integer.parseInt(getSystemProperty(DB_PORT)));
-    }
-    if (StringUtils.isNotBlank(getSystemProperty(DB_DATABASE))) {
-      pgConnectionOptions.setDatabase(getSystemProperty(DB_DATABASE));
-    }
-    if (StringUtils.isNotBlank(getSystemProperty(DB_USERNAME))) {
-      pgConnectionOptions.setUser(getSystemProperty(DB_USERNAME));
-    }
-    if (StringUtils.isNotBlank(getSystemProperty(DB_PASSWORD))) {
-      pgConnectionOptions.setPassword(getSystemProperty(DB_PASSWORD));
-    }
 
-    if (StringUtils.isNotBlank(getSystemProperty(DB_SERVER_PEM))) {
+    applyIfPresent(DB_HOST, pgConnectionOptions::setHost);
+    applyIfPresent(DB_PORT, value -> pgConnectionOptions.setPort(Integer.parseInt(value)));
+    applyIfPresent(DB_DATABASE, pgConnectionOptions::setDatabase);
+    applyIfPresent(DB_USERNAME, pgConnectionOptions::setUser);
+    applyIfPresent(DB_PASSWORD, pgConnectionOptions::setPassword);
+    applyIfPresent(DB_SERVER_PEM, pem -> {
       pgConnectionOptions.setSslMode(SslMode.VERIFY_FULL);
-
-      ClientSSLOptions sslClientOptions = new ClientSSLOptions()
+      pgConnectionOptions.setSslOptions(new ClientSSLOptions()
         .setHostnameVerificationAlgorithm("HTTPS")
-        .setTrustOptions(new PemTrustOptions().addCertValue(Buffer.buffer(getSystemProperty(DB_SERVER_PEM))))
-        .setEnabledSecureTransportProtocols(Set.of("TLSv1.3"));
-      pgConnectionOptions.setSslOptions(sslClientOptions);
-    }
+        .setTrustOptions(new PemTrustOptions().addCertValue(Buffer.buffer(pem)))
+        .setEnabledSecureTransportProtocols(Set.of("TLSv1.3")));
+    });
+
     if (StringUtils.isNotBlank(tenantId)) {
       pgConnectionOptions.addProperty(DEFAULT_SCHEMA_PROPERTY, convertToPsqlStandard(tenantId));
     }
     return pgConnectionOptions;
   }
 
-  public static PoolOptions getPoolOptions() {
+  public PoolOptions getPoolOptions() {
     return new PoolOptions()
-      .setMaxSize(PostgresConnectionOptions.getMaxPoolSize())
-      .setIdleTimeout(Integer.parseInt(
-        StringUtils.isNotBlank(getSystemProperty(DB_IDLETIMEOUT)) ? getSystemProperty(DB_IDLETIMEOUT)
-                                                                  : DEFAULT_IDLE_TIMEOUT))
+      .setMaxSize(getMaxPoolSize())
+      .setIdleTimeout(Integer.parseInt(getOrDefault(DB_IDLETIMEOUT, DEFAULT_IDLE_TIMEOUT)))
       .setIdleTimeoutUnit(TimeUnit.MILLISECONDS);
   }
 
-  public static Integer getMaxPoolSize() {
-    return Integer.parseInt(
-      getSystemProperty(DB_MAXPOOLSIZE) != null ? getSystemProperty(DB_MAXPOOLSIZE) : DEFAULT_MAX_POOL_SIZE);
-  }
-
-  public static String getSystemProperty(String key) {
-    return systemProperties.get(key);
+  public Integer getMaxPoolSize() {
+    return Integer.parseInt(getOrDefault(DB_MAXPOOLSIZE, DEFAULT_MAX_POOL_SIZE));
   }
 
   /**
@@ -110,5 +124,17 @@ public class PostgresConnectionOptions {
    */
   public static String convertToPsqlStandard(String tenantId) {
     return format("%s_%s", tenantId.toLowerCase(), MODULE_NAME);
+  }
+
+  private void applyIfPresent(String key, Consumer<String> setter) {
+    String value = environment.get(key);
+    if (StringUtils.isNotBlank(value)) {
+      setter.accept(value);
+    }
+  }
+
+  private String getOrDefault(String key, String defaultValue) {
+    String value = environment.get(key);
+    return StringUtils.isNotBlank(value) ? value : defaultValue;
   }
 }

@@ -1,7 +1,6 @@
 package org.folio.inventory.resources;
 
 import static java.lang.String.format;
-import static org.folio.inventory.common.FutureAssistance.allOf;
 
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpClient;
@@ -189,10 +188,8 @@ public abstract class AbstractInstances {
     return format("succeedingInstanceId==(%s) or precedingInstanceId==(%s)", idList, idList);
   }
 
-  protected <T> CompletableFuture<List<T>> allResultsOf(
-    List<CompletableFuture<T>> allFutures) {
-
-    return allOf(allFutures)
+  protected <T> CompletableFuture<List<T>> allResultsOf(List<CompletableFuture<T>> allFutures) {
+    return CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }))
       .thenApply(v -> allFutures.stream()
         .map(CompletableFuture::join)
         .toList());

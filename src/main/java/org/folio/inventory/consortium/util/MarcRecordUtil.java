@@ -39,7 +39,7 @@ public final class MarcRecordUtil {
    * @param values       values of the subfield to remove
    */
   public static void removeSubfieldsThatContainsValues(Record record, List<String> fields, char subfieldCode,
-                                                       List<String> values) {
+                                                     List<String> values) {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     if (record != null && record.getParsedRecord() != null && record.getParsedRecord().getContent() != null) {
       MarcWriter marcStreamWriter = new MarcStreamWriter(new ByteArrayOutputStream());

@@ -31,7 +31,9 @@ class EventIdStorageDaoTest {
   private static final String EVENT_ID = UUID.randomUUID().toString();
   private static boolean runningOnOwn;
 
-  private final PostgresClientFactory postgresClientFactory = new PostgresClientFactory(Vertx.vertx());
+  private final Vertx vertx = Vertx.vertx();
+  private final PostgresClientFactory postgresClientFactory =
+    new PostgresClientFactory(vertx, new PostgresConnectionOptions(PgPoolContainer.getConnectionEnv()));
   private final EventIdStorageDao eventIdStorageDao = new EventIdStorageDao(postgresClientFactory);
 
   @BeforeAll
@@ -39,7 +41,7 @@ class EventIdStorageDaoTest {
     if (!PgPoolContainer.isRunning()) {
       runningOnOwn = true;
       PgPoolContainer.create();
-      TenantApi tenantApi = new TenantApi();
+      TenantApi tenantApi = new TenantApi(new PostgresConnectionOptions(PgPoolContainer.getConnectionEnv()));
       tenantApi.initializeSchemaForTenant(TENANT_ID);
     }
   }
@@ -52,9 +54,8 @@ class EventIdStorageDaoTest {
   }
 
   @BeforeEach
-  void before() {
-    postgresClientFactory.setShouldResetPool(true);
-    PgPoolContainer.setEmbeddedPostgresOptions();
+  void before() throws Exception {
+    PostgresClientFactory.closePool(TENANT_ID).toCompletionStage().toCompletableFuture().get();
   }
 
   @Test
@@ -71,9 +72,10 @@ class EventIdStorageDaoTest {
   @Test
   void shouldReturnFailedFuture(VertxTestContext testContext) {
     var eventToEntity = EventToEntity.builder().table(EventTable.SHARED_INSTANCE).eventId(EVENT_ID).build();
+    var daoWithoutDbParams = new EventIdStorageDao(
+      new PostgresClientFactory(vertx, new PostgresConnectionOptions(new HashMap<>())));
 
-    PostgresConnectionOptions.setSystemProperties(new HashMap<>());
-    var future = eventIdStorageDao.storeEvent(eventToEntity, TENANT_ID);
+    var future = daoWithoutDbParams.storeEvent(eventToEntity, TENANT_ID);
 
     future.onComplete(testContext.failing(err -> testContext.verify(() -> {
       assertInstanceOf(ConnectException.class, err);

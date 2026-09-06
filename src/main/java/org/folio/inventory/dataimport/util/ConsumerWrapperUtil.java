@@ -8,7 +8,8 @@ public final class ConsumerWrapperUtil {
   }
 
   public static String constructModuleName() {
-    return PomReaderUtil.INSTANCE.constructModuleVersionAndVersion(PomReaderUtil.INSTANCE.getModuleName(),
+    return PomReaderUtil.INSTANCE.constructModuleVersionAndVersion(
+      PomReaderUtil.INSTANCE.getModuleName(),
       PomReaderUtil.INSTANCE.getVersion());
   }
 }

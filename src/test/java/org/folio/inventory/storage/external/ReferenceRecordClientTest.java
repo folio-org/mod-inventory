@@ -1,6 +1,6 @@
 package org.folio.inventory.storage.external;
 
-import static org.folio.inventory.common.FutureAssistance.waitForCompletion;
+import static support.FutureAssistance.waitForCompletion;
 import static org.folio.inventory.storage.external.ReferenceRecordClientTest.CauseMatcher.causeMatches;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;

@@ -2,6 +2,7 @@ package org.folio.inventory.dataimport.handlers;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler.JOB_EXECUTION_ID_KEY;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -27,7 +28,7 @@ import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler;
-import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
@@ -69,7 +70,7 @@ class MarcHoldingsRecordHridSetKafkaHandlerTest extends BaseWireMockTest {
   private KafkaConsumerRecord<String, String> kafkaRecord;
 
   private org.folio.rest.jaxrs.model.Record marcRecord;
-  private MarcHoldingsRecordHridSetKafkaHandler marcHoldingsRecordHridSetKafkaHandler;
+  private MarcHoldingsRecordHridSetKafkaHandler marcHoldingsHandler;
   private List<KafkaHeader> okapiHeaders;
 
   @BeforeEach
@@ -104,10 +105,12 @@ class MarcHoldingsRecordHridSetKafkaHandlerTest extends BaseWireMockTest {
         .withMappingParams(Json.encode(mappingParameters))
         .withMappingRules(new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH)).encode())))));
 
-    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, vertx.createHttpClient(), true);
-    marcHoldingsRecordHridSetKafkaHandler =
-      new MarcHoldingsRecordHridSetKafkaHandler(new HoldingsUpdateDelegate(mockedStorage, holdingsCollectionService),
-        mappingMetadataCache);
+    // Force a fresh cache bound to this test's Vertx - the static singleton would otherwise leak a stale,
+    // closed-Vertx-bound instance from a previously run test class (e.g. MappingMetadataCacheTest).
+    MappingMetadataCache.getInstance(vertx, true);
+
+    marcHoldingsHandler = new MarcHoldingsRecordHridSetKafkaHandler(vertx,
+      new HoldingsUpdateDelegate(mockedStorage, holdingsCollectionService));
 
     this.okapiHeaders = List.of(
       KafkaHeader.header(XOkapiHeaders.TENANT, "diku"),
@@ -128,12 +131,12 @@ class MarcHoldingsRecordHridSetKafkaHandlerTest extends BaseWireMockTest {
     when(kafkaRecord.headers()).thenReturn(okapiHeaders);
 
     // when
-    Future<String> future = marcHoldingsRecordHridSetKafkaHandler.handle(kafkaRecord);
+    Future<String> future = marcHoldingsHandler.handle(kafkaRecord);
 
     // then
     future.onComplete(ar -> testContext.verify(() -> {
-      org.junit.jupiter.api.Assertions.assertTrue(ar.succeeded());
-      org.junit.jupiter.api.Assertions.assertEquals(expectedKafkaRecordKey, ar.result());
+      assertTrue(ar.succeeded());
+      assertEquals(expectedKafkaRecordKey, ar.result());
       testContext.completeNow();
     }));
   }
@@ -157,11 +160,11 @@ class MarcHoldingsRecordHridSetKafkaHandlerTest extends BaseWireMockTest {
         "Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1")));
 
     // when
-    Future<String> future = marcHoldingsRecordHridSetKafkaHandler.handle(kafkaRecord);
+    Future<String> future = marcHoldingsHandler.handle(kafkaRecord);
 
     // then
     future.onComplete(ar -> testContext.verify(() -> {
-      org.junit.jupiter.api.Assertions.assertTrue(ar.failed());
+      assertTrue(ar.failed());
       testContext.completeNow();
     }));
   }
@@ -176,11 +179,11 @@ class MarcHoldingsRecordHridSetKafkaHandlerTest extends BaseWireMockTest {
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
 
     // when
-    Future<String> future = marcHoldingsRecordHridSetKafkaHandler.handle(kafkaRecord);
+    Future<String> future = marcHoldingsHandler.handle(kafkaRecord);
 
     // then
     future.onComplete(ar -> testContext.verify(() -> {
-      org.junit.jupiter.api.Assertions.assertTrue(ar.failed());
+      assertTrue(ar.failed());
       testContext.completeNow();
     }));
   }
@@ -192,11 +195,11 @@ class MarcHoldingsRecordHridSetKafkaHandlerTest extends BaseWireMockTest {
     when(kafkaRecord.value()).thenReturn(Json.encode(event));
 
     // when
-    Future<String> future = marcHoldingsRecordHridSetKafkaHandler.handle(kafkaRecord);
+    Future<String> future = marcHoldingsHandler.handle(kafkaRecord);
 
     // then
     future.onComplete(ar -> testContext.verify(() -> {
-      org.junit.jupiter.api.Assertions.assertTrue(ar.failed());
+      assertTrue(ar.failed());
       testContext.completeNow();
     }));
   }

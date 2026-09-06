@@ -26,7 +26,7 @@ class DeleteRuleFor999FieldCacheTest {
 
   @BeforeAll
   static void beforeClass(Vertx vertx) {
-    cache = new DeleteRuleFor999FieldCache(vertx, 60L);
+    cache = DeleteRuleFor999FieldCache.getInstance(vertx);
   }
 
   @Test

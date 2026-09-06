@@ -21,7 +21,7 @@ import org.folio.HttpStatus;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.BatchResult;
 import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.Instance;

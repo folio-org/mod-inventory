@@ -18,7 +18,7 @@ import lombok.SneakyThrows;
 import org.folio.Authority;
 import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.inventory.common.VertxAssistant;
-import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.storage.external.ExternalStorageCollections;

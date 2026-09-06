@@ -51,9 +51,9 @@ import org.folio.DataImportEventPayload;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
-import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.HoldingsRecordCollection;
@@ -133,7 +133,7 @@ class UpdateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
   @BeforeEach
   void setUp() {
     MappingManager.clearReaderFactories();
-    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, vertx.createHttpClient(), true);
+    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, true);
     eventHandler = new UpdateMarcHoldingsEventHandler(storage, mappingMetadataCache, publisher);
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
@@ -540,8 +540,7 @@ class UpdateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(3);
       failureHandler.accept(new Failure("Internal Server Error", 500));
       return null;
-    }).when(instanceRecordCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    }).when(instanceRecordCollection).findByCql(anyString(), any(), any(), any());
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
     Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
     var holdingsId = UUID.randomUUID();
@@ -573,8 +572,7 @@ class UpdateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
       Consumer<Success<MultipleRecords<Instance>>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(result));
       return null;
-    }).when(instanceRecordCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    }).when(instanceRecordCollection).findByCql(anyString(), any(), any(), any());
 
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
     Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
@@ -602,8 +600,8 @@ class UpdateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
   void shouldNotProcessEventIfFindByCQLThrowsUnsupportedEncodingException() throws IOException {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
-    doThrow(new UnsupportedEncodingException("Unsupported encoding.")).when(instanceRecordCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    doThrow(new UnsupportedEncodingException("Unsupported encoding."))
+      .when(instanceRecordCollection).findByCql(anyString(), any(), any(), any());
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
     Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
     var holdingsId = UUID.randomUUID();
@@ -663,7 +661,6 @@ class UpdateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
       Consumer<Success<MultipleRecords<Instance>>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(result));
       return null;
-    }).when(instanceRecordCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    }).when(instanceRecordCollection).findByCql(anyString(), any(), any(), any());
   }
 }

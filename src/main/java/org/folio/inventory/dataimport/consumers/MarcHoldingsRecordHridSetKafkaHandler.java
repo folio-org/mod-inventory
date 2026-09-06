@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import java.util.HashMap;
@@ -20,7 +21,7 @@ import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
@@ -57,10 +58,9 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
   private final HoldingsUpdateDelegate holdingsRecordUpdateDelegate;
   private final MappingMetadataCache mappingMetadataCache;
 
-  public MarcHoldingsRecordHridSetKafkaHandler(HoldingsUpdateDelegate holdingsRecordUpdateDelegate,
-                                               MappingMetadataCache mappingMetadataCache) {
+  public MarcHoldingsRecordHridSetKafkaHandler(Vertx vertx, HoldingsUpdateDelegate holdingsRecordUpdateDelegate) {
     this.holdingsRecordUpdateDelegate = holdingsRecordUpdateDelegate;
-    this.mappingMetadataCache = mappingMetadataCache;
+    this.mappingMetadataCache = MappingMetadataCache.getInstance(vertx);
   }
 
   @Override

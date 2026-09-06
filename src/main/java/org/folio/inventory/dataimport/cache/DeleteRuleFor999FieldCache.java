@@ -46,7 +46,7 @@ public final class DeleteRuleFor999FieldCache {
 
   private final Cache<String, Boolean> cache;
 
-  public DeleteRuleFor999FieldCache(Vertx vertx, long cacheExpirationTimeSeconds) {
+  private DeleteRuleFor999FieldCache(Vertx vertx, long cacheExpirationTimeSeconds) {
     this.cache = Caffeine.newBuilder()
       .expireAfterAccess(cacheExpirationTimeSeconds, TimeUnit.SECONDS)
       .executor(task -> vertx.runOnContext(v -> task.run()))

@@ -55,7 +55,7 @@ import support.TestUtil;
 
 // TODO: refactor and move out static mocking, may be required changes to implementation
 @ExtendWith({VertxExtension.class, MockitoExtension.class})
-class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
+class ConsortiumInstanceSharingConsumerTest extends KafkaTest {
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
   private static HttpClient httpClient;
 
@@ -71,12 +71,24 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
   private EventIdStorageService eventIdStorageService;
 
   private Instance existingInstance;
-  private ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler;
+  private ConsortiumInstanceSharingConsumer consortiumInstanceSharingConsumer;
   private MockedStatic<InstanceSharingHandlerFactory> mockedInstanceSharingHandler;
 
   @BeforeAll
   static void setUpClass() {
     httpClient = vertxAssistant.getVertx().createHttpClient();
+  }
+
+  @AfterAll
+  static void tearDownClass() {
+    httpClient.close();
+  }
+
+  @AfterEach
+  void tearDown() {
+    if (mockedInstanceSharingHandler != null) {
+      mockedInstanceSharingHandler.close();
+    }
   }
 
   @Test
@@ -143,15 +155,14 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
       .store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler =
-      new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
+    consortiumInstanceSharingConsumer =
+      new ConsortiumInstanceSharingConsumer(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
         eventIdStorageService);
 
     //then
-    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    Future<String> future = consortiumInstanceSharingConsumer.handle(kafkaRecord);
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
-      assertTrue(
-        result.contains("Instance with InstanceId=" + instanceId + " has been shared to the target tenant consortium"));
+      assertEquals(instanceId, result);
 
       ArgumentCaptor<Instance> updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
       verify(mockedSourceInstanceCollection, times(1)).update(updatedInstanceCaptor.capture(), any(), any());
@@ -210,12 +221,12 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
       .store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler =
-      new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
+    consortiumInstanceSharingConsumer =
+      new ConsortiumInstanceSharingConsumer(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
         eventIdStorageService);
 
     //then
-    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    Future<String> future = consortiumInstanceSharingConsumer.handle(kafkaRecord);
     future.onComplete(testContext.failing(err -> testContext.verify(() -> {
       assertTrue(err.getMessage()
         .contains("Error sharing Instance with InstanceId=" + instanceId
@@ -261,15 +272,14 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
       .store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler =
-      new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
+    consortiumInstanceSharingConsumer =
+      new ConsortiumInstanceSharingConsumer(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
         eventIdStorageService);
 
     //then
-    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    Future<String> future = consortiumInstanceSharingConsumer.handle(kafkaRecord);
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
-      assertEquals("Instance with InstanceId=" + instanceId +
-                   " is present on target tenant: university", result);
+      assertEquals(instanceId, result);
       testContext.completeNow();
     })));
   }
@@ -313,12 +323,12 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
       .store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler =
-      new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
+    consortiumInstanceSharingConsumer =
+      new ConsortiumInstanceSharingConsumer(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
         eventIdStorageService);
 
     //then
-    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    Future<String> future = consortiumInstanceSharingConsumer.handle(kafkaRecord);
     future.onComplete(testContext.failing(err -> testContext.verify(() -> {
       assertEquals("Internal server error.", err.getMessage());
       testContext.completeNow();
@@ -369,12 +379,12 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
       .store(any(), any());
 
     // when
-    consortiumInstanceSharingHandler =
-      new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
+    consortiumInstanceSharingConsumer =
+      new ConsortiumInstanceSharingConsumer(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
         eventIdStorageService);
 
     //then
-    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    Future<String> future = consortiumInstanceSharingConsumer.handle(kafkaRecord);
     future.onComplete(testContext.failing(err -> testContext.verify(() -> {
       assertTrue(err.getMessage()
         .contains("Error sharing Instance with InstanceId=" + instanceId + " to the target tenant consortium. " +
@@ -442,15 +452,14 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
       .store(any(), any());
 
     //when
-    consortiumInstanceSharingHandler = spy(
-      new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
+    consortiumInstanceSharingConsumer = spy(
+      new ConsortiumInstanceSharingConsumer(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
         eventIdStorageService));
 
     //then
-    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    Future<String> future = consortiumInstanceSharingConsumer.handle(kafkaRecord);
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
-      assertTrue(
-        result.contains("Instance with InstanceId=" + instanceId + " has been shared to the target tenant consortium"));
+      assertEquals(instanceId, result);
       testContext.completeNow();
     })));
   }
@@ -514,12 +523,12 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
       .store(any(), any());
 
     //when
-    consortiumInstanceSharingHandler = spy(
-      new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
+    consortiumInstanceSharingConsumer = spy(
+      new ConsortiumInstanceSharingConsumer(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
         eventIdStorageService));
 
     //then
-    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    Future<String> future = consortiumInstanceSharingConsumer.handle(kafkaRecord);
     future.onComplete(testContext.failing(err -> testContext.verify(() -> {
       assertTrue(err.getMessage()
         .contains("Sharing instance with InstanceId=" + instanceId + " to the target tenant consortium. Error: ERROR"));
@@ -555,26 +564,16 @@ class ConsortiumInstanceSharingHandlerTest extends KafkaTest {
       new DuplicateEventException("SQL Unique constraint violation prevented repeatedly saving the record")));
 
     // when
-    consortiumInstanceSharingHandler =
-      new ConsortiumInstanceSharingHandler(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
+    consortiumInstanceSharingConsumer =
+      new ConsortiumInstanceSharingConsumer(vertxAssistant.getVertx(), httpClient, storage, kafkaConfig,
         eventIdStorageService);
 
     //then
-    Future<String> future = consortiumInstanceSharingHandler.handle(kafkaRecord);
+    Future<String> future = consortiumInstanceSharingConsumer.handle(kafkaRecord);
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
       verify(mockedSourceInstanceCollection, times(0)).add(any(), any(), any());
       verify(storage, times(0)).getInstanceCollection(any());
       testContext.completeNow();
     })));
-  }
-
-  @AfterEach
-  void tearDown() {
-    if (mockedInstanceSharingHandler != null) { mockedInstanceSharingHandler.close(); }
-  }
-
-  @AfterAll
-  static void tearDownClass() {
-    httpClient.close();
   }
 }

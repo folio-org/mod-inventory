@@ -1,4 +1,4 @@
-package org.folio.inventory;
+package org.folio.inventory.verticle;
 
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_CREATED;
@@ -30,11 +30,10 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventTypes;
-import org.folio.inventory.consortium.cache.ConsortiumDataCache;
-import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
-import org.folio.inventory.dataimport.consumers.DataImportKafkaHandler;
+import org.folio.inventory.dataimport.consumers.DataImportKafkaConsumer;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.support.KafkaConsumerVerticle;
+import org.folio.kafka.KafkaConsumerWrapper;
 import org.folio.processing.events.EventManager;
 
 public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
@@ -69,28 +68,16 @@ public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
   private static final String LOAD_LIMIT_PROPERTY = "DataImportConsumer";
   private static final String MAX_DISTRIBUTION_PROPERTY = "DataImportConsumerVerticle";
 
-  private final CancelledJobsIdsCache cancelledJobsIdsCache;
-
-  public DataImportConsumerVerticle(CancelledJobsIdsCache cancelledJobsIdsCache) {
-    this.cancelledJobsIdsCache = cancelledJobsIdsCache;
-  }
-
   @Override
   public void start(Promise<Void> startPromise) {
     EventManager.registerKafkaEventPublisher(getKafkaConfig(), vertx,
       getMaxDistributionNumber(MAX_DISTRIBUTION_PROPERTY));
-    var consortiumDataCache = new ConsortiumDataCache(vertx, getHttpClient());
 
-    var dataImportKafkaHandler =
-      new DataImportKafkaHandler(vertx, getStorage(), getHttpClient(), getProfileSnapshotCache(),
-        getKafkaConfig(), getMappingMetadataCache(), getDeleteRuleFor999FieldCache(), consortiumDataCache,
-        cancelledJobsIdsCache);
+    var businessHandler = new DataImportKafkaConsumer(vertx, getStorage(), getHttpClient(), getKafkaConfig());
 
     var futures = EVENT_TYPES.stream()
       .map(type -> super.createConsumer(type.value(), LOAD_LIMIT_PROPERTY))
-      .map(consumerWrapper -> consumerWrapper.start(dataImportKafkaHandler, ConsumerWrapperUtil.constructModuleName())
-        .map(consumerWrapper)
-      )
+      .map(consumerWrapper -> startKafkaConsumer(consumerWrapper, businessHandler))
       .toList();
 
     Future.all(futures)
@@ -101,5 +88,11 @@ public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
   @Override
   protected Logger getLogger() {
     return LOGGER;
+  }
+
+  private Future<KafkaConsumerWrapper<String, String>> startKafkaConsumer(KafkaConsumerWrapper<String, String> consumer,
+                                                                          DataImportKafkaConsumer businessHandler) {
+    return consumer.start(businessHandler, ConsumerWrapperUtil.constructModuleName())
+      .map(consumer);
   }
 }

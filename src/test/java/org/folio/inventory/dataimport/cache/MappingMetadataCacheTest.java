@@ -17,7 +17,7 @@ import java.util.UUID;
 import org.folio.MappingMetadataDto;
 import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.exceptions.CacheLoadingException;
+import org.folio.inventory.exceptions.CacheLoadingException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +42,7 @@ class MappingMetadataCacheTest extends BaseWireMockTest {
   void setUp(Vertx vertx) {
     stubGetJson(MAPPING_METADATA_URL, Json.encode(mappingMetadata));
 
-    mappingMetadataCache = MappingMetadataCache.getInstance(vertx, vertx.createHttpClient(), true);
+    mappingMetadataCache = MappingMetadataCache.getInstance(vertx, true);
   }
 
   @Test

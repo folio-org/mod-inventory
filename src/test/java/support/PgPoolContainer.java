@@ -7,7 +7,6 @@ import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_PORT;
 import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_USERNAME;
 
 import java.util.Map;
-import org.folio.inventory.common.dao.PostgresConnectionOptions;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 public class PgPoolContainer {
@@ -23,22 +22,21 @@ public class PgPoolContainer {
    */
   public static void create() {
     CONTAINER.start();
-
-    setEmbeddedPostgresOptions();
   }
 
   /**
-   * Set embedded container system properties.
+   * Connection properties pointing at the running embedded container, keyed by the {@code DB_*}
+   * property names. Inject these into {@link PostgresConnectionOptions} (directly, or via verticle
+   * deployment config) so the code under test connects to the container.
+   *
+   * @return map of {@code DB_*} property values for the running container.
    */
-  public static void setEmbeddedPostgresOptions() {
-    if (isRunning()) {
-      Map<String, String> systemProperties = Map.of(DB_HOST, CONTAINER.getHost(),
-        DB_DATABASE, CONTAINER.getDatabaseName(),
-        DB_USERNAME, CONTAINER.getUsername(),
-        DB_PASSWORD, CONTAINER.getPassword(),
-        DB_PORT, String.valueOf(CONTAINER.getFirstMappedPort()));
-      PostgresConnectionOptions.setSystemProperties(systemProperties);
-    }
+  public static Map<String, String> getConnectionEnv() {
+    return Map.of(DB_HOST, CONTAINER.getHost(),
+      DB_DATABASE, CONTAINER.getDatabaseName(),
+      DB_USERNAME, CONTAINER.getUsername(),
+      DB_PASSWORD, CONTAINER.getPassword(),
+      DB_PORT, String.valueOf(CONTAINER.getFirstMappedPort()));
   }
 
   /**

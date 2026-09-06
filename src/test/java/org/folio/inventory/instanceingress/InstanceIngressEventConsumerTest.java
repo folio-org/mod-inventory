@@ -17,6 +17,8 @@ import io.vertx.kafka.client.producer.KafkaHeader;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import lombok.SneakyThrows;
+import org.apache.logging.log4j.core.util.ReflectionUtil;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -55,11 +57,13 @@ class InstanceIngressEventConsumerTest {
   private InstanceIngressEventConsumer consumer;
 
   @BeforeEach
+  @SneakyThrows
   void setUp(Vertx vertx) {
+    ReflectionUtil.setStaticFieldValue(MappingMetadataCache.class.getDeclaredField("instance"), mappingMetadataCache);
     when(storage.getInstanceCollection(any())).thenReturn(instanceCollection);
     when(mappingMetadataCache.getByRecordType(anyString(), any(), anyString()))
       .thenReturn(Future.succeededFuture(Optional.empty()));
-    consumer = new InstanceIngressEventConsumer(vertx, storage, vertx.createHttpClient(), mappingMetadataCache);
+    consumer = new InstanceIngressEventConsumer(vertx, storage, vertx.createHttpClient());
   }
 
   @Test

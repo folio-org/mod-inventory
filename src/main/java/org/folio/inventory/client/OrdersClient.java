@@ -16,7 +16,7 @@ import lombok.SneakyThrows;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.exceptions.OrdersLoadingException;
+import org.folio.inventory.exceptions.OrdersLoadingException;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 
 public class OrdersClient {

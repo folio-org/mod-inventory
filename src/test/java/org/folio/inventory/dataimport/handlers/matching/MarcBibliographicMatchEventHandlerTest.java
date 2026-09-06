@@ -63,7 +63,7 @@ import org.folio.Record;
 import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;

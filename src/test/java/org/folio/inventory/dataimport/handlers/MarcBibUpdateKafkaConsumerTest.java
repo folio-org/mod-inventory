@@ -1,15 +1,16 @@
 package org.folio.inventory.dataimport.handlers;
 
-import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
+import static org.folio.inventory.kafka.EntityLinksKafkaTopic.LINKS_STATS;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.FAIL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.AdditionalMatchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -30,11 +31,12 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.SneakyThrows;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.logging.log4j.core.util.ReflectionUtil;
 import org.folio.MappingMetadataDto;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.consumers.MarcBibUpdateKafkaHandler;
-import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.folio.inventory.dataimport.consumers.MarcBibUpdateKafkaConsumer;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -58,7 +60,7 @@ import support.TestUtil;
 
 @ExtendWith({VertxExtension.class, MockitoExtension.class})
 @MockitoSettings(strictness = Strictness.LENIENT)
-class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
+class MarcBibUpdateKafkaConsumerTest extends KafkaTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String RECORD_PATH = "src/test/resources/handlers/bib-record.json";
@@ -76,7 +78,7 @@ class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
   private MappingMetadataCache mappingMetadataCache;
   private Record marcRecord;
   private Instance instance;
-  private MarcBibUpdateKafkaHandler marcBibUpdateKafkaHandler;
+  private MarcBibUpdateKafkaConsumer marcBibUpdateKafkaConsumer;
 
   @BeforeEach
   @SneakyThrows
@@ -90,13 +92,15 @@ class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
     when(mockedInstanceCollection.findByIdAndUpdate(not(eq(INVALID_INSTANCE_ID)), any(), any()))
       .thenReturn(instance);
 
+    ReflectionUtil.setStaticFieldValue(MappingMetadataCache.class.getDeclaredField("instance"), mappingMetadataCache);
+
     when(mappingMetadataCache.getByRecordTypeBlocking(anyString(), any(Context.class), eq(MARC_BIB_RECORD_TYPE)))
       .thenReturn(Optional.of(new MappingMetadataDto()
         .withMappingRules(new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH)).encode())
         .withMappingParams(Json.encode(new MappingParameters()))));
 
-    marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertxAssistant.getVertx(), 100, kafkaConfig,
-      new InstanceUpdateDelegate(mockedStorage), mappingMetadataCache);
+    marcBibUpdateKafkaConsumer = new MarcBibUpdateKafkaConsumer(vertxAssistant.getVertx(), 100, kafkaConfig,
+      new InstanceUpdateDelegate(mockedStorage));
   }
 
   @Test
@@ -115,7 +119,7 @@ class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
 
     // when + then
     vertxAssistant.getVertx().runOnContext(v -> {
-      Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+      Future<String> future = marcBibUpdateKafkaConsumer.handle(kafkaRecord);
       future.onComplete(testContext.succeeding(ar -> testContext.verify(() -> {
         assertEquals(expectedKafkaRecordKey, ar);
         verify(1);
@@ -143,7 +147,7 @@ class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
 
     // when + then
     vertxAssistant.getVertx().runOnContext(v -> {
-      Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+      Future<String> future = marcBibUpdateKafkaConsumer.handle(kafkaRecord);
       future.onComplete(testContext.succeeding(ar -> testContext.verify(() -> {
         verify(2);
         testContext.completeNow();
@@ -166,9 +170,9 @@ class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
 
     // when + then
     vertxAssistant.getVertx().runOnContext(v -> {
-      Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+      Future<String> future = marcBibUpdateKafkaConsumer.handle(kafkaRecord);
       future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
-        org.junit.jupiter.api.Assertions.assertTrue(
+        assertTrue(
           cause.getMessage().contains("MappingParameters and mapping rules snapshots were not found by jobId"));
         verifyNoInteractions(mockedInstanceCollection);
         Mockito.verify(mappingMetadataCache).getByRecordTypeBlocking(anyString(), any(Context.class), anyString());
@@ -188,11 +192,11 @@ class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
     when(kafkaRecord.value()).thenReturn(Json.encode(payload));
 
     // when
-    Future<String> future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+    Future<String> future = marcBibUpdateKafkaConsumer.handle(kafkaRecord);
 
     // then
     future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
-      org.junit.jupiter.api.Assertions.assertTrue(
+      assertTrue(
         cause.getMessage().contains("Event message does not contain required data to update Instance by jobId"));
       verifyNoInteractions(mockedInstanceCollection);
       verifyNoInteractions(mappingMetadataCache);
@@ -216,7 +220,7 @@ class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
 
     // when + then
     vertxAssistant.getVertx().runOnContext(v -> {
-      var future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+      var future = marcBibUpdateKafkaConsumer.handle(kafkaRecord);
       future.onComplete(testContext.succeeding(ar -> testContext.verify(() -> {
         assertEquals(expectedKafkaRecordKey, ar);
         var reports = checkKafkaEventSent(TENANT_ID, LINKS_STATS.topicName())
@@ -257,7 +261,7 @@ class MarcBibUpdateKafkaHandlerTest extends KafkaTest {
 
     // when + then
     vertxAssistant.getVertx().runOnContext(v -> {
-      var future = marcBibUpdateKafkaHandler.handle(kafkaRecord);
+      var future = marcBibUpdateKafkaConsumer.handle(kafkaRecord);
       future.onComplete(testContext.failing(cause -> {
         // sendEventToKafka() runs after promise.fail(); delay to let the Kafka I/O thread deliver
         // the message to the broker before the consumer polls.

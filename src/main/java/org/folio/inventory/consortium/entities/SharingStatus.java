@@ -4,10 +4,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum SharingStatus {
+
   COMPLETE("COMPLETE"),
-
   ERROR("ERROR"),
-
   IN_PROGRESS("IN_PROGRESS");
 
   private final String value;

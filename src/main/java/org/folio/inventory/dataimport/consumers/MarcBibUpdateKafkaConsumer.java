@@ -2,7 +2,7 @@ package org.folio.inventory.dataimport.consumers;
 
 import static java.lang.String.format;
 import static java.util.Objects.isNull;
-import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
+import static org.folio.inventory.kafka.EntityLinksKafkaTopic.LINKS_STATS;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.INDICATOR_F;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.SUBFIELD_I;
@@ -32,7 +32,7 @@ import org.folio.MappingMetadataDto;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
@@ -47,9 +47,9 @@ import org.folio.rest.jaxrs.model.LinkUpdateReport;
 import org.folio.rest.jaxrs.model.MarcBibUpdate;
 import org.folio.rest.jaxrs.model.Record;
 
-public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, String> {
+public class MarcBibUpdateKafkaConsumer implements AsyncRecordHandler<String, String> {
 
-  private static final Logger LOGGER = LogManager.getLogger(MarcBibUpdateKafkaHandler.class);
+  private static final Logger LOGGER = LogManager.getLogger(MarcBibUpdateKafkaConsumer.class);
   private static final String MAPPING_METADATA_NOT_FOUND_MSG =
     "MappingParameters and mapping rules snapshots were not found by jobId '%s'";
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
@@ -66,14 +66,13 @@ public class MarcBibUpdateKafkaHandler implements AsyncRecordHandler<String, Str
   private final Vertx vertx;
   private final int maxDistributionNumber;
 
-  public MarcBibUpdateKafkaHandler(Vertx vertx, int maxDistributionNumber, KafkaConfig kafkaConfig,
-                                   InstanceUpdateDelegate instanceUpdateDelegate,
-                                   MappingMetadataCache mappingMetadataCache) {
+  public MarcBibUpdateKafkaConsumer(Vertx vertx, int maxDistributionNumber, KafkaConfig kafkaConfig,
+                                    InstanceUpdateDelegate instanceUpdateDelegate) {
     this.vertx = vertx;
     this.kafkaConfig = kafkaConfig;
     this.instanceUpdateDelegate = instanceUpdateDelegate;
     this.maxDistributionNumber = maxDistributionNumber;
-    this.mappingMetadataCache = mappingMetadataCache;
+    this.mappingMetadataCache = MappingMetadataCache.getInstance(vertx);
   }
 
   @Override

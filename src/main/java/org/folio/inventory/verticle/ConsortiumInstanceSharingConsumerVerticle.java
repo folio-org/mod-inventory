@@ -1,4 +1,4 @@
-package org.folio.inventory;
+package org.folio.inventory.verticle;
 
 import static java.lang.String.format;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
@@ -17,7 +17,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.dao.EventIdStorageDao;
 import org.folio.inventory.common.dao.PostgresClientFactory;
-import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler;
+import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingConsumer;
 import org.folio.inventory.consortium.entities.SharingInstanceEventType;
 import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.services.SharedInstanceEventIdStorageServiceImpl;
@@ -47,10 +47,10 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
     Storage storage = Storage.basedUpon(config, httpClient);
     SharedInstanceEventIdStorageServiceImpl sharedInstanceEventIdStorageService =
       new SharedInstanceEventIdStorageServiceImpl(new EventIdStorageDao(new PostgresClientFactory(vertx)));
-    ConsortiumInstanceSharingHandler consortiumInstanceSharingHandler = new ConsortiumInstanceSharingHandler(vertx,
+    ConsortiumInstanceSharingConsumer consortiumInstanceSharingConsumer = new ConsortiumInstanceSharingConsumer(vertx,
       httpClient, storage, kafkaConfig, sharedInstanceEventIdStorageService);
 
-    var kafkaConsumerFuture = createKafkaConsumerWrapper(kafkaConfig, consortiumInstanceSharingHandler);
+    var kafkaConsumerFuture = createKafkaConsumerWrapper(kafkaConfig, consortiumInstanceSharingConsumer);
     kafkaConsumerFuture.onFailure(startPromise::fail)
       .onSuccess(ar -> {
         consumer = ar;
@@ -67,7 +67,7 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
                                                                                   AsyncRecordHandler<String, String> recordHandler) {
     SubscriptionDefinition subscriptionDefinition =
       KafkaTopicNameHelper.createSubscriptionDefinition(kafkaConfig.getEnvId(),
-        KafkaTopicNameHelper.getDefaultNameSpace(), SharingInstanceEventType.CONSORTIUM_INSTANCE_SHARING_INIT.value());
+        KafkaTopicNameHelper.getDefaultNameSpace(), SharingInstanceEventType.SHARING_INIT.value());
 
     KafkaConsumerWrapper<String, String> consumerWrapper = KafkaConsumerWrapper.<String, String>builder()
       .context(context)

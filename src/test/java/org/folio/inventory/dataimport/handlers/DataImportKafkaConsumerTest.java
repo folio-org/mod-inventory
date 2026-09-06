@@ -5,7 +5,7 @@ import static org.folio.ActionProfile.Action.CREATE;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING;
-import static org.folio.inventory.dataimport.consumers.DataImportKafkaHandler.PROFILE_SNAPSHOT_ID_KEY;
+import static org.folio.inventory.dataimport.consumers.DataImportKafkaConsumer.PROFILE_SNAPSHOT_ID_KEY;
 import static org.folio.okapi.common.XOkapiHeaders.PERMISSIONS;
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
@@ -40,14 +40,11 @@ import java.util.concurrent.CompletableFuture;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
+import org.folio.JobProfile.DataType;
 import org.folio.MappingProfile;
 import org.folio.dataimport.util.DataImportHeaders;
-import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
-import org.folio.inventory.dataimport.cache.DeleteRuleFor999FieldCache;
-import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
-import org.folio.inventory.dataimport.consumers.DataImportKafkaHandler;
+import org.folio.inventory.dataimport.consumers.DataImportKafkaConsumer;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
@@ -62,7 +59,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import support.KafkaTest;
 
 @ExtendWith({MockitoExtension.class, VertxExtension.class})
-class DataImportKafkaHandlerTest extends KafkaTest {
+class DataImportKafkaConsumerTest extends KafkaTest {
 
   private static final String TENANT_ID = "diku";
   private static final String JOB_PROFILE_URL = "/data-import-profiles/jobProfileSnapshots";
@@ -70,7 +67,7 @@ class DataImportKafkaHandlerTest extends KafkaTest {
   private final JobProfile jobProfile = new JobProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Create instance")
-    .withDataType(org.folio.JobProfile.DataType.MARC);
+    .withDataType(DataType.MARC);
 
   private final ActionProfile actionProfile = new ActionProfile()
     .withId(UUID.randomUUID().toString())
@@ -106,7 +103,7 @@ class DataImportKafkaHandlerTest extends KafkaTest {
   @Mock
   private KafkaConsumerRecord<String, String> kafkaRecord;
 
-  private DataImportKafkaHandler dataImportKafkaHandler;
+  private DataImportKafkaConsumer dataImportConsumer;
   private CancelledJobsIdsCache cancelledJobsIdCache;
 
   @BeforeEach
@@ -115,14 +112,8 @@ class DataImportKafkaHandlerTest extends KafkaTest {
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
     HttpClient client = vertxAssistant.getVertx().createHttpClient();
-    cancelledJobsIdCache = new CancelledJobsIdsCache();
-    dataImportKafkaHandler = new DataImportKafkaHandler(vertxAssistant.getVertx(), mockedStorage, client,
-      new ProfileSnapshotCache(vertxAssistant.getVertx(), client, 3600),
-      kafkaConfig,
-      MappingMetadataCache.getInstance(vertxAssistant.getVertx(), client),
-      DeleteRuleFor999FieldCache.getInstance(vertxAssistant.getVertx()),
-      new ConsortiumDataCache(vertxAssistant.getVertx(), client),
-      cancelledJobsIdCache);
+    cancelledJobsIdCache = CancelledJobsIdsCache.getInstance();
+    dataImportConsumer = new DataImportKafkaConsumer(vertxAssistant.getVertx(), mockedStorage, client, kafkaConfig);
 
     EventManager.clearEventHandlers();
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertxAssistant.getVertx(), 1);
@@ -158,7 +149,7 @@ class DataImportKafkaHandlerTest extends KafkaTest {
     EventManager.registerEventHandler(mockedEventHandler);
 
     // when
-    Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
+    Future<String> future = dataImportConsumer.handle(kafkaRecord);
 
     // then
     future.onComplete(testContext.succeeding(actualKafkaRecordKey -> testContext.verify(() -> {
@@ -192,7 +183,7 @@ class DataImportKafkaHandlerTest extends KafkaTest {
     EventManager.registerEventHandler(mockedEventHandler);
 
     // when
-    Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
+    Future<String> future = dataImportConsumer.handle(kafkaRecord);
 
     // then
     future.onComplete(testContext.failing(v -> testContext.verify(() -> {
@@ -229,7 +220,7 @@ class DataImportKafkaHandlerTest extends KafkaTest {
     EventManager.registerEventHandler(mockedEventHandler);
 
     // when
-    Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
+    Future<String> future = dataImportConsumer.handle(kafkaRecord);
 
     // then
     future.onComplete(testContext.succeeding(actualKafkaRecordKey -> testContext.verify(() -> {
@@ -274,7 +265,7 @@ class DataImportKafkaHandlerTest extends KafkaTest {
     EventManager.registerEventHandler(mockedEventHandler);
 
     // when
-    Future<String> future = dataImportKafkaHandler.handle(kafkaRecord);
+    Future<String> future = dataImportConsumer.handle(kafkaRecord);
 
     // then
     future.onComplete(testContext.succeeding(actualKafkaRecordKey -> testContext.verify(() -> {

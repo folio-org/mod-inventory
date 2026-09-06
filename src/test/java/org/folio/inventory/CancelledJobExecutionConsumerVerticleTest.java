@@ -2,6 +2,7 @@ package org.folio.inventory;
 
 import static java.time.Duration.ofSeconds;
 import static org.folio.DataImportEventTypes.DI_JOB_CANCELLED;
+import static org.folio.dataimport.testsupport.vertx.VertxTestUtil.await;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
 import static support.KafkaUtility.sendEvent;
@@ -16,6 +17,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
+import org.folio.inventory.verticle.CancelledJobExecutionConsumerVerticle;
 import org.folio.kafka.headers.FolioKafkaHeaders;
 import org.folio.rest.jaxrs.model.Event;
 import org.junit.jupiter.api.AfterEach;
@@ -34,8 +36,8 @@ class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
 
   @BeforeEach
   void setUp(VertxTestContext testContext) {
-    cancelledJobsIdsCache = new CancelledJobsIdsCache();
-    deployVerticle(cancelledJobsIdsCache).onComplete(ar -> testContext.verify(() -> {
+    cancelledJobsIdsCache = CancelledJobsIdsCache.getInstance(true);
+    deployVerticle().onComplete(ar -> testContext.verify(() -> {
       assertTrue(ar.succeeded());
       testContext.completeNow();
     }));
@@ -67,14 +69,14 @@ class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
       .allMatch(id -> cancelledJobsIdsCache.contains(id)));
 
     // stop currently deployed verticle
-    org.folio.dataimport.testsupport.vertx.VertxTestUtil.await(undeployVerticle());
+    await(undeployVerticle());
 
     List<String> idsBatch2 = generateJobIds(200);
     sendJobIdsToKafka(idsBatch2);
 
     // redeploy the verticle
-    cancelledJobsIdsCache = new CancelledJobsIdsCache();
-    org.folio.dataimport.testsupport.vertx.VertxTestUtil.await(deployVerticle(cancelledJobsIdsCache));
+    cancelledJobsIdsCache = CancelledJobsIdsCache.getInstance(true);
+    await(deployVerticle());
 
     // verify that the verticle has read all events
     // including previously consumed events and newly produced events
@@ -86,10 +88,9 @@ class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
     testContext.completeNow();
   }
 
-  private Future<String> deployVerticle(CancelledJobsIdsCache cancelledJobsIdsCache) {
+  private Future<String> deployVerticle() {
     CompletableFuture<String> future = new CompletableFuture<>();
     vertxAssistant.deployVerticle(
-      () -> new CancelledJobExecutionConsumerVerticle(cancelledJobsIdsCache),
       CancelledJobExecutionConsumerVerticle.class.getName(),
       deploymentOptions.getConfig().getMap(),
       1,

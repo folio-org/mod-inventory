@@ -1,11 +1,11 @@
-package org.folio.inventory;
+package org.folio.inventory.verticle;
 
 import static org.folio.inventory.dataimport.util.ConsumerWrapperUtil.constructModuleName;
 
 import io.vertx.core.Promise;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.inventory.dataimport.consumers.MarcBibUpdateKafkaHandler;
+import org.folio.inventory.dataimport.consumers.MarcBibUpdateKafkaConsumer;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.support.KafkaConsumerVerticle;
 
@@ -18,8 +18,8 @@ public class MarcBibUpdateConsumerVerticle extends KafkaConsumerVerticle {
   public void start(Promise<Void> startPromise) {
     var instanceUpdateDelegate = new InstanceUpdateDelegate(getStorage());
 
-    var marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaHandler(vertx, getMaxDistributionNumber(BASE_PROPERTY),
-      getKafkaConfig(), instanceUpdateDelegate, getMappingMetadataCache());
+    var marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaConsumer(vertx, getMaxDistributionNumber(BASE_PROPERTY),
+      getKafkaConfig(), instanceUpdateDelegate);
     var marcBibUpdateConsumerWrapper = createConsumer(SRS_MARC_BIB_EVENT, BASE_PROPERTY, false);
 
     marcBibUpdateConsumerWrapper.start(marcBibUpdateKafkaHandler, constructModuleName())

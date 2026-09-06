@@ -1,4 +1,4 @@
-package org.folio.inventory;
+package org.folio.inventory.verticle;
 
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_HOLDINGS_HOLDING_HRID_SET;
 import static org.folio.inventory.dataimport.util.ConsumerWrapperUtil.constructModuleName;
@@ -23,7 +23,7 @@ public class MarcHridSetConsumerVerticle extends KafkaConsumerVerticle {
     var holdingsRecordUpdateDelegate = new HoldingsUpdateDelegate(getStorage(), holdingsCollectionService);
 
     var marcHoldingsRecordHridSetKafkaHandler =
-      new MarcHoldingsRecordHridSetKafkaHandler(holdingsRecordUpdateDelegate, getMappingMetadataCache());
+      new MarcHoldingsRecordHridSetKafkaHandler(vertx, holdingsRecordUpdateDelegate);
 
     marcHoldingsConsumerWrapper.start(marcHoldingsRecordHridSetKafkaHandler, constructModuleName())
       .onFailure(startPromise::fail)

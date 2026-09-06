@@ -1,4 +1,4 @@
-package org.folio.inventory.common;
+package support;
 
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
@@ -9,6 +9,7 @@ import java.util.function.Consumer;
 import org.folio.inventory.common.domain.Success;
 
 public class WaitForAllFutures<T> {
+
   private final ArrayList<CompletableFuture<T>> allFutures = new ArrayList<>();
 
   public Consumer<Success<T>> notifySuccess() {
@@ -19,9 +20,7 @@ public class WaitForAllFutures<T> {
     return FutureAssistance.succeed(newFuture);
   }
 
-  public void waitForCompletion()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  public void waitForCompletion() throws InterruptedException, ExecutionException, TimeoutException {
     CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }))
       .get(5000, TimeUnit.MILLISECONDS);
   }

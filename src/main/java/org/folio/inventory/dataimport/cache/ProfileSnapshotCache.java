@@ -6,17 +6,19 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import java.net.URI;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.exceptions.CacheLoadingException;
+import org.folio.inventory.exceptions.CacheLoadingException;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
@@ -27,15 +29,33 @@ public class ProfileSnapshotCache {
 
   private static final Logger LOGGER = LogManager.getLogger();
 
+  private static final String PROFILE_SNAPSHOT_CACHE_EXPIRATION_TIME =
+    "inventory.profile-snapshot-cache.expiration.time.seconds";
+  private static final String CACHE_EXPIRATION_DEFAULT = "3600";
+
+  private static ProfileSnapshotCache instance = null;
+
   private final AsyncCache<String, Optional<ProfileSnapshotWrapper>> cache;
   private final HttpClient httpClient;
 
-  public ProfileSnapshotCache(Vertx vertx, HttpClient httpClient, long cacheExpirationTime) {
+  private ProfileSnapshotCache(Vertx vertx, HttpClient httpClient, long cacheExpirationTime) {
     this.httpClient = httpClient;
     cache = Caffeine.newBuilder()
       .expireAfterAccess(cacheExpirationTime, TimeUnit.SECONDS)
       .executor(task -> vertx.runOnContext(v -> task.run()))
       .buildAsync();
+  }
+
+  public static ProfileSnapshotCache getInstance(Vertx vertx, HttpClient httpClient) {
+    return getInstance(vertx, httpClient, false);
+  }
+
+  public static synchronized ProfileSnapshotCache getInstance(Vertx vertx, HttpClient httpClient, boolean returnNew) {
+    if (instance == null || returnNew) {
+      instance = new ProfileSnapshotCache(vertx, httpClient,
+        Long.parseLong(getCacheEnvVariable(vertx.getOrCreateContext().config())));
+    }
+    return instance;
   }
 
   public Future<Optional<ProfileSnapshotWrapper>> get(String profileSnapshotId, Context context) {
@@ -75,6 +95,14 @@ public class ProfileSnapshotCache {
           return CompletableFuture.failedFuture(new CacheLoadingException(message));
         }
       });
+  }
+
+  private static String getCacheEnvVariable(JsonObject config) {
+    String cacheExpirationTime = config.getString(PROFILE_SNAPSHOT_CACHE_EXPIRATION_TIME);
+    if (StringUtils.isBlank(cacheExpirationTime)) {
+      return CACHE_EXPIRATION_DEFAULT;
+    }
+    return cacheExpirationTime;
   }
 }
 

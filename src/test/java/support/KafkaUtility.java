@@ -1,6 +1,6 @@
 package support;
 
-import static org.folio.inventory.EntityLinksKafkaTopic.LINKS_STATS;
+import static org.folio.inventory.kafka.EntityLinksKafkaTopic.LINKS_STATS;
 import static org.folio.kafka.KafkaTopicNameHelper.getDefaultNameSpace;
 
 import java.time.Duration;

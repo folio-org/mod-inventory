@@ -353,7 +353,7 @@ class CreateInstanceEventHandlerTest extends BaseWireMockTest {
     createInstanceEventHandler = spy(
       new CreateInstanceEventHandler(storage,
         new PrecedingSucceedingTitlesHelper(context -> mockedClient),
-        MappingMetadataCache.getInstance(vertx, httpClient, true),
+        MappingMetadataCache.getInstance(vertx, true),
         instanceIdStorageService, orderHelperService, snapshotService, httpClient));
 
     doReturn(sourceStorageClient).when(createInstanceEventHandler)

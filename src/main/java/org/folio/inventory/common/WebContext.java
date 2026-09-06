@@ -1,9 +1,9 @@
 package org.folio.inventory.common;
 
 import io.vertx.ext.web.RoutingContext;
-
 import java.net.MalformedURLException;
 import java.net.URL;
+import org.apache.commons.lang3.StringUtils;
 import org.folio.okapi.common.XOkapiHeaders;
 
 public class WebContext implements Context {
@@ -16,22 +16,22 @@ public class WebContext implements Context {
 
   @Override
   public String getTenantId() {
-    return getHeader(XOkapiHeaders.TENANT, "");
+    return getHeaderOrEmpty(XOkapiHeaders.TENANT);
   }
 
   @Override
   public String getToken() {
-    return getHeader(XOkapiHeaders.TOKEN, "");
+    return getHeaderOrEmpty(XOkapiHeaders.TOKEN);
   }
 
   @Override
   public String getOkapiLocation() {
-    return getHeader(XOkapiHeaders.URL, "");
+    return getHeaderOrEmpty(XOkapiHeaders.URL);
   }
 
   @Override
   public String getUserId() {
-    return getHeader(XOkapiHeaders.USER_ID, "");
+    return getHeaderOrEmpty(XOkapiHeaders.USER_ID);
   }
 
   @Override
@@ -64,8 +64,8 @@ public class WebContext implements Context {
     return routingContext.request().getHeader(header);
   }
 
-  private String getHeader(String header, String defaultValue) {
-    return hasHeader(header) ? getHeader(header) : defaultValue;
+  private String getHeaderOrEmpty(String header) {
+    return hasHeader(header) ? getHeader(header) : StringUtils.EMPTY;
   }
 
   private boolean hasHeader(String header) {

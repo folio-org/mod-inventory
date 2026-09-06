@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.folio.inventory.MarcBibUpdateConsumerVerticle;
+import org.folio.inventory.verticle.MarcBibUpdateConsumerVerticle;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import support.KafkaTest;

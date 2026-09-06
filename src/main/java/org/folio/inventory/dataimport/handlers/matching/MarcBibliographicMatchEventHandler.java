@@ -20,7 +20,7 @@ import org.folio.DataImportEventPayload;
 import org.folio.MatchProfile;
 import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;

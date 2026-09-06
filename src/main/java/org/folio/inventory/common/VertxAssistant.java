@@ -10,10 +10,13 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import lombok.Getter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+@Getter
 public class VertxAssistant {
+
   private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
   private Vertx vertx;
@@ -26,10 +29,6 @@ public class VertxAssistant {
     if (this.vertx == null) {
       this.vertx = Vertx.vertx();
     }
-  }
-
-  public Vertx getVertx() {
-    return vertx;
   }
 
   public void stop() {

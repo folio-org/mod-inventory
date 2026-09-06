@@ -1,4 +1,4 @@
-package org.folio.inventory;
+package org.folio.inventory.verticle;
 
 import static org.folio.inventory.dataimport.util.ConsumerWrapperUtil.constructModuleName;
 
@@ -17,8 +17,7 @@ public class InstanceIngressConsumerVerticle extends KafkaConsumerVerticle {
 
   @Override
   public void start(Promise<Void> startPromise) {
-    var instanceIngressEventHandler =
-      new InstanceIngressEventConsumer(vertx, getStorage(), getHttpClient(), getMappingMetadataCache());
+    var instanceIngressEventHandler = new InstanceIngressEventConsumer(vertx, getStorage(), getHttpClient());
 
     var consumerWrapper = createConsumer(INSTANCE_INGRESS_TOPIC, BASE_PROPERTY);
 

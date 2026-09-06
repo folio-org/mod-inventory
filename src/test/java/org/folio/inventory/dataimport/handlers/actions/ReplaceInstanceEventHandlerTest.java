@@ -392,10 +392,9 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
 
     precedingSucceedingTitlesHelper = spy(new PrecedingSucceedingTitlesHelper(ctxt -> mockedClient));
 
-    replaceInstanceEventHandler = spy(
-      new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper, MappingMetadataCache.getInstance(vertx,
-        vertx.createHttpClient(), true), vertx.createHttpClient(), consortiumServiceImpl, instanceLinkClient,
-        snapshotService));
+    var metadataCache = MappingMetadataCache.getInstance(vertx, true);
+    replaceInstanceEventHandler = spy(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper,
+      metadataCache, vertx.createHttpClient(), consortiumServiceImpl, instanceLinkClient, snapshotService));
 
     var recordUUID = UUID.randomUUID().toString();
     HttpResponse<Buffer> recordHttpResponse =

@@ -1,8 +1,8 @@
 package org.folio.inventory.consortium.handlers;
 
-import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.SOURCE;
+import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
-import static org.folio.inventory.domain.items.Item.HRID_KEY;
+import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -31,7 +31,7 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
     String sourceTenantId = sharingInstanceMetadata.getSourceTenantId();
     String targetTenantId = sharingInstanceMetadata.getTargetTenantId();
 
-    LOGGER.info("publishInstanceWithFolioSource :: Publishing instance with InstanceId={} from tenant={} to tenant={}.",
+    LOGGER.info("publishInstance:: Publishing instance with InstanceId={} from tenant={} to tenant={}.",
       instanceId, sourceTenantId, targetTenantId);
 
     // Remove HRID_KEY from the instance JSON
@@ -42,7 +42,7 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
     return instanceOperations.addInstance(Instance.fromJson(jsonInstance), targetTenantProvider)
       .compose(targetInstance -> {
         JsonObject jsonInstanceToPublish = new JsonObject(instance.getJsonForStorage().encode());
-        jsonInstanceToPublish.put(SOURCE, CONSORTIUM_FOLIO.getValue());
+        jsonInstanceToPublish.put(SOURCE_KEY, CONSORTIUM_FOLIO.getValue());
         jsonInstanceToPublish.put(HRID_KEY, targetInstance.getHrid());
 
         // Update instance in sourceInstanceCollection

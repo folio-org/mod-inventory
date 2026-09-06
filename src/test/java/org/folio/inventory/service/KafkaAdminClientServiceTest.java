@@ -5,6 +5,7 @@ import static io.vertx.core.Future.succeededFuture;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -137,7 +138,7 @@ class KafkaAdminClientServiceTest {
 
     createKafkaTopicsAsync(mockClient)
       .onComplete(testContext.failing(cause -> testContext.verify(() -> {
-          org.junit.jupiter.api.Assertions.assertEquals("err msg", cause.getMessage());
+          assertEquals("err msg", cause.getMessage());
           verify(mockClient, times(1)).close();
           testContext.completeNow();
         }

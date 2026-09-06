@@ -2,23 +2,37 @@ package org.folio.inventory.dataimport.cache;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-
 import java.util.concurrent.TimeUnit;
 
 public class CancelledJobsIdsCache {
 
-  public static final String EXPIRATION_TIME_PARAMETER = "inventory.cancelled-jobs-cache.expiration.time.minutes";
+  private static final String EXPIRATION_TIME_PARAMETER = "inventory.cancelled-jobs-cache.expiration.time.minutes";
   private static final String DEFAULT_EXPIRATION_TIME_MINUTES = "1440";
 
+  private static CancelledJobsIdsCache instance = null;
   private final Cache<String, Boolean> cache;
 
-  public CancelledJobsIdsCache() {
+  private CancelledJobsIdsCache() {
     int expirationTimeMinutes = Integer.parseInt(System.getProperty(EXPIRATION_TIME_PARAMETER,
       System.getenv().getOrDefault(EXPIRATION_TIME_PARAMETER, DEFAULT_EXPIRATION_TIME_MINUTES)));
 
     this.cache = Caffeine.newBuilder()
       .expireAfterWrite(expirationTimeMinutes, TimeUnit.MINUTES)
       .build();
+  }
+
+  public static CancelledJobsIdsCache getInstance() {
+    return getInstance(false);
+  }
+
+  /**
+   * Used for testing
+   */
+  public static synchronized CancelledJobsIdsCache getInstance(boolean returnNew) {
+    if (instance == null || returnNew) {
+      instance = new CancelledJobsIdsCache();
+    }
+    return instance;
   }
 
   /**

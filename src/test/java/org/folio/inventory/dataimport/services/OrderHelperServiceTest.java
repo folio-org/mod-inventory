@@ -153,7 +153,7 @@ class OrderHelperServiceTest extends BaseWireMockTest {
     WIRE_MOCK.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
-    orderHelperService = new OrderHelperServiceImpl(new ProfileSnapshotCache(vertx, client, 3600));
+    orderHelperService = new OrderHelperServiceImpl(ProfileSnapshotCache.getInstance(vertx, client, true));
     //when
     Future<Void> future = orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload,
       DI_INVENTORY_INSTANCE_CREATED, context);
@@ -246,7 +246,7 @@ class OrderHelperServiceTest extends BaseWireMockTest {
     WIRE_MOCK.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
-    orderHelperService = new OrderHelperServiceImpl(new ProfileSnapshotCache(vertx, client, 3600));
+    orderHelperService = new OrderHelperServiceImpl(ProfileSnapshotCache.getInstance(vertx, client, true));
     //when
     Future<Void> future = orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload,
       DI_INVENTORY_INSTANCE_CREATED, context);
@@ -337,7 +337,7 @@ class OrderHelperServiceTest extends BaseWireMockTest {
     WIRE_MOCK.stubFor(get(new UrlPathPattern(new RegexPattern(JOB_PROFILE_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(profileSnapshotWrapper))));
 
-    orderHelperService = new OrderHelperServiceImpl(new ProfileSnapshotCache(vertx, client, 3600));
+    orderHelperService = new OrderHelperServiceImpl(ProfileSnapshotCache.getInstance(vertx, client, true));
 
     //when
     Future<Void> future = orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload,

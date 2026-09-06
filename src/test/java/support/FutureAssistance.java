@@ -1,4 +1,4 @@
-package org.folio.inventory.common;
+package support;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -49,8 +49,7 @@ public class FutureAssistance {
     return failure -> future.completeExceptionally(new Exception(failure.reason()));
   }
 
-  public static <T> CompletableFuture<Void> allOf(
-    List<CompletableFuture<T>> allFutures) {
+  public static <T> CompletableFuture<Void> allOf(List<CompletableFuture<T>> allFutures) {
 
     return CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }));
   }

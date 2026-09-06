@@ -18,6 +18,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.inventory.common.WebContext;
+import org.folio.inventory.common.dao.PostgresConnectionOptions;
 import org.folio.inventory.rest.impl.SingleConnectionProvider;
 import org.folio.inventory.services.InventoryKafkaTopicService;
 import org.folio.kafka.services.KafkaAdminClientService;
@@ -29,7 +30,17 @@ public class TenantApi {
   private static final String DROP_SCHEMA_SQL = "DROP SCHEMA IF EXISTS %s CASCADE";
   private static final String CHANGELOG_TENANT_PATH = "liquibase/tenant/changelog.xml";
   private static final String TENANT_PATH = "/_/tenant";
+
   private final InventoryKafkaTopicService inventoryKafkaTopicService = new InventoryKafkaTopicService();
+  private final PostgresConnectionOptions connectionOptions;
+
+  public TenantApi() {
+    this(new PostgresConnectionOptions());
+  }
+
+  public TenantApi(PostgresConnectionOptions connectionOptions) {
+    this.connectionOptions = connectionOptions;
+  }
 
   public void register(Router router) {
     router.post(TENANT_PATH).handler(this::create);
@@ -42,13 +53,12 @@ public class TenantApi {
     initializeSchemaForTenant(context.getTenantId())
       .onSuccess(result -> {
           Vertx vertx = routingContext.vertx();
-          var kafkaAdminClientService = new KafkaAdminClientService(vertx);
-          kafkaAdminClientService.createKafkaTopics(inventoryKafkaTopicService.createTopicObjects(),
-            context.getTenantId());
-          routingContext.response().setStatusCode(HttpStatus.HTTP_NO_CONTENT.toInt()).end();
+          new KafkaAdminClientService(vertx)
+            .createKafkaTopics(inventoryKafkaTopicService.createTopicObjects(), context.getTenantId());
+          routingContext.response().setStatusCode(HttpStatus.SC_NO_CONTENT).end();
         }
       )
-      .onFailure(fail -> routingContext.response().setStatusCode(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt())
+      .onFailure(fail -> routingContext.response().setStatusCode(HttpStatus.SC_SERVER_ERROR)
         .end(fail.toString()));
   }
 
@@ -56,8 +66,8 @@ public class TenantApi {
     WebContext context = new WebContext(routingContext);
 
     deleteSchemaForTenant(context.getTenantId())
-      .onSuccess(result -> routingContext.response().setStatusCode(HttpStatus.HTTP_NO_CONTENT.toInt()).end())
-      .onFailure(fail -> routingContext.response().setStatusCode(HttpStatus.HTTP_INTERNAL_SERVER_ERROR.toInt())
+      .onSuccess(result -> routingContext.response().setStatusCode(HttpStatus.SC_NO_CONTENT).end())
+      .onFailure(fail -> routingContext.response().setStatusCode(HttpStatus.SC_SERVER_ERROR)
         .end(fail.toString()));
   }
 
@@ -65,7 +75,7 @@ public class TenantApi {
     String schemaName = convertToPsqlStandard(tenantId);
     LOGGER.info("Initializing schema {} for tenant {}", schemaName, tenantId);
 
-    SingleConnectionProvider connectionProvider = new SingleConnectionProvider();
+    SingleConnectionProvider connectionProvider = new SingleConnectionProvider(connectionOptions);
 
     try (var connection = connectionProvider.getConnection(tenantId);
          var preparedStatement = connection.prepareStatement(format(CREATE_SCHEMA_SQL, schemaName))) {
@@ -89,7 +99,7 @@ public class TenantApi {
     String schemaName = convertToPsqlStandard(tenantId);
     LOGGER.info("Attempting to drop schema {} for tenant {}", schemaName, tenantId);
 
-    SingleConnectionProvider connectionProvider = new SingleConnectionProvider();
+    SingleConnectionProvider connectionProvider = new SingleConnectionProvider(connectionOptions);
 
     try (var connection = connectionProvider.getConnection(tenantId);
          var preparedStatement = connection.prepareStatement(format(DROP_SCHEMA_SQL, schemaName))) {

@@ -21,7 +21,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.MappingMetadataDto;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.exceptions.CacheLoadingException;
+import org.folio.inventory.exceptions.CacheLoadingException;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.SynchronousHttpClient;
 
@@ -34,29 +34,30 @@ public class MappingMetadataCache {
   private static final String METADATA_EXPIRATION_TIME = "inventory.mapping-metadata-cache.expiration.time.seconds";
   private static final String MAPPING_PARAM_LOAD_ERROR_LOG_MSG_TEMPLATE =
     "Error loading MappingMetadata by jobExecutionId: '{}'";
+  private static final String DEFAULT_CACHE_EXPIRATION = "3600";
   private static MappingMetadataCache instance = null;
   private final AsyncCache<String, Optional<MappingMetadataDto>> cache;
   private final HttpClient httpClient;
 
-  public MappingMetadataCache(Vertx vertx, HttpClient httpClient, long cacheExpirationTime) {
-    this.httpClient = httpClient;
-    cache = Caffeine.newBuilder()
+  private MappingMetadataCache(Vertx vertx, long cacheExpirationTime) {
+    this.httpClient = vertx.createHttpClient();
+    this.cache = Caffeine.newBuilder()
       .expireAfterAccess(cacheExpirationTime, TimeUnit.SECONDS)
       .executor(task -> vertx.runOnContext(v -> task.run()))
       .buildAsync();
   }
 
-  public static MappingMetadataCache getInstance(Vertx vertx, HttpClient httpClient) {
-    return getInstance(vertx, httpClient, false);
+  public static MappingMetadataCache getInstance(Vertx vertx) {
+    return getInstance(vertx,false);
   }
 
   /**
    * Used for testing
    */
-  public static synchronized MappingMetadataCache getInstance(Vertx vertx, HttpClient httpClient, boolean returnNew) {
+  public static synchronized MappingMetadataCache getInstance(Vertx vertx, boolean returnNew) {
     if (instance == null || returnNew) {
-      instance = new MappingMetadataCache(vertx, httpClient,
-        Long.parseLong(getCacheEnvVariable(vertx.getOrCreateContext().config(), METADATA_EXPIRATION_TIME)));
+      instance = new MappingMetadataCache(vertx,
+        Long.parseLong(getCacheEnvVariable(vertx.getOrCreateContext().config())));
     }
     return instance;
   }
@@ -177,10 +178,10 @@ public class MappingMetadataCache {
     }
   }
 
-  private static String getCacheEnvVariable(JsonObject config, String variableName) {
-    String cacheExpirationTime = config.getString(variableName);
+  private static String getCacheEnvVariable(JsonObject config) {
+    String cacheExpirationTime = config.getString(METADATA_EXPIRATION_TIME);
     if (StringUtils.isBlank(cacheExpirationTime)) {
-      cacheExpirationTime = "3600";
+      return DEFAULT_CACHE_EXPIRATION;
     }
     return cacheExpirationTime;
   }

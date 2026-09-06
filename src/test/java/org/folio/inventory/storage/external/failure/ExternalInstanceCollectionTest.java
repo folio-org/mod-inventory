@@ -17,7 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import lombok.SneakyThrows;
 import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.inventory.common.VertxAssistant;
-import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;

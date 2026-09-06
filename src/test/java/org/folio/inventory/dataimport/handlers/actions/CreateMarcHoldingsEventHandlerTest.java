@@ -150,7 +150,7 @@ class CreateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
   @BeforeEach
   void setUp(Vertx vertx) {
     MappingManager.clearReaderFactories();
-    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, vertx.createHttpClient(), true);
+    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, true);
     createMarcHoldingsEventHandler =
       new CreateMarcHoldingsEventHandler(storage, mappingMetadataCache, holdingsIdStorageService,
         holdingsCollectionService, consortiumService);

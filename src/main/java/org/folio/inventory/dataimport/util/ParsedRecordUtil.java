@@ -38,7 +38,7 @@ public final class ParsedRecordUtil {
                        && INDICATOR_F.equals(field.getJsonObject(TAG_999).getString("ind1"))
                        && INDICATOR_F.equals(field.getJsonObject(TAG_999).getString("ind2")))
       .flatMap(targetField -> targetField.getJsonObject(TAG_999).getJsonArray("subfields").stream())
-      .map(subfieldAsObject -> (JsonObject) subfieldAsObject)
+      .map(JsonObject.class::cast)
       .filter(subfield -> subfield.containsKey(additionalSubfield.subfieldCode))
       .findFirst()
       .map(targetSubfield -> targetSubfield.getString(additionalSubfield.subfieldCode))
@@ -46,21 +46,21 @@ public final class ParsedRecordUtil {
   }
 
   public static JsonObject normalize(Object content) {
-    return (content instanceof String)
-           ? new JsonObject((String) content)
+    return (content instanceof String s)
+           ? new JsonObject(s)
            : JsonObject.mapFrom(content);
   }
 
   /**
    * Extracts value from specified field
    *
-   * @param record record
+   * @param dataRecord record
    * @param tag    tag of data field
    * @return value from the specified field, or null
    */
-  public static String getControlFieldValue(Record record, String tag) {
-    if (record != null && record.getParsedRecord() != null && record.getParsedRecord().getContent() != null) {
-      MarcReader reader = buildMarcReader(record);
+  public static String getControlFieldValue(Record dataRecord, String tag) {
+    if (dataRecord != null && dataRecord.getParsedRecord() != null && dataRecord.getParsedRecord().getContent() != null) {
+      MarcReader reader = buildMarcReader(dataRecord);
       try {
         if (reader.hasNext()) {
           org.marc4j.marc.Record marcRecord = reader.next();
@@ -115,9 +115,9 @@ public final class ParsedRecordUtil {
     }
   }
 
-  private static MarcReader buildMarcReader(Record record) {
+  private static MarcReader buildMarcReader(Record dataRecord) {
     return new MarcJsonReader(
-      new ByteArrayInputStream(record.getParsedRecord().getContent().toString().getBytes(StandardCharsets.UTF_8)));
+      new ByteArrayInputStream(dataRecord.getParsedRecord().getContent().toString().getBytes(StandardCharsets.UTF_8)));
   }
 
   public enum AdditionalSubfields {

@@ -16,7 +16,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.InstanceLinkDtoCollection;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.exceptions.InstanceLinksException;
+import org.folio.inventory.exceptions.InstanceLinksException;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 
 public class InstanceLinkClient {

@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.UUID;
 import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.exceptions.CacheLoadingException;
+import org.folio.inventory.exceptions.CacheLoadingException;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,7 +44,7 @@ class JobProfileSnapshotCacheTest extends BaseWireMockTest {
   void setUp(Vertx vertx) {
     stubGetJson(PROFILE_SNAPSHOT_URL, Json.encode(jobProfileSnapshot));
 
-    profileSnapshotCache = new ProfileSnapshotCache(vertx, vertx.createHttpClient(), 3600);
+    profileSnapshotCache = ProfileSnapshotCache.getInstance(vertx, vertx.createHttpClient());
     context = EventHandlingUtil.constructContext(TENANT_ID, "token", mockServerUrl());
   }
 

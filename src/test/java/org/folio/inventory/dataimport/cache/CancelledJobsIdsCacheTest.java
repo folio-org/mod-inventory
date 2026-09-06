@@ -14,7 +14,7 @@ class CancelledJobsIdsCacheTest {
 
   @BeforeEach
   void setUp() {
-    cache = new CancelledJobsIdsCache();
+    cache = CancelledJobsIdsCache.getInstance(true);
   }
 
   @Test

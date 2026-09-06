@@ -5,7 +5,6 @@ import static java.lang.String.format;
 import static java.lang.String.join;
 import static java.lang.System.getProperty;
 import static java.util.Objects.isNull;
-import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
@@ -24,9 +23,6 @@ import java.util.List;
 import java.util.UUID;
 
 import org.apache.logging.log4j.Logger;
-import org.folio.inventory.dataimport.cache.DeleteRuleFor999FieldCache;
-import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.GlobalLoadSensor;
 import org.folio.kafka.KafkaConfig;
@@ -39,11 +35,7 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
   private static final String LOAD_LIMIT_DEFAULT = "5";
   private static final String MAX_DISTRIBUTION_NUMBER_TEMPLATE = "inventory.kafka.%s.maxDistributionNumber";
   private static final String MAX_DISTRIBUTION_NUMBER_DEFAULT = "100";
-  private static final String CACHE_EXPIRATION_DEFAULT = "3600";
-  private static final String PROFILE_SNAPSHOT_CACHE_EXPIRATION_TIME =
-    "inventory.profile-snapshot-cache.expiration.time.seconds";
   private final List<KafkaConsumerWrapper<String, String>> consumerWrappers = new ArrayList<>();
-  private ProfileSnapshotCache profileSnapshotCache;
   private KafkaConfig kafkaConfig;
   private JsonObject config;
   private HttpClient httpClient;
@@ -107,31 +99,6 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
       storage = Storage.basedUpon(getConfig(), vertx.createHttpClient());
     }
     return storage;
-  }
-
-  protected MappingMetadataCache getMappingMetadataCache() {
-    return MappingMetadataCache.getInstance(vertx, getHttpClient());
-  }
-
-  protected DeleteRuleFor999FieldCache getDeleteRuleFor999FieldCache() {
-    return DeleteRuleFor999FieldCache.getInstance(vertx);
-  }
-
-  protected ProfileSnapshotCache getProfileSnapshotCache() {
-    if (isNull(profileSnapshotCache)) {
-      var profileSnapshotExpirationTime = getCacheEnvVariable(PROFILE_SNAPSHOT_CACHE_EXPIRATION_TIME);
-      profileSnapshotCache =
-        new ProfileSnapshotCache(vertx, getHttpClient(), Long.parseLong(profileSnapshotExpirationTime));
-    }
-    return profileSnapshotCache;
-  }
-
-  protected String getCacheEnvVariable(String variableName) {
-    var cacheExpirationTime = getConfig().getString(variableName);
-    if (isBlank(cacheExpirationTime)) {
-      cacheExpirationTime = CACHE_EXPIRATION_DEFAULT;
-    }
-    return cacheExpirationTime;
   }
 
   protected int getMaxDistributionNumber(String property) {

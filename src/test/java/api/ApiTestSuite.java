@@ -36,7 +36,7 @@ import java.util.concurrent.TimeoutException;
 import lombok.SneakyThrows;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.inventory.InventoryVerticle;
+import org.folio.inventory.verticle.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.consortium.util.ConsortiumUtil;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
@@ -281,6 +281,7 @@ public class ApiTestSuite {
     config.put("port", INVENTORY_VERTICLE_TEST_PORT);
     config.put("storage.type", storageType);
     config.put("storage.location", storageLocation);
+    config.putAll(PgPoolContainer.getConnectionEnv());
 
     System.setProperty(ConsortiumUtil.EXPIRATION_TIME_PARAM, "0");
 

@@ -1,17 +1,14 @@
 package org.folio.inventory.consortium.handlers;
 
 import static java.lang.String.format;
-import static org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingHandler.SOURCE;
 import static org.folio.inventory.consortium.util.MarcRecordUtil.removeFieldFromMarcRecord;
-import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.INSTANCE_ID_TYPE;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
+import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_MARC;
-import static org.folio.inventory.domain.items.Item.HRID_KEY;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonObject;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
@@ -20,44 +17,43 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.Authority;
-import org.folio.HttpStatus;
 import org.folio.Link;
 import org.folio.LinkingRuleDto;
 import org.folio.Record;
-import org.folio.dataimport.util.FolioHeaders;
-import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.exceptions.ConsortiumException;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.consortium.util.MarcRecordUtil;
 import org.folio.inventory.consortium.util.RestDataImportHelper;
+import org.folio.inventory.consortium.util.SourceStorageHelper;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceSource;
 import org.folio.inventory.services.EntitiesLinksService;
-import org.folio.inventory.services.EntitiesLinksServiceImpl;
 import org.folio.inventory.storage.Storage;
 import org.folio.okapi.common.XOkapiHeaders;
-import org.folio.rest.client.SourceStorageRecordsClient;
 
 public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
-  public static final String SRS_RECORD_ID_TYPE = "SRS_RECORD";
   private static final Logger LOGGER = LogManager.getLogger(MarcInstanceSharingHandlerImpl.class);
-  private static final String CONSORTIUM_PREFIX = "CONSORTIUM-";
+  private static final String COMMITTED_STATUS = "COMMITTED";
+
   private final RestDataImportHelper restDataImportHelper;
   private final InstanceOperationsHelper instanceOperations;
   private final EntitiesLinksService entitiesLinksService;
+  private final SourceStorageHelper sourceStorageHelper;
   private final Storage storage;
-  private final Vertx vertx;
 
-  public MarcInstanceSharingHandlerImpl(InstanceOperationsHelper instanceOperations, Storage storage, Vertx vertx,
-                                        HttpClient httpClient) {
-    this.vertx = vertx;
+  public MarcInstanceSharingHandlerImpl(InstanceOperationsHelper instanceOperations, Storage storage,
+                                        RestDataImportHelper restDataImportHelper,
+                                        EntitiesLinksService entitiesLinksService,
+                                        SourceStorageHelper sourceStorageHelper) {
     this.instanceOperations = instanceOperations;
-    this.restDataImportHelper = new RestDataImportHelper(vertx);
-    this.entitiesLinksService = new EntitiesLinksServiceImpl(vertx, httpClient);
+    this.restDataImportHelper = restDataImportHelper;
+    this.entitiesLinksService = entitiesLinksService;
+    this.sourceStorageHelper = sourceStorageHelper;
     this.storage = storage;
   }
 
@@ -66,137 +62,51 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
                                         TargetTenantProvider targetTenantProvider, Map<String, String> kafkaHeaders) {
     String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
     String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
-
-    SourceStorageRecordsClient sourceStorageClient = getSourceStorageRecordsClient(sourceTenant, kafkaHeaders);
     Context context =
       constructContext(sourceTenant, kafkaHeaders.get(XOkapiHeaders.TOKEN), kafkaHeaders.get(XOkapiHeaders.URL),
         kafkaHeaders.get(XOkapiHeaders.USER_ID), kafkaHeaders.get(XOkapiHeaders.REQUEST_ID));
 
-    // Get source MARC by instance ID
-    return getSourceMARCByInstanceId(instanceId, sourceTenant, sourceStorageClient)
+    return sourceStorageHelper.getSourceRecordByInstanceId(instanceId, sourceTenant, kafkaHeaders)
       .compose(marcRecord -> detachLocalAuthorityLinksIfNeeded(marcRecord, instanceId, context, sharingInstanceMetadata,
         storage))
-      .compose(marcRecord -> {
-        // Publish instance with MARC source
-        removeFieldFromMarcRecord(marcRecord, "001");
-        return restDataImportHelper.importMarcRecord(marcRecord, sharingInstanceMetadata, kafkaHeaders)
-          .compose(result -> {
-            if ("COMMITTED".equals(result)) {
-              return updateTargetInstanceWithNonMarcControlledFields(instance, targetTenantProvider, kafkaHeaders)
-                // Delete source record by record ID if the result is "COMMITTED"
-                .compose(targetInstance -> deleteSourceRecordByRecordId(marcRecord.getId(), instanceId, sourceTenant,
-                  sourceStorageClient)
-                  .map(targetInstance))
-                .compose(targetInstance -> {
-                  // Update JSON instance to include SOURCE=CONSORTIUM-MARC
-                  JsonObject jsonInstanceToPublish = new JsonObject(instance.getJsonForStorage().encode());
-                  jsonInstanceToPublish.put(SOURCE, CONSORTIUM_MARC.getValue());
-                  jsonInstanceToPublish.put(HRID_KEY, targetInstance.getHrid());
-                  // Update instance in sourceInstanceCollection
-                  return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish),
-                    sourceTenantProvider);
-                });
-            } else {
-              // If the result is not "COMMITTED", skip the deletion and update steps and return the result directly
-              return Future.failedFuture(String.format("DI status is %s", result));
-            }
-          });
-      });
+      .compose(marcRecord -> importAndCommit(marcRecord, instance, sharingInstanceMetadata, sourceTenantProvider,
+        targetTenantProvider, kafkaHeaders));
   }
 
-  public SourceStorageRecordsClient getSourceStorageRecordsClient(String tenant, Map<String, String> kafkaHeaders) {
-    LOGGER.info("getSourceStorageRecordsClient :: Creating SourceStorageRecordsClient for tenant={}", tenant);
-    var folioHeaders = FolioHeaders.from(kafkaHeaders).tenant(tenant);
-    return new SourceStorageRecordsClientWrapper(folioHeaders, vertx.createHttpClient());
+  private Future<String> importAndCommit(Record marcRecord, Instance instance, SharingInstance sharingInstanceMetadata,
+                                         SourceTenantProvider sourceTenantProvider,
+                                         TargetTenantProvider targetTenantProvider, Map<String, String> kafkaHeaders) {
+    removeFieldFromMarcRecord(marcRecord, "001");
+    return restDataImportHelper.importMarcRecord(marcRecord, sharingInstanceMetadata, kafkaHeaders)
+      .compose(importStatus -> commitIfImportSucceeded(importStatus, marcRecord, instance, sharingInstanceMetadata,
+        sourceTenantProvider, targetTenantProvider, kafkaHeaders));
   }
 
-  Future<Record> getSourceMARCByInstanceId(String instanceId, String sourceTenant, SourceStorageRecordsClient client) {
+  private Future<String> commitIfImportSucceeded(String importStatus, Record marcRecord, Instance instance,
+                                                 SharingInstance sharingInstanceMetadata,
+                                                 SourceTenantProvider sourceTenantProvider,
+                                                 TargetTenantProvider targetTenantProvider,
+                                                 Map<String, String> kafkaHeaders) {
+    if (!COMMITTED_STATUS.equals(importStatus)) {
+      return Future.failedFuture(format("DI status is %s", importStatus));
+    }
 
-    LOGGER.info(
-      "getSourceMARCByInstanceId:: Getting source MARC record for instance with InstanceId={} from tenant={}.",
-      instanceId, sourceTenant);
+    String instanceId = sharingInstanceMetadata.getInstanceIdentifier().toString();
+    String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
 
-    Promise<Record> promise = Promise.promise();
-    client.getSourceStorageRecordsFormattedById(instanceId, INSTANCE_ID_TYPE).onComplete(responseResult -> {
-      try {
-        if (responseResult.succeeded()) {
-          int statusCode = responseResult.result().statusCode();
-          if (statusCode == HttpStatus.SC_OK) {
-            String bodyAsString = responseResult.result().bodyAsString();
-            LOGGER.debug("MARC source for instance with InstanceId={} from tenant={}. Record={}.", instanceId,
-              sourceTenant, bodyAsString);
-            promise.complete(responseResult.result().bodyAsJson(Record.class));
-          } else {
-            String errorMessage =
-              String.format("Failed to retrieve MARC record for instance with InstanceId=%s from tenant=%s. " +
-                            "Status message: %s. Status code: %s", instanceId, sourceTenant,
-                responseResult.result().statusMessage(), statusCode);
-            LOGGER.error(errorMessage);
-            promise.fail(errorMessage);
-          }
-        } else {
-          String errorMessage =
-            String.format("Failed to retrieve MARC record for instance with InstanceId=%s from tenant=%s. " +
-                          "Error message: %s", instanceId, sourceTenant, responseResult.cause().getMessage());
-          LOGGER.error(errorMessage);
-          promise.fail(responseResult.cause());
-        }
-      } catch (Exception ex) {
-        LOGGER.error("Error processing MARC record retrieval.", ex);
-        promise.fail("Error processing MARC record retrieval.");
-      }
-    });
-    return promise.future();
+    return updateTargetInstanceWithNonMarcControlledFields(instance, targetTenantProvider, kafkaHeaders)
+      .compose(targetInstance -> sourceStorageHelper
+        .deleteSourceRecordByRecordId(marcRecord.getId(), instanceId, sourceTenant, kafkaHeaders)
+        .map(deletedRecordId -> targetInstance))
+      .compose(targetInstance -> updateSourceInstanceAsShared(instance, targetInstance, sourceTenantProvider));
   }
 
-  Future<String> deleteSourceRecordByRecordId(String recordId, String instanceId, String tenantId,
-                                              SourceStorageRecordsClient client) {
-    LOGGER.info(
-      "deleteSourceRecordByRecordId :: Delete source record with recordId={} for instance by InstanceId={} from tenant {}",
-      recordId, instanceId, tenantId);
-
-    return client.deleteSourceStorageRecordsById(recordId, SRS_RECORD_ID_TYPE)
-      .onFailure(e -> LOGGER.error(
-        "deleteSourceRecordByRecordId:: Error deleting source record with recordId={} by InstanceId={} from tenant {}",
-        recordId, instanceId, tenantId, e))
-      .compose(response -> {
-        if (response.statusCode() == HttpStatus.SC_NO_CONTENT) {
-          LOGGER.info(
-            "deleteSourceRecordByRecordId:: Source record with recordId={} for instance with InstanceId={} from tenant {} has been deleted.",
-            recordId, instanceId, tenantId);
-          return Future.succeededFuture(instanceId);
-        } else {
-          String msg = format(
-            "Error deleting source record with recordId=%s by InstanceId=%s from tenant %s, responseStatus=%s, body=%s",
-            recordId, instanceId, tenantId, response.statusCode(), response.bodyAsString());
-          LOGGER.error("deleteSourceRecordByRecordId:: {}", msg);
-          return Future.failedFuture(msg);
-        }
-      });
-  }
-
-  Future<String> updateSourceRecordSuppressFromDiscoveryByInstanceId(String instanceId, boolean suppress,
-                                                                     SourceStorageRecordsClient sourceStorageClient) {
-    LOGGER.info(
-      "updateSourceRecordSuppressFromDiscoveryByInstanceId:: Updating suppress from discovery flag for record in SRS, instanceId: {}, suppressFromDiscovery: {}",
-      instanceId, suppress);
-
-    return sourceStorageClient.putSourceStorageRecordsSuppressFromDiscoveryById(instanceId,
-        INSTANCE_ID_TYPE, suppress)
-      .compose(response -> {
-        if (response.statusCode() == org.folio.HttpStatus.HTTP_OK.toInt()) {
-          LOGGER.info(
-            "updateSourceRecordSuppressFromDiscoveryByInstanceId:: Suppress from discovery flag was successfully updated for record in SRS, instanceId: {}, suppressFromDiscovery: {}",
-            instanceId, suppress);
-          return Future.succeededFuture(instanceId);
-        } else {
-          String errorMessage = format(
-            "Cannot update suppress from discovery flag for SRS record, instanceId: %s, statusCode: %s, suppressFromDiscovery: %s",
-            instanceId, response.statusCode(), suppress);
-          LOGGER.warn(format("updateSourceRecordSuppressFromDiscoveryByInstanceId:: %s", errorMessage));
-          return Future.failedFuture(errorMessage);
-        }
-      });
+  private Future<String> updateSourceInstanceAsShared(Instance instance, Instance targetInstance,
+                                                      SourceTenantProvider sourceTenantProvider) {
+    JsonObject jsonInstanceToPublish = new JsonObject(instance.getJsonForStorage().encode());
+    jsonInstanceToPublish.put(SOURCE_KEY, CONSORTIUM_MARC.getValue());
+    jsonInstanceToPublish.put(HRID_KEY, targetInstance.getHrid());
+    return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish), sourceTenantProvider);
   }
 
   private Future<Instance> updateTargetInstanceWithNonMarcControlledFields(Instance sourceInstance,
@@ -214,10 +124,8 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
                                                                    TargetTenantProvider targetTenantProvider,
                                                                    Map<String, String> kafkaHeaders) {
     if (Boolean.TRUE.equals(targetInstance.getDiscoverySuppress())) {
-      SourceStorageRecordsClient sourceStorageClient =
-        getSourceStorageRecordsClient(targetTenantProvider.tenantId(), kafkaHeaders);
-      return updateSourceRecordSuppressFromDiscoveryByInstanceId(targetInstance.getId(),
-        targetInstance.getDiscoverySuppress(), sourceStorageClient)
+      return sourceStorageHelper.updateSourceRecordSuppressFromDiscovery(targetInstance.getId(),
+          targetInstance.getDiscoverySuppress(), targetTenantProvider.tenantId(), kafkaHeaders)
         .map(targetInstance);
     }
     return Future.succeededFuture(targetInstance);
@@ -344,7 +252,7 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
         PagingParameters.defaults(),
         findResults -> {
           List<String> localEntitiesIds = findResults.result().records().stream()
-            .filter(source -> !source.getSource().value().startsWith(CONSORTIUM_PREFIX))
+            .filter(source -> !source.getSource().value().startsWith(InstanceSource.CONSORTIUM_PREFIX))
             .map(Authority::getId).toList();
           promise.complete(localEntitiesIds);
         },

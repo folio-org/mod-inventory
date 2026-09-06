@@ -1,4 +1,4 @@
-package org.folio.inventory;
+package org.folio.inventory.verticle;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebRequestDiagnostics;
 import org.folio.inventory.common.dao.PostgresClientFactory;
+import org.folio.inventory.common.dao.PostgresConnectionOptions;
 import org.folio.inventory.consortium.cache.ConsortiumDataCache;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.consortium.services.ConsortiumServiceImpl;
@@ -36,8 +37,6 @@ public class InventoryVerticle extends AbstractVerticle {
 
   @Override
   public void start(Promise<Void> started) {
-    Logging.initialiseFormat();
-
     final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
     Router router = Router.router(vertx);
@@ -55,6 +54,8 @@ public class InventoryVerticle extends AbstractVerticle {
 
     Storage storage = Storage.basedUpon(config, client);
 
+    PostgresConnectionOptions connectionOptions = PostgresConnectionOptions.fromConfig(config);
+
     router.route().handler(WebRequestDiagnostics::outputDiagnostics);
 
     ConsortiumDataCache consortiumDataCache = new ConsortiumDataCache(vertx, client);
@@ -70,7 +71,7 @@ public class InventoryVerticle extends AbstractVerticle {
     new IsbnUtilsApi().register(router);
     new ItemsByHoldingsRecordIdApi(storage, client).register(router);
     new InventoryConfigApi().register(router);
-    new TenantApi().register(router);
+    new TenantApi(connectionOptions).register(router);
     new UpdateOwnershipApi(storage, client, consortiumService, snapshotService,
       new InventoryClientFactoryImpl()).register(router);
     new TenantItemsApi(client).register(router);

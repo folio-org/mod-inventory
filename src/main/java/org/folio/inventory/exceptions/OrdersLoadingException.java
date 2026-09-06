@@ -1,4 +1,4 @@
-package org.folio.inventory.dataimport.exceptions;
+package org.folio.inventory.exceptions;
 
 public class OrdersLoadingException extends RuntimeException {
 

@@ -190,7 +190,7 @@ class MarcBibModifyEventHandlerTest {
 
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper =
       new PrecedingSucceedingTitlesHelper(ctxt -> mockedOkapiHttpClient);
-    DeleteRuleFor999FieldCache deleteRuleFor999FieldCache = new DeleteRuleFor999FieldCache(vertx, 60L);
+    DeleteRuleFor999FieldCache deleteRuleFor999FieldCache = DeleteRuleFor999FieldCache.getInstance(vertx, true);
     marcBibModifyEventHandler = spy(new MarcBibModifyEventHandler(mappingMetadataCache, deleteRuleFor999FieldCache,
       new InstanceUpdateDelegate(mockedStorage), precedingSucceedingTitlesHelper, httpClient));
 

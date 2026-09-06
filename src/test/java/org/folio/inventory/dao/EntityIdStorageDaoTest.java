@@ -32,7 +32,9 @@ class EntityIdStorageDaoTest {
 
   private static boolean runningOnOwn;
 
-  private final PostgresClientFactory postgresClientFactory = new PostgresClientFactory(Vertx.vertx());
+  private final Vertx vertx = Vertx.vertx();
+  private final PostgresClientFactory postgresClientFactory =
+    new PostgresClientFactory(vertx, new PostgresConnectionOptions(PgPoolContainer.getConnectionEnv()));
   private final EntityIdStorageDao entityIdStorageDao = new EntityIdStorageDao(postgresClientFactory);
 
   @BeforeAll
@@ -40,7 +42,7 @@ class EntityIdStorageDaoTest {
     if (!PgPoolContainer.isRunning()) {
       runningOnOwn = true;
       PgPoolContainer.create();
-      TenantApi tenantApi = new TenantApi();
+      TenantApi tenantApi = new TenantApi(new PostgresConnectionOptions(PgPoolContainer.getConnectionEnv()));
       tenantApi.initializeSchemaForTenant(TENANT_ID);
     }
   }
@@ -53,9 +55,8 @@ class EntityIdStorageDaoTest {
   }
 
   @BeforeEach
-  void before() {
-    postgresClientFactory.setShouldResetPool(true);
-    PgPoolContainer.setEmbeddedPostgresOptions();
+  void before() throws Exception {
+    PostgresClientFactory.closePool(TENANT_ID).toCompletionStage().toCompletableFuture().get();
   }
 
   @Test
@@ -102,9 +103,10 @@ class EntityIdStorageDaoTest {
       .recordId(RECORD_ID)
       .entityId(INSTANCE_ID)
       .build();
+    var daoWithoutDbParams = new EntityIdStorageDao(
+      new PostgresClientFactory(vertx, new PostgresConnectionOptions(new HashMap<>())));
 
-    PostgresConnectionOptions.setSystemProperties(new HashMap<>());
-    var future = entityIdStorageDao.saveRecordToEntityRelationship(expectedRecordToInstance, TENANT_ID);
+    var future = daoWithoutDbParams.saveRecordToEntityRelationship(expectedRecordToInstance, TENANT_ID);
 
     future.onComplete(testContext.failing(err -> testContext.verify(() -> {
       assertInstanceOf(ConnectException.class, err);

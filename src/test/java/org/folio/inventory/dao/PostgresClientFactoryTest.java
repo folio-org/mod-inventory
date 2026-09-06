@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.pgclient.SslMode;
 import java.util.Collections;
@@ -21,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.common.dao.PostgresConnectionOptions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -49,23 +51,29 @@ class PostgresClientFactoryTest {
     assertEquals(cachedPool, poolFromCache);
   }
 
+  @DisplayName("should create a new pool after the cached pool is closed")
   @Test
-  void shouldResetPgPoolCache(Vertx vertx) {
+  void shouldReturnNewPool_whenCachedPoolClosed(Vertx vertx, VertxTestContext testContext) {
+    // arrange
     var postgresClientFactory = new PostgresClientFactory(vertx);
     var cachedPool = postgresClientFactory.getCachedPool(TENANT_ID);
-    postgresClientFactory.setShouldResetPool(true);
-    var poolFromCache = postgresClientFactory.getCachedPool(TENANT_ID);
-    assertNotNull(cachedPool);
-    assertNotNull(poolFromCache);
-    assertNotEquals(cachedPool, poolFromCache);
+
+    // act
+    PostgresClientFactory.closePool(TENANT_ID).onComplete(testContext.succeeding(v -> testContext.verify(() -> {
+      var poolFromCache = postgresClientFactory.getCachedPool(TENANT_ID);
+
+      // assert
+      assertNotNull(poolFromCache);
+      assertNotEquals(cachedPool, poolFromCache);
+      testContext.completeNow();
+    })));
   }
 
   @Test
   void shouldSetDefaultConnectionOptions() {
     var expectedPgConnectOptions = new PgConnectOptions();
-    PostgresConnectionOptions.setSystemProperties(new HashMap<>());
 
-    var actualConnectionOptions = PostgresConnectionOptions.getConnectionOptions(null);
+    var actualConnectionOptions = new PostgresConnectionOptions(new HashMap<>()).getConnectionOptions(null);
 
     assertEquals(expectedPgConnectOptions.getHost(), actualConnectionOptions.getHost());
     assertEquals(expectedPgConnectOptions.getUser(), actualConnectionOptions.getUser());
@@ -87,8 +95,8 @@ class PostgresClientFactoryTest {
     optionsMap.put(DB_SERVER_PEM, SERVER_PEM);
     optionsMap.put(DB_IDLETIMEOUT, String.valueOf(60000));
 
-    PostgresConnectionOptions.setSystemProperties(optionsMap);
-    var pgConnectOpts = PostgresConnectionOptions.getConnectionOptions(TENANT_ID);
+    var connectionOptions = new PostgresConnectionOptions(optionsMap);
+    var pgConnectOpts = connectionOptions.getConnectionOptions(TENANT_ID);
 
     assertEquals("localhost", pgConnectOpts.getHost());
     assertEquals(5432, pgConnectOpts.getPort());
@@ -97,12 +105,10 @@ class PostgresClientFactoryTest {
     assertEquals("test", pgConnectOpts.getDatabase());
     assertEquals(SslMode.VERIFY_FULL, pgConnectOpts.getSslMode());
     assertEquals("HTTPS", pgConnectOpts.getSslOptions().getHostnameVerificationAlgorithm());
-    assertEquals(MAX_POOL_SIZE, PostgresConnectionOptions.getMaxPoolSize());
+    assertEquals(MAX_POOL_SIZE, connectionOptions.getMaxPoolSize());
     assertNotNull(pgConnectOpts.getSslOptions().getTrustOptions());
-    assertEquals(60000, PostgresConnectionOptions.getPoolOptions().getIdleTimeout());
+    assertEquals(60000, connectionOptions.getPoolOptions().getIdleTimeout());
     assertEquals(expectedEnabledSecureTransportProtocols,
       pgConnectOpts.getSslOptions().getEnabledSecureTransportProtocols());
-
-    PostgresConnectionOptions.setSystemProperties(new HashMap<>());
   }
 }

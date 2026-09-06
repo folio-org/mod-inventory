@@ -2,7 +2,6 @@ package org.folio.inventory.resources;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.HttpStatus.HTTP_OK;
-import static org.folio.inventory.common.FutureAssistance.allOf;
 import static org.folio.inventory.support.CompletableFutures.failedFuture;
 import static org.folio.inventory.support.CqlHelper.multipleRecordsCqlQuery;
 import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
@@ -49,7 +48,7 @@ import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebContext;
-import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.items.CQLQueryRequestDto;
@@ -283,7 +282,7 @@ public class ItemsApi extends AbstractInventoryResource {
 
         allFutures.add(boundWithPartsFuture);
 
-        CompletableFuture<Void> allDoneFuture = allOf(allFutures);
+        CompletableFuture<Void> allDoneFuture = CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }));
 
         allDoneFuture.thenAccept(v -> {
           log.info("GET all items: all futures completed");
@@ -787,7 +786,7 @@ public class ItemsApi extends AbstractInventoryResource {
           setBoundWithTitlesOnItem(item,
             boundWithPartsClient, routingContext));
 
-        CompletableFuture<Void> allDoneFuture = allOf(allFutures);
+        CompletableFuture<Void> allDoneFuture = CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }));
 
         allDoneFuture.thenAccept(v -> {
           try {

@@ -1,4 +1,4 @@
-package org.folio.inventory;
+package org.folio.inventory.kafka;
 
 import org.folio.kafka.services.KafkaTopic;
 

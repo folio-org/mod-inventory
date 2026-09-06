@@ -1,32 +1,22 @@
 package org.folio.inventory.consortium.handlers;
 
 import static io.vertx.core.buffer.Buffer.buffer;
-import static org.folio.HttpStatus.HTTP_INTERNAL_SERVER_ERROR;
-import static org.folio.HttpStatus.HTTP_NO_CONTENT;
-import static org.folio.HttpStatus.HTTP_OK;
-import static org.folio.inventory.consortium.handlers.MarcInstanceSharingHandlerImpl.SRS_RECORD_ID_TYPE;
-import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.INSTANCE_ID_TYPE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static support.TestUtil.buildHttpResponseWithBuffer;
 
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -46,20 +36,18 @@ import org.folio.Link;
 import org.folio.LinkingRuleDto;
 import org.folio.Record;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.api.request.PagingParameters;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.entities.SharingInstance;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.consortium.util.RestDataImportHelper;
+import org.folio.inventory.consortium.util.SourceStorageHelper;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.instances.Instance;
-import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.services.EntitiesLinksServiceImpl;
 import org.folio.inventory.storage.Storage;
-import org.folio.rest.client.SourceStorageRecordsClient;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -116,15 +104,13 @@ class MarcInstanceSharingHandlerImplTest {
     "[{\"006\":\"m     o  d        \"},{\"007\":\"cr cnu||||||||\"},{\"008\":\"060504c20069999txufr pso     0   a0eng c\"},{\"005\":\"20230915131710.4\"},{\"010\":{\"subfields\":[{\"a\":\"  2006214613\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"019\":{\"subfields\":[{\"a\":\"1058285745\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"022\":{\"subfields\":[{\"a\":\"1931-7603\"},{\"l\":\"1931-7603\"},{\"2\":\"1\"}],\"ind1\":\"0\",\"ind2\":\" \"}},{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)68188263\"},{\"z\":\"(OCoLC)1058285745\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"040\":{\"subfields\":[{\"a\":\"NSD\"},{\"b\":\"eng\"},{\"c\":\"NSD\"},{\"d\":\"WAU\"},{\"d\":\"DLC\"},{\"d\":\"HUL\"},{\"d\":\"OCLCQ\"},{\"d\":\"OCLCF\"},{\"d\":\"OCL\"},{\"d\":\"AU@\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"042\":{\"subfields\":[{\"a\":\"pcc\"},{\"a\":\"nsdp\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"049\":{\"subfields\":[{\"a\":\"ILGA\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"050\":{\"subfields\":[{\"a\":\"ISSN RECORD\"}],\"ind1\":\"1\",\"ind2\":\"0\"}},{\"050\":{\"subfields\":[{\"a\":\"QL640\"}],\"ind1\":\"1\",\"ind2\":\"4\"}},{\"082\":{\"subfields\":[{\"a\":\"598.1\"},{\"2\":\"14\"}],\"ind1\":\"1\",\"ind2\":\"0\"}},{\"130\":{\"subfields\":[{\"a\":\"Herpetological conservation and biology (Online)\"}],\"ind1\":\"0\",\"ind2\":\" \"}},{\"210\":{\"subfields\":[{\"a\":\"Herpetol. conserv. biol.\"},{\"b\":\"(Online)\"}],\"ind1\":\"0\",\"ind2\":\" \"}},{\"222\":{\"subfields\":[{\"a\":\"Herpetological conservation and biology\"},{\"b\":\"(Online)\"}],\"ind1\":\" \",\"ind2\":\"0\"}},{\"245\":{\"subfields\":[{\"a\":\"Biology!!!!!\"}],\"ind1\":\"1\",\"ind2\":\"0\"}},{\"246\":{\"subfields\":[{\"a\":\"HCBBBB\"}],\"ind1\":\"1\",\"ind2\":\"3\"}},{\"260\":{\"subfields\":[{\"a\":\"[Texarkana, Tex.] :\"},{\"b\":\"[publisher not identified],\"},{\"c\":\"[2006]\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"310\":{\"subfields\":[{\"a\":\"Semiannual\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"336\":{\"subfields\":[{\"a\":\"text\"},{\"b\":\"txt\"},{\"2\":\"rdacontent\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"337\":{\"subfields\":[{\"a\":\"computer\"},{\"b\":\"c\"},{\"2\":\"rdamedia\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"338\":{\"subfields\":[{\"a\":\"online resource\"},{\"b\":\"cr\"},{\"2\":\"rdacarrier\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"362\":{\"subfields\":[{\"a\":\"Began with: Vol. 1, issue 1 (Sept. 2006).\"}],\"ind1\":\"1\",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"Published in partnership with: Partners in Amphibian & Reptile Conservation (PARC), World Congress of Herpetology, Las Vegas Springs Preserve.\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"650\":{\"subfields\":[{\"a\":\"Herpetology\"},{\"x\":\"Conservation\"},{\"v\":\"Periodicals.\"}],\"ind1\":\" \",\"ind2\":\"0\"}},{\"650\":{\"subfields\":[{\"a\":\"Amphibians\"},{\"x\":\"Conservation\"},{\"v\":\"Periodicals.\"}],\"ind1\":\" \",\"ind2\":\"0\"}},{\"650\":{\"subfields\":[{\"a\":\"Reptiles\"},{\"x\":\"Conservation\"},{\"v\":\"Periodicals.\"}],\"ind1\":\" \",\"ind2\":\"0\"}},{\"655\":{\"subfields\":[{\"a\":\"Electronic journals.\"}],\"ind1\":\" \",\"ind2\":\"0\"}},{\"100\":{\"subfields\":[{\"a\":\"Partners in Amphibian and Reptile Conservation.\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"100\":{\"subfields\":[{\"a\":\"Partners in Amphibian and Reptile Conservation.\"},{\"9\":\"3f2923d3-6f8e-41a6-94e1-09eaf32872e0\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"710\":{\"subfields\":[{\"a\":\"Partners in Amphibian and Reptile Conservation.\"}],\"ind1\":\"2\",\"ind2\":\" \"}},{\"711\":{\"subfields\":[{\"a\":\"World Congress of Herpetology.\"}],\"ind1\":\"2\",\"ind2\":\" \"}},{\"776\":{\"subfields\":[{\"t\":\"Herpetological conservation and biology (Print)\"},{\"x\":\"2151-0733\"},{\"w\":\"(DLC)  2009202029\"},{\"w\":\"(OCoLC)427887140\"}],\"ind1\":\"1\",\"ind2\":\" \"}},{\"841\":{\"subfields\":[{\"a\":\"v.1- (1992-)\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"856\":{\"subfields\":[{\"u\":\"http://www.herpconbio.org\"},{\"z\":\"Available to Lehigh users\"}],\"ind1\":\"4\",\"ind2\":\"0\"}},{\"999\":{\"subfields\":[{\"s\":\"0ecd6e9f-f02f-47b7-8326-2743bfa3fc43\"},{\"i\":\"fea6477b-d8f5-4d22-9e86-6218407c780b\"}],\"ind1\":\"f\",\"ind2\":\"f\"}}]";
   private static final String PARSED_RECORD_FIELDS_AFTER_UNLINK_LOCAL_LINKS =
     "[{\"006\":\"m     o  d        \"},{\"007\":\"cr cnu||||||||\"},{\"008\":\"060504c20069999txufr pso     0   a0eng c\"},{\"005\":\"20230915131710.4\"},{\"010\":{\"subfields\":[{\"a\":\"  2006214613\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"019\":{\"subfields\":[{\"a\":\"1058285745\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"022\":{\"subfields\":[{\"a\":\"1931-7603\"},{\"l\":\"1931-7603\"},{\"2\":\"1\"}],\"ind1\":\"0\",\"ind2\":\" \"}},{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)68188263\"},{\"z\":\"(OCoLC)1058285745\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"040\":{\"subfields\":[{\"a\":\"NSD\"},{\"b\":\"eng\"},{\"c\":\"NSD\"},{\"d\":\"WAU\"},{\"d\":\"DLC\"},{\"d\":\"HUL\"},{\"d\":\"OCLCQ\"},{\"d\":\"OCLCF\"},{\"d\":\"OCL\"},{\"d\":\"AU@\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"042\":{\"subfields\":[{\"a\":\"pcc\"},{\"a\":\"nsdp\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"049\":{\"subfields\":[{\"a\":\"ILGA\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"050\":{\"subfields\":[{\"a\":\"ISSN RECORD\"}],\"ind1\":\"1\",\"ind2\":\"0\"}},{\"050\":{\"subfields\":[{\"a\":\"QL640\"}],\"ind1\":\"1\",\"ind2\":\"4\"}},{\"082\":{\"subfields\":[{\"a\":\"598.1\"},{\"2\":\"14\"}],\"ind1\":\"1\",\"ind2\":\"0\"}},{\"130\":{\"subfields\":[{\"a\":\"Herpetological conservation and biology (Online)\"}],\"ind1\":\"0\",\"ind2\":\" \"}},{\"210\":{\"subfields\":[{\"a\":\"Herpetol. conserv. biol.\"},{\"b\":\"(Online)\"}],\"ind1\":\"0\",\"ind2\":\" \"}},{\"222\":{\"subfields\":[{\"a\":\"Herpetological conservation and biology\"},{\"b\":\"(Online)\"}],\"ind1\":\" \",\"ind2\":\"0\"}},{\"245\":{\"subfields\":[{\"a\":\"Biology!!!!!\"}],\"ind1\":\"1\",\"ind2\":\"0\"}},{\"246\":{\"subfields\":[{\"a\":\"HCBBBB\"}],\"ind1\":\"1\",\"ind2\":\"3\"}},{\"260\":{\"subfields\":[{\"a\":\"[Texarkana, Tex.] :\"},{\"b\":\"[publisher not identified],\"},{\"c\":\"[2006]\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"310\":{\"subfields\":[{\"a\":\"Semiannual\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"336\":{\"subfields\":[{\"a\":\"text\"},{\"b\":\"txt\"},{\"2\":\"rdacontent\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"337\":{\"subfields\":[{\"a\":\"computer\"},{\"b\":\"c\"},{\"2\":\"rdamedia\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"338\":{\"subfields\":[{\"a\":\"online resource\"},{\"b\":\"cr\"},{\"2\":\"rdacarrier\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"362\":{\"subfields\":[{\"a\":\"Began with: Vol. 1, issue 1 (Sept. 2006).\"}],\"ind1\":\"1\",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"Published in partnership with: Partners in Amphibian & Reptile Conservation (PARC), World Congress of Herpetology, Las Vegas Springs Preserve.\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"650\":{\"subfields\":[{\"a\":\"Herpetology\"},{\"x\":\"Conservation\"},{\"v\":\"Periodicals.\"}],\"ind1\":\" \",\"ind2\":\"0\"}},{\"650\":{\"subfields\":[{\"a\":\"Amphibians\"},{\"x\":\"Conservation\"},{\"v\":\"Periodicals.\"}],\"ind1\":\" \",\"ind2\":\"0\"}},{\"650\":{\"subfields\":[{\"a\":\"Reptiles\"},{\"x\":\"Conservation\"},{\"v\":\"Periodicals.\"}],\"ind1\":\" \",\"ind2\":\"0\"}},{\"655\":{\"subfields\":[{\"a\":\"Electronic journals.\"}],\"ind1\":\" \",\"ind2\":\"0\"}},{\"100\":{\"subfields\":[{\"a\":\"Partners in Amphibian and Reptile Conservation.\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"710\":{\"subfields\":[{\"a\":\"Partners in Amphibian and Reptile Conservation.\"}],\"ind1\":\"2\",\"ind2\":\" \"}},{\"711\":{\"subfields\":[{\"a\":\"World Congress of Herpetology.\"}],\"ind1\":\"2\",\"ind2\":\" \"}},{\"776\":{\"subfields\":[{\"t\":\"Herpetological conservation and biology (Print)\"},{\"x\":\"2151-0733\"},{\"w\":\"(DLC)  2009202029\"},{\"w\":\"(OCoLC)427887140\"}],\"ind1\":\"1\",\"ind2\":\" \"}},{\"841\":{\"subfields\":[{\"a\":\"v.1- (1992-)\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"856\":{\"subfields\":[{\"u\":\"http://www.herpconbio.org\"},{\"z\":\"Available to Lehigh users\"}],\"ind1\":\"4\",\"ind2\":\"0\"}},{\"999\":{\"subfields\":[{\"s\":\"0ecd6e9f-f02f-47b7-8326-2743bfa3fc43\"},{\"i\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\"}],\"ind1\":\"f\",\"ind2\":\"f\"}}]";
-  private static Vertx vertx;
-  private static HttpClient httpClient;
   private final HttpResponse<Buffer> sourceStorageRecordsResponseBuffer =
     buildHttpResponseWithBuffer(Buffer.buffer(RECORD_JSON), HttpStatus.HTTP_OK);
   private MarcInstanceSharingHandlerImpl marcHandler;
   @Mock
   private InstanceOperationsHelper instanceOperationsHelper;
   @Mock
-  private SourceStorageRecordsClient sourceStorageClient;
+  private SourceStorageHelper sourceStorageHelper;
   @Mock
   private RestDataImportHelper restDataImportHelper;
   @Mock
@@ -137,8 +123,6 @@ class MarcInstanceSharingHandlerImplTest {
   private SourceTenantProvider sourceTenantProvider;
   @Mock
   private TargetTenantProvider targetTenantProvider;
-  @Mock
-  private HttpResponse<Buffer> httpResponse;
 
   private Instance instance;
   private SharingInstance sharingInstanceMetadata;
@@ -146,12 +130,6 @@ class MarcInstanceSharingHandlerImplTest {
   private Record bibRecord;
   private Authority localAuthority;
   private Authority sharedAuthority;
-
-  @BeforeAll
-  static void setUpClass() {
-    vertx = Vertx.vertx();
-    httpClient = vertx.createHttpClient();
-  }
 
   @BeforeEach
   void setUp() {
@@ -185,13 +163,14 @@ class MarcInstanceSharingHandlerImplTest {
   @Test
   void publishInstanceTest(VertxTestContext testContext) {
     //given
-    doReturn(Future.succeededFuture(bibRecord)).when(marcHandler).getSourceMARCByInstanceId(any(), any(), any());
+    when(sourceStorageHelper.getSourceRecordByInstanceId(any(), any(), any()))
+      .thenReturn(Future.succeededFuture(bibRecord));
 
     when(restDataImportHelper.importMarcRecord(any(), any(), any()))
       .thenReturn(Future.succeededFuture("COMMITTED"));
 
-    doReturn(Future.succeededFuture(INSTANCE_ID_2)).when(marcHandler)
-      .deleteSourceRecordByRecordId(any(), any(), any(), any());
+    when(sourceStorageHelper.deleteSourceRecordByRecordId(any(), any(), any(), any()))
+      .thenReturn(Future.succeededFuture(INSTANCE_ID_2));
     when(instance.getHrid()).thenReturn(TARGET_INSTANCE_HRID);
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
     when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
@@ -208,7 +187,8 @@ class MarcInstanceSharingHandlerImplTest {
       var updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
       verify(instanceOperationsHelper).updateInstance(updatedInstanceCaptor.capture(),
         argThat(p -> MEMBER_TENANT.equals(p.tenantId())));
-      verify(marcHandler, times(0)).updateSourceRecordSuppressFromDiscoveryByInstanceId(any(), anyBoolean(), any());
+      verify(sourceStorageHelper, times(0))
+        .updateSourceRecordSuppressFromDiscovery(any(), anyBoolean(), any(), any());
       var updatedInstance = updatedInstanceCaptor.getValue();
       assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
       assertEquals(TARGET_INSTANCE_HRID, updatedInstance.getHrid());
@@ -274,8 +254,8 @@ class MarcInstanceSharingHandlerImplTest {
     var recordWithLinkedAuthorities =
       buildHttpResponseWithBuffer(buffer(RECORD_JSON_WITH_LOCAL_LINKED_AUTHORITIES), HttpStatus.HTTP_OK)
         .bodyAsJson(Record.class);
-    doReturn(Future.succeededFuture(recordWithLinkedAuthorities)).when(marcHandler)
-      .getSourceMARCByInstanceId(any(), any(), any());
+    when(sourceStorageHelper.getSourceRecordByInstanceId(any(), any(), any()))
+      .thenReturn(Future.succeededFuture(recordWithLinkedAuthorities));
 
     doAnswer(invocationOnMock -> {
       var result = new MultipleRecords<>(List.of(localAuthority), 1);
@@ -524,142 +504,6 @@ class MarcInstanceSharingHandlerImplTest {
   }
 
   @Test
-  void getSourceMARCByInstanceIdSuccessTest() {
-    var sourceTenant = "consortium";
-
-    var mockRecord = new Record();
-    mockRecord.setId(INSTANCE_ID_2);
-
-    when(sourceStorageClient.getSourceStorageRecordsFormattedById(any(), any()))
-      .thenReturn(Future.succeededFuture(httpResponse));
-
-    when(httpResponse.statusCode()).thenReturn(HttpStatus.HTTP_OK.toInt());
-    when(httpResponse.bodyAsString()).thenReturn("{\"id\":\"" + INSTANCE_ID_2 + "\"}");
-    when(httpResponse.bodyAsJson(Record.class)).thenReturn(mockRecord);
-
-    var handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
-    handler.getSourceMARCByInstanceId(INSTANCE_ID_2, sourceTenant, sourceStorageClient).onComplete(result -> {
-      var resultRecord = result.result();
-      assertEquals(INSTANCE_ID_2, resultRecord.getId());
-    });
-  }
-
-  @Test
-  void getSourceMARCByInstanceIdFailTest() {
-    var sourceTenant = "sourceTenant";
-
-    var mockRecord = new Record();
-    mockRecord.setId(INSTANCE_ID_2);
-
-    when(sourceStorageClient.getSourceStorageRecordsFormattedById(any(), any()))
-      .thenReturn(Future.failedFuture(new NotFoundException("Not found")));
-
-    when(httpResponse.statusCode()).thenReturn(HttpStatus.HTTP_OK.toInt());
-    when(httpResponse.bodyAsString()).thenReturn("{\"id\":\"" + INSTANCE_ID_2 + "\"}");
-    when(httpResponse.bodyAsJson(Record.class)).thenReturn(mockRecord);
-
-    var handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
-    handler.getSourceMARCByInstanceId(INSTANCE_ID_2, sourceTenant, sourceStorageClient)
-      .onComplete(result -> assertTrue(result.failed()));
-  }
-
-  @Test
-  void deleteSourceRecordByInstanceIdSuccessTest() {
-
-    var recordId = "991f37c8-cd22-4db7-9543-a4ec68735e95";
-    var tenant = "sourceTenant";
-
-    when(httpResponse.statusCode()).thenReturn(HTTP_NO_CONTENT.toInt());
-    when(sourceStorageClient.deleteSourceStorageRecordsById(any(), any()))
-      .thenReturn(Future.succeededFuture(httpResponse));
-
-    var handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
-    handler.deleteSourceRecordByRecordId(recordId, INSTANCE_ID_2, tenant, sourceStorageClient)
-      .onComplete(result -> assertEquals(INSTANCE_ID_2, result.result()));
-
-    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, SRS_RECORD_ID_TYPE);
-  }
-
-  @Test
-  void deleteSourceRecordByInstanceIdFailedTest() {
-
-    var instanceId = "991f37c8-cd22-4db7-9543-a4ec68735e95";
-    var recordId = "fea6477b-d8f5-4d22-9e86-6218407c780b";
-    var tenant = "sourceTenant";
-
-    when(sourceStorageClient.deleteSourceStorageRecordsById(any(), any()))
-      .thenReturn(Future.failedFuture(new NotFoundException("Not found")));
-
-    var handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
-    handler.deleteSourceRecordByRecordId(recordId, instanceId, tenant, sourceStorageClient)
-      .onComplete(result -> assertTrue(result.failed()));
-
-    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, SRS_RECORD_ID_TYPE);
-  }
-
-  @Test
-  void deleteSourceRecordByInstanceIdFailedTestWhenResponseStatusIsNotNoContent() {
-    var instanceId = "991f37c8-cd22-4db7-9543-a4ec68735e95";
-    var recordId = "fea6477b-d8f5-4d22-9e86-6218407c780b";
-    var tenant = "sourceTenant";
-
-    when(httpResponse.statusCode()).thenReturn(HTTP_INTERNAL_SERVER_ERROR.toInt());
-    when(sourceStorageClient.deleteSourceStorageRecordsById(any(), any()))
-      .thenReturn(Future.succeededFuture(httpResponse));
-
-    var handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
-    handler.deleteSourceRecordByRecordId(recordId, instanceId, tenant, sourceStorageClient)
-      .onComplete(result -> assertTrue(result.failed()));
-
-    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, SRS_RECORD_ID_TYPE);
-  }
-
-  @Test
-  void updateSourceRecordSuppressFromDiscoveryByInstanceIdSuccessTest() {
-    when(httpResponse.statusCode()).thenReturn(HTTP_OK.toInt());
-    when(sourceStorageClient.putSourceStorageRecordsSuppressFromDiscoveryById(any(), any(), anyBoolean()))
-      .thenReturn(Future.succeededFuture(httpResponse));
-
-    var handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
-    handler.updateSourceRecordSuppressFromDiscoveryByInstanceId(INSTANCE_ID_2, true, sourceStorageClient)
-      .onComplete(result -> assertEquals(INSTANCE_ID_2, result.result()));
-
-    verify(sourceStorageClient, times(1)).putSourceStorageRecordsSuppressFromDiscoveryById(INSTANCE_ID_2,
-      INSTANCE_ID_TYPE, true);
-  }
-
-  @Test
-  void updateSourceRecordSuppressFromDiscoveryByInstanceIdFailedTest() {
-    var instanceId = "991f37c8-cd22-4db7-9543-a4ec68735e95";
-
-    when(sourceStorageClient.putSourceStorageRecordsSuppressFromDiscoveryById(any(), any(), anyBoolean()))
-      .thenReturn(Future.failedFuture(new NotFoundException("Not found")));
-
-    var handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
-    handler.updateSourceRecordSuppressFromDiscoveryByInstanceId(instanceId, true, sourceStorageClient)
-      .onComplete(result -> assertTrue(result.failed()));
-
-    verify(sourceStorageClient, times(1)).putSourceStorageRecordsSuppressFromDiscoveryById(instanceId, INSTANCE_ID_TYPE,
-      true);
-  }
-
-  @Test
-  void updateSourceRecordSuppressFromDiscoveryByInstanceIdFailedTestWhenResponseStatusIsNotOk() {
-    var instanceId = "991f37c8-cd22-4db7-9543-a4ec68735e95";
-
-    when(httpResponse.statusCode()).thenReturn(HTTP_INTERNAL_SERVER_ERROR.toInt());
-    when(sourceStorageClient.putSourceStorageRecordsSuppressFromDiscoveryById(any(), any(), anyBoolean()))
-      .thenReturn(Future.succeededFuture(httpResponse));
-
-    var handler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, null, vertx, httpClient);
-    handler.updateSourceRecordSuppressFromDiscoveryByInstanceId(instanceId, true, sourceStorageClient)
-      .onComplete(result -> assertTrue(result.failed()));
-
-    verify(sourceStorageClient, times(1)).putSourceStorageRecordsSuppressFromDiscoveryById(instanceId, INSTANCE_ID_TYPE,
-      true);
-  }
-
-  @Test
   void shouldPopulateTargetInstanceWithNonMarcControlledFields(VertxTestContext testContext) {
     //given
     var instanceId = UUID.randomUUID().toString();
@@ -678,8 +522,8 @@ class MarcInstanceSharingHandlerImplTest {
     var importedTargetInstance =
       new Instance(instanceId, 1, targetInstanceHrid, "MARC", "testTitle", UUID.randomUUID().toString());
 
-    doReturn(Future.succeededFuture(instanceId)).when(marcHandler)
-      .updateSourceRecordSuppressFromDiscoveryByInstanceId(any(), anyBoolean(), any());
+    when(sourceStorageHelper.updateSourceRecordSuppressFromDiscovery(any(), anyBoolean(), any(), any()))
+      .thenReturn(Future.succeededFuture(instanceId));
     when(restDataImportHelper.importMarcRecord(any(), any(), any())).thenReturn(Future.succeededFuture("COMMITTED"));
     when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(
       Future.succeededFuture(importedTargetInstance));
@@ -697,8 +541,8 @@ class MarcInstanceSharingHandlerImplTest {
       var updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
       verify(instanceOperationsHelper).updateInstance(updatedInstanceCaptor.capture(),
         argThat(p -> CONSORTIUM_TENANT.equals(p.tenantId())));
-      verify(marcHandler, times(1)).updateSourceRecordSuppressFromDiscoveryByInstanceId(instanceId, true,
-        sourceStorageClient);
+      verify(sourceStorageHelper, times(1))
+        .updateSourceRecordSuppressFromDiscovery(instanceId, true, CONSORTIUM_TENANT, kafkaHeaders);
       var targetInstanceWithNonMarcData = updatedInstanceCaptor.getValue();
       assertEquals("MARC", targetInstanceWithNonMarcData.getSource());
       assertEquals(targetInstanceHrid, targetInstanceWithNonMarcData.getHrid());
@@ -717,19 +561,17 @@ class MarcInstanceSharingHandlerImplTest {
   }
 
   private void setupMarcHandler() {
-    marcHandler = spy(new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, vertx, httpClient));
-    setField(marcHandler, "restDataImportHelper", restDataImportHelper);
-    setField(marcHandler, "entitiesLinksService", entitiesLinksService);
-    doReturn(sourceStorageClient).when(marcHandler).getSourceStorageRecordsClient(anyString(), eq(kafkaHeaders));
+    marcHandler = new MarcInstanceSharingHandlerImpl(instanceOperationsHelper, storage, restDataImportHelper,
+      entitiesLinksService, sourceStorageHelper);
 
     var recordWithLinkedAuthorities =
       buildHttpResponseWithBuffer(Buffer.buffer(RECORD_JSON_WITH_LINKED_AUTHORITIES), HttpStatus.HTTP_OK)
         .bodyAsJson(Record.class);
     bibRecord = sourceStorageRecordsResponseBuffer.bodyAsJson(Record.class);
-    doReturn(Future.succeededFuture(recordWithLinkedAuthorities)).when(marcHandler)
-      .getSourceMARCByInstanceId(any(), any(), any());
-    doReturn(Future.succeededFuture(INSTANCE_ID_1)).when(marcHandler)
-      .deleteSourceRecordByRecordId(any(), any(), any(), any());
+    when(sourceStorageHelper.getSourceRecordByInstanceId(any(), any(), any()))
+      .thenReturn(Future.succeededFuture(recordWithLinkedAuthorities));
+    when(sourceStorageHelper.deleteSourceRecordByRecordId(any(), any(), any(), any()))
+      .thenReturn(Future.succeededFuture(INSTANCE_ID_1));
   }
 
   private void mockSuccessRetrievingAuthorities() throws UnsupportedEncodingException {
@@ -774,15 +616,5 @@ class MarcInstanceSharingHandlerImplTest {
       Mockito.argThat(sharedAuthorityLinks -> sharedAuthorityLinks.size() == 1
                                               && sharedAuthorityLinks.getFirst().getAuthorityId()
                                                 .equals(AUTHORITY_ID_2)));
-  }
-
-  private static void setField(Object instance, String fieldName, Object fieldValue) {
-    try {
-      var field = instance.getClass().getDeclaredField(fieldName);
-      field.setAccessible(true);
-      field.set(instance, fieldValue);
-    } catch (NoSuchFieldException | IllegalAccessException e) {
-      throw new RuntimeException("Failed to set field value using reflection", e);
-    }
   }
 }
