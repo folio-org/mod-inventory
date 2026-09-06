@@ -5,22 +5,13 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import io.vertx.core.json.JsonObject;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -34,14 +25,8 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.processing.util.MarcRecordNormalizer;
 import org.folio.rest.jaxrs.model.MarcFieldProtectionSetting;
-import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 import org.marc4j.MarcException;
-import org.marc4j.MarcJsonReader;
-import org.marc4j.MarcJsonWriter;
-import org.marc4j.MarcReader;
-import org.marc4j.MarcStreamWriter;
-import org.marc4j.MarcWriter;
 import org.marc4j.marc.ControlField;
 import org.marc4j.marc.DataField;
 import org.marc4j.marc.MarcFactory;
@@ -72,23 +57,12 @@ public final class AdditionalFieldsUtil {
   private static final CacheLoader<String, org.marc4j.marc.Record> parsedRecordContentCacheLoader;
   private static final LoadingCache<String, org.marc4j.marc.Record> parsedRecordContentCache;
   private static final String OCLC_PREFIX = "(OCoLC)";
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final int MAX_CACHE_SIZE = 2000;
 
   static {
     // this function is executed when creating a new item to be saved in the cache.
     // In this case, this is a MARC4J Record
-    parsedRecordContentCacheLoader =
-      parsedRecordContent -> {
-        MarcJsonReader marcJsonReader =
-          new MarcJsonReader(
-            new ByteArrayInputStream(
-              parsedRecordContent.getBytes(StandardCharsets.UTF_8)));
-        if (marcJsonReader.hasNext()) {
-          return marcJsonReader.next();
-        }
-        return null;
-      };
+    parsedRecordContentCacheLoader = content -> MarcContentCodec.parse(content).orElse(null);
 
     parsedRecordContentCache =
       Caffeine.newBuilder()
@@ -489,51 +463,12 @@ public final class AdditionalFieldsUtil {
   public static String reorderMarcRecordFields(String sourceOrderContent, String systemOrderContent,
                                                String recordId) {
     try {
-      var parsedContent = OBJECT_MAPPER.readTree(systemOrderContent);
-      var fieldsArrayNode = (ArrayNode) parsedContent.path(FIELDS);
-
-      var nodes = toNodeList(fieldsArrayNode);
-      var nodes00X = removeAndGetNodesByTagPrefix(nodes, TAG_00X_PREFIX);
-      var sourceOrderTags = getSourceFields(sourceOrderContent);
-      var reorderedFields = OBJECT_MAPPER.createArrayNode();
-
-      var node001 = removeAndGetNodeByTag(nodes00X, TAG_001);
-      if (node001 != null && !node001.isEmpty()) {
-        reorderedFields.add(node001);
-      }
-
-      var node005 = removeAndGetNodeByTag(nodes00X, TAG_005);
-      if (node005 != null && !node005.isEmpty()) {
-        reorderedFields.add(node005);
-      }
-
-      for (var tag : sourceOrderTags) {
-        var nodeTag = tag;
-        //loop will add system generated fields that are absent in initial record, preserving their order, f.e. 035
-        do {
-          var node = tag.startsWith(TAG_00X_PREFIX)
-                     ? removeAndGetNodeByTag(nodes00X, tag)
-                     : removeFirstNode(nodes);
-          if (node != null && !node.isEmpty()) {
-            nodeTag = getTagFromNode(node);
-            reorderedFields.add(node);
-          }
-        } while (!tag.equals(nodeTag) && !nodes.isEmpty());
-      }
-
-      reorderedFields.addAll(nodes);
-
-      ((ObjectNode) parsedContent).set(FIELDS, reorderedFields);
-      return parsedContent.toString();
+      return MarcJsonFieldOrderer.reorderFields(sourceOrderContent, systemOrderContent);
     } catch (Exception e) {
       LOGGER.error("reorderMarcRecordFields:: Failed to reorder Marc record fields for record '{}', falling back "
         + "to the un-reordered system field order: {}", recordId, e.getMessage(), e);
       return systemOrderContent;
     }
-  }
-
-  private static JsonNode removeFirstNode(List<JsonNode> nodes) {
-    return nodes.isEmpty() ? null : nodes.removeFirst();
   }
 
   private static boolean has035SubfieldWithOclcPrefix(org.marc4j.marc.Record marcRecord) {
@@ -553,25 +488,18 @@ public final class AdditionalFieldsUtil {
    * @return true if the leader was recalculated and the record content was updated, false if an error occurred
    */
   private static boolean recalculateLeaderAndParsedRecord(Record recordForUpdate, org.marc4j.marc.Record marcRecord) {
-    try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+    try {
       // marcRecord has already been mutated in place by the caller. The cache entry keyed by the record's
       // current (pre-mutation) content string now points at an object whose fields no longer match that key -
       // invalidate it before anyone else can observe the stale mapping, and before we re-key it below.
-      String staleContentKey = normalizeContent(recordForUpdate.getParsedRecord().getContent());
+      String staleContentKey = MarcContentCodec.canonicalize(recordForUpdate.getParsedRecord().getContent());
       parsedRecordContentCache.invalidate(staleContentKey);
-      MarcWriter streamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
-      MarcWriter jsonWriter = new MarcJsonWriter(os);
-      try (AutoCloseable closeStreamWriter = streamWriter::close; AutoCloseable closeJsonWriter = jsonWriter::close) {
-        // use stream writer to recalculate leader
-        streamWriter.write(marcRecord);
-        jsonWriter.write(marcRecord);
 
-        String parsedContentString = new JsonObject(os.toString()).encode();
-        // save parsed content string to cache then set it on the record
-        parsedRecordContentCache.put(parsedContentString, marcRecord);
-        recordForUpdate.setParsedRecord(recordForUpdate.getParsedRecord().withContent(parsedContentString));
-        return true;
-      }
+      String parsedContentString = MarcContentCodec.serializeWithRecalculatedLeader(marcRecord);
+      // save parsed content string to cache then set it on the record
+      parsedRecordContentCache.put(parsedContentString, marcRecord);
+      recordForUpdate.setParsedRecord(recordForUpdate.getParsedRecord().withContent(parsedContentString));
+      return true;
     } catch (Exception e) {
       if (isOversizedRecordException(e)) {
         LOGGER.warn("recalculateLeaderAndParsedRecord:: Record {} exceeds the MARC21 99999-byte length limit "
@@ -592,11 +520,6 @@ public final class AdditionalFieldsUtil {
    */
   private static boolean isOversizedRecordException(Exception e) {
     return e instanceof MarcException && e.getMessage() != null && e.getMessage().contains("99999 bytes");
-  }
-
-  private static MarcReader buildMarcReader(Record srcRecord) {
-    String content = normalizeContent(srcRecord.getParsedRecord().getContent());
-    return new MarcJsonReader(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
   }
 
   /**
@@ -647,15 +570,13 @@ public final class AdditionalFieldsUtil {
     if (srcRecord != null && srcRecord.getParsedRecord() != null && isNotBlank(
       srcRecord.getParsedRecord().getContent().toString())) {
       try {
-        var content = normalizeContent(srcRecord.getParsedRecord().getContent());
+        var content = MarcContentCodec.canonicalize(srcRecord.getParsedRecord().getContent());
         return parsedRecordContentCache.get(content);
       } catch (Exception e) {
         LOGGER.warn("computeMarcRecord:: Error during the transformation to marc record", e);
         try {
-          MarcReader reader = buildMarcReader(srcRecord);
-          if (reader.hasNext()) {
-            return reader.next();
-          }
+          String fallbackContent = MarcContentCodec.canonicalize(srcRecord.getParsedRecord().getContent());
+          return MarcContentCodec.parse(fallbackContent).orElse(null);
         } catch (Exception ex) {
           LOGGER.warn("computeMarcRecord:: Error during the building of MarcReader", ex);
         }
@@ -663,18 +584,6 @@ public final class AdditionalFieldsUtil {
       }
     }
     return null;
-  }
-
-  /**
-   * Canonicalizes parsed record content (as held by {@link ParsedRecord#getContent()}, either a {@link String} or a
-   * structured type such as {@link JsonObject}/{@code Map}) into a single canonical JSON string, so that content
-   * differing only in whitespace or key order produces the same cache key.
-   *
-   * @param content parsed record content
-   * @return canonicalized content string
-   */
-  private static String normalizeContent(Object content) {
-    return (content instanceof String contentStr ? new JsonObject(contentStr) : JsonObject.mapFrom(content)).encode();
   }
 
   private static boolean isValidIdAndHrid(String id, String hrid, String externalId, String externalHrid) {
@@ -685,70 +594,4 @@ public final class AdditionalFieldsUtil {
     return srcRecord != null ? srcRecord.getId() : "";
   }
 
-  private static List<JsonNode> toNodeList(ArrayNode fieldsArrayNode) {
-    var nodes = new LinkedList<JsonNode>();
-    for (var node : fieldsArrayNode) {
-      nodes.add(node);
-    }
-    return nodes;
-  }
-
-  private static JsonNode removeAndGetNodeByTag(List<JsonNode> nodes, String tag) {
-    var toRemove = nodes.stream()
-      .filter(node -> getTagFromNode(node).equals(tag))
-      .findFirst();
-    toRemove.ifPresent(nodes::remove);
-    return toRemove.orElse(null);
-  }
-
-  private static List<JsonNode> removeAndGetNodesByTagPrefix(List<JsonNode> nodes, String prefix) {
-    var startsWithNodes = new LinkedList<JsonNode>();
-    for (JsonNode node : nodes) {
-      var nodeTag = getTagFromNode(node);
-      if (nodeTag.startsWith(prefix)) {
-        startsWithNodes.add(node);
-      }
-    }
-
-    nodes.removeAll(startsWithNodes);
-    return startsWithNodes;
-  }
-
-  private static String getTagFromNode(JsonNode node) {
-    // an empty field node ({}) has no tag and must never structurally match a real tag lookup, so callers
-    // (removeAndGetNodeByTag's equality check, removeAndGetNodesByTagPrefix's startsWith check, and the
-    // getSourceFields loop) all correctly treat "" as "never matches" for well-formed input.
-    var fieldNames = node.fieldNames();
-    return fieldNames.hasNext() ? fieldNames.next() : "";
-  }
-
-  private static List<String> getSourceFields(String source) {
-    var sourceFields = new ArrayList<String>();
-    var remainingFields = new ArrayList<String>();
-    var has001 = false;
-    try {
-      var sourceJson = OBJECT_MAPPER.readTree(source);
-      var fieldsNode = sourceJson.get(FIELDS);
-
-      for (JsonNode fieldNode : fieldsNode) {
-        var tag = getTagFromNode(fieldNode);
-        if (tag.equals(TAG_001)) {
-          sourceFields.addFirst(tag);
-          has001 = true;
-        } else if (tag.equals(TAG_005)) {
-          if (!has001) {
-            sourceFields.addFirst(tag);
-          } else {
-            sourceFields.add(1, tag);
-          }
-        } else {
-          remainingFields.add(tag);
-        }
-      }
-      sourceFields.addAll(remainingFields);
-    } catch (Exception e) {
-      LOGGER.error("An error occurred while parsing source JSON: {}", e.getMessage(), e);
-    }
-    return sourceFields;
-  }
 }

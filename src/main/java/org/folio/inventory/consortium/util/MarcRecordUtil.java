@@ -4,19 +4,16 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.Record;
+import org.folio.inventory.dataimport.util.MarcContentCodec;
 import org.folio.inventory.dataimport.util.MarcFieldEditor;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.marc4j.MarcException;
-import org.marc4j.MarcJsonReader;
 import org.marc4j.MarcJsonWriter;
-import org.marc4j.MarcReader;
 import org.marc4j.MarcStreamWriter;
 import org.marc4j.MarcWriter;
 
@@ -69,18 +66,9 @@ public final class MarcRecordUtil {
     if (parsedMarcRecord != null) {
       boolean fieldsRemoved = MarcFieldEditor.removeAllFieldsWithTag(parsedMarcRecord, fieldTag);
       if (fieldsRemoved) {
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-          MarcWriter marcStreamWriter = new MarcStreamWriter(new ByteArrayOutputStream());
-          MarcWriter marcJsonWriter = new MarcJsonWriter(baos);
-          try (AutoCloseable closeStreamWriter = marcStreamWriter::close;
-               AutoCloseable closeJsonWriter = marcJsonWriter::close) {
-            // use stream writer to recalculate leader
-            marcStreamWriter.write(parsedMarcRecord);
-            marcJsonWriter.write(parsedMarcRecord);
-
-            String updatedContent = new JsonObject(baos.toString()).encode();
-            marcRecord.getParsedRecord().setContent(updatedContent);
-          }
+        try {
+          String updatedContent = MarcContentCodec.serializeWithRecalculatedLeader(parsedMarcRecord);
+          marcRecord.getParsedRecord().setContent(updatedContent);
         } catch (Exception e) {
           if (isOversizedRecordException(e)) {
             LOGGER.warn("removeFieldFromMarcRecord:: Record {} exceeds the MARC21 99999-byte length limit and "
@@ -129,14 +117,12 @@ public final class MarcRecordUtil {
         && isNotBlank(record.getParsedRecord().getContent().toString())) {
       try {
         var content = normalizeContent(record.getParsedRecord().getContent());
-        return getMarcRecordFromParsedContent(content);
+        return MarcContentCodec.parse(content).orElse(null);
       } catch (Exception e) {
         LOGGER.warn("computeMarcRecord:: Error during the transformation to marc record", e);
         try {
-          MarcReader reader = buildMarcReader(record);
-          if (reader.hasNext()) {
-            return reader.next();
-          }
+          String fallbackContent = ParsedRecordUtil.normalize(record.getParsedRecord().getContent()).encode();
+          return MarcContentCodec.parse(fallbackContent).orElse(null);
         } catch (Exception ex) {
           LOGGER.warn("computeMarcRecord:: Error during the building of MarcReader", ex);
         }
@@ -144,20 +130,6 @@ public final class MarcRecordUtil {
       }
     }
     return null;
-  }
-
-  private static org.marc4j.marc.Record getMarcRecordFromParsedContent(String parsedRecordContent) {
-    MarcJsonReader marcJsonReader =
-      new MarcJsonReader(new ByteArrayInputStream(parsedRecordContent.getBytes(StandardCharsets.UTF_8)));
-    if (marcJsonReader.hasNext()) {
-      return marcJsonReader.next();
-    }
-    return null;
-  }
-
-  private static MarcReader buildMarcReader(Record record) {
-    String content = ParsedRecordUtil.normalize(record.getParsedRecord().getContent()).encode();
-    return new MarcJsonReader(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
   }
 
   private static String normalizeContent(Object o) {
