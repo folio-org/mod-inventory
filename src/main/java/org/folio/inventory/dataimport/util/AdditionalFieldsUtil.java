@@ -2,13 +2,8 @@ package org.folio.inventory.dataimport.util;
 
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
-import com.github.benmanes.caffeine.cache.CacheLoader;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import com.github.benmanes.caffeine.cache.LoadingCache;
-import io.vertx.core.json.JsonObject;
 import java.time.Clock;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -26,15 +21,20 @@ import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingPa
 import org.folio.processing.util.MarcRecordNormalizer;
 import org.folio.rest.jaxrs.model.MarcFieldProtectionSetting;
 import org.folio.rest.jaxrs.model.Record;
-import org.marc4j.MarcException;
 import org.marc4j.marc.ControlField;
 import org.marc4j.marc.DataField;
-import org.marc4j.marc.MarcFactory;
 import org.marc4j.marc.VariableField;
-import org.marc4j.marc.impl.Verifier;
 
 /**
- * Util to work with additional fields
+ * Util to work with additional fields.
+ *
+ * <p>Thin facade over {@link MarcRecordEditor} (the shared parse -&gt; mutate -&gt; write-back logic, including
+ * the parsed-record-content cache) via a {@link JaxrsRecordHolder} adapter, plus the bits of logic that cannot
+ * move into the FOLIO-type-agnostic {@link MarcRecordEditor}: {@link #isFieldsFillingNeeded} (needs
+ * {@link Instance}), {@link #updateLatestTransactionDate} (needs {@link MappingParameters}/{@link Clock}),
+ * {@link #normalize035} (needs {@link MarcRecordNormalizer}), and the pure compositions
+ * ({@link #move001To035}, {@link #fill001FieldInMarcRecord}, {@link #fillHrIdFieldInMarcRecord},
+ * {@link #remove035WithActualHrId}) that just call the named operations below in sequence.
  */
 public final class AdditionalFieldsUtil {
 
@@ -54,30 +54,13 @@ public final class AdditionalFieldsUtil {
   private static final String TAG_003 = "003";
   private static final char TAG_035_IND = ' ';
   private static final String ANY_STRING = "*";
-  private static final CacheLoader<String, org.marc4j.marc.Record> parsedRecordContentCacheLoader;
-  private static final LoadingCache<String, org.marc4j.marc.Record> parsedRecordContentCache;
   private static final String OCLC_PREFIX = "(OCoLC)";
-  private static final int MAX_CACHE_SIZE = 2000;
-
-  static {
-    // this function is executed when creating a new item to be saved in the cache.
-    // In this case, this is a MARC4J Record
-    parsedRecordContentCacheLoader = content -> MarcContentCodec.parse(content).orElse(null);
-
-    parsedRecordContentCache =
-      Caffeine.newBuilder()
-        .maximumSize(MAX_CACHE_SIZE)
-        // strong (equals/hashCode-based) keys: the cache is content-addressed, so structurally-equal
-        // parsed content must map to the same entry regardless of String instance identity.
-        .recordStats()
-        .build(parsedRecordContentCacheLoader);
-  }
 
   private AdditionalFieldsUtil() {
   }
 
   public static AdditionalFieldsUtilCacheStats getCacheStats() {
-    return AdditionalFieldsUtilCacheStats.fromCaffeine(parsedRecordContentCache.stats());
+    return MarcRecordEditor.getCacheStats();
   }
 
   /**
@@ -90,21 +73,7 @@ public final class AdditionalFieldsUtil {
    * @return true if succeeded, false otherwise
    */
   public static boolean addFieldToMarcRecord(Record recordForUpdate, String field, char subfield, String value) {
-    boolean result = false;
-    try {
-      if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null
-          && recordForUpdate.getParsedRecord().getContent() != null) {
-        org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
-        if (marcRecord != null) {
-          MarcFieldEditor.addSubfieldToField(marcRecord, field, subfield, value);
-          result = recalculateLeaderAndParsedRecord(recordForUpdate, marcRecord);
-        }
-      }
-    } catch (Exception e) {
-      LOGGER.warn("addFieldToMarcRecord:: Failed to add additional subfield {} for field {} to record {}",
-        subfield, field, getRecordId(recordForUpdate), e);
-    }
-    return result;
+    return MarcRecordEditor.addFieldToMarcRecord(new JaxrsRecordHolder(recordForUpdate), field, subfield, value);
   }
 
   /**
@@ -130,7 +99,8 @@ public final class AdditionalFieldsUtil {
     if (isField005NeedToUpdate(recordForUpdate, mappingParameters)) {
       String date = DATE_TIME_005_FORMATTER.format(ZonedDateTime.now(clock));
       try {
-        addControlledFieldToMarcRecordOrThrow(recordForUpdate, TAG_005, date, true);
+        MarcRecordEditor.addControlledFieldToMarcRecordOrThrow(new JaxrsRecordHolder(recordForUpdate), TAG_005,
+          date, true);
       } catch (Exception e) {
         throw new EventProcessingException(format("Failed to update field '005' to record with id '%s'",
           recordForUpdate != null ? recordForUpdate.getId() : "null"), e);
@@ -148,44 +118,9 @@ public final class AdditionalFieldsUtil {
    * @return true if succeeded, false otherwise
    */
   public static boolean addControlledFieldToMarcRecord(Record recordForUpdate, String field, String value,
-                                                       boolean replace) {
-    try {
-      addControlledFieldToMarcRecordOrThrow(recordForUpdate, field, value, replace);
-      return true;
-    } catch (Exception e) {
-      LOGGER.warn("addControlledFieldToMarcRecord:: Failed to add additional controlled field {} to record {}",
-        field, getRecordId(recordForUpdate), e);
-      return false;
-    }
-  }
-
-  /**
-   * Throwing core of {@link #addControlledFieldToMarcRecord(Record, String, String, boolean)}. Same behaviour,
-   * except failures - null record/parsed-record/content, an unparseable record, or a failed write-back - raise
-   * a {@link MarcContentException} carrying the failure detail instead of being swallowed into a boolean.
-   * This lets callers that need the real cause (e.g. {@link #updateLatestTransactionDate}) chain it into their
-   * own exception rather than losing it.
-   */
-  private static void addControlledFieldToMarcRecordOrThrow(Record recordForUpdate, String field, String value,
-                                                            boolean replace) {
-    if (recordForUpdate == null || recordForUpdate.getParsedRecord() == null
-        || recordForUpdate.getParsedRecord().getContent() == null) {
-      throw new MarcContentException(format(
-        "Cannot add controlled field '%s' to record '%s': record, parsed record, or its content is null",
-        field, getRecordId(recordForUpdate)));
-    }
-    org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
-    if (marcRecord == null) {
-      throw new MarcContentException(format(
-        "Cannot add controlled field '%s' to record '%s': failed to parse the parsed record content",
-        field, getRecordId(recordForUpdate)));
-    }
-    MarcFieldEditor.addOrReplaceControlField(marcRecord, field, value, replace);
-    if (!recalculateLeaderAndParsedRecord(recordForUpdate, marcRecord)) {
-      throw new MarcContentException(format(
-        "Cannot add controlled field '%s' to record '%s': failed to recalculate leader and write back the "
-        + "parsed record content", field, getRecordId(recordForUpdate)));
-    }
+                                                        boolean replace) {
+    return MarcRecordEditor.addControlledFieldToMarcRecord(new JaxrsRecordHolder(recordForUpdate), field, value,
+      replace);
   }
 
   /**
@@ -206,10 +141,11 @@ public final class AdditionalFieldsUtil {
   }
 
   public static void normalize035(Record srcRecord) {
-    org.marc4j.marc.Record marcRecord = computeMarcRecord(srcRecord);
+    JaxrsRecordHolder holder = new JaxrsRecordHolder(srcRecord);
+    org.marc4j.marc.Record marcRecord = MarcRecordEditor.computeMarcRecord(holder);
     if (marcRecord != null && has035SubfieldWithOclcPrefix(marcRecord)) {
       MarcRecordNormalizer.normalize035Field(marcRecord);
-      recalculateLeaderAndParsedRecord(srcRecord, marcRecord);
+      MarcRecordEditor.recalculateAndWriteBack(holder, marcRecord);
     }
   }
 
@@ -231,17 +167,7 @@ public final class AdditionalFieldsUtil {
    * @return value from field
    */
   public static String getValueFromControlledField(Record srcRecord, String tag) {
-    try {
-      org.marc4j.marc.Record marcRecord = computeMarcRecord(srcRecord);
-      if (marcRecord != null) {
-        return MarcFieldEditor.getControlFieldValue(marcRecord, tag);
-      }
-    } catch (Exception e) {
-      LOGGER.warn("getValueFromControlledField:: Failed to read controlled field {} from record {}", tag,
-        getRecordId(srcRecord), e);
-      return null;
-    }
-    return null;
+    return MarcRecordEditor.getValueFromControlledField(new JaxrsRecordHolder(srcRecord), tag);
   }
 
   /**
@@ -262,10 +188,7 @@ public final class AdditionalFieldsUtil {
    */
   public static Optional<String> getValueFromDataField(Record srcRecord, String tag, char ind1, char ind2,
                                                        char subfield) {
-    checkForControlField(tag);
-
-    return Optional.ofNullable(computeMarcRecord(srcRecord))
-      .map(marcRecord -> MarcFieldEditor.getDataFieldSubfieldValue(marcRecord, tag, ind1, ind2, subfield));
+    return MarcRecordEditor.getValueFromDataField(new JaxrsRecordHolder(srcRecord), tag, ind1, ind2, subfield);
   }
 
   /**
@@ -283,10 +206,7 @@ public final class AdditionalFieldsUtil {
    *                                  instead of a data field
    */
   public static Optional<String> getValueFromDataField(Record srcRecord, String tag, char subfield) {
-    checkForControlField(tag);
-
-    return Optional.ofNullable(computeMarcRecord(srcRecord))
-      .map(marcRecord -> MarcFieldEditor.getDataFieldSubfieldValue(marcRecord, tag, subfield));
+    return MarcRecordEditor.getValueFromDataField(new JaxrsRecordHolder(srcRecord), tag, subfield);
   }
 
   /**
@@ -299,29 +219,7 @@ public final class AdditionalFieldsUtil {
    * @return true if succeeded, false otherwise
    */
   public static boolean removeField(Record recordForUpdate, String fieldName, char subfield, String value) {
-    boolean isFieldRemoveSucceed = false;
-    try {
-      if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null
-          && recordForUpdate.getParsedRecord().getContent() != null) {
-        org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
-        if (marcRecord != null) {
-          if (StringUtils.isEmpty(value)) {
-            isFieldRemoveSucceed = MarcFieldEditor.removeFirstField(marcRecord, fieldName);
-          } else {
-            isFieldRemoveSucceed = MarcFieldEditor.removeFieldWithSubfieldValue(marcRecord, fieldName, subfield,
-              value);
-          }
-
-          if (isFieldRemoveSucceed) {
-            isFieldRemoveSucceed = recalculateLeaderAndParsedRecord(recordForUpdate, marcRecord);
-          }
-        }
-      }
-    } catch (Exception e) {
-      LOGGER.warn("removeField:: Failed to remove controlled field {} from record {}",
-        fieldName, getRecordId(recordForUpdate), e);
-    }
-    return isFieldRemoveSucceed;
+    return MarcRecordEditor.removeField(new JaxrsRecordHolder(recordForUpdate), fieldName, subfield, value);
   }
 
   /**
@@ -332,7 +230,7 @@ public final class AdditionalFieldsUtil {
    * @return true if succeeded, false otherwise
    */
   public static boolean removeField(Record recordForUpdate, String field) {
-    return removeField(recordForUpdate, field, '\0', null);
+    return MarcRecordEditor.removeField(new JaxrsRecordHolder(recordForUpdate), field);
   }
 
   /**
@@ -361,24 +259,8 @@ public final class AdditionalFieldsUtil {
    */
   public static boolean addDataFieldToMarcRecord(Record recordForUpdate, String tag, char ind1, char ind2,
                                                  char subfield, String value) {
-    boolean result = false;
-    try {
-      if (recordForUpdate != null && recordForUpdate.getParsedRecord() != null
-          && recordForUpdate.getParsedRecord().getContent() != null) {
-        MarcFactory factory = MarcFactory.newInstance();
-        org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
-        if (marcRecord != null) {
-          DataField dataField = factory.newDataField(tag, ind1, ind2);
-          dataField.addSubfield(factory.newSubfield(subfield, value));
-          MarcFieldEditor.addDataFieldInOrder(marcRecord, dataField);
-          result = recalculateLeaderAndParsedRecord(recordForUpdate, marcRecord);
-        }
-      }
-    } catch (Exception e) {
-      LOGGER.warn("addDataFieldToMarcRecord:: Failed to add additional data field {} to record {}",
-        tag, getRecordId(recordForUpdate), e);
-    }
-    return result;
+    return MarcRecordEditor.addDataFieldToMarcRecord(new JaxrsRecordHolder(recordForUpdate), tag, ind1, ind2,
+      subfield, value);
   }
 
   public static String mergeFieldsFor035(String valueFrom003, String valueFrom001) {
@@ -397,21 +279,7 @@ public final class AdditionalFieldsUtil {
    * @return true if exist
    */
   public static boolean isFieldExist(Record recordForUpdate, String tag, char subfield, String value) {
-    if (value == null) {
-      // nothing to match against - deliberately "not found", rather than letting the trim() below
-      // NPE and get masked as a caught-and-logged "error during the search" false.
-      return false;
-    }
-    try {
-      org.marc4j.marc.Record marcRecord = computeMarcRecord(recordForUpdate);
-      if (marcRecord != null) {
-        return MarcFieldEditor.fieldExists(marcRecord, tag, subfield, value);
-      }
-    } catch (Exception e) {
-      LOGGER.warn("isFieldExist:: Error during the search a field in the record", e);
-      return false;
-    }
-    return false;
+    return MarcRecordEditor.isFieldExist(new JaxrsRecordHolder(recordForUpdate), tag, subfield, value);
   }
 
   public static void remove035FieldWhenRecordContainsHrId(Record srcRecord) {
@@ -480,49 +348,6 @@ public final class AdditionalFieldsUtil {
   }
 
   /**
-   * Recalculates the leader (via a stream-writer round trip) and rewrites the parsed record content for
-   * {@code recordForUpdate}, then refreshes the cache entry for the new content.
-   *
-   * @param recordForUpdate record whose parsed record content should be replaced
-   * @param marcRecord      mutated marc4j record to serialize
-   * @return true if the leader was recalculated and the record content was updated, false if an error occurred
-   */
-  private static boolean recalculateLeaderAndParsedRecord(Record recordForUpdate, org.marc4j.marc.Record marcRecord) {
-    try {
-      // marcRecord has already been mutated in place by the caller. The cache entry keyed by the record's
-      // current (pre-mutation) content string now points at an object whose fields no longer match that key -
-      // invalidate it before anyone else can observe the stale mapping, and before we re-key it below.
-      String staleContentKey = MarcContentCodec.canonicalize(recordForUpdate.getParsedRecord().getContent());
-      parsedRecordContentCache.invalidate(staleContentKey);
-
-      String parsedContentString = MarcContentCodec.serializeWithRecalculatedLeader(marcRecord);
-      // save parsed content string to cache then set it on the record
-      parsedRecordContentCache.put(parsedContentString, marcRecord);
-      recordForUpdate.setParsedRecord(recordForUpdate.getParsedRecord().withContent(parsedContentString));
-      return true;
-    } catch (Exception e) {
-      if (isOversizedRecordException(e)) {
-        LOGGER.warn("recalculateLeaderAndParsedRecord:: Record {} exceeds the MARC21 99999-byte length limit "
-          + "and cannot be serialized", recordForUpdate.getId(), e);
-      } else {
-        LOGGER.warn("recalculateLeaderAndParsedRecord:: Failed to recalculate leader and parsed record for "
-          + "record: {}", recordForUpdate.getId(), e);
-      }
-      return false;
-    }
-  }
-
-  /**
-   * Detects marc4j's oversized-record failure - {@code MarcStreamWriter} refuses to write a record whose
-   * ISO 2709 serialization would exceed the MARC21 99999-byte record-length limit. Checking the exception type
-   * first, then the message, keeps this from misclassifying unrelated {@link MarcException}s (e.g. an oversized
-   * individual field, which marc4j reports with a different message) as this specific, actionable condition.
-   */
-  private static boolean isOversizedRecordException(Exception e) {
-    return e instanceof MarcException && e.getMessage() != null && e.getMessage().contains("99999 bytes");
-  }
-
-  /**
    * Checks whether field 005 needs to be updated or this field is protected.
    *
    * @param srcRecord         record to check
@@ -533,7 +358,7 @@ public final class AdditionalFieldsUtil {
     boolean needToUpdate = true;
     List<MarcFieldProtectionSetting> fieldProtectionSettings = mappingParameters.getMarcFieldProtectionSettings();
     if (CollectionUtils.isNotEmpty(fieldProtectionSettings)) {
-      org.marc4j.marc.Record marcRecord = computeMarcRecord(srcRecord);
+      org.marc4j.marc.Record marcRecord = MarcRecordEditor.computeMarcRecord(new JaxrsRecordHolder(srcRecord));
       if (marcRecord != null) {
         List<VariableField> variableFields = marcRecord.getVariableFields(TAG_005);
         if (!variableFields.isEmpty()) {
@@ -558,40 +383,8 @@ public final class AdditionalFieldsUtil {
       .noneMatch(setting -> setting.getData().equals(ANY_STRING) || setting.getData().equals(field.getData()));
   }
 
-  private static void checkForControlField(String tag) {
-    if (Verifier.isControlField(tag)) {
-      String msg = INVALID_DATA_FIELD_MSG.formatted(tag);
-      LOGGER.warn("getValueFromDataField:: {}", msg);
-      throw new IllegalArgumentException(msg);
-    }
-  }
-
-  private static org.marc4j.marc.Record computeMarcRecord(Record srcRecord) {
-    if (srcRecord != null && srcRecord.getParsedRecord() != null && isNotBlank(
-      srcRecord.getParsedRecord().getContent().toString())) {
-      try {
-        var content = MarcContentCodec.canonicalize(srcRecord.getParsedRecord().getContent());
-        return parsedRecordContentCache.get(content);
-      } catch (Exception e) {
-        LOGGER.warn("computeMarcRecord:: Error during the transformation to marc record", e);
-        try {
-          String fallbackContent = MarcContentCodec.canonicalize(srcRecord.getParsedRecord().getContent());
-          return MarcContentCodec.parse(fallbackContent).orElse(null);
-        } catch (Exception ex) {
-          LOGGER.warn("computeMarcRecord:: Error during the building of MarcReader", ex);
-        }
-        return null;
-      }
-    }
-    return null;
-  }
-
   private static boolean isValidIdAndHrid(String id, String hrid, String externalId, String externalHrid) {
     return isNotEmpty(externalId) && (Objects.equals(id, externalId) && !Objects.equals(hrid, externalHrid));
-  }
-
-  private static String getRecordId(Record srcRecord) {
-    return srcRecord != null ? srcRecord.getId() : "";
   }
 
 }

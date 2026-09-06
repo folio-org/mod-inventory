@@ -603,12 +603,14 @@ class AdditionalFieldsUtilTest {
     // given: one field with a huge subfield value pushes the total ISO 2709 record length past marc4j's
     // MARC21 99999-byte ceiling. MarcStreamWriter throws MarcException past that limit; before this fix,
     // recalculateLeaderAndParsedRecord's catch-all logged this identically to any other, unrelated failure.
+    // The write-back/oversized-record check now lives in MarcRecordEditor.recalculateAndWriteBack (relocated
+    // there as part of the Stage 4c extraction), so the warning is emitted under that class's logger.
     String hugeValue = "a".repeat(150_000);
     String parsedContent = "{\"leader\":\"00000nam a2200000 a 4500\",\"fields\":[{\"001\":\"in001\"},"
                            + "{\"999\":{\"subfields\":[{\"a\":\"" + hugeValue + "\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
     var marcRecord = new Record().withId(UUID.randomUUID().toString())
       .withParsedRecord(new ParsedRecord().withContent(parsedContent));
-    var appender = LogCaptureTestAppender.attachTo(AdditionalFieldsUtil.class);
+    var appender = LogCaptureTestAppender.attachTo(MarcRecordEditor.class);
 
     try {
       // when
