@@ -92,20 +92,20 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import support.builders.MarcHoldingItemRecordBuilder;
+import support.builders.MarcRecordBuilder;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class CreateHoldingEventHandlerTest {
 
-  private static final String PARSED_CONTENT_WITH_INSTANCE_ID = MarcHoldingItemRecordBuilder.newRecord()
+  private static final String PARSED_CONTENT_WITH_INSTANCE_ID = MarcRecordBuilder.newRecord()
     .with945("a", "OM", "h", "KU/CC/DI/M")
     .with945("a", "AM", "h", "KU/CC/DI/M")
     .with945("a", "asdf", "h", "fcd64ce1-6995-48f0-840e-89ffa2288371")
-    .withInstanceId999(MarcHoldingItemRecordBuilder.INSTANCE_ID)
+    .withInstanceId999(MarcRecordBuilder.INSTANCE_ID)
     .build();
 
-  private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID = MarcHoldingItemRecordBuilder.newRecord()
+  private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID = MarcRecordBuilder.newRecord()
     .with945("a", "OM", "h", "KU/CC/DI/M")
     .with945("a", "AM", "h", "KU/CC/DI/M")
     .with945("a", "asdf", "h", "fcd64ce1-6995-48f0-840e-89ffa2288371")

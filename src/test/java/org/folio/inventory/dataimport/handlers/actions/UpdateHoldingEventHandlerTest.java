@@ -88,21 +88,21 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import support.builders.MarcHoldingItemRecordBuilder;
+import support.builders.MarcRecordBuilder;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class UpdateHoldingEventHandlerTest {
 
-  private static final String PARSED_CONTENT_WITH_INSTANCE_ID = MarcHoldingItemRecordBuilder.newRecord()
-    .withInstanceId999(MarcHoldingItemRecordBuilder.INSTANCE_ID)
+  private static final String PARSED_CONTENT_WITH_INSTANCE_ID = MarcRecordBuilder.newRecord()
+    .withInstanceId999(MarcRecordBuilder.INSTANCE_ID)
     .build();
 
   private static final String PARSED_CONTENT_WITH_INSTANCE_ID_AND_MULTIPLE_HOLDINGS =
-    MarcHoldingItemRecordBuilder.newRecord()
+    MarcRecordBuilder.newRecord()
       .with945EmptyIndicators("h", "Online")
       .with945EmptyIndicators("h", "Online 2")
-      .withInstanceId999(MarcHoldingItemRecordBuilder.INSTANCE_ID)
+      .withInstanceId999(MarcRecordBuilder.INSTANCE_ID)
       .build();
 
   private static final String ERRORS = "ERRORS";

@@ -558,9 +558,20 @@
           <useSystemClassLoader>false</useSystemClassLoader>
           <includes>
             <include>org/folio/inventory/**</include>
-            <include>**/api/ApiTestSuite.java</include>
           </includes>
         </configuration>
+        <executions>
+          <execution>
+            <id>api-test-suite</id>
+            <phase>test</phase>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <test>api.ApiTestSuite</test>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

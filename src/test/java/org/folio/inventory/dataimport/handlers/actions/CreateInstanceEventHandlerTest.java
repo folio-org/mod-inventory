@@ -115,34 +115,34 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import support.TestUtil;
-import support.builders.MarcBibRecordBuilder;
+import support.builders.MarcRecordBuilder;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class CreateInstanceEventHandlerTest extends BaseWireMockTest {
 
-  private static final String PARSED_CONTENT = MarcBibRecordBuilder.newBibRecord()
+  private static final String PARSED_CONTENT = MarcRecordBuilder.newBibRecord()
     .with003("in001")
     .build();
 
-  private static final String PARSED_CONTENT_999FFI = MarcBibRecordBuilder.newBibRecord()
+  private static final String PARSED_CONTENT_999FFI = MarcRecordBuilder.newBibRecord()
     .build();
 
-  private static final String PARSED_CONTENT_WITH_005 = MarcBibRecordBuilder.newBibRecord()
+  private static final String PARSED_CONTENT_WITH_005 = MarcRecordBuilder.newBibRecord()
     .with005("20141107001016.0")
     .build();
 
-  private static final String PARSED_CONTENT_WITH_999FI = MarcBibRecordBuilder.newBibRecord()
+  private static final String PARSED_CONTENT_WITH_999FI = MarcRecordBuilder.newBibRecord()
     .with003("in001")
-    .with999ff(MarcBibRecordBuilder.INSTANCE_ID)
+    .with999ff(MarcRecordBuilder.INSTANCE_ID)
     .build();
 
-  private static final String PARSED_CONTENT_WITH_999_NON_FF_I = MarcBibRecordBuilder.newBibRecord()
+  private static final String PARSED_CONTENT_WITH_999_NON_FF_I = MarcRecordBuilder.newBibRecord()
     .with003("in001")
-    .with999NonFf(MarcBibRecordBuilder.INSTANCE_ID)
+    .with999NonFf(MarcRecordBuilder.INSTANCE_ID)
     .build();
 
-  private static final String PARSED_CONTENT_WITH_DELETED_05 = MarcBibRecordBuilder.newBibRecord()
+  private static final String PARSED_CONTENT_WITH_DELETED_05 = MarcRecordBuilder.newBibRecord()
     .with003("in001")
     .deleted()
     .build();

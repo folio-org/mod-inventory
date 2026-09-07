@@ -84,27 +84,27 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import support.builders.MarcHoldingItemRecordBuilder;
+import support.builders.MarcRecordBuilder;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class CreateItemEventHandlerTest {
 
-  private static final String PARSED_CONTENT_WITHOUT_HOLDING_ID = MarcHoldingItemRecordBuilder.newRecord()
+  private static final String PARSED_CONTENT_WITHOUT_HOLDING_ID = MarcRecordBuilder.newRecord()
     .build();
 
-  private static final String PARSED_CONTENT_WITH_HOLDING_ID = MarcHoldingItemRecordBuilder.newRecord()
+  private static final String PARSED_CONTENT_WITH_HOLDING_ID = MarcRecordBuilder.newRecord()
     .with945("a", "OM", "h", "KU/CC/DI/M")
     .with945("a", "AM", "h", "KU/CC/DI/M")
-    .withHoldingsId999(MarcHoldingItemRecordBuilder.INSTANCE_ID)
+    .withHoldingsId999(MarcRecordBuilder.INSTANCE_ID)
     .build();
 
-  private static final String PARSED_CONTENT_WITH_INVALID_MULTIPLE_FIELDS = MarcHoldingItemRecordBuilder.newRecord()
+  private static final String PARSED_CONTENT_WITH_INVALID_MULTIPLE_FIELDS = MarcRecordBuilder.newRecord()
     .with945("a", "AM")
     .with945("a", "OM", "h", "KU/CC/DI/M")
     .with945("a", "AM", "h", "KU/CC/DI/M")
     .with945("h", "fake")
-    .withHoldingsId999(MarcHoldingItemRecordBuilder.INSTANCE_ID)
+    .withHoldingsId999(MarcRecordBuilder.INSTANCE_ID)
     .build();
   private static final String ITEMS_SHOULD_HAVE_SAME_MATERIAL_TYPE =
     "All Items should have the same material type, during the creation of open order";

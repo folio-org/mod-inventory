@@ -57,27 +57,6 @@ public class MarcSourceRecordFixture {
     return values;
   }
 
-  /**
-   * Returns parsed-record content JSON for a MARC holdings record that has an 852 location field
-   * and a 999 ff instance field, but no 004 field.
-   *
-   * <p>Shared between CreateMarcHoldingsEventHandlerTest and UpdateMarcHoldingsEventHandlerTest
-   * to test the "missing 004 field" validation path.
-   */
-  public static String parsedMarcHoldingsWith852LocationAndInstance(String locationId, String instanceId) {
-    return new JsonObject()
-      .put("leader", "01314nam  22003851a 4500")
-      .put("fields", new JsonArray()
-        .add(new JsonObject().put("001", "ybp7406411"))
-        .add(new JsonObject().put("852", new JsonObject()
-          .put("ind1", "f").put("ind2", "f")
-          .put("subfields", new JsonArray().add(new JsonObject().put("b", locationId)))))
-        .add(new JsonObject().put("999", new JsonObject()
-          .put("ind1", "f").put("ind2", "f")
-          .put("subfields", new JsonArray().add(new JsonObject().put("i", instanceId))))))
-      .encode();
-  }
-
   public static JsonObject getParsedContent(JsonObject parsedRecord) {
     Object content = parsedRecord.getValue("content");
     if (content instanceof JsonObject contentJson) {

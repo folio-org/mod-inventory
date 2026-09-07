@@ -94,7 +94,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import support.builders.MarcHoldingItemRecordBuilder;
+import support.builders.MarcRecordBuilder;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -158,11 +158,11 @@ class UpdateItemEventHandlerTest {
         "leader": "01877cam a2200457Ii 4500"
       }
     """;
-  private static final String PARSED_CONTENT_WITH_HOLDING_ID = MarcHoldingItemRecordBuilder.newRecord()
+  private static final String PARSED_CONTENT_WITH_HOLDING_ID = MarcRecordBuilder.newRecord()
     .withLeader("01314nam 22003851a 4500")
     .with945("a", "OM", "h", "KU/CC/DI/M")
     .with945("a", "AM", "h", "KU/CC/DI/M")
-    .withHoldingsId999(MarcHoldingItemRecordBuilder.INSTANCE_ID)
+    .withHoldingsId999(MarcRecordBuilder.INSTANCE_ID)
     .build();
   private static final String MULTIPLE_HOLDINGS_FIELD = "MULTIPLE_HOLDINGS_FIELD";
   private static final String HOLDINGS_IDENTIFIERS = "HOLDINGS_IDENTIFIERS";

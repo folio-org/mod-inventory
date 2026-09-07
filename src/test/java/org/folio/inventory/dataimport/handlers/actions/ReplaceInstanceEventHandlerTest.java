@@ -136,20 +136,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import support.TestUtil;
-import support.builders.MarcBibRecordBuilder;
+import support.builders.MarcRecordBuilder;
 
 @ExtendWith({MockitoExtension.class, VertxExtension.class})
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
 
-  private static final String PARSED_CONTENT = MarcBibRecordBuilder.newBibRecord()
-    .with520Summary(MarcBibRecordBuilder.SHORT_520_SUMMARY)
+  private static final String PARSED_CONTENT = MarcRecordBuilder.newBibRecord()
     .build();
 
-  private static final String PARSED_CONTENT_WITH_DELETED_05 = MarcBibRecordBuilder.newBibRecord()
+  private static final String PARSED_CONTENT_WITH_DELETED_05 = MarcRecordBuilder.newBibRecord()
     .with003("in001")
     .deleted()
-    .with520Summary(MarcBibRecordBuilder.SHORT_520_SUMMARY)
     .build();
   private static final String RESPONSE_CONTENT = """
     {
