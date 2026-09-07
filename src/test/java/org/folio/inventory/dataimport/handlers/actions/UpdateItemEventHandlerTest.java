@@ -94,6 +94,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import support.builders.MarcHoldingItemRecordBuilder;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -157,55 +158,12 @@ class UpdateItemEventHandlerTest {
         "leader": "01877cam a2200457Ii 4500"
       }
     """;
-  private static final String PARSED_CONTENT_WITH_HOLDING_ID = """
-    {
-      "leader": "01314nam 22003851a 4500",
-      "fields": [
-        {
-          "001": "ybp7406411"
-        },
-        {
-          "945": {
-            "subfields": [
-              {
-                "a": "OM"
-              },
-              {
-                "h": "KU/CC/DI/M"
-              }
-            ],
-            "ind1": " ",
-            "ind2": " "
-          }
-        },
-        {
-          "945": {
-            "subfields": [
-              {
-                "a": "AM"
-              },
-              {
-                "h": "KU/CC/DI/M"
-              }
-            ],
-            "ind1": " ",
-            "ind2": " "
-          }
-        },
-        {
-          "999": {
-            "ind1": "f",
-            "ind2": "f",
-            "subfields": [
-              {
-                "h": "957985c6-97e3-4038-b0e7-343ecd0b8120"
-              }
-            ]
-          }
-        }
-      ]
-    }
-    """;
+  private static final String PARSED_CONTENT_WITH_HOLDING_ID = MarcHoldingItemRecordBuilder.newRecord()
+    .withLeader("01314nam 22003851a 4500")
+    .with945("a", "OM", "h", "KU/CC/DI/M")
+    .with945("a", "AM", "h", "KU/CC/DI/M")
+    .withHoldingsId999(MarcHoldingItemRecordBuilder.INSTANCE_ID)
+    .build();
   private static final String MULTIPLE_HOLDINGS_FIELD = "MULTIPLE_HOLDINGS_FIELD";
   private static final String HOLDINGS_IDENTIFIERS = "HOLDINGS_IDENTIFIERS";
   private static final String ERRORS = "ERRORS";

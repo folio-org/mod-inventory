@@ -88,75 +88,22 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import support.builders.MarcHoldingItemRecordBuilder;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class UpdateHoldingEventHandlerTest {
 
-  private static final String PARSED_CONTENT_WITH_INSTANCE_ID = """
-    {
-      "leader": "01314nam  22003851a 4500",
-      "fields": [
-        {
-          "001": "ybp7406411"
-        },
-        {
-          "999": {
-            "ind1": "f",
-            "ind2": "f",
-            "subfields": [
-              {
-                "i": "957985c6-97e3-4038-b0e7-343ecd0b8120"
-              }
-            ]
-          }
-        }
-      ]
-    }
-    """;
-  private static final String PARSED_CONTENT_WITH_INSTANCE_ID_AND_MULTIPLE_HOLDINGS = """
-    {
-      "leader": "01314nam  22003851a 4500",
-      "fields": [
-        {
-          "001": "ybp7406411"
-        },
-        {
-          "945": {
-            "ind1": "",
-            "ind2": "",
-            "subfields": [
-              {
-                "h": "Online"
-              }
-            ]
-          }
-        },
-        {
-          "945": {
-            "ind1": "",
-            "ind2": "",
-            "subfields": [
-              {
-                "h": "Online 2"
-              }
-            ]
-          }
-        },
-        {
-          "999": {
-            "ind1": "f",
-            "ind2": "f",
-            "subfields": [
-              {
-                "i": "957985c6-97e3-4038-b0e7-343ecd0b8120"
-              }
-            ]
-          }
-        }
-      ]
-    }
-    """;
+  private static final String PARSED_CONTENT_WITH_INSTANCE_ID = MarcHoldingItemRecordBuilder.newRecord()
+    .withInstanceId999(MarcHoldingItemRecordBuilder.INSTANCE_ID)
+    .build();
+
+  private static final String PARSED_CONTENT_WITH_INSTANCE_ID_AND_MULTIPLE_HOLDINGS =
+    MarcHoldingItemRecordBuilder.newRecord()
+      .with945EmptyIndicators("h", "Online")
+      .with945EmptyIndicators("h", "Online 2")
+      .withInstanceId999(MarcHoldingItemRecordBuilder.INSTANCE_ID)
+      .build();
 
   private static final String ERRORS = "ERRORS";
   private static final String PERMANENT_LOCATION_ID = UUID.randomUUID().toString();

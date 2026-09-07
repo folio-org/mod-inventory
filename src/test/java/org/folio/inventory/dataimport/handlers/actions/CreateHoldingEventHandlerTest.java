@@ -92,127 +92,24 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import support.builders.MarcHoldingItemRecordBuilder;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class CreateHoldingEventHandlerTest {
 
-  private static final String PARSED_CONTENT_WITH_INSTANCE_ID = """
-    {
-      "leader": "01314nam  22003851a 4500",
-      "fields": [
-        {
-          "001": "ybp7406411"
-        },
-        {
-          "945": {
-            "subfields": [
-              {
-                "a": "OM"
-              },
-              {
-                "h": "KU/CC/DI/M"
-              }
-            ],
-            "ind1": " ",
-            "ind2": " "
-          }
-        },
-        {
-          "945": {
-            "subfields": [
-              {
-                "a": "AM"
-              },
-              {
-                "h": "KU/CC/DI/M"
-              }
-            ],
-            "ind1": " ",
-            "ind2": " "
-          }
-        },
-        {
-          "945": {
-            "subfields": [
-              {
-                "a": "asdf"
-              },
-              {
-                "h": "fcd64ce1-6995-48f0-840e-89ffa2288371"
-              }
-            ],
-            "ind1": " ",
-            "ind2": " "
-          }
-        },
-        {
-          "999": {
-            "ind1": "f",
-            "ind2": "f",
-            "subfields": [
-              {
-                "i": "957985c6-97e3-4038-b0e7-343ecd0b8120"
-              }
-            ]
-          }
-        }
-      ]
-    }
-    """;
+  private static final String PARSED_CONTENT_WITH_INSTANCE_ID = MarcHoldingItemRecordBuilder.newRecord()
+    .with945("a", "OM", "h", "KU/CC/DI/M")
+    .with945("a", "AM", "h", "KU/CC/DI/M")
+    .with945("a", "asdf", "h", "fcd64ce1-6995-48f0-840e-89ffa2288371")
+    .withInstanceId999(MarcHoldingItemRecordBuilder.INSTANCE_ID)
+    .build();
 
-  private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID = """
-    {
-      "leader": "01314nam  22003851a 4500",
-      "fields": [
-        {
-          "001": "ybp7406411"
-        },
-        {
-          "945": {
-            "subfields": [
-              {
-                "a": "OM"
-              },
-              {
-                "h": "KU/CC/DI/M"
-              }
-            ],
-            "ind1": " ",
-            "ind2": " "
-          }
-        },
-        {
-          "945": {
-            "subfields": [
-              {
-                "a": "AM"
-              },
-              {
-                "h": "KU/CC/DI/M"
-              }
-            ],
-            "ind1": " ",
-            "ind2": " "
-          }
-        },
-        {
-          "945": {
-            "subfields": [
-              {
-                "a": "asdf"
-              },
-              {
-                "h": "fcd64ce1-6995-48f0-840e-89ffa2288371"
-              }
-            ],
-            "ind1": " ",
-            "ind2": " "
-          }
-        }
-      ]
-    }
-    """;
+  private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID = MarcHoldingItemRecordBuilder.newRecord()
+    .with945("a", "OM", "h", "KU/CC/DI/M")
+    .with945("a", "AM", "h", "KU/CC/DI/M")
+    .with945("a", "asdf", "h", "fcd64ce1-6995-48f0-840e-89ffa2288371")
+    .build();
   private static final String FOLIO_SOURCE_ID = "f32d531e-df79-46b3-8932-cdd35f7a2264";
   private static final String RECORD_ID = UUID.randomUUID().toString();
   private static final String ITEM_ID = UUID.randomUUID().toString();

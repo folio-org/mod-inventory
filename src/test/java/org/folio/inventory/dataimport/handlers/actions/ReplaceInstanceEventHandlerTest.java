@@ -136,172 +136,21 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import support.TestUtil;
+import support.builders.MarcBibRecordBuilder;
 
 @ExtendWith({MockitoExtension.class, VertxExtension.class})
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
 
-  private static final String PARSED_CONTENT = """
-    {
-      "leader": "01314nam  22003851a 4500",
-      "fields": [
-        {
-          "001": "ybp7406411"
-        },
-        {
-          "245": {
-            "ind1": "1",
-            "ind2": "0",
-            "subfields": [
-              {
-                "a": "titleValue"
-              }
-            ]
-          }
-        },
-        {
-          "336": {
-            "ind1": "1",
-            "ind2": "0",
-            "subfields": [
-              {
-                "b": "b6698d38-149f-11ec-82a8-0242ac130003"
-              }
-            ]
-          }
-        },
-        {
-          "780": {
-            "ind1": "0",
-            "ind2": "0",
-            "subfields": [
-              {
-                "t": "Houston oil directory"
-              }
-            ]
-          }
-        },
-        {
-          "785": {
-            "ind1": "0",
-            "ind2": "0",
-            "subfields": [
-              {
-                "t": "SAIS review of international affairs"
-              },
-              {
-                "x": "1945-4724"
-              }
-            ]
-          }
-        },
-        {
-          "500": {
-            "ind1": " ",
-            "ind2": " ",
-            "subfields": [
-              {
-                "a": "Adaptation of Xi xiang ji by Wang Shifu."
-              }
-            ]
-          }
-        },
-        {
-          "520": {
-            "ind1": " ",
-            "ind2": " ",
-            "subfields": [
-              {
-                "a": "Ben shu miao shu."
-              }
-            ]
-          }
-        }
-      ]
-    }
-    """;
-  private static final String PARSED_CONTENT_WITH_DELETED_05 = """
-    {
-      "leader": "01314dam  22003851a 4500",
-      "fields": [
-        {
-          "001": "ybp7406411"
-        },
-        {
-          "003": "in001"
-        },
-        {
-          "245": {
-            "ind1": "1",
-            "ind2": "0",
-            "subfields": [
-              {
-                "a": "titleValue"
-              }
-            ]
-          }
-        },
-        {
-          "336": {
-            "ind1": "1",
-            "ind2": "0",
-            "subfields": [
-              {
-                "b": "b6698d38-149f-11ec-82a8-0242ac130003"
-              }
-            ]
-          }
-        },
-        {
-          "780": {
-            "ind1": "0",
-            "ind2": "0",
-            "subfields": [
-              {
-                "t": "Houston oil directory"
-              }
-            ]
-          }
-        },
-        {
-          "785": {
-            "ind1": "0",
-            "ind2": "0",
-            "subfields": [
-              {
-                "t": "SAIS review of international affairs"
-              },
-              {
-                "x": "1945-4724"
-              }
-            ]
-          }
-        },
-        {
-          "500": {
-            "ind1": " ",
-            "ind2": " ",
-            "subfields": [
-              {
-                "a": "Adaptation of Xi xiang ji by Wang Shifu."
-              }
-            ]
-          }
-        },
-        {
-          "520": {
-            "ind1": " ",
-            "ind2": " ",
-            "subfields": [
-              {
-                "a": "Ben shu miao shu."
-              }
-            ]
-          }
-        }
-      ]
-    }
-    """;
+  private static final String PARSED_CONTENT = MarcBibRecordBuilder.newBibRecord()
+    .with520Summary(MarcBibRecordBuilder.SHORT_520_SUMMARY)
+    .build();
+
+  private static final String PARSED_CONTENT_WITH_DELETED_05 = MarcBibRecordBuilder.newBibRecord()
+    .with003("in001")
+    .deleted()
+    .with520Summary(MarcBibRecordBuilder.SHORT_520_SUMMARY)
+    .build();
   private static final String RESPONSE_CONTENT = """
     {
       "id": "%s",

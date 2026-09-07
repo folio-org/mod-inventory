@@ -80,6 +80,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import support.TestUtil;
+import support.fixtures.MarcSourceRecordFixture;
 
 @ExtendWith({MockitoExtension.class, VertxExtension.class})
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -109,38 +110,9 @@ class CreateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
       ]
     }
     """;
-  private static final String PARSED_CONTENT_WITH_PERMANENT_LOCATION_ID = """
-    {
-      "leader": "01314nam  22003851a 4500",
-      "fields": [
-        {
-          "001": "ybp7406411"
-        },
-        {
-          "852": {
-            "ind1": "f",
-            "ind2": "f",
-            "subfields": [
-              {
-                "b": "957985c6-97e3-4038-b0e7-343ecd0b8120"
-              }
-            ]
-          }
-        },
-        {
-          "999": {
-            "ind1": "f",
-            "ind2": "f",
-            "subfields": [
-              {
-                "i": "957985c6-97e3-4038-b0e7-343ecd0b8120"
-              }
-            ]
-          }
-        }
-      ]
-    }
-    """;
+  private static final String PARSED_CONTENT_WITH_PERMANENT_LOCATION_ID =
+    MarcSourceRecordFixture.parsedMarcHoldingsWith852LocationAndInstance(
+      "957985c6-97e3-4038-b0e7-343ecd0b8120", "957985c6-97e3-4038-b0e7-343ecd0b8120");
   private static final String PARSED_HOLDINGS_RECORD = "src/test/resources/marc/parsed-holdings-record.json";
   private static final String PERMANENT_LOCATION_ID = "fe19bae4-da28-472b-be90-d442e2428ead";
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/marc-holdings-rules.json";
