@@ -30,6 +30,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import support.ApiTests;
 
+@SuppressWarnings("java:S5786")
 public class InstanceRelationshipsTest extends ApiTests {
 
   private static final String PARENT_INSTANCES = "parentInstances";

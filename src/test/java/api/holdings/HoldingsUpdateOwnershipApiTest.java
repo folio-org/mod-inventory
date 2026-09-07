@@ -54,6 +54,7 @@ import support.fixtures.MarcSourceRecordFixture;
 import support.http.ResourceClient;
 import support.http.StorageInterfaceUrls;
 
+@SuppressWarnings("java:S5786")
 public class HoldingsUpdateOwnershipApiTest extends ConsortiumApiTests {
 
   private static final String INSTANCE_ID = "instanceId";

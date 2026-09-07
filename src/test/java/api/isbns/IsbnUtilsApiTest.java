@@ -21,6 +21,7 @@ import support.ApiRoot;
 import support.ApiTests;
 import support.FutureAssistance;
 
+@SuppressWarnings("java:S5786")
 public class IsbnUtilsApiTest extends ApiTests {
 
   @Test

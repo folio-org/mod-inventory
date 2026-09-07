@@ -34,6 +34,7 @@ import support.builders.InvalidHoldingRequestBuilder;
 import support.builders.ItemRequestBuilder;
 import support.builders.ItemsMoveRequestBuilder;
 
+@SuppressWarnings("java:S5786")
 public class ItemsApiMoveTest extends ApiTests {
 
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";

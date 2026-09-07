@@ -34,6 +34,7 @@ import support.builders.HoldingRequestBuilder;
 import support.builders.SourceRecordRequestBuilder;
 import support.fixtures.InstanceRequestFixture;
 
+@SuppressWarnings("java:S5786")
 public class HoldingsApiTest extends ApiTests {
 
   private static final InventoryConfiguration CONFIG = new InventoryConfigurationImpl();

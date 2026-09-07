@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
  * and the {@link ItemStatusName} enum, otherwise item won't pass validation
  * and will be rejected.
  */
+@SuppressWarnings("java:S5786")
 public class ItemAllowedStatusesSchemaTest {
 
   @Test

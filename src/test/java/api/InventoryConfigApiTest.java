@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import support.ApiRoot;
 import support.ApiTests;
 
-public class InventoryConfigApiTest extends ApiTests {
+class InventoryConfigApiTest extends ApiTests {
 
   private static final InventoryConfiguration CONFIG = new InventoryConfigurationImpl();
 

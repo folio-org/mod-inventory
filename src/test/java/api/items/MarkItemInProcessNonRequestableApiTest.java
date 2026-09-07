@@ -16,6 +16,7 @@ import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 import support.builders.ItemRequestBuilder;
 
+@SuppressWarnings("java:S5786")
 public class MarkItemInProcessNonRequestableApiTest extends AbstractMarkItemApiTest {
 
   @Test

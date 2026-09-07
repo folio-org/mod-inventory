@@ -78,6 +78,7 @@ import support.builders.ItemRequestBuilder;
 import support.fixtures.InstanceRequestFixture;
 import support.fixtures.ItemRequestFixture;
 
+@SuppressWarnings("java:S5786")
 public class ItemsApiTest extends ApiTests {
 
   private static final String LAST_CHECK_IN_FIELD = "lastCheckIn";

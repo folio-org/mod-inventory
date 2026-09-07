@@ -27,6 +27,7 @@ import org.folio.inventory.support.http.client.Response;
 import org.junit.jupiter.api.Test;
 import support.ApiTests;
 
+@SuppressWarnings("java:S5786")
 public class PrecedingSucceedingTitlesApiTest extends ApiTests {
 
   @Test

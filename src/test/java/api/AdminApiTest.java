@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import support.ApiRoot;
 import support.ApiTests;
 
-public class AdminApiTest extends ApiTests {
+class AdminApiTest extends ApiTests {
 
   @Test
   void health() throws Exception {

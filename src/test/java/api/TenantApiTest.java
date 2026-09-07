@@ -19,7 +19,7 @@ import support.ApiRoot;
 import support.ApiTests;
 import support.PgPoolContainer;
 
-public class TenantApiTest extends ApiTests {
+class TenantApiTest extends ApiTests {
 
   @Test
   void shouldCreateSchemaWithTables() throws Exception {

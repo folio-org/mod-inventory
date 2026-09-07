@@ -29,6 +29,7 @@ import support.InstanceApiClient;
 import support.builders.HoldingRequestBuilder;
 import support.http.ResourceClient;
 
+@SuppressWarnings("java:S5786")
 public class TenantItemApiTest extends ApiTests {
 
   private static final String TENANT_ITEMS_FIELD = "tenantItems";

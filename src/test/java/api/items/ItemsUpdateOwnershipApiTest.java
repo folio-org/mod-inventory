@@ -55,6 +55,7 @@ import support.builders.ItemRequestBuilder;
 import support.builders.ItemsUpdateOwnershipRequestBuilder;
 import support.fakes.EndpointFailureDescriptor;
 
+@SuppressWarnings("java:S5786")
 public class ItemsUpdateOwnershipApiTest extends ConsortiumApiTests {
 
   private static final String ID = "id";

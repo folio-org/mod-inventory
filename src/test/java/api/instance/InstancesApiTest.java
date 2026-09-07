@@ -64,6 +64,7 @@ import support.ApiTests;
 import support.FutureAssistance;
 import support.InstanceApiClient;
 
+@SuppressWarnings("java:S5786")
 public class InstancesApiTest extends ApiTests {
 
   private static final InventoryConfiguration CONFIG = new InventoryConfigurationImpl();

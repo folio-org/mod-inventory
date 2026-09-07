@@ -29,6 +29,7 @@ import support.InstanceApiClient;
 import support.builders.HoldingRequestBuilder;
 import support.builders.HoldingsRecordMoveRequestBuilder;
 
+@SuppressWarnings("java:S5786")
 public class HoldingsApiMoveTest extends ConsortiumApiTests {
 
   private static final String INSTANCE_ID = "instanceId";

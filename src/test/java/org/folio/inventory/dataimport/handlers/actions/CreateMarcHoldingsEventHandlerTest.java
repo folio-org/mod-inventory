@@ -44,6 +44,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+import lombok.SneakyThrows;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
@@ -428,90 +429,88 @@ class CreateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
     assertEquals("The field 004 for marc holdings must be not null", exception.getCause().getMessage());
   }
 
+  @SneakyThrows
   @Test
   void shouldNotProcessEventIfHoldingRecordIsInvalid() {
-    assertThrows(ExecutionException.class, () -> {
-      MappingProfile marcMappingProfile = new MappingProfile()
-        .withId(UUID.randomUUID().toString())
-        .withName("Prelim item from MARC")
-        .withIncomingRecordType(EntityType.MARC_HOLDINGS)
-        .withExistingRecordType(EntityType.HOLDINGS)
-        .withMappingDetails(new MappingDetail()
-          .withMappingFields(Lists.newArrayList(
-            new MappingRule().withPath("permanentLocationId").withValue("permanentLocationExpression"),
-            new MappingRule().withPath("invalidField").withValue("invalidFieldValue"))));
+    MappingProfile marcMappingProfile = new MappingProfile()
+      .withId(UUID.randomUUID().toString())
+      .withName("Prelim item from MARC")
+      .withIncomingRecordType(EntityType.MARC_HOLDINGS)
+      .withExistingRecordType(EntityType.HOLDINGS)
+      .withMappingDetails(new MappingDetail()
+        .withMappingFields(Lists.newArrayList(
+          new MappingRule().withPath("permanentLocationId").withValue("permanentLocationExpression"),
+          new MappingRule().withPath("invalidField").withValue("invalidFieldValue"))));
 
-      ProfileSnapshotWrapper holdingProfileSnapshot = new ProfileSnapshotWrapper()
-        .withId(UUID.randomUUID().toString())
-        .withProfileId(jobProfile.getId())
-        .withContentType(JOB_PROFILE)
-        .withContent(jobProfile)
-        .withChildSnapshotWrappers(Collections.singletonList(
-          new ProfileSnapshotWrapper()
-            .withProfileId(actionProfile.getId())
-            .withContentType(ACTION_PROFILE)
-            .withContent(actionProfile)
-            .withChildSnapshotWrappers(Collections.singletonList(
-              new ProfileSnapshotWrapper()
-                .withProfileId(marcMappingProfile.getId())
-                .withContentType(MAPPING_PROFILE)
-                .withContent(JsonObject.mapFrom(marcMappingProfile).getMap())))));
+    ProfileSnapshotWrapper holdingProfileSnapshot = new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
+      .withProfileId(jobProfile.getId())
+      .withContentType(JOB_PROFILE)
+      .withContent(jobProfile)
+      .withChildSnapshotWrappers(Collections.singletonList(
+        new ProfileSnapshotWrapper()
+          .withProfileId(actionProfile.getId())
+          .withContentType(ACTION_PROFILE)
+          .withContent(actionProfile)
+          .withChildSnapshotWrappers(Collections.singletonList(
+            new ProfileSnapshotWrapper()
+              .withProfileId(marcMappingProfile.getId())
+              .withContentType(MAPPING_PROFILE)
+              .withContent(JsonObject.mapFrom(marcMappingProfile).getMap())))));
 
-      HoldingsRecord holdings = new HoldingsRecord()
-        .withId(String.valueOf(UUID.randomUUID()))
-        .withHrid(String.valueOf(UUID.randomUUID()))
-        .withInstanceId(String.valueOf(UUID.randomUUID()))
-        .withSourceId(String.valueOf(UUID.randomUUID()))
-        .withHoldingsTypeId(String.valueOf(UUID.randomUUID()))
-        .withPermanentLocationId(PERMANENT_LOCATION_ID);
+    HoldingsRecord holdings = new HoldingsRecord()
+      .withId(String.valueOf(UUID.randomUUID()))
+      .withHrid(String.valueOf(UUID.randomUUID()))
+      .withInstanceId(String.valueOf(UUID.randomUUID()))
+      .withSourceId(String.valueOf(UUID.randomUUID()))
+      .withHoldingsTypeId(String.valueOf(UUID.randomUUID()))
+      .withPermanentLocationId(PERMANENT_LOCATION_ID);
 
-      var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
-      Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
-      HashMap<String, String> context = new HashMap<>();
-      context.put("HOLDINGS",
-        new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
-      context.put(MARC_HOLDINGS.value(), Json.encode(marcRecord));
+    var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put("HOLDINGS",
+      new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
+    context.put(MARC_HOLDINGS.value(), Json.encode(marcRecord));
 
-      DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-        .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
-        .withContext(context)
-        .withCurrentNode(holdingProfileSnapshot.getChildSnapshotWrappers().getFirst());
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
+      .withContext(context)
+      .withCurrentNode(holdingProfileSnapshot.getChildSnapshotWrappers().getFirst());
 
-      CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
-      future.get(5, TimeUnit.MILLISECONDS);
-    });
+    CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
+    assertThrows(ExecutionException.class, future::get);
   }
 
+  @SneakyThrows
   @Test
   void shouldNotProcessEventWhenRecordToHoldingsFutureFails() {
-    assertThrows(Exception.class, () -> {
-      when(holdingsIdStorageService.store(any(), any(), any())).thenReturn(Future.failedFuture(new Exception()));
+    when(holdingsIdStorageService.store(any(), any(), any())).thenReturn(Future.failedFuture(new Exception()));
 
-      HoldingsRecord holdings = new HoldingsRecord()
-        .withId(String.valueOf(UUID.randomUUID()))
-        .withHrid(String.valueOf(UUID.randomUUID()))
-        .withInstanceId(String.valueOf(UUID.randomUUID()))
-        .withSourceId(String.valueOf(UUID.randomUUID()))
-        .withHoldingsTypeId(String.valueOf(UUID.randomUUID()))
-        .withPermanentLocationId(PERMANENT_LOCATION_ID);
+    HoldingsRecord holdings = new HoldingsRecord()
+      .withId(String.valueOf(UUID.randomUUID()))
+      .withHrid(String.valueOf(UUID.randomUUID()))
+      .withInstanceId(String.valueOf(UUID.randomUUID()))
+      .withSourceId(String.valueOf(UUID.randomUUID()))
+      .withHoldingsTypeId(String.valueOf(UUID.randomUUID()))
+      .withPermanentLocationId(PERMANENT_LOCATION_ID);
 
-      var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
-      Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
-      HashMap<String, String> context = new HashMap<>();
-      context.put("HOLDINGS",
-        new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
-      context.put(MARC_HOLDINGS.value(), Json.encode(marcRecord));
+    var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    HashMap<String, String> context = new HashMap<>();
+    context.put("HOLDINGS",
+      new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
+    context.put(MARC_HOLDINGS.value(), Json.encode(marcRecord));
 
-      DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-        .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
-        .withJobExecutionId(UUID.randomUUID().toString())
-        .withOkapiUrl(WIRE_MOCK.baseUrl())
-        .withContext(context)
-        .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_SRS_MARC_HOLDING_RECORD_CREATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withOkapiUrl(WIRE_MOCK.baseUrl())
+      .withContext(context)
+      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
-      CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
-      future.get(5, TimeUnit.SECONDS);
-    });
+    CompletableFuture<DataImportEventPayload> future = createMarcHoldingsEventHandler.handle(dataImportEventPayload);
+    assertThrows(ExecutionException.class, future::get);
   }
 
   @Test

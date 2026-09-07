@@ -25,7 +25,7 @@ import support.builders.HoldingRequestBuilder;
 import support.builders.ItemRequestBuilder;
 import support.fixtures.InstanceFixture;
 
-public class BoundWithTest extends ApiTests {
+class BoundWithTest extends ApiTests {
 
   @Test
   @SuppressWarnings("checkstyle:MethodLength")
