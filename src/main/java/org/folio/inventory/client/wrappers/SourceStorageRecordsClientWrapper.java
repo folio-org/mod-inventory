@@ -38,21 +38,21 @@ public class SourceStorageRecordsClientWrapper extends SourceStorageRecordsClien
   }
 
   @Override
-  public Future<HttpResponse<Buffer>> postSourceStorageRecords(Record aRecord) {
+  public Future<HttpResponse<Buffer>> postSourceStorageRecords(Record sourceRecord) {
     return createRequest(POST, RECORDS_PATH, folioHeaders, webClient)
-      .sendBuffer(getBuffer(aRecord));
+      .sendBuffer(getBuffer(sourceRecord));
   }
 
   @Override
-  public Future<HttpResponse<Buffer>> putSourceStorageRecordsById(String id, Record aRecord) {
+  public Future<HttpResponse<Buffer>> putSourceStorageRecordsById(String id, Record sourceRecord) {
     return createRequest(PUT, RECORD_BY_ID_PATH.formatted(id), folioHeaders, webClient)
-      .sendBuffer(getBuffer(aRecord));
+      .sendBuffer(getBuffer(sourceRecord));
   }
 
   @Override
-  public Future<HttpResponse<Buffer>> putSourceStorageRecordsGenerationById(String id, Record aRecord) {
+  public Future<HttpResponse<Buffer>> putSourceStorageRecordsGenerationById(String id, Record sourceRecord) {
     return createRequest(PUT, RECORD_GENERATION_PATH.formatted(id), folioHeaders, webClient)
-      .sendBuffer(getBuffer(aRecord));
+      .sendBuffer(getBuffer(sourceRecord));
   }
 
   @Override

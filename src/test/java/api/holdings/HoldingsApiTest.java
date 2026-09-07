@@ -36,7 +36,7 @@ import support.fixtures.InstanceRequestFixture;
 
 public class HoldingsApiTest extends ApiTests {
 
-  private static final InventoryConfiguration config = new InventoryConfigurationImpl();
+  private static final InventoryConfiguration CONFIG = new InventoryConfigurationImpl();
 
   @Test
   void canUpdateAnExistingHoldings() {
@@ -91,7 +91,7 @@ public class HoldingsApiTest extends ApiTests {
     assertThat(putResponse.statusCode(), is(NO_CONTENT.code()));
 
     var getResponse = holdingsStorageClient.getById(getId(newHoldings));
-    var getRecordResponse = sourceRecordStorageClient.getById(UUID.fromString(newHoldings.getString(("id"))));
+    var getRecordResponse = sourceRecordStorageClient.getById(UUID.fromString(newHoldings.getString("id")));
 
     assertThat(getResponse.statusCode(), is(OK.code()));
     assertThat(getRecordResponse.statusCode(), is(OK.code()));
@@ -120,7 +120,7 @@ public class HoldingsApiTest extends ApiTests {
     assertThat(putResponse.statusCode(), is(NO_CONTENT.code()));
 
     var getResponse = holdingsStorageClient.getById(getId(newHoldings));
-    var getRecordResponse = sourceRecordStorageClient.getById(UUID.fromString(newHoldings.getString(("id"))));
+    var getRecordResponse = sourceRecordStorageClient.getById(UUID.fromString(newHoldings.getString("id")));
 
     assertThat(getResponse.statusCode(), is(OK.code()));
     assertThat(getRecordResponse.statusCode(), is(OK.code()));
@@ -164,7 +164,7 @@ public class HoldingsApiTest extends ApiTests {
   }
 
   @Test
-  void canUpdateAnExistingMARCHoldingsIfNoChanges() {
+  void canUpdateAnExistingMarcHoldingsIfNoChanges() {
     UUID instanceId = instancesClient.create(InstanceRequestFixture.smallAngryPlanet()).getId();
     JsonObject newHoldings = holdingsStorageClient.create(new HoldingRequestBuilder()
       .forInstance(instanceId).withMarcSource()).getJson();
@@ -181,14 +181,14 @@ public class HoldingsApiTest extends ApiTests {
   }
 
   @Test
-  void canNotUpdateAnExistingMARCHoldingsIfBlockedFieldsAreChanged() {
+  void canNotUpdateAnExistingMarcHoldingsIfBlockedFieldsAreChanged() {
     UUID instanceId = instancesClient.create(InstanceRequestFixture.smallAngryPlanet()).getId();
     JsonObject newHoldings = holdingsStorageClient.create(new HoldingRequestBuilder()
       .forInstance(instanceId).withMarcSource()).getJson();
 
     JsonObject holdingsForUpdate = marcHoldingsWithDefaultBlockedFields(getId(newHoldings));
 
-    for (String field : config.getHoldingsBlockedFields()) {
+    for (String field : CONFIG.getHoldingsBlockedFields()) {
       Response putResponse = updateHoldings(holdingsForUpdate);
 
       assertThat(putResponse.statusCode(), is(HttpResponseStatus.UNPROCESSABLE_ENTITY.code()));
@@ -199,7 +199,7 @@ public class HoldingsApiTest extends ApiTests {
   }
 
   @Test
-  void canCreateAHolding() {
+  void canCreateHolding() {
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
     IndividualResource postResponse = holdingsStorageClient.create(new HoldingRequestBuilder()
@@ -217,7 +217,7 @@ public class HoldingsApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void cannotCreateAHoldingWithoutPermanentLocationId() {
+  void cannotCreateHoldingWithoutPermanentLocationId() {
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
     JsonObject holdingAsJson = new HoldingRequestBuilder()
@@ -230,7 +230,7 @@ public class HoldingsApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void cannotCreateAHoldingWithoutInstanceId() {
+  void cannotCreateHoldingWithoutInstanceId() {
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
     JsonObject holdingAsJson = new HoldingRequestBuilder()
@@ -244,8 +244,7 @@ public class HoldingsApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void cannotUpdateAHoldingWithOptimisticLockingFailure() {
-
+  void cannotUpdateHoldingWithOptimisticLockingFailure() {
     JsonObject instance = createInstance(smallAngryPlanet(UUID.randomUUID()));
     JsonObject holding = new HoldingRequestBuilder()
       .forInstance(UUID.fromString(instance.getString("id")))

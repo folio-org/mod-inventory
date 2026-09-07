@@ -8,9 +8,6 @@ package org.folio.inventory.domain.items;
 
 import java.util.Objects;
 
-/**
- * @author ne
- */
 public record Status(ItemStatusName name, String date) {
   public Status(ItemStatusName name) {
     this(name, null);

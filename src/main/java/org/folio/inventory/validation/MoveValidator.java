@@ -13,7 +13,7 @@ import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.inventory.support.JsonHelper;
 import org.folio.inventory.support.http.server.ValidationError;
 
-public class MoveValidator {
+public final class MoveValidator {
 
   private MoveValidator() { }
 

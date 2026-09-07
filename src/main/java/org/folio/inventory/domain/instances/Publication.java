@@ -2,10 +2,6 @@ package org.folio.inventory.domain.instances;
 
 import io.vertx.core.json.JsonObject;
 
-/**
- *
- * @author ne
- */
 public record Publication(String publisher, String place, String dateOfPublication, String role) {
   // JSON property names
   public static final String PUBLISHER_KEY = "publisher";

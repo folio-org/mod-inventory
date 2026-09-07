@@ -58,23 +58,24 @@ public final class ItemUtil {
   public static final String PERMANENT_LOAN_TYPE = "permanentLoanType";
   public static final String TEMPORARY_LOAN_TYPE = "temporaryLoanType";
 
-  private static final Set<String> readOnlyFieldNames = new HashSet<>();
+  private static final Set<String> READ_ONLY_FIELD_NAMES = new HashSet<>();
 
   static {
-    readOnlyFieldNames.add(TITLE_KEY);
-    readOnlyFieldNames.add(CALL_NUMBER_KEY);
-    readOnlyFieldNames.add(CONTRIBUTOR_NAMES_KEY);
-    readOnlyFieldNames.add(EFFECTIVE_SHELVING_ORDER_KEY);
-    readOnlyFieldNames.add(EFFECTIVE_CALL_NUMBER_COMPONENTS_KEY);
-    readOnlyFieldNames.add(IS_BOUND_WTH_KEY);
-    readOnlyFieldNames.add(BOUND_WTH_TITLES_KEY);
-    readOnlyFieldNames.add(EFFECTIVE_LOCATION_KEY);
-    readOnlyFieldNames.add(METADATA_KEY);
+    READ_ONLY_FIELD_NAMES.add(TITLE_KEY);
+    READ_ONLY_FIELD_NAMES.add(CALL_NUMBER_KEY);
+    READ_ONLY_FIELD_NAMES.add(CONTRIBUTOR_NAMES_KEY);
+    READ_ONLY_FIELD_NAMES.add(EFFECTIVE_SHELVING_ORDER_KEY);
+    READ_ONLY_FIELD_NAMES.add(EFFECTIVE_CALL_NUMBER_COMPONENTS_KEY);
+    READ_ONLY_FIELD_NAMES.add(IS_BOUND_WTH_KEY);
+    READ_ONLY_FIELD_NAMES.add(BOUND_WTH_TITLES_KEY);
+    READ_ONLY_FIELD_NAMES.add(EFFECTIVE_LOCATION_KEY);
+    READ_ONLY_FIELD_NAMES.add(METADATA_KEY);
   }
 
   private ItemUtil() {
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   public static Item fromStoredItemRepresentation(JsonObject itemFromServer) {
     List<String> formerIds = JsonArrayHelper
       .toListOfStrings(itemFromServer.getJsonArray(Item.FORMER_IDS_KEY));
@@ -173,6 +174,7 @@ public final class ItemUtil {
     return mapToJson(item);
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   public static Item jsonToItem(JsonObject itemRequest) {
     List<String> formerIds = toListOfStrings(
       itemRequest.getJsonArray(Item.FORMER_IDS_KEY));
@@ -274,6 +276,7 @@ public final class ItemUtil {
       .withTags(tags);
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   public static JsonObject mapToJson(Item item) {
     JsonObject itemJson = new JsonObject();
     itemJson.put(ID, item.id != null
@@ -378,7 +381,7 @@ public final class ItemUtil {
   }
 
   public static void removeReadOnlyFields(JsonObject itemJson) {
-    readOnlyFieldNames.forEach(itemJson::remove);
+    READ_ONLY_FIELD_NAMES.forEach(itemJson::remove);
   }
 
   public static Integer getOrder(JsonObject itemJson) {
@@ -394,7 +397,8 @@ public final class ItemUtil {
 
   private static List<String> getTags(JsonObject itemRequest) {
     final JsonObject tags = itemRequest.getJsonObject(Item.TAGS_KEY);
-    return tags.containsKey(Item.TAG_LIST_KEY) ?
-           JsonArrayHelper.toListOfStrings(tags.getJsonArray(Item.TAG_LIST_KEY)) : new ArrayList<>();
+    return tags.containsKey(Item.TAG_LIST_KEY)
+           ? JsonArrayHelper.toListOfStrings(tags.getJsonArray(Item.TAG_LIST_KEY))
+           : new ArrayList<>();
   }
 }

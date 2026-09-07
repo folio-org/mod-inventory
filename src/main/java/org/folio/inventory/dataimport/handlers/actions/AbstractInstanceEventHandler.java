@@ -203,13 +203,13 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_OK.toInt()) {
           payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(),
             Json.encode(encodeParsedRecordContent(result.bodyAsJson(Record.class))));
-          LOGGER.info(
-            "putRecordInSrsOnly:: Updated MARC record in SRS with id: '{}' for instanceId: '{}', from tenant: {}, jobExecutionId: {}",
+          LOGGER.info("putRecordInSrsOnly:: Updated MARC record in SRS with id: '{}' for instanceId: '{}', "
+                      + "from tenant: {}, jobExecutionId: {}",
             instanceId, srcRecord.getId(), payload.getTenant(), payload.getJobExecutionId());
           promise.complete();
         } else {
-          String msg = format(
-            "Failed to update MARC record in SRS for instanceId: '%s', jobExecutionId: '%s', status code: %s, Record: %s",
+          String msg = format("Failed to update MARC record in SRS for instanceId: '%s', "
+                              + "jobExecutionId: '%s', status code: %s, Record: %s",
             instanceId, payload.getJobExecutionId(), result != null ? result.statusCode() : "",
             result != null ? result.bodyAsString() : "");
           LOGGER.error("putRecordInSrsOnly:: {}", msg);
@@ -258,7 +258,8 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
 
   protected void deleteInstance(String id, String jobExecutionId, InstanceCollection instanceCollection) {
     Promise<Void> promise = Promise.promise();
-    instanceCollection.delete(id, success -> {
+    instanceCollection.delete(id,
+      success -> {
         LOGGER.info("deleteInstance:: Instance was deleted by id: '{}', jobExecutionId: '{}'", id, jobExecutionId);
         promise.complete(success.result());
       },
@@ -273,8 +274,8 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
 
   protected void markInstanceAndRecordAsDeletedIfNeeded(Instance instance, Record srsRecord) {
     Optional<Character> leaderStatus = ParsedRecordUtil.getLeaderStatus(srsRecord.getParsedRecord());
-    if (Boolean.TRUE.equals(instance.getDeleted()) || (leaderStatus.isPresent()
-                                                       && LEADER_STATUS_DELETED == leaderStatus.get())) {
+    if (Boolean.TRUE.equals(instance.getDeleted()) || leaderStatus.isPresent()
+                                                      && LEADER_STATUS_DELETED == leaderStatus.get()) {
       LOGGER.debug("markInstanceAndRecordAsDeletedIfNeeded:: Mark Instance with id: '{}' as deleted", instance.getId());
       instance.setDeleted(true);
       instance.setDiscoverySuppress(true);

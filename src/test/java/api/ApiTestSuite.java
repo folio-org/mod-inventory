@@ -36,10 +36,10 @@ import java.util.concurrent.TimeoutException;
 import lombok.SneakyThrows;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.inventory.verticle.InventoryVerticle;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.consortium.util.ConsortiumUtil;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.verticle.InventoryVerticle;
 import org.junit.platform.suite.api.AfterSuite;
 import org.junit.platform.suite.api.BeforeSuite;
 import org.junit.platform.suite.api.SelectClasses;
@@ -48,7 +48,6 @@ import support.ControlledVocabularyPreparation;
 import support.PgPoolContainer;
 import support.fakes.FakeOkapi;
 import support.http.ResourceClient;
-
 
 @Suite
 @SelectClasses({
@@ -268,7 +267,6 @@ public class ApiTestSuite {
 
   @SneakyThrows
   private static void startInventoryVerticle() {
-    CompletableFuture<String> deployed = new CompletableFuture<>();
 
     String storageType = "okapi";
     String storageLocation = "";
@@ -285,6 +283,7 @@ public class ApiTestSuite {
 
     System.setProperty(ConsortiumUtil.EXPIRATION_TIME_PARAM, "0");
 
+    CompletableFuture<String> deployed = new CompletableFuture<>();
     VERTX_ASSISTANT.deployVerticle(
       InventoryVerticle.class.getName(), config, deployed);
 
@@ -350,6 +349,7 @@ public class ApiTestSuite {
     courseReserveLoanTypeId = loanTypePreparation.createOrReferenceTerm("Course Reserves");
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @SneakyThrows
   private static void createLocations() {
     final OkapiHttpClient client = createOkapiHttpClient();

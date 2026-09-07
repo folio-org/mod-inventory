@@ -52,9 +52,9 @@ import org.folio.JobProfile;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.dataimport.HoldingsMapperFactory;
@@ -93,10 +93,70 @@ import org.mockito.quality.Strictness;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class UpdateHoldingEventHandlerTest {
 
-  private static final String PARSED_CONTENT_WITH_INSTANCE_ID =
-    "{ \"leader\": \"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"ybp7406411\"}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } } ] }";
-  private static final String PARSED_CONTENT_WITH_INSTANCE_ID_AND_MULTIPLE_HOLDINGS =
-    "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"945\":{\"ind1\":\"\",\"ind2\":\"\",\"subfields\":[{\"h\":\"Online\"}]}},{\"945\":{\"ind1\":\"\",\"ind2\":\"\",\"subfields\":[{\"h\":\"Online 2\"}]}},{\"999\":{\"ind1\":\"f\",\"ind2\":\"f\",\"subfields\":[{\"i\":\"957985c6-97e3-4038-b0e7-343ecd0b8120\"}]}}]}";
+  private static final String PARSED_CONTENT_WITH_INSTANCE_ID = """
+    {
+      "leader": "01314nam  22003851a 4500",
+      "fields": [
+        {
+          "001": "ybp7406411"
+        },
+        {
+          "999": {
+            "ind1": "f",
+            "ind2": "f",
+            "subfields": [
+              {
+                "i": "957985c6-97e3-4038-b0e7-343ecd0b8120"
+              }
+            ]
+          }
+        }
+      ]
+    }
+    """;
+  private static final String PARSED_CONTENT_WITH_INSTANCE_ID_AND_MULTIPLE_HOLDINGS = """
+    {
+      "leader": "01314nam  22003851a 4500",
+      "fields": [
+        {
+          "001": "ybp7406411"
+        },
+        {
+          "945": {
+            "ind1": "",
+            "ind2": "",
+            "subfields": [
+              {
+                "h": "Online"
+              }
+            ]
+          }
+        },
+        {
+          "945": {
+            "ind1": "",
+            "ind2": "",
+            "subfields": [
+              {
+                "h": "Online 2"
+              }
+            ]
+          }
+        },
+        {
+          "999": {
+            "ind1": "f",
+            "ind2": "f",
+            "subfields": [
+              {
+                "i": "957985c6-97e3-4038-b0e7-343ecd0b8120"
+              }
+            ]
+          }
+        }
+      ]
+    }
+    """;
 
   private static final String ERRORS = "ERRORS";
   private static final String PERMANENT_LOCATION_ID = UUID.randomUUID().toString();
@@ -202,7 +262,7 @@ class UpdateHoldingEventHandlerTest {
       Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(holdingsRecord));
       return null;
-    }).when(holdingsRecordsCollection).update(any(), any(Consumer.class), any(Consumer.class));
+    }).when(holdingsRecordsCollection).update(any(), any(), any());
 
     when(mappingMetadataCache.get(anyString(), any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
@@ -273,6 +333,7 @@ class UpdateHoldingEventHandlerTest {
     assertEquals(holdingId, resultedHoldings.getString("id"));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldUpdateMultipleHoldingsOnOlRetryAndRemoveRetryCounterFromPayloadViaSeveralRuns()
     throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
@@ -301,28 +362,28 @@ class UpdateHoldingEventHandlerTest {
     }
 
     //actual Holdings which will returned as "actual" after optimistic locking errors
-    HoldingsRecord actualHoldings = new HoldingsRecord()
+    final HoldingsRecord actualHoldings = new HoldingsRecord()
       .withId(holdingsIds.getFirst())
       .withHrid(holdingsHrids.getFirst())
       .withInstanceId(instanceIds.getFirst())
       .withPermanentLocationId(PERMANENT_LOCATION_ID)
       .withVersion(2L);
 
-    HoldingsRecord actualHoldings2 = new HoldingsRecord()
+    final HoldingsRecord actualHoldings2 = new HoldingsRecord()
       .withId(holdingsIds.get(3))
       .withHrid(holdingsHrids.get(3))
       .withInstanceId(instanceIds.get(3))
       .withPermanentLocationId(permLocationIds.get(3))
       .withVersion(2L);
 
-    HoldingsRecord actualHoldings3 = new HoldingsRecord()
+    final HoldingsRecord actualHoldings3 = new HoldingsRecord()
       .withId(holdingsIds.get(4))
       .withHrid(holdingsHrids.get(4))
       .withInstanceId(instanceIds.get(4))
       .withPermanentLocationId(permLocationIds.get(4))
       .withVersion(2L);
 
-    HoldingsRecord actualHoldings4 = new HoldingsRecord()
+    final HoldingsRecord actualHoldings4 = new HoldingsRecord()
       .withId(holdingsIds.get(5))
       .withHrid(holdingsHrids.get(5))
       .withInstanceId(instanceIds.get(5))
@@ -333,7 +394,8 @@ class UpdateHoldingEventHandlerTest {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
     when(storage.getItemCollection(any())).thenReturn(itemCollection);
 
-    //Real Holdings which will have specific behavior: successful, optimistic locking error (ol), failure by another reason.
+    //Real Holdings which will have specific behavior: successful,
+    // optimistic locking error (ol), failure by another reason.
     HoldingsRecord olHoldingsRecord1 = new HoldingsRecord()
       .withId(holdingsIds.getFirst())
       .withInstanceId(instanceIds.getFirst())
@@ -400,15 +462,17 @@ class UpdateHoldingEventHandlerTest {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(format(
-        "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-        holdingsIds.getFirst()), 409));
+        "Cannot update record %s it has been changed (optimistic locking): "
+        + "Stored _version is 2, _version of request is 1", holdingsIds.getFirst()), 409));
       return null;
-    }).doAnswer(invocationOnMock -> {
+    })
+      .doAnswer(invocationOnMock -> {
         HoldingsRecord tmpHoldingsRecord = invocationOnMock.getArgument(0);
         Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
         successHandler.accept(new Success<>(tmpHoldingsRecord));
         return null;
-      }).doAnswer(invocationOnMock -> {
+      })
+      .doAnswer(invocationOnMock -> {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
         failureHandler.accept(
           new Failure(format("Cannot update record %s not found", partialErrorHoldingsRecord3.getId()), 404));
@@ -416,22 +480,22 @@ class UpdateHoldingEventHandlerTest {
       }).doAnswer(invocationOnMock -> {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
         failureHandler.accept(new Failure(format(
-          "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-          olHoldingsRecord4.getId()), 409));
+          "Cannot update record %s it has been changed (optimistic locking): "
+          + "Stored _version is 2, _version of request is 1", olHoldingsRecord4.getId()), 409));
         return null;
       })
       .doAnswer(invocationOnMock -> {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
         failureHandler.accept(new Failure(format(
-          "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-          olHoldingsRecord5.getId()), 409));
+          "Cannot update record %s it has been changed (optimistic locking): "
+          + "Stored _version is 2, _version of request is 1", olHoldingsRecord5.getId()), 409));
         return null;
       })
       .doAnswer(invocationOnMock -> {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
         failureHandler.accept(new Failure(format(
-          "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-          olHoldingsRecord6.getId()), 409));
+          "Cannot update record %s it has been changed (optimistic locking): "
+          + "Stored _version is 2, _version of request is 1", olHoldingsRecord6.getId()), 409));
         return null;
       })
       .doAnswer(invocationOnMock -> {
@@ -467,8 +531,8 @@ class UpdateHoldingEventHandlerTest {
       .doAnswer(invocationOnMock -> {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
         failureHandler.accept(new Failure(format(
-          "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-          olHoldingsRecord4.getId()), 409));
+          "Cannot update record %s it has been changed (optimistic locking): "
+          + "Stored _version is 2, _version of request is 1", olHoldingsRecord4.getId()), 409));
         return null;
       })
       .doAnswer(invocationOnMock -> {
@@ -491,7 +555,7 @@ class UpdateHoldingEventHandlerTest {
     }).when(holdingsRecordsCollection).findByCql(Mockito.argThat(cql -> cql.equals(
         String.format("id==(%s OR %s OR %s OR %s)", holdingsIds.getFirst(), holdingsIds.get(3), holdingsIds.get(4),
           holdingsIds.get(5)))),
-      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      any(PagingParameters.class), any(), any());
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
@@ -568,24 +632,27 @@ class UpdateHoldingEventHandlerTest {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(format(
-        "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-        olHoldingsRecord1.getId()), 409));
+        "Cannot update record %s it has been changed (optimistic locking):"
+        + " Stored _version is 2, _version of request is 1", olHoldingsRecord1.getId()), 409));
       return null;
-    }).doAnswer(invocationOnMock -> {
+    })
+      .doAnswer(invocationOnMock -> {
         HoldingsRecord tmpHoldingsRecord = invocationOnMock.getArgument(0);
         Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
         successHandler.accept(new Success<>(tmpHoldingsRecord));
         return null;
-      }).doAnswer(invocationOnMock -> {
+      })
+      .doAnswer(invocationOnMock -> {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
         failureHandler.accept(
           new Failure(format("Cannot update record %s not found", partialErrorHoldingsRecord3.getId()), 404));
         return null;
-      }).doAnswer(invocationOnMock -> {
+      })
+      .doAnswer(invocationOnMock -> {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
         failureHandler.accept(new Failure(format(
-          "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-          olHoldingsRecord4.getId()), 409));
+          "Cannot update record %s it has been changed (optimistic locking): "
+          + "Stored _version is 2, _version of request is 1", olHoldingsRecord4.getId()), 409));
         return null;
       })
       .doAnswer(invocationOnMock -> {
@@ -609,7 +676,7 @@ class UpdateHoldingEventHandlerTest {
       return null;
     }).when(holdingsRecordsCollection).findByCql(
       Mockito.argThat(cql -> cql.equals(String.format("id==(%s OR %s)", holdingsIds.getFirst(), holdingsIds.get(3)))),
-      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      any(PagingParameters.class), any(), any());
 
     CompletableFuture<DataImportEventPayload> futureSecondRun =
       updateHoldingEventHandler.handle(dataImportEventPayloadSecondRun);
@@ -638,8 +705,9 @@ class UpdateHoldingEventHandlerTest {
       format("Cannot update record %s not found", partialErrorHoldingsRecord3.getId()));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
-  void shouldUpdateSingleHoldingEvenIfOLErrorExistsAndRemoveRetryCounterFromPayload()
+  void shouldUpdateSingleHoldingEvenIfOlErrorExistsAndRemoveRetryCounterFromPayload()
     throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
     String holdingId = UUID.randomUUID().toString();
 
@@ -649,7 +717,7 @@ class UpdateHoldingEventHandlerTest {
 
     String permanentLocationId = UUID.randomUUID().toString();
 
-    HoldingsRecord actualHoldings = new HoldingsRecord()
+    final HoldingsRecord actualHoldings = new HoldingsRecord()
       .withId(holdingId)
       .withHrid(hrid)
       .withInstanceId(instanceId)
@@ -671,8 +739,8 @@ class UpdateHoldingEventHandlerTest {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(format(
-        "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-        holdingId), 409));
+        "Cannot update record %s it has been changed (optimistic locking): "
+        + "Stored _version is 2, _version of request is 1", holdingId), 409));
       return null;
     }).doAnswer(invocationOnMock -> {
       HoldingsRecord tmpHoldingsRecord = invocationOnMock.getArgument(0);
@@ -688,7 +756,7 @@ class UpdateHoldingEventHandlerTest {
       return null;
     }).when(holdingsRecordsCollection)
       .findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s)", holdingId))),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
@@ -723,8 +791,9 @@ class UpdateHoldingEventHandlerTest {
     assertEquals(0, resultedErrorList.size());
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
-  void shouldNotUpdateSingleHoldingIfOLErrorExistsAndRetryNumberIsExceeded()
+  void shouldNotUpdateSingleHoldingIfOlErrorExistsAndRetryNumberIsExceeded()
     throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
     String holdingId = UUID.randomUUID().toString();
 
@@ -734,7 +803,7 @@ class UpdateHoldingEventHandlerTest {
 
     String permanentLocationId = UUID.randomUUID().toString();
 
-    HoldingsRecord actualHoldings = new HoldingsRecord()
+    final HoldingsRecord actualHoldings = new HoldingsRecord()
       .withId(holdingId)
       .withHrid(hrid)
       .withInstanceId(instanceId)
@@ -756,14 +825,14 @@ class UpdateHoldingEventHandlerTest {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(format(
-        "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-        holdingId), 409));
+        "Cannot update record %s it has been changed (optimistic locking): "
+        + "Stored _version is 2, _version of request is 1", holdingId), 409));
       return null;
     }).doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(format(
-        "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-        holdingId), 409));
+        "Cannot update record %s it has been changed (optimistic locking): "
+        + "Stored _version is 2, _version of request is 1", holdingId), 409));
       return null;
     }).when(holdingsRecordsCollection).update(any(), any(), any());
 
@@ -774,7 +843,7 @@ class UpdateHoldingEventHandlerTest {
       return null;
     }).when(holdingsRecordsCollection)
       .findByCql(Mockito.argThat(cql -> cql.equals(String.format("id==(%s)", holdingId))),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
@@ -813,6 +882,7 @@ class UpdateHoldingEventHandlerTest {
         actualDataImportEventPayload.getJobExecutionId()), resultedErrorList.getFirst().getError());
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldProcessHoldingAndInstanceEvent() throws InterruptedException, ExecutionException, TimeoutException {
     String permanentLocationId = UUID.randomUUID().toString();
@@ -830,7 +900,7 @@ class UpdateHoldingEventHandlerTest {
       Consumer<Success<org.folio.inventory.domain.items.Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(ItemUtil.jsonToItem(existingItemJson)));
       return null;
-    }).when(itemCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
+    }).when(itemCollection).findById(anyString(), any(), any());
     when(storage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(itemCollection);
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
@@ -890,6 +960,7 @@ class UpdateHoldingEventHandlerTest {
     assertEquals(holdingId, resultedHoldings.getString("id"));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldProcessEventAndUpdateMultipleHoldings() throws InterruptedException, ExecutionException, TimeoutException {
     String firstPermanentLocationId = UUID.randomUUID().toString();
@@ -961,6 +1032,7 @@ class UpdateHoldingEventHandlerTest {
     assertEquals(secondId, secondResultedHoldings.getString("id"));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldProcessEventAndUpdateMultipleHoldingsWithPartialErrors()
     throws InterruptedException, ExecutionException, TimeoutException {
@@ -1000,8 +1072,8 @@ class UpdateHoldingEventHandlerTest {
       failureHandler.accept(new Failure("Internal Server Error", 500));
       return null;
     }).when(holdingsRecordsCollection)
-      .update(argThat(holdings -> holdings.getId().equals(firstHoldingsRecord.getId())), any(Consumer.class),
-        any(Consumer.class));
+      .update(argThat(holdings -> holdings.getId().equals(firstHoldingsRecord.getId())), any(),
+        any());
 
     JsonArray holdingsList = new JsonArray();
     holdingsList.add(new JsonObject().put("holdings", firstHoldingsRecord));
@@ -1076,7 +1148,7 @@ class UpdateHoldingEventHandlerTest {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure("Internal Server Error", 500));
       return null;
-    }).when(holdingsRecordsCollection).update(any(), any(Consumer.class), any(Consumer.class));
+    }).when(holdingsRecordsCollection).update(any(), any(), any());
 
     JsonArray holdingsList = new JsonArray();
     holdingsList.add(new JsonObject().put("holdings", firstHoldingsRecord));
@@ -1099,6 +1171,7 @@ class UpdateHoldingEventHandlerTest {
     assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.MILLISECONDS));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldProcessHoldingAndItemEventButWithPartialErrorIfItemUpdateFailed()
     throws InterruptedException, ExecutionException, TimeoutException {
@@ -1112,7 +1185,7 @@ class UpdateHoldingEventHandlerTest {
     when(storage.getItemCollection(any())).thenReturn(itemCollection);
 
     String itemId = UUID.randomUUID().toString();
-    JsonObject existingItemJson = new JsonObject()
+    final JsonObject existingItemJson = new JsonObject()
       .put("id", itemId)
       .put("status", new JsonObject().put("name", AVAILABLE.value()))
       .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
@@ -1162,7 +1235,7 @@ class UpdateHoldingEventHandlerTest {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure("Internal Server Error", 500));
       return null;
-    }).when(itemCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
+    }).when(itemCollection).findById(anyString(), any(), any());
     when(storage.getItemCollection(ArgumentMatchers.any(Context.class))).thenReturn(itemCollection);
 
     CompletableFuture<DataImportEventPayload> future = updateHoldingEventHandler.handle(dataImportEventPayload);
@@ -1317,6 +1390,7 @@ class UpdateHoldingEventHandlerTest {
       secondPartialError.getString("error"));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldNotProcessEventIfPermanentLocationIdIsNotExistsInContext()
     throws InterruptedException, ExecutionException, TimeoutException {
@@ -1452,8 +1526,9 @@ class UpdateHoldingEventHandlerTest {
   @Test
   void shouldReturnFailedFutureIfCurrentActionProfileHasNoMappingProfile() {
     HashMap<String, String> context = new HashMap<>();
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
-    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(record));
+    Record sourceRecord = new Record()
+      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(sourceRecord));
     context.put(HOLDINGS.value(), Json.encode(new HoldingsRecord()));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -1501,6 +1576,7 @@ class UpdateHoldingEventHandlerTest {
     assertFalse(updateHoldingEventHandler.isEligible(dataImportEventPayload));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test()
   void shouldNotUpdateHoldingIfStatisticalCodeIdIsInvalid() {
     // given
@@ -1516,7 +1592,7 @@ class UpdateHoldingEventHandlerTest {
             .withEnabled("true")
             .withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
 
-    ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
+    final ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withProfileId(jobProfile.getId())
       .withContentType(JOB_PROFILE)
@@ -1578,6 +1654,7 @@ class UpdateHoldingEventHandlerTest {
     );
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldUpdateMultipleHoldingsWithPartialErrorIfOneHoldingHasInvalidStatisticalCode()
     throws InterruptedException, ExecutionException, TimeoutException {
@@ -1593,7 +1670,7 @@ class UpdateHoldingEventHandlerTest {
             .withEnabled("true")
             .withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
 
-    ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
+    final ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withProfileId(jobProfile.getId())
       .withContentType(JOB_PROFILE)

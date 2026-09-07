@@ -13,6 +13,7 @@ import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
@@ -86,13 +87,13 @@ public class CreateHoldingEventHandler implements EventHandler {
   }
 
   @Override
-  public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
+  public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload payload) {
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
-    String jobExecutionId = dataImportEventPayload.getJobExecutionId();
+    String jobExecutionId = payload.getJobExecutionId();
     try {
-      dataImportEventPayload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
+      payload.setEventType(DI_INVENTORY_HOLDING_CREATED.value());
 
-      HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
+      HashMap<String, String> payloadContext = payload.getContext();
       if (payloadContext == null || payloadContext.isEmpty()
           || StringUtils.isEmpty(payloadContext.get(MARC_BIBLIOGRAPHIC.value()))) {
         LOGGER.warn("handle:: Can`t create Holding entity for context: {} jobExecutionId: {}", payloadContext,
@@ -101,90 +102,22 @@ public class CreateHoldingEventHandler implements EventHandler {
       }
       String recordId = payloadContext.get(DataImportHeaders.RECORD_ID);
       String chunkId = payloadContext.get(DataImportHeaders.CHUNK_ID);
-      if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
+      if (payload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
         LOGGER.warn("handle:: {} jobExecutionId: {} recordId: {}", ACTION_HAS_NO_MAPPING_MSG, jobExecutionId, recordId);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
-      Context context = constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(),
-        dataImportEventPayload.getOkapiUrl(),
+      Context context = constructContext(payload.getTenant(), payload.getToken(),
+        payload.getOkapiUrl(),
         payloadContext.get(DataImportHeaders.USER_ID), payloadContext.get(XOkapiHeaders.REQUEST_ID.toLowerCase()));
       LOGGER.info("handle:: Create holding with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId,
         recordId, chunkId);
 
-      Future<RecordToEntity> recordToHoldingsFuture =
-        idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
-      recordToHoldingsFuture.onSuccess(res -> {
-          String holdingsId = res.getEntityId();
-          mappingMetadataCache.get(jobExecutionId, context)
-            .map(parametersOptional -> parametersOptional.orElseThrow(() ->
-              new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG,
-                jobExecutionId, recordId, chunkId))))
-            .map(mappingMetadataDto -> {
-              prepareEvent(dataImportEventPayload);
-              MappingParameters mappingParameters =
-                Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
-              MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
-              JsonArray holdingsList = new JsonArray(payloadContext.get(HOLDINGS.value()));
-              String instanceId = getInstanceId(dataImportEventPayload);
-              for (int i = 0; i < holdingsList.size(); i++) {
-                JsonObject holdingAsJson = holdingsList.getJsonObject(i);
-                if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
-                  holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
-                  holdingsList.set(i, holdingAsJson);
-                }
-                holdingAsJson.put("id", (i == 0) ? holdingsId : UUID.randomUUID().toString());
-                holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
-                fillInstanceIdIfNeeded(instanceId, holdingAsJson);
-              }
-
-              Map.Entry<JsonArray, List<PartialError>> validationResult = ValidationUtil.validateHoldings(holdingsList);
-              JsonArray validHoldingsList = validationResult.getKey();
-              List<PartialError> validationErrors = validationResult.getValue();
-              if (validHoldingsList.isEmpty()) {
-                List<String> errors = validationErrors.stream().map(PartialError::getError).toList();
-                throw new EventProcessingException("Mapped Holdings record(s) are invalid: %s".formatted(errors));
-              }
-
-              LOGGER.trace("handle:: Mapped holdings: {}", validHoldingsList.encode());
-              dataImportEventPayload.getContext().put(HOLDINGS.value(), validHoldingsList.encode());
-              return Map.entry(
-                List.of(Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord[].class)),
-                validationErrors);
-            })
-            .compose(entry -> consortiumService.getConsortiumConfiguration(context)
-              .compose(consortiumConfigurationOptional -> {
-                if (consortiumConfigurationOptional.isPresent()) {
-                  return ConsortiumUtil.createShadowInstanceIfNeeded(consortiumService,
-                      storage.getInstanceCollection(context),
-                      context, getInstanceId(dataImportEventPayload), consortiumConfigurationOptional.get())
-                    .map(entry);
-                }
-                return Future.succeededFuture(entry);
-              }))
-            .compose(entry -> addHoldings(entry.getKey(), entry.getValue(), payloadContext, context))
-            .onSuccess(createdHoldings -> {
-              LOGGER.info(
-                "handle:: Created Holdings records by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
-                jobExecutionId, recordId, chunkId);
-              payloadContext.put(HOLDINGS.value(), Json.encode(createdHoldings));
-              orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload,
-                  DI_INVENTORY_HOLDING_CREATED, context)
-                .onComplete(result -> future.complete(dataImportEventPayload));
-            })
-            .onFailure(e -> {
-              if (!(e instanceof DuplicateEventException)) {
-                LOGGER.warn(
-                  "handle:: Error creating inventory Holding record by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
-                  jobExecutionId,
-                  recordId, chunkId, e);
-              }
-              future.completeExceptionally(e);
-            });
-        })
+      idStorageService.store(recordId, UUID.randomUUID().toString(), payload.getTenant())
+        .onSuccess(successHandler(payload, jobExecutionId, context, recordId, chunkId, payloadContext, future))
         .onFailure(failure -> {
-          LOGGER.warn(
-            "handle:: Error creating inventory recordId and holdingsId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
+          LOGGER.warn("handle:: Error creating inventory recordId and holdingsId relationship "
+                      + "by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
             jobExecutionId, recordId, chunkId, failure);
           future.completeExceptionally(failure);
         });
@@ -206,6 +139,80 @@ public class CreateHoldingEventHandler implements EventHandler {
              && actionProfile.getFolioRecord() == ActionProfile.FolioRecord.HOLDINGS;
     }
     return false;
+  }
+
+  @SuppressWarnings("checkstyle:MethodLength")
+  private Handler<RecordToEntity> successHandler(DataImportEventPayload dataImportEventPayload,
+                                                 String jobExecutionId, Context context,
+                                                 String recordId, String chunkId,
+                                                 HashMap<String, String> payloadContext,
+                                                 CompletableFuture<DataImportEventPayload> future) {
+    return res -> {
+      String holdingsId = res.getEntityId();
+      mappingMetadataCache.get(jobExecutionId, context)
+        .map(parametersOptional -> parametersOptional.orElseThrow(() ->
+          new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG,
+            jobExecutionId, recordId, chunkId))))
+        .map(mappingMetadataDto -> {
+          prepareEvent(dataImportEventPayload);
+          MappingParameters mappingParameters =
+            Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
+          MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
+          JsonArray holdingsList = new JsonArray(payloadContext.get(HOLDINGS.value()));
+          String instanceId = getInstanceId(dataImportEventPayload);
+          for (int i = 0; i < holdingsList.size(); i++) {
+            JsonObject holdingAsJson = holdingsList.getJsonObject(i);
+            if (holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD) != null) {
+              holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_PATH_FIELD);
+              holdingsList.set(i, holdingAsJson);
+            }
+            holdingAsJson.put("id", (i == 0) ? holdingsId : UUID.randomUUID().toString());
+            holdingAsJson.put("sourceId", FOLIO_SOURCE_ID);
+            fillInstanceIdIfNeeded(instanceId, holdingAsJson);
+          }
+
+          Map.Entry<JsonArray, List<PartialError>> validationResult = ValidationUtil.validateHoldings(holdingsList);
+          JsonArray validHoldingsList = validationResult.getKey();
+          List<PartialError> validationErrors = validationResult.getValue();
+          if (validHoldingsList.isEmpty()) {
+            List<String> errors = validationErrors.stream().map(PartialError::getError).toList();
+            throw new EventProcessingException("Mapped Holdings record(s) are invalid: %s".formatted(errors));
+          }
+
+          LOGGER.trace("handle:: Mapped holdings: {}", validHoldingsList.encode());
+          dataImportEventPayload.getContext().put(HOLDINGS.value(), validHoldingsList.encode());
+          return Map.entry(
+            List.of(Json.decodeValue(payloadContext.get(HOLDINGS.value()), HoldingsRecord[].class)),
+            validationErrors);
+        })
+        .compose(entry -> consortiumService.getConsortiumConfiguration(context)
+          .compose(consortiumConfigurationOptional -> {
+            if (consortiumConfigurationOptional.isPresent()) {
+              return ConsortiumUtil.createShadowInstanceIfNeeded(consortiumService,
+                  storage.getInstanceCollection(context),
+                  context, getInstanceId(dataImportEventPayload), consortiumConfigurationOptional.get())
+                .map(entry);
+            }
+            return Future.succeededFuture(entry);
+          }))
+        .compose(entry -> addHoldings(entry.getKey(), entry.getValue(), payloadContext, context))
+        .onSuccess(createdHoldings -> {
+          LOGGER.info(
+            "handle:: Created Holdings records by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
+            jobExecutionId, recordId, chunkId);
+          payloadContext.put(HOLDINGS.value(), Json.encode(createdHoldings));
+          orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload,
+              DI_INVENTORY_HOLDING_CREATED, context)
+            .onComplete(result -> future.complete(dataImportEventPayload));
+        })
+        .onFailure(e -> {
+          if (!(e instanceof DuplicateEventException)) {
+            LOGGER.warn("handle:: Error creating inventory Holding record by jobExecutionId: '{}' "
+                        + "and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId, chunkId, e);
+          }
+          future.completeExceptionally(e);
+        });
+    };
   }
 
   private void prepareEvent(DataImportEventPayload dataImportEventPayload) {

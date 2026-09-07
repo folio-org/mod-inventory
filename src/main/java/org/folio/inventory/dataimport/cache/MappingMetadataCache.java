@@ -26,9 +26,9 @@ import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.SynchronousHttpClient;
 
 /**
- * Cache for storing MappingMetadataDto entities by jobExecutionId
+ * Cache for storing MappingMetadataDto entities by jobExecutionId.
  */
-public class MappingMetadataCache {
+public final class MappingMetadataCache {
 
   private static final Logger LOGGER = LogManager.getLogger();
   private static final String METADATA_EXPIRATION_TIME = "inventory.mapping-metadata-cache.expiration.time.seconds";
@@ -48,12 +48,9 @@ public class MappingMetadataCache {
   }
 
   public static MappingMetadataCache getInstance(Vertx vertx) {
-    return getInstance(vertx,false);
+    return getInstance(vertx, false);
   }
 
-  /**
-   * Used for testing
-   */
   public static synchronized MappingMetadataCache getInstance(Vertx vertx, boolean returnNew) {
     if (instance == null || returnNew) {
       instance = new MappingMetadataCache(vertx,

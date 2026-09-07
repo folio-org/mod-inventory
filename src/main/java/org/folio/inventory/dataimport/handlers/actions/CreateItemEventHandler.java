@@ -47,7 +47,6 @@ import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.ItemStatusName;
-import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.CqlHelper;
@@ -64,12 +63,14 @@ import org.folio.rest.jaxrs.model.EntityType;
 
 public class CreateItemEventHandler implements EventHandler {
 
-  public static final String HOLDINGS_RECORD_ID_FIELD = "holdingsRecordId";
-  public static final String ITEM_PATH_FIELD = "item";
-  public static final String HOLDING_ID_FIELD = "id";
-  public static final String ITEM_ID_FIELD = "id";
-  public static final String PO_LINE_ID_FIELD = "id";
-  static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Item requires a mapping profile";
+  private static final Logger LOGGER = LogManager.getLogger(CreateItemEventHandler.class);
+
+  private static final String ACTION_HAS_NO_MAPPING_MSG = "Action profile to create an Item requires a mapping profile";
+  private static final String HOLDINGS_RECORD_ID_FIELD = "holdingsRecordId";
+  private static final String ITEM_PATH_FIELD = "item";
+  private static final String HOLDING_ID_FIELD = "id";
+  private static final String ITEM_ID_FIELD = "id";
+  private static final String PO_LINE_ID_FIELD = "id";
   private static final String PAYLOAD_HAS_NO_DATA_MSG =
     "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data";
   private static final String PAYLOAD_DATA_HAS_NO_HOLDINGS = "Failed to extract holdingsRecord from payload";
@@ -85,11 +86,9 @@ public class CreateItemEventHandler implements EventHandler {
   private static final String HOLDING_PERMANENT_LOCATION_ID = "permanentLocationId";
   private static final String HOLDING_IDENTIFIERS = "HOLDINGS_IDENTIFIERS";
   private static final String BLANK = "";
-  private static final Map<String, String> validNotes = Map.of(
+  private static final Map<String, String> VALID_NOTES = Map.of(
     "Check in note", "Check in",
     "Check out note", "Check out");
-
-  private static final Logger LOGGER = LogManager.getLogger(CreateItemEventHandler.class);
 
   private final DateTimeFormatter dateTimeFormatter =
     DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneOffset.UTC);
@@ -119,129 +118,33 @@ public class CreateItemEventHandler implements EventHandler {
   }
 
   @Override
-  public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
-    logParametersEventHandler(LOGGER, dataImportEventPayload);
+  public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload payload) {
+    logParametersEventHandler(LOGGER, payload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
-    String jobExecutionId = dataImportEventPayload.getJobExecutionId();
+    String jobExecutionId = payload.getJobExecutionId();
     try {
-      dataImportEventPayload.setEventType(DI_INVENTORY_ITEM_CREATED.value());
+      payload.setEventType(DI_INVENTORY_ITEM_CREATED.value());
 
-      HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
+      HashMap<String, String> payloadContext = payload.getContext();
       if (payloadContext == null || isBlank(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()))) {
         LOGGER.warn("handle:: " + PAYLOAD_HAS_NO_DATA_MSG + " jobExecutionId: {}", jobExecutionId);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
+
       String recordId = payloadContext.get(DataImportHeaders.RECORD_ID);
-      if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
+      if (payload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
         LOGGER.warn("handle:: " + ACTION_HAS_NO_MAPPING_MSG + " jobExecutionId: {} recordId: {}", jobExecutionId,
           recordId);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
-      dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-      dataImportEventPayload.setCurrentNode(
-        dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
-      dataImportEventPayload.getContext().put(ITEM.value(), new JsonArray().encode());
+      preparePayloadForItemCreation(payload);
 
-      String chunkId = dataImportEventPayload.getContext().get(DataImportHeaders.CHUNK_ID);
+      String chunkId = payloadContext.get(DataImportHeaders.CHUNK_ID);
       LOGGER.info("handle:: Create items with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId,
         recordId, chunkId);
 
-      Future<RecordToEntity> recordToItemFuture =
-        idStorageService.store(recordId, UUID.randomUUID().toString(), dataImportEventPayload.getTenant());
-      recordToItemFuture.onSuccess(res -> {
-        String deduplicationItemId = res.getEntityId();
-        Context context =
-          EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(),
-            dataImportEventPayload.getOkapiUrl(),
-            payloadContext.get(DataImportHeaders.USER_ID), payloadContext.get(XOkapiHeaders.REQUEST_ID.toLowerCase()));
-        ItemCollection itemCollection = storage.getItemCollection(context);
-
-        mappingMetadataCache.get(jobExecutionId, context)
-          .map(parametersOptional -> parametersOptional
-            .orElseThrow(() -> new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId,
-              recordId, chunkId))))
-          .map(mappingMetadataDto -> {
-            MappingParameters mappingParameters =
-              Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
-            MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
-            return processMappingResult(dataImportEventPayload, deduplicationItemId);
-          })
-          .compose(mappedItemList -> {
-            LOGGER.trace("handle:: Mapped items: {}", mappedItemList::encode);
-            Promise<List<Item>> createMultipleItemsPromise = Promise.promise();
-            List<PartialError> multipleItemsCreateErrors = new ArrayList<>();
-            List<Future<?>> createItemsFutures = new ArrayList<>();
-            List<Item> createdItems = new ArrayList<>();
-
-            mappedItemList.forEach(e -> {
-              JsonObject itemAsJson = getItemFromJson((JsonObject) e);
-              Promise<Item> createItemPromise = Promise.promise();
-              processSingleItem(jobExecutionId, recordId, chunkId, itemCollection, itemAsJson)
-                .onSuccess(item -> {
-                  createdItems.add(item);
-                  createItemPromise.complete();
-                })
-                .onFailure(cause -> {
-                  String itemId =
-                    itemAsJson.getString(ITEM_ID_FIELD) != null ? itemAsJson.getString(ITEM_ID_FIELD) : BLANK;
-                  String holdingId = itemAsJson.getString(HOLDINGS_RECORD_ID_FIELD) != null ? itemAsJson.getString(
-                    HOLDINGS_RECORD_ID_FIELD) : BLANK;
-                  PartialError partialError = new PartialError(itemId, cause.getMessage());
-                  partialError.setHoldingId(holdingId);
-                  multipleItemsCreateErrors.add(partialError);
-                  if (cause instanceof DuplicateEventException) {
-                    createItemPromise.fail(cause);
-                  } else {
-                    createItemPromise.complete();
-                  }
-                });
-
-              createItemsFutures.add(createItemPromise.future());
-            });
-
-            Future.join(createItemsFutures).onComplete(ar -> {
-              if (payloadContext.containsKey(ERRORS) || !multipleItemsCreateErrors.isEmpty()) {
-                payloadContext.put(ERRORS, Json.encode(multipleItemsCreateErrors));
-              }
-              if (ar.succeeded()) {
-                String multipleItemsCreateErrorsAsStringJson = Json.encode(multipleItemsCreateErrors);
-                if (!createdItems.isEmpty()) {
-                  payloadContext.put(ERRORS, multipleItemsCreateErrorsAsStringJson);
-                  createMultipleItemsPromise.complete(createdItems);
-                } else {
-                  createMultipleItemsPromise.fail(multipleItemsCreateErrorsAsStringJson);
-                }
-              } else {
-                createMultipleItemsPromise.fail(ar.cause());
-              }
-            });
-            return createMultipleItemsPromise.future();
-          })
-          .onComplete(ar -> {
-            if (ar.succeeded()) {
-              dataImportEventPayload.getContext().put(ITEM.value(), Json.encode(ar.result()));
-              orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload,
-                  DI_INVENTORY_ITEM_CREATED, context)
-                .onComplete(result -> future.complete(dataImportEventPayload)
-                );
-            } else {
-              if (!(ar.cause() instanceof DuplicateEventException)) {
-                LOGGER.warn(
-                  "handle:: Error creating inventory Item by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
-                  jobExecutionId,
-                  recordId, chunkId, ar.cause());
-              }
-              future.completeExceptionally(ar.cause());
-            }
-          });
-      }).onFailure(failure -> {
-        LOGGER.warn(
-          "handle:: Error creating inventory recordId and itemId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
-          jobExecutionId, recordId,
-          chunkId, failure);
-        future.completeExceptionally(failure);
-      });
+      storeAndProcess(recordId, payload, payloadContext, jobExecutionId, chunkId, future);
     } catch (Exception e) {
       LOGGER.warn("handle:: Error creating inventory Item", e);
       future.completeExceptionally(e);
@@ -258,6 +161,123 @@ public class CreateItemEventHandler implements EventHandler {
       return actionProfile.getAction() == CREATE && actionProfile.getFolioRecord() == ITEM;
     }
     return false;
+  }
+
+  private void preparePayloadForItemCreation(DataImportEventPayload payload) {
+    payload.getEventsChain().add(payload.getEventType());
+    payload.setCurrentNode(payload.getCurrentNode().getChildSnapshotWrappers().getFirst());
+    payload.getContext().put(ITEM.value(), new JsonArray().encode());
+  }
+
+  private Context buildContext(DataImportEventPayload payload, HashMap<String, String> payloadContext) {
+    return EventHandlingUtil.constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(),
+      payloadContext.get(DataImportHeaders.USER_ID), payloadContext.get(XOkapiHeaders.REQUEST_ID.toLowerCase()));
+  }
+
+  private void storeAndProcess(String recordId, DataImportEventPayload payload,
+                               HashMap<String, String> payloadContext, String jobExecutionId, String chunkId,
+                               CompletableFuture<DataImportEventPayload> future) {
+    idStorageService.store(recordId, UUID.randomUUID().toString(), payload.getTenant())
+      .onSuccess(res -> {
+        String deduplicationItemId = res.getEntityId();
+        Context context = buildContext(payload, payloadContext);
+        ItemCollection itemCollection = storage.getItemCollection(context);
+        mapAndCreateItems(deduplicationItemId, itemCollection, payload, payloadContext, context, jobExecutionId,
+          recordId, chunkId)
+          .onSuccess(createdItems -> completeWithOrderProcessing(createdItems, payload, context, future))
+          .onFailure(e -> {
+            if (!(e instanceof DuplicateEventException)) {
+              LOGGER.warn("handle:: Error creating inventory Item by jobExecutionId: '{}' and "
+                          + "recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId, chunkId, e);
+            }
+            future.completeExceptionally(e);
+          });
+      })
+      .onFailure(failure -> {
+        LOGGER.warn("handle:: Error creating inventory recordId and itemId relationship by "
+                    + "jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
+          jobExecutionId, recordId, chunkId, failure);
+        future.completeExceptionally(failure);
+      });
+  }
+
+  private Future<List<Item>> mapAndCreateItems(String deduplicationItemId, ItemCollection itemCollection,
+                                               DataImportEventPayload payload, HashMap<String, String> payloadContext,
+                                               Context context, String jobExecutionId, String recordId,
+                                               String chunkId) {
+    return mappingMetadataCache.get(jobExecutionId, context)
+      .map(parametersOptional -> parametersOptional
+        .orElseThrow(() -> new EventProcessingException(
+          format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId, recordId, chunkId))))
+      .map(mappingMetadataDto -> {
+        MappingParameters mappingParameters =
+          Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
+        MappingManager.map(payload, new MappingContext().withMappingParameters(mappingParameters));
+        return processMappingResult(payload, deduplicationItemId);
+      })
+      .compose(mappedItemList -> {
+        LOGGER.trace("handle:: Mapped items: {}", mappedItemList::encode);
+        return createAllItems(mappedItemList, itemCollection, payloadContext, jobExecutionId, recordId, chunkId);
+      });
+  }
+
+  private Future<List<Item>> createAllItems(JsonArray mappedItemList, ItemCollection itemCollection,
+                                            HashMap<String, String> payloadContext, String jobExecutionId,
+                                            String recordId, String chunkId) {
+    Promise<List<Item>> promise = Promise.promise();
+    List<PartialError> errors = new ArrayList<>();
+    List<Future<?>> futures = new ArrayList<>();
+    List<Item> createdItems = new ArrayList<>();
+
+    mappedItemList.forEach(e -> {
+      JsonObject itemAsJson = getItemFromJson((JsonObject) e);
+      Promise<Item> itemPromise = Promise.promise();
+      processSingleItem(jobExecutionId, recordId, chunkId, itemCollection, itemAsJson)
+        .onSuccess(item -> {
+          createdItems.add(item);
+          itemPromise.complete();
+        })
+        .onFailure(cause -> {
+          String itemId = itemAsJson.getString(ITEM_ID_FIELD) != null ? itemAsJson.getString(ITEM_ID_FIELD) : BLANK;
+          String holdingId = itemAsJson.getString(HOLDINGS_RECORD_ID_FIELD) != null
+                             ? itemAsJson.getString(HOLDINGS_RECORD_ID_FIELD) : BLANK;
+          PartialError partialError = new PartialError(itemId, cause.getMessage());
+          partialError.setHoldingId(holdingId);
+          errors.add(partialError);
+          if (cause instanceof DuplicateEventException) {
+            itemPromise.fail(cause);
+          } else {
+            itemPromise.complete();
+          }
+        });
+      futures.add(itemPromise.future());
+    });
+
+    Future.join(futures).onComplete(ar -> {
+      if (payloadContext.containsKey(ERRORS) || !errors.isEmpty()) {
+        payloadContext.put(ERRORS, Json.encode(errors));
+      }
+      if (ar.succeeded()) {
+        String errorsAsJson = Json.encode(errors);
+        if (!createdItems.isEmpty()) {
+          payloadContext.put(ERRORS, errorsAsJson);
+          promise.complete(createdItems);
+        } else {
+          promise.fail(errorsAsJson);
+        }
+      } else {
+        promise.fail(ar.cause());
+      }
+    });
+
+    return promise.future();
+  }
+
+  private void completeWithOrderProcessing(List<Item> createdItems, DataImportEventPayload payload,
+                                           Context context, CompletableFuture<DataImportEventPayload> future) {
+    payload.getContext().put(ITEM.value(), Json.encode(createdItems));
+    orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(payload, DI_INVENTORY_ITEM_CREATED, context)
+      .onComplete(result -> future.complete(payload));
   }
 
   private Future<Item> processSingleItem(String jobExecutionId, String recordId, String chunkId,
@@ -353,7 +373,9 @@ public class CreateItemEventHandler implements EventHandler {
         LOGGER.warn("fillHoldingsRecordIdIfNecessary:: " + PAYLOAD_DATA_HAS_NO_HOLDINGS);
         throw new EventProcessingException(PAYLOAD_DATA_HAS_NO_HOLDINGS);
       }
-      if (holdingId == null) { return false; }
+      if (holdingId == null) {
+        return false;
+      }
       itemAsJson.put(HOLDINGS_RECORD_ID_FIELD, holdingId);
     }
     return true;
@@ -425,7 +447,7 @@ public class CreateItemEventHandler implements EventHandler {
       .map(note -> note.withId(UUID.randomUUID().toString()))
       .map(note -> note.withSource(null))
       .map(note -> note.withDate(dateTimeFormatter.format(ZonedDateTime.now(Clock.systemDefaultZone()))))
-      .map(note -> note.withNoteType(validNotes.getOrDefault(note.noteType(), note.noteType())))
+      .map(note -> note.withNoteType(VALID_NOTES.getOrDefault(note.noteType(), note.noteType())))
       .toList();
 
     if (LOGGER.isTraceEnabled()) {

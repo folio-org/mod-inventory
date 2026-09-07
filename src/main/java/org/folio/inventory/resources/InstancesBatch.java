@@ -73,7 +73,8 @@ public class InstancesBatch extends AbstractInstances {
         .map(Instance::fromJson)
         .collect(Collectors.toList());
 
-      storage.getInstanceCollection(webContext).addBatch(instancesToCreate, success -> {
+      storage.getInstanceCollection(webContext).addBatch(instancesToCreate,
+        success -> {
           BatchResult<Instance> batchResult = success.result();
           List<Instance> createdInstances = batchResult.getBatchItems();
           errorMessages.addAll(batchResult.getErrorMessages());
@@ -82,8 +83,8 @@ public class InstancesBatch extends AbstractInstances {
             requestBody.getInteger(BATCH_RESPONSE_FIELD_TOTAL_RECORDS)));
 
           if (!createdInstances.isEmpty()) {
-            updateRelatedRecords(validInstances, createdInstances, routingContext, webContext).
-              onComplete(ar -> {
+            updateRelatedRecords(validInstances, createdInstances, routingContext, webContext)
+              .onComplete(ar -> {
                 JsonObject responseBody = getBatchResponse(createdInstances, errorMessages);
                 RedirectResponse.created(routingContext.response(), Buffer.buffer(responseBody.encodePrettily()));
               });
@@ -122,7 +123,7 @@ public class InstancesBatch extends AbstractInstances {
   }
 
   /**
-   * Performs validation for incoming Instance json object
+   * Performs validation for incoming Instance json object.
    *
    * @param jsonInstance Instance json object
    * @return error message

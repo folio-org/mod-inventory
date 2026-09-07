@@ -63,6 +63,7 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
     this.mappingMetadataCache = mappingMetadataCache;
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     logParametersEventHandler(LOGGER, dataImportEventPayload);
@@ -124,7 +125,7 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
             future.complete(dataImportEventPayload);
           } else {
             if (updateAr.cause() instanceof OptimisticLockingException) {
-              processOLError(dataImportEventPayload, future, updateAr);
+              processOlError(dataImportEventPayload, future, updateAr);
             } else {
               dataImportEventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
               LOGGER.error("Error updating inventory instance by id: '{}' by jobExecutionId: '{}'", instanceId,
@@ -154,7 +155,7 @@ public class MarcBibModifiedPostProcessingEventHandler implements EventHandler {
     return false;
   }
 
-  private void processOLError(DataImportEventPayload dataImportEventPayload,
+  private void processOlError(DataImportEventPayload dataImportEventPayload,
                               CompletableFuture<DataImportEventPayload> future, AsyncResult<Void> updateAr) {
     int currentRetryNumber = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null
                              ? 0 : Integer.parseInt(dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));

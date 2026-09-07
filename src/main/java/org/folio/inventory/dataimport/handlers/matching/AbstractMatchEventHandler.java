@@ -10,7 +10,10 @@ import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.apache.logging.log4j.LogManager;
@@ -156,39 +159,47 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
           preparePayloadBeforeConsortiumProcessing(dataImportEventPayload, consortiumConfiguration.get(),
             mappingMetadataDto, matchingParametersRelations, savedMultiMatchIds, savedInstancesIds);
           return MatchingManager.match(dataImportEventPayload)
-            .thenCompose(isMatchedConsortium -> {
-              dataImportEventPayload.setTenant(context.getTenantId());
-              if (Boolean.TRUE.equals(isMatchedConsortium) && isMatchedLocal && localMatchedInstance != null
-                  && !isShadowEntity(localMatchedInstance,
-                dataImportEventPayload.getContext().get(getEntityType().value()))) {
-                LOGGER.warn(
-                  "matchCentralTenantIfNeeded:: Found multiple results during matching on local tenant: {} and central tenant: {} ",
-                  context.getTenantId(), consortiumConfiguration.get().centralTenantId());
-                return CompletableFuture.failedFuture(new MatchingException(
-                  String.format(FOUND_MULTIPLE_ENTITIES, context.getTenantId(),
-                    consortiumConfiguration.get().centralTenantId())));
-              }
-              if (localCallMultiMatchIds != null) {
-                dataImportEventPayload.getContext().put(MULTI_MATCH_IDS, localCallMultiMatchIds);
-              }
-              if (localCallInstancesIds != null) {
-                dataImportEventPayload.getContext().put(INSTANCES_IDS, localCallInstancesIds);
-              }
-              if (StringUtils.isEmpty(dataImportEventPayload.getContext().get(getEntityType().value()))) {
-                dataImportEventPayload.getContext().put(getEntityType().value(), localMatchedInstance);
-              } else {
-                dataImportEventPayload.getContext()
-                  .put(CENTRAL_TENANT_ID_KEY, consortiumConfiguration.get().centralTenantId());
-                LOGGER.info("matchCentralTenantIfNeeded:: Matched on central tenant: {}",
-                  consortiumConfiguration.get().centralTenantId());
-              }
-              return CompletableFuture.completedFuture(isMatchedConsortium || isMatchedLocal);
-            });
+            .thenCompose(finalizeMatchProcessing(dataImportEventPayload, isMatchedLocal, context,
+              consortiumConfiguration, localMatchedInstance, localCallMultiMatchIds, localCallInstancesIds));
         }
         LOGGER.debug("matchCentralTenantIfNeeded:: Consortium configuration for tenant: {} not found",
           context.getTenantId());
         return CompletableFuture.completedFuture(isMatchedLocal);
       });
+  }
+
+  private Function<Boolean, CompletionStage<Boolean>> finalizeMatchProcessing(
+    DataImportEventPayload dataImportEventPayload, boolean isMatchedLocal, Context context,
+    Optional<ConsortiumConfiguration> consortiumConfiguration, String localMatchedInstance,
+    String localCallMultiMatchIds, String localCallInstancesIds) {
+    return isMatchedConsortium -> {
+      dataImportEventPayload.setTenant(context.getTenantId());
+      var consortiumConfig = consortiumConfiguration.get();
+      if (Boolean.TRUE.equals(isMatchedConsortium) && isMatchedLocal && localMatchedInstance != null
+          && !isShadowEntity(localMatchedInstance,
+        dataImportEventPayload.getContext().get(getEntityType().value()))) {
+        LOGGER.warn("matchCentralTenantIfNeeded:: Found multiple results during matching on local "
+                    + "tenant: {} and central tenant: {} ", context.getTenantId(), consortiumConfig.centralTenantId());
+        return CompletableFuture.failedFuture(new MatchingException(
+          String.format(FOUND_MULTIPLE_ENTITIES, context.getTenantId(),
+            consortiumConfig.centralTenantId())));
+      }
+      if (localCallMultiMatchIds != null) {
+        dataImportEventPayload.getContext().put(MULTI_MATCH_IDS, localCallMultiMatchIds);
+      }
+      if (localCallInstancesIds != null) {
+        dataImportEventPayload.getContext().put(INSTANCES_IDS, localCallInstancesIds);
+      }
+      if (StringUtils.isEmpty(dataImportEventPayload.getContext().get(getEntityType().value()))) {
+        dataImportEventPayload.getContext().put(getEntityType().value(), localMatchedInstance);
+      } else {
+        dataImportEventPayload.getContext()
+          .put(CENTRAL_TENANT_ID_KEY, consortiumConfig.centralTenantId());
+        LOGGER.info("matchCentralTenantIfNeeded:: Matched on central tenant: {}",
+          consortiumConfig.centralTenantId());
+      }
+      return CompletableFuture.completedFuture(isMatchedConsortium || isMatchedLocal);
+    };
   }
 
   private boolean isMatchByPolOrVrn(DataImportEventPayload dataImportEventPayload) {

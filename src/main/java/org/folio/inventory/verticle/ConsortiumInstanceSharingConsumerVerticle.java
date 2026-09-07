@@ -1,6 +1,5 @@
 package org.folio.inventory.verticle;
 
-import static java.lang.String.format;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_ENV;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_HOST;
 import static org.folio.inventory.dataimport.util.KafkaConfigConstants.KAFKA_MAX_REQUEST_SIZE;
@@ -50,7 +49,7 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
     ConsortiumInstanceSharingConsumer consortiumInstanceSharingConsumer = new ConsortiumInstanceSharingConsumer(vertx,
       httpClient, storage, kafkaConfig, sharedInstanceEventIdStorageService);
 
-    var kafkaConsumerFuture = createKafkaConsumerWrapper(kafkaConfig, consortiumInstanceSharingConsumer);
+    var kafkaConsumerFuture = createConsumerWrapper(kafkaConfig, consortiumInstanceSharingConsumer);
     kafkaConsumerFuture.onFailure(startPromise::fail)
       .onSuccess(ar -> {
         consumer = ar;
@@ -63,8 +62,9 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
     consumer.stop().onComplete(ar -> stopPromise.complete());
   }
 
-  private Future<KafkaConsumerWrapper<String, String>> createKafkaConsumerWrapper(KafkaConfig kafkaConfig,
-                                                                                  AsyncRecordHandler<String, String> recordHandler) {
+  private Future<KafkaConsumerWrapper<String, String>> createConsumerWrapper(
+    KafkaConfig kafkaConfig,
+    AsyncRecordHandler<String, String> recordHandler) {
     SubscriptionDefinition subscriptionDefinition =
       KafkaTopicNameHelper.createSubscriptionDefinition(kafkaConfig.getEnvId(),
         KafkaTopicNameHelper.getDefaultNameSpace(), SharingInstanceEventType.SHARING_INIT.value());

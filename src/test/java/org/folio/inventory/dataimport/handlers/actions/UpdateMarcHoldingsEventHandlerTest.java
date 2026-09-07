@@ -53,7 +53,6 @@ import org.folio.MappingProfile;
 import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.HoldingsRecordCollection;
@@ -89,8 +88,38 @@ class UpdateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
   private static final String PARSED_HOLDINGS_RECORD = "src/test/resources/marc/parsed-holdings-record.json";
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
 
-  private static final String PARSED_CONTENT_WITH_004_FIELD =
-    "{ \"leader\": \"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"ybp7406411\"}, {\"852\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"b\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] }},   {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } } ] }";
+  private static final String PARSED_CONTENT_WITH_004_FIELD = """
+    {
+      "leader": "01314nam  22003851a 4500",
+      "fields": [
+        {
+          "001": "ybp7406411"
+        },
+        {
+          "852": {
+            "ind1": "f",
+            "ind2": "f",
+            "subfields": [
+              {
+                "b": "957985c6-97e3-4038-b0e7-343ecd0b8120"
+              }
+            ]
+          }
+        },
+        {
+          "999": {
+            "ind1": "f",
+            "ind2": "f",
+            "subfields": [
+              {
+                "i": "957985c6-97e3-4038-b0e7-343ecd0b8120"
+              }
+            ]
+          }
+        }
+      ]
+    }
+    """;
   private static final String PERMANENT_LOCATION_ID = "fe19bae4-da28-472b-be90-d442e2428ead";
 
   private final Vertx vertx = Vertx.vertx();
@@ -389,7 +418,8 @@ class UpdateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(
-        "Cannot update Holdings record because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
+        "Cannot update Holdings record because it has been changed (optimistic locking): "
+        + "Stored _version is 2, _version of request is 1",
         409));
       return null;
     }).when(holdingsCollection).update(any(), any(), any());
@@ -453,7 +483,7 @@ class UpdateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
   }
 
   @Test
-  void shouldProcessEventSecondRetryIfOLErrorExist() throws ExecutionException, InterruptedException, TimeoutException {
+  void shouldProcessEventSecondRetryIfOlErrorExist() throws ExecutionException, InterruptedException, TimeoutException {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     var instanceId = String.valueOf(UUID.randomUUID());
@@ -466,7 +496,8 @@ class UpdateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
         if (count++ == 0) {
           Consumer<Failure> failureHandler = invocation.getArgument(2);
           failureHandler.accept(new Failure(
-            "Cannot update Holdings record because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
+            "Cannot update Holdings record because it has been changed (optimistic locking): "
+            + "Stored _version is 2, _version of request is 1",
             409));
         } else {
           Consumer<Success<Void>> successConsumer = invocation.getArgument(1);
@@ -533,7 +564,7 @@ class UpdateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
   }
 
   @Test
-  void shouldNotProcessEventIfFindByCQLHasInternalServerError() throws IOException {
+  void shouldNotProcessEventIfFindByCqlHasInternalServerError() throws IOException {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     doAnswer(invocationOnMock -> {
@@ -563,7 +594,7 @@ class UpdateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
   }
 
   @Test
-  void shouldNotProcessEventIfFindByCQLTotalRecordsIsZero() throws IOException {
+  void shouldNotProcessEventIfFindByCqlTotalRecordsIsZero() throws IOException {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     doAnswer(invocationOnMock -> {
@@ -597,7 +628,7 @@ class UpdateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
   }
 
   @Test
-  void shouldNotProcessEventIfFindByCQLThrowsUnsupportedEncodingException() throws IOException {
+  void shouldNotProcessEventIfFindByCqlThrowsUnsupportedEncodingException() throws IOException {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     doThrow(new UnsupportedEncodingException("Unsupported encoding."))

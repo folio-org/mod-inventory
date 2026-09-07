@@ -114,8 +114,7 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
           .postSourceStorageRecords(srcRecord)
           .onComplete(ar -> {
             var result = ar.result();
-            if (ar.succeeded() &&
-                result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
+            if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
               LOGGER.info("Created MARC record in SRS with id: '{}', instanceId: '{}', from tenant: {}",
                 srcRecord.getId(), instance.getId(), context.getTenantId());
               promise.complete(instance);

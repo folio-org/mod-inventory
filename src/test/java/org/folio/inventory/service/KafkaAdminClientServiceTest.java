@@ -39,7 +39,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class KafkaAdminClientServiceTest {
 
   private static final String STUB_TENANT = "foo-tenant";
-  private static final Set<String> allExpectedTopics = Set.of(
+  private static final Set<String> ALL_EXPECTED_TOPICS = Set.of(
     "folio.Default.foo-tenant.DI_INVENTORY_INSTANCE_CREATED",
     "folio.Default.foo-tenant.DI_INVENTORY_HOLDING_CREATED",
     "folio.Default.foo-tenant.DI_INVENTORY_ITEM_CREATED",
@@ -137,12 +137,13 @@ class KafkaAdminClientServiceTest {
     when(mockClient.close()).thenReturn(succeededFuture());
 
     createKafkaTopicsAsync(mockClient)
-      .onComplete(testContext.failing(cause -> testContext.verify(() -> {
-          assertEquals("err msg", cause.getMessage());
-          verify(mockClient, times(1)).close();
-          testContext.completeNow();
-        }
-      )));
+      .onComplete(testContext.failing(cause ->
+        testContext.verify(() -> {
+            assertEquals("err msg", cause.getMessage());
+            verify(mockClient, times(1)).close();
+            testContext.completeNow();
+          }
+        )));
   }
 
   @Test
@@ -160,7 +161,7 @@ class KafkaAdminClientServiceTest {
         verify(mockClient, times(1)).close();
 
         // Only these items are expected, so implicitly checks size of list
-        assertThat(getTopicNames(createTopicsCaptor), containsInAnyOrder(allExpectedTopics.toArray()));
+        assertThat(getTopicNames(createTopicsCaptor), containsInAnyOrder(ALL_EXPECTED_TOPICS.toArray()));
         testContext.completeNow();
       })));
   }

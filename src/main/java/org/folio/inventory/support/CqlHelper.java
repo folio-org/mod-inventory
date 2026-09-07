@@ -2,13 +2,12 @@ package org.folio.inventory.support;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.folio.util.StringUtil;
 
 /**
  * Helper for CQL queries.
  */
-public class CqlHelper {
+public final class CqlHelper {
   private CqlHelper() { }
 
   public static String multipleRecordsCqlQuery(List<String> recordIds) {
@@ -19,7 +18,7 @@ public class CqlHelper {
   }
 
   /**
-   * Returns non-encoded CQL query with ids of records
+   * Returns non-encoded CQL query with ids of records.
    *
    * @param recordIds record's ids
    * @return CQL expression
@@ -37,6 +36,7 @@ public class CqlHelper {
 
   /**
    * Returns a CQL expression with an exact match for barcode.
+   *
    * <p>
    * barcodeIs("abc") = "barcode==\"abc\""<br>
    * barcodeIs("1-*?") = "barcode==\"1-\\*\\?\""

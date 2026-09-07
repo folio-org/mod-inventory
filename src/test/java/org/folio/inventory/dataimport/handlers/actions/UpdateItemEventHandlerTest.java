@@ -53,9 +53,9 @@ import org.folio.JobProfile;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.HoldingWriterFactory;
 import org.folio.inventory.dataimport.HoldingsMapperFactory;
@@ -100,17 +100,112 @@ import org.mockito.quality.Strictness;
 class UpdateItemEventHandlerTest {
 
   private static final String PARSED_CONTENT = """
-    {{
+    {
+      {
+        "fields": [
+          {
+            "900": {
+              "ind1": " ",
+              "ind2": " ",
+              "subfields": [
+                {
+                  "a": "it00000000001"
+                },
+                {
+                  "3": "ho00000000001"
+                }
+              ]
+            }
+          },
+          {
+            "950": {
+              "ind1": " ",
+              "ind2": " ",
+              "subfields": [
+                {
+                  "a": "Did this item note get added?"
+                }
+              ]
+            }
+          },
+          {
+            "951": {
+              "ind1": " ",
+              "ind2": " ",
+              "subfields": [
+                {
+                  "a": "Did this item check-out note get added?"
+                }
+              ]
+            }
+          },
+          {
+            "999": {
+              "ind1": "f",
+              "ind2": "f",
+              "subfields": [
+                {
+                  "s": "bd9894be-e5ea-424f-aa47-1dd54e719ed4"
+                },
+                {
+                  "i": "45fd6cfe-5b7c-43f3-9fc3-bd80261b328f"
+                }
+              ]
+            }
+          }
+        ],
+        "leader": "01877cam a2200457Ii 4500"
+      }
+    """;
+  private static final String PARSED_CONTENT_WITH_HOLDING_ID = """
+    {
+      "leader": "01314nam 22003851a 4500",
       "fields": [
-        { "900": { "ind1": " ", "ind2": " ", "subfields": [ { "a": "it00000000001" }, { "3": "ho00000000001" } ] } },
-        { "950": { "ind1": " ", "ind2": " ", "subfields": [ { "a": "Did this item note get added?" } ] } },
-        { "951": { "ind1": " ", "ind2": " ", "subfields": [ { "a": "Did this item check-out note get added?" } ] } },
-        { "999": { "ind1": "f", "ind2": "f", "subfields": [ { "s": "bd9894be-e5ea-424f-aa47-1dd54e719ed4" }, { "i": "45fd6cfe-5b7c-43f3-9fc3-bd80261b328f" } ] } }],
-      "leader": "01877cam a2200457Ii 4500"
+        {
+          "001": "ybp7406411"
+        },
+        {
+          "945": {
+            "subfields": [
+              {
+                "a": "OM"
+              },
+              {
+                "h": "KU/CC/DI/M"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "945": {
+            "subfields": [
+              {
+                "a": "AM"
+              },
+              {
+                "h": "KU/CC/DI/M"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "999": {
+            "ind1": "f",
+            "ind2": "f",
+            "subfields": [
+              {
+                "h": "957985c6-97e3-4038-b0e7-343ecd0b8120"
+              }
+            ]
+          }
+        }
+      ]
     }
     """;
-  private static final String PARSED_CONTENT_WITH_HOLDING_ID =
-    "{\"leader\":\"01314nam 22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"945\":{\"subfields\":[{\"a\":\"OM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"AM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"h\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } }]}";
   private static final String MULTIPLE_HOLDINGS_FIELD = "MULTIPLE_HOLDINGS_FIELD";
   private static final String HOLDINGS_IDENTIFIERS = "HOLDINGS_IDENTIFIERS";
   private static final String ERRORS = "ERRORS";
@@ -207,7 +302,7 @@ class UpdateItemEventHandlerTest {
       Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(returnedHoldings));
       return null;
-    }).when(mockedHoldingsCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedHoldingsCollection).findById(anyString(), any(), any());
 
     when(mappingMetadataCache.get(anyString(), any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
@@ -231,7 +326,7 @@ class UpdateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     JsonObject firstExistingItemJson = new JsonObject()
       .put("id", UUID.randomUUID().toString())
@@ -284,6 +379,7 @@ class UpdateItemEventHandlerTest {
     Assertions.assertNotNull(eventPayload.getContext().get(HOLDINGS.value()));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldUpdateMultipleItemsWithNewStatuses()
     throws UnsupportedEncodingException, InterruptedException, ExecutionException, TimeoutException {
@@ -294,7 +390,7 @@ class UpdateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     JsonObject firstExistingItemJson = new JsonObject()
       .put("id", UUID.randomUUID().toString())
@@ -375,6 +471,7 @@ class UpdateItemEventHandlerTest {
     Assertions.assertNotNull(eventPayload.getContext().get(HOLDINGS.value()));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldUpdateMultipleItemsWithNewStatusesIfHoldingAlreadyInPayload()
     throws UnsupportedEncodingException, InterruptedException, ExecutionException, TimeoutException {
@@ -385,7 +482,7 @@ class UpdateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     String holdingsId = UUID.randomUUID().toString();
     JsonObject firstExistingItemJson = new JsonObject()
@@ -458,8 +555,9 @@ class UpdateItemEventHandlerTest {
     Assertions.assertNotNull(eventPayload.getContext().get(HOLDINGS.value()));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
-  void shouldUpdateMultipleItemsOnOLRetryAndRemoveRetryCounterFromPayloadViaSeveralRuns()
+  void shouldUpdateMultipleItemsOnOlRetryAndRemoveRetryCounterFromPayloadViaSeveralRuns()
     throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
 
     // 10 ids for the Items
@@ -479,19 +577,20 @@ class UpdateItemEventHandlerTest {
     JsonObject metadata = new JsonObject();
 
     //actual Items which will returned as "actual" after optimistic locking errors
-    Item actualItem =
+    final Item actualItem =
       new Item(itemIds.get(0), "2", holdingsIds.get(0), "test", new Status(AVAILABLE), commonId, commonId, metadata);
 
-    Item actualItem2 =
+    final Item actualItem2 =
       new Item(itemIds.get(3), "2", holdingsIds.get(3), "test", new Status(AVAILABLE), commonId, commonId, metadata);
 
-    Item actualItem3 =
+    final Item actualItem3 =
       new Item(itemIds.get(4), "2", holdingsIds.get(4), "test", new Status(AVAILABLE), commonId, commonId, metadata);
 
-    Item actualItem4 =
+    final Item actualItem4 =
       new Item(itemIds.get(5), "2", holdingsIds.get(5), "test", new Status(AVAILABLE), commonId, commonId, metadata);
 
-    //Real Items which will have specific behavior: successful, optimistic locking error (ol), failure by another reason.
+    //Real Items which will have specific behavior: successful,
+    // optimistic locking error (ol), failure by another reason.
     JsonObject olItem1 = new JsonObject()
       .put("id", itemIds.get(0))
       .put("status", new JsonObject().put("name", AVAILABLE.value()))
@@ -569,37 +668,40 @@ class UpdateItemEventHandlerTest {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(format(
-        "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-        itemIds.getFirst()), 409));
+        "Cannot update record %s it has been changed (optimistic locking): "
+        + "Stored _version is 2, _version of request is 1", itemIds.getFirst()), 409));
       return null;
-    }).doAnswer(invocationOnMock -> {
+    })
+      .doAnswer(invocationOnMock -> {
         Item itemRecord = invocationOnMock.getArgument(0);
         Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
         successHandler.accept(new Success<>(itemRecord));
         return null;
-      }).doAnswer(invocationOnMock -> {
+      })
+      .doAnswer(invocationOnMock -> {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
         failureHandler.accept(new Failure(format("Cannot update record %s not found", itemIds.get(2)), 404));
         return null;
-      }).doAnswer(invocationOnMock -> {
+      })
+      .doAnswer(invocationOnMock -> {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
         failureHandler.accept(new Failure(format(
-          "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-          itemIds.get(3)), 409));
+          "Cannot update record %s it has been changed (optimistic locking): "
+          + "Stored _version is 2, _version of request is 1", itemIds.get(3)), 409));
         return null;
       })
       .doAnswer(invocationOnMock -> {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
         failureHandler.accept(new Failure(format(
-          "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-          itemIds.get(4)), 409));
+          "Cannot update record %s it has been changed (optimistic locking):"
+          + " Stored _version is 2, _version of request is 1", itemIds.get(4)), 409));
         return null;
       })
       .doAnswer(invocationOnMock -> {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
         failureHandler.accept(new Failure(format(
-          "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-          itemIds.get(5)), 409));
+          "Cannot update record %s it has been changed (optimistic locking): "
+          + "Stored _version is 2, _version of request is 1", itemIds.get(5)), 409));
         return null;
       })
       .doAnswer(invocationOnMock -> {
@@ -633,8 +735,8 @@ class UpdateItemEventHandlerTest {
       .doAnswer(invocationOnMock -> {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
         failureHandler.accept(new Failure(format(
-          "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-          itemIds.get(3)), 409));
+          "Cannot update record %s it has been changed (optimistic locking): "
+          + "Stored _version is 2, _version of request is 1", itemIds.get(3)), 409));
         return null;
       })
       .doAnswer(invocationOnMock -> {
@@ -655,7 +757,7 @@ class UpdateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection).findByCql(argThat(cql -> cql.contains("AND id <>")),
-      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> {
       var result = new MultipleRecords<>(List.of(actualItem, actualItem2, actualItem3, actualItem4), 4);
@@ -666,7 +768,7 @@ class UpdateItemEventHandlerTest {
       argThat(cql -> cql.equals(
         String.format("id==(%s OR %s OR %s OR %s)", itemIds.getFirst(), itemIds.get(3), itemIds.get(4),
           itemIds.get(5)))),
-      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      any(PagingParameters.class), any(), any());
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new ItemWriterFactory());
@@ -689,7 +791,7 @@ class UpdateItemEventHandlerTest {
     verify(mockedItemCollection, times(1)).findByCql(
       argThat(cql -> cql.equals(
         String.format("id==(%s OR %s OR %s OR %s)", itemIds.getFirst(), itemIds.get(3), itemIds.get(4),
-          itemIds.get(5)))), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+          itemIds.get(5)))), any(PagingParameters.class), any(), any());
 
     Assertions.assertEquals(DI_INVENTORY_ITEM_UPDATED.value(), actualDataImportEventPayload.getEventType());
     Assertions.assertNotNull(actualDataImportEventPayload.getContext().get(ITEM.value()));
@@ -742,23 +844,26 @@ class UpdateItemEventHandlerTest {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(format(
-        "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-        itemIds.getFirst()), 409));
+        "Cannot update record %s it has been changed (optimistic locking):"
+        + " Stored _version is 2, _version of request is 1", itemIds.getFirst()), 409));
       return null;
-    }).doAnswer(invocationOnMock -> {
+    })
+      .doAnswer(invocationOnMock -> {
         Item tmpHoldingsRecord = invocationOnMock.getArgument(0);
         Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
         successHandler.accept(new Success<>(tmpHoldingsRecord));
         return null;
-      }).doAnswer(invocationOnMock -> {
+      })
+      .doAnswer(invocationOnMock -> {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
         failureHandler.accept(new Failure(format("Cannot update record %s not found", itemIds.get(2)), 404));
         return null;
-      }).doAnswer(invocationOnMock -> {
+      })
+      .doAnswer(invocationOnMock -> {
         Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
         failureHandler.accept(new Failure(format(
-          "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-          itemIds.get(3)), 409));
+          "Cannot update record %s it has been changed (optimistic locking): "
+          + "Stored _version is 2, _version of request is 1", itemIds.get(3)), 409));
         return null;
       })
       .doAnswer(invocationOnMock -> {
@@ -782,7 +887,7 @@ class UpdateItemEventHandlerTest {
       return null;
     }).when(mockedItemCollection).findByCql(
       argThat(cql -> cql.equals(String.format("id==(%s OR %s)", itemIds.getFirst(), itemIds.get(3)))),
-      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      any(PagingParameters.class), any(), any());
 
     CompletableFuture<DataImportEventPayload> futureSecondRun =
       updateItemHandler.handle(dataImportEventPayloadSecondRun);
@@ -790,7 +895,7 @@ class UpdateItemEventHandlerTest {
     verify(mockedItemCollection, times(20)).update(any(), any(), any());
     verify(mockedItemCollection, times(1)).findByCql(
       argThat(cql -> cql.equals(String.format("id==(%s OR %s)", itemIds.getFirst(), itemIds.get(3)))),
-      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      any(PagingParameters.class), any(), any());
     Assertions.assertEquals(DI_INVENTORY_ITEM_UPDATED.value(), actualDataImportEventPayloadSecondRun.getEventType());
     Assertions.assertNotNull(actualDataImportEventPayloadSecondRun.getContext().get(ITEM.value()));
     Assertions.assertNull(
@@ -816,8 +921,9 @@ class UpdateItemEventHandlerTest {
       format("Cannot update record %s not found", partialErrorItem3.getString("id")));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
-  void shouldNotUpdateSingleItemIfOLErrorExistsAndRetryNumberIsExceeded()
+  void shouldNotUpdateSingleItemIfOlErrorExistsAndRetryNumberIsExceeded()
     throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
     String itemId = UUID.randomUUID().toString();
 
@@ -827,7 +933,8 @@ class UpdateItemEventHandlerTest {
 
     JsonObject metadata = new JsonObject();
 
-    Item actualItem = new Item(itemId, "2", holdingId, "test", new Status(AVAILABLE), commonId, commonId, metadata);
+    final Item actualItem = new Item(itemId, "2", holdingId, "test",
+      new Status(AVAILABLE), commonId, commonId, metadata);
 
     JsonObject olItem1 = new JsonObject()
       .put("id", itemId)
@@ -847,7 +954,7 @@ class UpdateItemEventHandlerTest {
     context.put(ITEM.value(), itemList.encode());
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+    final DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_ITEM_UPDATED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
@@ -857,14 +964,14 @@ class UpdateItemEventHandlerTest {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(format(
-        "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-        itemId), 409));
+        "Cannot update record %s it has been changed (optimistic locking): "
+        + "Stored _version is 2, _version of request is 1", itemId), 409));
       return null;
     }).doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(format(
-        "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
-        itemId), 409));
+        "Cannot update record %s it has been changed (optimistic locking):"
+        + " Stored _version is 2, _version of request is 1", itemId), 409));
       return null;
     }).when(mockedItemCollection).update(any(), any(), any());
 
@@ -874,7 +981,7 @@ class UpdateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection).findByCql(argThat(cql -> cql.contains("AND id <>")),
-      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> {
       var result = new MultipleRecords<>(List.of(actualItem), 1);
@@ -882,7 +989,7 @@ class UpdateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection).findByCql(argThat(cql -> cql.equals(String.format("id==(%s)", itemId))),
-      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      any(PagingParameters.class), any(), any());
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
@@ -892,7 +999,7 @@ class UpdateItemEventHandlerTest {
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
     verify(mockedItemCollection, times(2)).update(any(), any(), any());
     verify(mockedItemCollection, times(1)).findByCql(argThat(cql -> cql.equals(String.format("id==(%s)", itemId))),
-      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      any(PagingParameters.class), any(), any());
 
     Assertions.assertEquals(DI_INVENTORY_ITEM_UPDATED.value(), actualDataImportEventPayload.getEventType());
     Assertions.assertNotNull(actualDataImportEventPayload.getContext().get(ActionProfile.FolioRecord.ITEM.value()));
@@ -913,8 +1020,9 @@ class UpdateItemEventHandlerTest {
         actualDataImportEventPayload.getJobExecutionId()), resultedErrorList.getFirst().getError());
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
-  void shouldUpdateSingleItemEvenIfOLErrorExistsAndRemoveRetryCounterFromPayload()
+  void shouldUpdateSingleItemEvenIfOlErrorExistsAndRemoveRetryCounterFromPayload()
     throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
     String itemId = UUID.randomUUID().toString();
 
@@ -924,7 +1032,8 @@ class UpdateItemEventHandlerTest {
 
     JsonObject metadata = new JsonObject();
 
-    Item actualItem = new Item(itemId, "2", holdingId, "test", new Status(AVAILABLE), commonId, commonId, metadata);
+    final Item actualItem = new Item(itemId, "2", holdingId, "test",
+      new Status(AVAILABLE), commonId, commonId, metadata);
 
     JsonObject olItem1 = new JsonObject()
       .put("id", itemId)
@@ -944,7 +1053,7 @@ class UpdateItemEventHandlerTest {
     context.put(ITEM.value(), itemList.encode());
     context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+    final DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_ITEM_UPDATED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withContext(context)
@@ -954,7 +1063,8 @@ class UpdateItemEventHandlerTest {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(format(
-        "Cannot update record %s it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
+        "Cannot update record %s it has been changed (optimistic locking): "
+        + "Stored _version is 2, _version of request is 1",
         itemId), 409));
       return null;
     }).doAnswer(invocationOnMock -> {
@@ -970,7 +1080,7 @@ class UpdateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection).findByCql(argThat(cql -> cql.contains("AND id <>")),
-      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> {
       var result = new MultipleRecords<>(List.of(actualItem), 1);
@@ -978,7 +1088,7 @@ class UpdateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection).findByCql(argThat(cql -> cql.equals(String.format("id==(%s)", itemId))),
-      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      any(PagingParameters.class), any(), any());
 
     MappingManager.registerReaderFactory(fakeReaderFactory);
     MappingManager.registerWriterFactory(new HoldingWriterFactory());
@@ -988,7 +1098,7 @@ class UpdateItemEventHandlerTest {
     DataImportEventPayload actualDataImportEventPayload = future.get(5, TimeUnit.MILLISECONDS);
     verify(mockedItemCollection, times(2)).update(any(), any(), any());
     verify(mockedItemCollection, times(1)).findByCql(argThat(cql -> cql.equals(String.format("id==(%s)", itemId))),
-      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      any(PagingParameters.class), any(), any());
 
     Assertions.assertEquals(DI_INVENTORY_ITEM_UPDATED.value(), actualDataImportEventPayload.getEventType());
     Assertions.assertNotNull(actualDataImportEventPayload.getContext().get(ActionProfile.FolioRecord.ITEM.value()));
@@ -1005,6 +1115,7 @@ class UpdateItemEventHandlerTest {
     Assertions.assertEquals(0, resultedErrorList.size());
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldNotUpdateMultipleItemsWithNewStatusesAndReturnDiErrorIfNoItemsUpdated()
     throws UnsupportedEncodingException {
@@ -1015,7 +1126,7 @@ class UpdateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     MappingRule statusMappingRule =
       new MappingRule().withPath("item.status.name").withValue("\"statusExpression\"").withEnabled("true");
@@ -1073,6 +1184,7 @@ class UpdateItemEventHandlerTest {
     assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldAddPartialErrorsWhenBarcodeToUpdatedAssignedToAnotherItem()
     throws InterruptedException, ExecutionException, TimeoutException, UnsupportedEncodingException {
@@ -1085,7 +1197,7 @@ class UpdateItemEventHandlerTest {
       .put("permanentLoanType", new JsonObject().put("id", UUID.randomUUID().toString()))
       .put("holdingsRecordId", UUID.randomUUID().toString());
 
-    JsonObject secondExistingItemJson = new JsonObject()
+    final JsonObject secondExistingItemJson = new JsonObject()
       .put("id", UUID.randomUUID().toString())
       .put("status", new JsonObject().put("name", AVAILABLE.value()))
       .put("materialType", new JsonObject().put("id", UUID.randomUUID().toString()))
@@ -1098,7 +1210,7 @@ class UpdateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> {
       Item itemByCql = new Item(null, null, null, new Status(AVAILABLE), null, null, null);
@@ -1107,7 +1219,7 @@ class UpdateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection).findByCql(argThat(cql -> cql.contains(itemId1)),
-      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      any(PagingParameters.class), any(), any());
 
     JsonArray itemsList = new JsonArray();
     itemsList.add(new JsonObject().put("item", firstExistingItemJson));
@@ -1168,6 +1280,7 @@ class UpdateItemEventHandlerTest {
       firstError.getString("error").contains("Barcode must be unique, In process is already assigned to another item"));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldNotRequestWhenUpdatedItemHasEmptyBarcode()
     throws UnsupportedEncodingException, ExecutionException, InterruptedException, TimeoutException {
@@ -1179,13 +1292,13 @@ class UpdateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     String permanentLocationId2 = UUID.randomUUID().toString();
 
     String expectedHoldingId2 = UUID.randomUUID().toString();
     String expectedHoldingId1 = UUID.randomUUID().toString();
-    JsonArray holdingsAsJson = new JsonArray(List.of(
+    final JsonArray holdingsAsJson = new JsonArray(List.of(
       new JsonObject()
         .put("id", expectedHoldingId1)
         .put("permanentLocationId", PERMANENT_LOCATION_ID),
@@ -1255,7 +1368,7 @@ class UpdateItemEventHandlerTest {
 
     // then
     verify(mockedItemCollection, times(0))
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
   }
 
   @Test
@@ -1293,6 +1406,7 @@ class UpdateItemEventHandlerTest {
     assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @ParameterizedTest
   @ValueSource(strings = {"Aged to lost", "Awaiting delivery", "Awaiting pickup", "Checked out", "Claimed returned",
                           "Declared lost", "Paged"})
@@ -1305,7 +1419,7 @@ class UpdateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     String expectedItemBarcode = "BC-123123";
     MappingRule barcodeMappingRule = mappingProfile.getMappingDetails().getMappingFields().get(1);
@@ -1420,6 +1534,7 @@ class UpdateItemEventHandlerTest {
     Assertions.assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldReturnFailedFutureAndNotUpdateItemIfStatisticalCodeIdIsInvalid() {
     // given
@@ -1433,7 +1548,7 @@ class UpdateItemEventHandlerTest {
             .withEnabled("true")
             .withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
 
-    ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
+    final ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withProfileId(jobProfile.getId())
       .withContentType(JOB_PROFILE)

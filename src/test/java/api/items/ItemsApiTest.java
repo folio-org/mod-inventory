@@ -56,7 +56,7 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.Strings;
-import org.folio.inventory.domain.items.CQLQueryRequestDto;
+import org.folio.inventory.domain.items.CqlQueryRequestDto;
 import org.folio.inventory.domain.items.EffectiveCallNumberComponents;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.support.JsonArrayHelper;
@@ -90,9 +90,10 @@ public class ItemsApiTest extends ApiTests {
   private static final String CALL_NUMBER_PREFIX = "callNumberPrefix";
   private static final String CALL_NUMBER_TYPE_ID = UUID.randomUUID().toString();
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   @SneakyThrows
-  void canCreateAnItemWithoutIDAndHRID() {
+  void canCreateAnItemWithoutIdAndHrid() {
     UUID holdingId = createInstanceAndHolding();
     String testNote = "this is a note";
     JsonArray adminNote = new JsonArray();
@@ -166,7 +167,7 @@ public class ItemsApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void canCreateItemWithAnIDAndHRID() {
+  void canCreateItemWithAnIdAndHrid() {
     UUID itemId = UUID.randomUUID();
     final String hrid = "it777";
 
@@ -365,13 +366,14 @@ public class ItemsApiTest extends ApiTests {
     );
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   @SneakyThrows
   void canUpdateExistingItem() {
-    UUID transitDestinationServicePointIdForCreate = UUID.randomUUID();
-    UUID transitDestinationServicePointIdForUpdate = UUID.randomUUID();
-    UUID holdingId = createInstanceAndHolding();
-    UUID itemId = UUID.randomUUID();
+    final UUID transitDestinationServicePointIdForCreate = UUID.randomUUID();
+    final UUID transitDestinationServicePointIdForUpdate = UUID.randomUUID();
+    final UUID holdingId = createInstanceAndHolding();
+    final UUID itemId = UUID.randomUUID();
 
     JsonObject lastCheckIn = defaultLastCheckIn();
 
@@ -540,6 +542,7 @@ public class ItemsApiTest extends ApiTests {
     assertThat(getAllResponse.getJson().getInteger("totalRecords"), is(2));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   @SneakyThrows
   void canPageAllItems() {
@@ -785,7 +788,7 @@ public class ItemsApiTest extends ApiTests {
     }
 
     String idzWithOrDelimiter = "id==(" + String.join(" or ", itemIdz) + ")";
-    CQLQueryRequestDto cqlQueryRequestDto = new CQLQueryRequestDto();
+    CqlQueryRequestDto cqlQueryRequestDto = new CqlQueryRequestDto();
     cqlQueryRequestDto.setQuery(idzWithOrDelimiter);
     cqlQueryRequestDto.setLimit(2000);
     final var postCompleted = okapiClient.post(ApiRoot.itemsRetrieve(), JsonObject.mapFrom(cqlQueryRequestDto));
@@ -803,7 +806,7 @@ public class ItemsApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void canPageAllIRetrieveItemsViaPost() {
+  void canPageAllRetrieveItemsViaPost() {
 
     int numOfItemsToCreate = 5;
     for (int i = 1; i <= numOfItemsToCreate; i++) {
@@ -821,7 +824,7 @@ public class ItemsApiTest extends ApiTests {
         .withBarcode("0987563431" + i));
     }
 
-    CQLQueryRequestDto cqlQueryRequestDto = new CQLQueryRequestDto();
+    CqlQueryRequestDto cqlQueryRequestDto = new CqlQueryRequestDto();
     cqlQueryRequestDto.setLimit(3);
     final var retrievePostCompletedFirstPage =
       okapiClient.post(ApiRoot.itemsRetrieve(), JsonObject.mapFrom(cqlQueryRequestDto));
@@ -1023,7 +1026,7 @@ public class ItemsApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void canCreateAnItemWithACirculationNote() {
+  void canCreateAnItemWithCirculationNote() {
 
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
@@ -1038,9 +1041,9 @@ public class ItemsApiTest extends ApiTests {
         .put(LAST_NAME_KEY, "Smith")
         .put(FIRST_NAME_KEY, "John"));
 
-    JsonObject createdUser = usersClient.create(user).getJson();
+    final JsonObject createdUser = usersClient.create(user).getJson();
 
-    DateTime requestMade = DateTime.now();
+    final DateTime requestMade = DateTime.now();
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
@@ -1077,8 +1080,8 @@ public class ItemsApiTest extends ApiTests {
 
     assertThat(createdItem.getJsonObject("temporaryLocation").getString("name"), is("Reading Room"));
 
-    JsonObject checkInNote = createdItem.getJsonArray(CIRCULATION_NOTES_KEY).getJsonObject(0);
-    JsonObject source = checkInNote.getJsonObject(SOURCE_KEY);
+    final JsonObject checkInNote = createdItem.getJsonArray(CIRCULATION_NOTES_KEY).getJsonObject(0);
+    final JsonObject source = checkInNote.getJsonObject(SOURCE_KEY);
 
     assertThat(checkInNote.getString(NOTE_TYPE_KEY), is("Check in"));
     assertThat(checkInNote.getString(NOTE_KEY), is("Please read this note before checking in the item"));
@@ -1094,7 +1097,7 @@ public class ItemsApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void canCreateAnItemWithACirculationNoteWithoutSourceField() {
+  void canCreateAnItemWithCirculationNoteWithoutSourceField() {
 
     JsonObject createdInstance = createInstance(smallAngryPlanet(UUID.randomUUID()));
 
@@ -1103,7 +1106,7 @@ public class ItemsApiTest extends ApiTests {
           .forInstance(UUID.fromString(createdInstance.getString("id"))))
       .getId();
 
-    DateTime requestMade = DateTime.now();
+    final DateTime requestMade = DateTime.now();
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
       .forHolding(holdingId)
@@ -1172,17 +1175,17 @@ public class ItemsApiTest extends ApiTests {
       .withCheckInNote()
       .create();
 
-    DateTime createItemRequestMade = DateTime.now();
+    final DateTime createItemRequestMade = DateTime.now();
 
     itemsClient.create(newItemRequest).getJson();
 
-    JsonObject createdItem = itemsClient.getById(itemId).getJson();
-    String createdItemCirculationNoteDate = createdItem
+    final JsonObject createdItem = itemsClient.getById(itemId).getJson();
+    final String createdItemCirculationNoteDate = createdItem
       .getJsonArray(CIRCULATION_NOTES_KEY)
       .getJsonObject(0)
       .getString(DATE_KEY);
 
-    JsonObject updateItemRequest = newItemRequest.copy()
+    final JsonObject updateItemRequest = newItemRequest.copy()
       .put("hrid", createdItem.getString("hrid"))
       .put("status", new JsonObject().put("name", "Checked out"));
 
@@ -1266,9 +1269,9 @@ public class ItemsApiTest extends ApiTests {
     itemsStorageClient.create(thirdFloorItem);
     itemsStorageClient.create(mainLibraryItem);
 
-    JsonObject readingRoomItems = findItems("effectiveLocationId=" + getReadingRoomLocation());
-    JsonObject thirdFloorItems = findItems("effectiveLocationId=" + getThirdFloorLocation());
-    JsonObject mainLibraryItems = findItems("effectiveLocationId=" + getMainLibraryLocation());
+    final JsonObject readingRoomItems = findItems("effectiveLocationId=" + getReadingRoomLocation());
+    final JsonObject thirdFloorItems = findItems("effectiveLocationId=" + getThirdFloorLocation());
+    final JsonObject mainLibraryItems = findItems("effectiveLocationId=" + getMainLibraryLocation());
 
     assertThat(readingRoomItems.getInteger("totalRecords"), is(1));
     assertThat(readingRoomItems.getJsonArray("items").getJsonObject(0).getString("id"),
@@ -1286,10 +1289,9 @@ public class ItemsApiTest extends ApiTests {
   @Test
   @SneakyThrows
   void itemHasLastCheckInPropertiesWhenTheyAreSet() {
+    final JsonObject readingRoomItem = newDvdItemAtReadingRoom(UUID.randomUUID().toString());
 
-    JsonObject readingRoomItem = newDvdItemAtReadingRoom(UUID.randomUUID().toString());
-
-    JsonObject lastCheckInObj = new JsonObject();
+    final JsonObject lastCheckInObj = new JsonObject();
     UUID userId = UUID.randomUUID();
     UUID servicePointId = UUID.randomUUID();
     DateTime checkInDate = DateTime.now();
@@ -1327,7 +1329,7 @@ public class ItemsApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void cannotChangeHRID() {
+  void cannotChangeHrid() {
 
     UUID holdingId = createInstanceAndHolding();
 
@@ -1356,8 +1358,7 @@ public class ItemsApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void cannotRemoveHRID() {
-
+  void cannotRemoveHrid() {
     UUID holdingId = createInstanceAndHolding();
 
     IndividualResource postResponse = itemsClient.create(new ItemRequestBuilder()
@@ -1673,13 +1674,14 @@ public class ItemsApiTest extends ApiTests {
     assertThat(response.statusCode(), is(204));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   @SneakyThrows
   void canPatchExistingItem() {
-    UUID transitDestinationServicePointIdForCreate = UUID.randomUUID();
-    UUID transitDestinationServicePointIdForUpdate = UUID.randomUUID();
-    UUID holdingId = createInstanceAndHolding();
-    UUID itemId = UUID.randomUUID();
+    final UUID transitDestinationServicePointIdForCreate = UUID.randomUUID();
+    final UUID transitDestinationServicePointIdForUpdate = UUID.randomUUID();
+    final UUID holdingId = createInstanceAndHolding();
+    final UUID itemId = UUID.randomUUID();
 
     JsonObject lastCheckIn = defaultLastCheckIn();
 
@@ -1776,10 +1778,10 @@ public class ItemsApiTest extends ApiTests {
   @Test
   @SneakyThrows
   void cannotPatchItemIfHridWasChanged() {
-    UUID transitDestinationServicePointIdForCreate = UUID.randomUUID();
-    UUID transitDestinationServicePointIdForUpdate = UUID.randomUUID();
-    UUID holdingId = createInstanceAndHolding();
-    UUID itemId = UUID.randomUUID();
+    final UUID transitDestinationServicePointIdForCreate = UUID.randomUUID();
+    final UUID transitDestinationServicePointIdForUpdate = UUID.randomUUID();
+    final UUID holdingId = createInstanceAndHolding();
+    final UUID itemId = UUID.randomUUID();
 
     JsonObject lastCheckIn = defaultLastCheckIn();
 
@@ -1822,10 +1824,10 @@ public class ItemsApiTest extends ApiTests {
   @Test
   @SneakyThrows
   void cannotPatchItemIfBarcodeExists() {
-    UUID transitDestinationServicePointIdForCreate = UUID.randomUUID();
-    UUID transitDestinationServicePointIdForUpdate = UUID.randomUUID();
-    UUID holdingId = createInstanceAndHolding();
-    UUID itemId = UUID.randomUUID();
+    final UUID transitDestinationServicePointIdForCreate = UUID.randomUUID();
+    final UUID transitDestinationServicePointIdForUpdate = UUID.randomUUID();
+    final UUID holdingId = createInstanceAndHolding();
+    final UUID itemId = UUID.randomUUID();
 
     JsonObject lastCheckIn = defaultLastCheckIn();
 
@@ -1883,10 +1885,10 @@ public class ItemsApiTest extends ApiTests {
   @Test
   @SneakyThrows
   void cannotPatchItemWithIncorrectStatus() {
-    UUID transitDestinationServicePointIdForCreate = UUID.randomUUID();
-    UUID transitDestinationServicePointIdForUpdate = UUID.randomUUID();
-    UUID holdingId = createInstanceAndHolding();
-    UUID itemId = UUID.randomUUID();
+    final UUID transitDestinationServicePointIdForCreate = UUID.randomUUID();
+    final UUID transitDestinationServicePointIdForUpdate = UUID.randomUUID();
+    final UUID holdingId = createInstanceAndHolding();
+    final UUID itemId = UUID.randomUUID();
 
     JsonObject lastCheckIn = defaultLastCheckIn();
 

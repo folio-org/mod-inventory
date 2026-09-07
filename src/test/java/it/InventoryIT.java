@@ -9,7 +9,6 @@ import io.restassured.RestAssured;
 import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.http.ContentType;
 import java.nio.file.Path;
-
 import org.folio.okapi.common.XOkapiHeaders;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,8 +42,9 @@ import org.testcontainers.utility.DockerImageName;
 class InventoryIT {
 
   private static final Logger LOG = LoggerFactory.getLogger(InventoryIT.class);
+
   /**
-   * Container logging, requires log4j-slf4j-impl in test scope
+   * Container logging, requires log4j-slf4j-impl in test scope.
    */
   private static final boolean IS_LOG_ENABLED = false;
   private static final Network NETWORK = Network.newNetwork();
@@ -85,12 +85,12 @@ class InventoryIT {
   @Test
   void health() {
     // request without X-Okapi-Tenant
-    when().
-      get("/admin/health").
-      then().
-      statusCode(200).
-      body(is("OK")).
-      contentType(ContentType.TEXT);
+    when()
+      .get("/admin/health")
+      .then()
+      .statusCode(200)
+      .body(is("OK"))
+      .contentType(ContentType.TEXT);
   }
 
   /**
@@ -104,10 +104,10 @@ class InventoryIT {
 
     var path = "/inventory/instances/1000464a-cf2f-4218-a12c-08e3a09888e6";
 
-    when().
-      get(path).
-      then().
-      statusCode(404);
+    when()
+      .get(path)
+      .then()
+      .statusCode(404);
 
     assertThat(MOD_INVENTORY.getLogs(), containsString("Handling GET " + path));
   }

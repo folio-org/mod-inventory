@@ -39,7 +39,7 @@ public class InventoryVerticle extends AbstractVerticle {
   public void start(Promise<Void> started) {
     final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-    Router router = Router.router(vertx);
+    final Router router = Router.router(vertx);
 
     server = vertx.createHttpServer();
 
@@ -50,17 +50,17 @@ public class InventoryVerticle extends AbstractVerticle {
     config.fieldNames().forEach(key ->
       log.info(String.format("%s:%s", key, config.getValue(key).toString())));
 
-    HttpClient client = vertx.createHttpClient();
+    final HttpClient client = vertx.createHttpClient();
 
-    Storage storage = Storage.basedUpon(config, client);
+    final Storage storage = Storage.basedUpon(config, client);
 
-    PostgresConnectionOptions connectionOptions = PostgresConnectionOptions.fromConfig(config);
+    final PostgresConnectionOptions connectionOptions = PostgresConnectionOptions.fromConfig(config);
 
     router.route().handler(WebRequestDiagnostics::outputDiagnostics);
 
-    ConsortiumDataCache consortiumDataCache = new ConsortiumDataCache(vertx, client);
-    ConsortiumService consortiumService = new ConsortiumServiceImpl(client, consortiumDataCache);
-    SnapshotService snapshotService = new SnapshotService(client);
+    final ConsortiumDataCache consortiumDataCache = new ConsortiumDataCache(vertx, client);
+    final ConsortiumService consortiumService = new ConsortiumServiceImpl(client, consortiumDataCache);
+    final SnapshotService snapshotService = new SnapshotService(client);
 
     new AdminApi().register(router);
     new ItemsApi(storage, client).register(router);

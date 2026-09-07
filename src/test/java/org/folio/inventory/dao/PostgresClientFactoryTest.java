@@ -84,7 +84,7 @@ class PostgresClientFactoryTest {
 
   @Test
   void shouldReturnInitializedConnectionOptions() {
-    var expectedEnabledSecureTransportProtocols = Collections.singleton("TLSv1.3");
+    final var expectedEnabledSecureTransportProtocols = Collections.singleton("TLSv1.3");
     Map<String, String> optionsMap = new HashMap<>();
     optionsMap.put(DB_HOST, "localhost");
     optionsMap.put(DB_PORT, "5432");

@@ -86,6 +86,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
     this.mappingMetadataCache = mappingMetadataCache;
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     logParametersEventHandler(LOGGER, dataImportEventPayload);
@@ -106,9 +107,9 @@ public class UpdateHoldingEventHandler implements EventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
       }
 
-      LOGGER.info(
-        "handle:: Processing UpdateHoldingEventHandler starting with jobExecutionId: {} and incomingRecordId: {}.",
-        jobExecutionId, dataImportEventPayload.getContext().get(INCOMING_RECORD_ID));
+      var incomingRecordId = dataImportEventPayload.getContext().get(INCOMING_RECORD_ID);
+      LOGGER.info("handle:: Processing UpdateHoldingEventHandler starting with jobExecutionId: {} "
+                  + "and incomingRecordId: {}.", jobExecutionId, incomingRecordId);
       List<PartialError> errors = new ArrayList<>();
 
       validateRequiredHoldingsFields(dataImportEventPayload, errors);
@@ -136,8 +137,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
             Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
           MappingManager.map(dataImportEventPayload, new MappingContext().withMappingParameters(mappingParameters));
 
-          List<HoldingsRecord> updatedHoldingsRecord = new ArrayList<>();
-          List<Future<?>> updatedHoldingsRecordFutures = new ArrayList<>();
+          final List<HoldingsRecord> updatedHoldingsRecord = new ArrayList<>();
+          final List<Future<?>> updatedHoldingsRecordFutures = new ArrayList<>();
           isPayloadConstructed = false;
           convertHoldings(dataImportEventPayload);
 
@@ -158,15 +159,13 @@ public class UpdateHoldingEventHandler implements EventHandler {
             holdingsRecordCollection.update(holding,
               success -> {
                 try {
-                  LOGGER.info(
-                    "handle:: Successfully updated holdings with id: {}, jobExecutionId: '{}' recordId: '{}' chunkId: '{}'",
-                    holding.getId(), jobExecutionId, recordId, chunkId);
+                  LOGGER.info("handle:: Successfully updated holdings with id: {}, jobExecutionId: '{}' "
+                              + "recordId: '{}' chunkId: '{}'", holding.getId(), jobExecutionId, recordId, chunkId);
                   updatedHoldingsRecord.add(holding);
                   constructDataImportEventPayload(updatePromise, dataImportEventPayload, list, context, errors);
                 } catch (Exception e) {
-                  LOGGER.warn(
-                    "handle:: Error updating inventory Holdings jobExecutionId: '{}' recordId: '{}' chunkId: '{}'",
-                    jobExecutionId, recordId, chunkId, e);
+                  LOGGER.warn("handle:: Error updating inventory Holdings jobExecutionId: '{}' "
+                              + "recordId: '{}' chunkId: '{}'", jobExecutionId, recordId, chunkId, e);
                   future.completeExceptionally(e);
                 }
               },
@@ -175,8 +174,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
                   expiredHoldings.add(holding);
                 } else {
                   errors.add(new PartialError(holding.getId() != null ? holding.getId() : BLANK, failure.reason()));
-                  LOGGER.warn(
-                    "handle:: Error updating Holding by holdingId '{}' and jobExecution '{}' recordId '{}' chunkId '{}' - {}, status code {}",
+                  LOGGER.warn("handle:: Error updating Holding by holdingId '{}' and jobExecution '{}'"
+                              + " recordId '{}' chunkId '{}' - {}, status code {}",
                     holding.getId(), jobExecutionId, recordId, chunkId, failure.reason(), failure.statusCode());
                 }
                 updatePromise.complete();
@@ -186,9 +185,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
             .onSuccess(ar -> processResults(dataImportEventPayload, updatedHoldingsRecord, expiredHoldings, future,
               holdingsRecordCollection, errors))
             .onFailure(e -> {
-              LOGGER.warn(
-                "handle:: Error in composite future for Holdings update jobExecutionId: '{}' recordId: '{}' chunkId: '{}'",
-                jobExecutionId, recordId, chunkId, e);
+              LOGGER.warn("handle:: Error in composite future for Holdings update jobExecutionId: '{}' "
+                          + "recordId: '{}' chunkId: '{}'", jobExecutionId, recordId, chunkId, e);
               future.completeExceptionally(e);
             });
         })
@@ -236,10 +234,10 @@ public class UpdateHoldingEventHandler implements EventHandler {
   private void processResults(DataImportEventPayload dataImportEventPayload, List<HoldingsRecord> updatedHoldingsRecord,
                               List<HoldingsRecord> expiredHoldings, CompletableFuture<DataImportEventPayload> future,
                               HoldingsRecordCollection holdingsRecordCollection, List<PartialError> errors) {
-    OlHoldingsAccumulativeResults olAccumulativeResults = buildOLAccumulativeResults(dataImportEventPayload);
+    OlHoldingsAccumulativeResults olAccumulativeResults = buildOlAccumulativeResults(dataImportEventPayload);
     olAccumulativeResults.getResultedSuccessHoldings().addAll(updatedHoldingsRecord);
     if (!expiredHoldings.isEmpty()) {
-      processOLError(dataImportEventPayload, future, holdingsRecordCollection, expiredHoldings, errors,
+      processOlError(dataImportEventPayload, future, holdingsRecordCollection, expiredHoldings, errors,
         olAccumulativeResults);
       String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorHoldings());
       if (!olAccumulativeResults.getResultedErrorHoldings().isEmpty()) {
@@ -281,9 +279,8 @@ public class UpdateHoldingEventHandler implements EventHandler {
         String instanceId = tmpHoldingsRecord.getInstanceId();
         String permanentLocationId = tmpHoldingsRecord.getPermanentLocationId();
         if (StringUtils.isAnyBlank(hrid, instanceId, permanentLocationId, holdingId)) {
-          LOGGER.warn(
-            "validateRequiredHoldingsFields:: Can`t update Holding entity hrid: {}, instanceId: {}, permanentLocationId: {}, holdingId: {}",
-            hrid, instanceId, permanentLocationId, holdingId);
+          LOGGER.warn("validateRequiredHoldingsFields:: Can`t update Holding entity hrid: {}, instanceId: {}, "
+                      + "permanentLocationId: {}, holdingId: {}", hrid, instanceId, permanentLocationId, holdingId);
           errors.add(new PartialError(holdingId != null ? holdingId : BLANK, EMPTY_REQUIRED_FIELDS_ERROR_MESSAGE));
         }
       }
@@ -312,20 +309,18 @@ public class UpdateHoldingEventHandler implements EventHandler {
       dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
   }
 
-  private void processOLError(DataImportEventPayload dataImportEventPayload,
+  private void processOlError(DataImportEventPayload dataImportEventPayload,
                               CompletableFuture<DataImportEventPayload> future,
                               HoldingsRecordCollection holdingsRecords, List<HoldingsRecord> expiredHoldings,
                               List<PartialError> errors, OlHoldingsAccumulativeResults olAccumulativeResults) {
-    int currentRetryNumber = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0
-                                                                                                   : Integer.parseInt(
-                                                                                                     dataImportEventPayload.getContext()
-                                                                                                       .get(
-                                                                                                         CURRENT_RETRY_NUMBER));
+    int currentRetryNumber = dataImportEventPayload.getContext()
+                               .get(CURRENT_RETRY_NUMBER) == null
+                             ? 0
+                             : Integer.parseInt(dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       dataImportEventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn(
-        "processOLError:: Error updating Holdings. Expired Holdings: '{}'. Current retry number = '{}'. Retry UpdateHoldingEventHandler handler...",
-        expiredHoldings, currentRetryNumber);
+      LOGGER.warn("processOLError:: Error updating Holdings. Expired Holdings: '{}'. Current retry number = '{}'. "
+                  + "Retry UpdateHoldingEventHandler handler...", expiredHoldings, currentRetryNumber);
       getActualHoldingsList(expiredHoldings, holdingsRecords)
         .onSuccess(
           actualHoldingsList -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actualHoldingsList,
@@ -375,7 +370,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
     olAccumulativeResults.getResultedErrorHoldings().addAll(errors);
     dataImportEventPayload.getContext().put(OL_ACCUMULATIVE_RESULTS, Json.encode(olAccumulativeResults));
     handle(dataImportEventPayload).whenComplete((res, e) -> {
-      actualizeOLAccumulativeResults(olAccumulativeResults, res);
+      actualizeOlAccumulativeResults(olAccumulativeResults, res);
       future.complete(res);
     });
   }
@@ -458,7 +453,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
     return errorsAsStringJson;
   }
 
-  private OlHoldingsAccumulativeResults buildOLAccumulativeResults(DataImportEventPayload dataImportEventPayload) {
+  private OlHoldingsAccumulativeResults buildOlAccumulativeResults(DataImportEventPayload dataImportEventPayload) {
     OlHoldingsAccumulativeResults olAccumulativeResults;
     if (dataImportEventPayload.getContext().get(OL_ACCUMULATIVE_RESULTS) == null) {
       olAccumulativeResults = new OlHoldingsAccumulativeResults();
@@ -469,7 +464,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
     return olAccumulativeResults;
   }
 
-  private void actualizeOLAccumulativeResults(OlHoldingsAccumulativeResults olAccumulativeResults,
+  private void actualizeOlAccumulativeResults(OlHoldingsAccumulativeResults olAccumulativeResults,
                                               DataImportEventPayload res) {
     OlHoldingsAccumulativeResults actualOlAccumulativeResults =
       Json.decodeValue(res.getContext().get(OL_ACCUMULATIVE_RESULTS), OlHoldingsAccumulativeResults.class);

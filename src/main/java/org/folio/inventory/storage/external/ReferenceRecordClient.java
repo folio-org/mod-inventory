@@ -67,7 +67,7 @@ public class ReferenceRecordClient {
     return "name==" + StringUtil.cqlEncode(name);
   }
 
-  public static class ReferenceRecordClientException extends Exception {
+  public static final class ReferenceRecordClientException extends Exception {
     private ReferenceRecordClientException(String message) {
       super(message);
     }

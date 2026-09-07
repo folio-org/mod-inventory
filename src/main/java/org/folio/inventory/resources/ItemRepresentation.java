@@ -116,11 +116,8 @@ class ItemRepresentation {
     return representation;
   }
 
-  private JsonObject toJson(
-    Item item,
-    JsonObject holding,
-    JsonObject instance) {
-
+  @SuppressWarnings("checkstyle:MethodLength")
+  private JsonObject toJson(Item item, JsonObject holding, JsonObject instance) {
     JsonObject representation = new JsonObject();
     representation.put("id", item.id);
     includeIfPresent(representation, "_version", item.getVersion());

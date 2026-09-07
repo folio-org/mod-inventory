@@ -9,7 +9,7 @@ import java.util.UUID;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
- * Entity that is used for sharing instance process
+ * Entity that is used for sharing instance process.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -35,7 +35,7 @@ public class SharingInstance {
   private String error;
 
   /**
-   * Returns id of sharedInstance entity
+   * Returns id of sharedInstance entity.
    *
    * @return id of SharedInstance
    */
@@ -53,7 +53,7 @@ public class SharingInstance {
   }
 
   /**
-   * Returns id of instance
+   * Returns id of instance.
    *
    * @return instanceIdentifier
    */
@@ -71,7 +71,7 @@ public class SharingInstance {
   }
 
   /**
-   * Returns the tenant id from which pull the instance
+   * Returns the tenant id from which pull the instance.
    *
    * @return sourceTenantId
    */
@@ -89,7 +89,7 @@ public class SharingInstance {
   }
 
   /**
-   * Returns the tenant id to which pull the instance
+   * Returns the tenant id to which pull the instance.
    *
    * @return targetTenantId
    */
@@ -107,7 +107,7 @@ public class SharingInstance {
   }
 
   /**
-   * Returns status of sharing process
+   * Returns status of sharing process.
    *
    * @return status
    */
@@ -125,7 +125,7 @@ public class SharingInstance {
   }
 
   /**
-   * Returns the error that existed during sharing process
+   * Returns the error that existed during sharing process.
    *
    * @return error
    */
@@ -151,12 +151,12 @@ public class SharingInstance {
       return false;
     }
     SharingInstance sharingInstance = (SharingInstance) o;
-    return Objects.equals(this.id, sharingInstance.id) &&
-           Objects.equals(this.instanceIdentifier, sharingInstance.instanceIdentifier) &&
-           Objects.equals(this.sourceTenantId, sharingInstance.sourceTenantId) &&
-           Objects.equals(this.targetTenantId, sharingInstance.targetTenantId) &&
-           Objects.equals(this.status, sharingInstance.status) &&
-           Objects.equals(this.error, sharingInstance.error);
+    return Objects.equals(this.id, sharingInstance.id)
+           && Objects.equals(this.instanceIdentifier, sharingInstance.instanceIdentifier)
+           && Objects.equals(this.sourceTenantId, sharingInstance.sourceTenantId)
+           && Objects.equals(this.targetTenantId, sharingInstance.targetTenantId)
+           && Objects.equals(this.status, sharingInstance.status)
+           && Objects.equals(this.error, sharingInstance.error);
   }
 
   @Override

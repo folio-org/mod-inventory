@@ -21,7 +21,6 @@ import org.folio.HttpStatus;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.BatchResult;
 import org.folio.inventory.domain.Metadata;
 import org.folio.inventory.domain.instances.Instance;
@@ -29,6 +28,7 @@ import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.exceptions.ExternalResourceFetchException;
 import org.folio.inventory.exceptions.InternalServerErrorException;
 import org.folio.inventory.exceptions.NotFoundException;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.support.InstanceUtil;
 import org.folio.inventory.support.http.client.Response;
 import org.folio.inventory.support.http.client.SynchronousHttpClient;
@@ -165,8 +165,8 @@ class ExternalStorageModuleInstanceCollection
     int statusCode = response.statusCode();
     String contentHeaderValue = response.contentType();
     return statusCode == HttpStatus.SC_CREATED
-           || (statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR
-               && HttpHeaderValues.APPLICATION_JSON.toString().equals(contentHeaderValue));
+           || statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR
+              && HttpHeaderValues.APPLICATION_JSON.toString().equals(contentHeaderValue);
   }
 
   private Instance modifyInstance(JsonObject existing, JsonObject incoming) {

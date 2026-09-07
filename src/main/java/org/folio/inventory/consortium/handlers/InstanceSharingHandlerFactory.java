@@ -14,9 +14,9 @@ public enum InstanceSharingHandlerFactory {
   public static InstanceSharingHandler getInstanceSharingHandler(InstanceSharingHandlerFactory handlerType,
                                                                  InstanceOperationsHelper helper, Storage storage,
                                                                  Vertx vertx, HttpClient httpClient) {
-    return handlerType == FOLIO ?
-           new FolioInstanceSharingHandlerImpl(helper) :
-           new MarcInstanceSharingHandlerImpl(helper, storage,
+    return handlerType == FOLIO
+           ? new FolioInstanceSharingHandlerImpl(helper)
+           : new MarcInstanceSharingHandlerImpl(helper, storage,
              new RestDataImportHelper(vertx), new EntitiesLinksServiceImpl(vertx, httpClient),
              new SourceStorageHelper(httpClient));
   }

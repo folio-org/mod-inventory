@@ -19,7 +19,7 @@ import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.inventory.support.InstanceUtil;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 
-public class ConsortiumUtil {
+public final class ConsortiumUtil {
 
   public static final String EXPIRATION_TIME_PARAM = "cache.consortium-data.expiration.time.seconds";
   public static final String DEFAULT_EXPIRATION_TIME_SECONDS = "300";
@@ -31,12 +31,12 @@ public class ConsortiumUtil {
   public static Future<Optional<SharingInstance>> createShadowInstanceIfNeeded(ConsortiumService consortiumService,
                                                                                InstanceCollection instanceCollection,
                                                                                Context context, String instanceId,
-                                                                               ConsortiumConfiguration consortiumConfiguration) {
+                                                                               ConsortiumConfiguration consortiumCnfg) {
     return InstanceUtil.findInstanceById(instanceId, instanceCollection).map(Optional.<SharingInstance>empty())
       .recover(throwable -> {
         if (throwable instanceof NotFoundException) {
           LOGGER.info("createShadowInstanceIfNeeded:: Creating shadow instance with instanceId: {}", instanceId);
-          return consortiumService.createShadowInstance(context, instanceId, consortiumConfiguration).map(Optional::of);
+          return consortiumService.createShadowInstance(context, instanceId, consortiumCnfg).map(Optional::of);
         }
         return Future.failedFuture(throwable);
       });

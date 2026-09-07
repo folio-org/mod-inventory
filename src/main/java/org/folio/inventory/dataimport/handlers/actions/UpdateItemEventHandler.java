@@ -88,7 +88,8 @@ public class UpdateItemEventHandler implements EventHandler {
   static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
   private static final Logger LOGGER = LogManager.getLogger(UpdateItemEventHandler.class);
   private static final String PAYLOAD_HAS_NO_DATA_MSG =
-    "Failed to handle event payload, cause event payload context does not contain MARC_BIBLIOGRAPHIC data or ITEM to update";
+    "Failed to handle event payload, cause event payload context does not contain "
+    + "MARC_BIBLIOGRAPHIC data or ITEM to update";
   private static final String STATUS_UPDATE_ERROR_MSG = "Could not change item status '%s' to '%s'";
   private static final String MAPPING_METADATA_NOT_FOUND_MSG =
     "MappingMetadata snapshot was not found by jobExecutionId '%s'. RecordId: '%s', chunkId: '%s' ";
@@ -120,6 +121,7 @@ public class UpdateItemEventHandler implements EventHandler {
     this.mappingMetadataCache = mappingMetadataCache;
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     logParametersEventHandler(LOGGER, dataImportEventPayload);
@@ -201,7 +203,7 @@ public class UpdateItemEventHandler implements EventHandler {
               Item itemToUpdate = ItemUtil.jsonToItem(mappedItemAsJson);
               verifyItemBarcodeUniqueness(itemToUpdate, itemCollection, updatePromise, errors)
                 .compose(
-                  v -> updateItemAndRetryIfOLExists(itemToUpdate, itemCollection, updatePromise, errors, expiredItems))
+                  v -> updateItemAndRetryIfOlExists(itemToUpdate, itemCollection, updatePromise, errors, expiredItems))
                 .onSuccess(updatedItem -> {
                   if (isProtectedStatusChanged.get()) {
                     String msg =
@@ -255,10 +257,10 @@ public class UpdateItemEventHandler implements EventHandler {
   private void processResults(DataImportEventPayload dataImportEventPayload, List<Item> updatedItemEntities,
                               List<Item> expiredItems, CompletableFuture<DataImportEventPayload> future,
                               ItemCollection itemCollection, List<PartialError> errors) {
-    OlItemAccumulativeResults olAccumulativeResults = buildOLAccumulativeResults(dataImportEventPayload);
+    OlItemAccumulativeResults olAccumulativeResults = buildOlAccumulativeResults(dataImportEventPayload);
     olAccumulativeResults.getResultedSuccessItems().addAll(getItemsMappedToJsonArray(updatedItemEntities));
     if (!expiredItems.isEmpty()) {
-      processOLError(dataImportEventPayload, future, itemCollection, expiredItems, errors, olAccumulativeResults);
+      processOlError(dataImportEventPayload, future, itemCollection, expiredItems, errors, olAccumulativeResults);
       String errorsAsStringJson = formatErrorsAsString(errors, olAccumulativeResults.getResultedErrorItems());
       if (!olAccumulativeResults.getResultedErrorItems().isEmpty()) {
         fillPayloadAndClearLists(dataImportEventPayload, errorsAsStringJson, future, olAccumulativeResults);
@@ -274,11 +276,11 @@ public class UpdateItemEventHandler implements EventHandler {
   }
 
   private static JsonObject getItemAsJsonWithProperFields(JsonObject item) {
-    String materialTypeId = getString(item, MATERIAL_TYPE_ID_KEY);
-    String permanentLocationId = getString(item, PERMANENT_LOCATION_ID_KEY);
-    String temporaryLocationId = getString(item, TEMPORARY_LOCATION_ID_KEY);
-    String permanentLoanTypeId = getString(item, PERMANENT_LOAN_TYPE_ID_KEY);
-    String temporaryLoanTypeId = getString(item, TEMPORARY_LOAN_TYPE_ID_KEY);
+    final String materialTypeId = getString(item, MATERIAL_TYPE_ID_KEY);
+    final String permanentLocationId = getString(item, PERMANENT_LOCATION_ID_KEY);
+    final String temporaryLocationId = getString(item, TEMPORARY_LOCATION_ID_KEY);
+    final String permanentLoanTypeId = getString(item, PERMANENT_LOAN_TYPE_ID_KEY);
+    final String temporaryLoanTypeId = getString(item, TEMPORARY_LOAN_TYPE_ID_KEY);
 
     item.remove(MATERIAL_TYPE_ID_KEY);
     item.remove(PERMANENT_LOCATION_ID_KEY);
@@ -297,7 +299,9 @@ public class UpdateItemEventHandler implements EventHandler {
 
   private static void putValueNestedIfNotNull(JsonObject item, String objectPropertyName,
                                               String nestedPropertyName, String value) {
-    if (value != null) { item.put(objectPropertyName, new JsonObject().put(nestedPropertyName, value)); }
+    if (value != null) {
+      item.put(objectPropertyName, new JsonObject().put(nestedPropertyName, value));
+    }
   }
 
   private static List<JsonObject> getItemsMappedToJsonArray(List<Item> updatedItemEntities) {
@@ -432,7 +436,7 @@ public class UpdateItemEventHandler implements EventHandler {
     return promise.future();
   }
 
-  private Future<Item> updateItemAndRetryIfOLExists(Item item, ItemCollection itemCollection,
+  private Future<Item> updateItemAndRetryIfOlExists(Item item, ItemCollection itemCollection,
                                                     Promise<Void> updatePromise, List<PartialError> errors,
                                                     List<Item> expiredItems) {
     Promise<Item> promise = Promise.promise();
@@ -456,21 +460,18 @@ public class UpdateItemEventHandler implements EventHandler {
     return promise.future();
   }
 
-  private void processOLError(DataImportEventPayload dataImportEventPayload,
+  private void processOlError(DataImportEventPayload dataImportEventPayload,
                               CompletableFuture<DataImportEventPayload> future, ItemCollection itemCollection,
                               List<Item> expiredItems, List<PartialError> errors,
                               OlItemAccumulativeResults olAccumulativeResults) {
-    int currentRetryNumber = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0
-                                                                                                   : Integer.parseInt(
-                                                                                                     dataImportEventPayload.getContext()
-                                                                                                       .get(
-                                                                                                         CURRENT_RETRY_NUMBER));
+    int currentRetryNumber = dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null
+                             ? 0
+                             : Integer.parseInt(dataImportEventPayload.getContext().get(CURRENT_RETRY_NUMBER));
 
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       dataImportEventPayload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn(
-        "processOLError:: Error updating Items. Expired Items: '{} '.Current retry number = '{}'. Retry UpdateItemEventHandler handler...",
-        expiredItems, currentRetryNumber);
+      LOGGER.warn("processOLError:: Error updating Items. Expired Items: '{} '.Current retry number = '{}'. "
+                  + "Retry UpdateItemEventHandler handler...", expiredItems, currentRetryNumber);
       getActualItemsList(expiredItems, itemCollection)
         .onSuccess(
           actualItemsList -> prepareDataAndReInvokeCurrentHandler(dataImportEventPayload, future, actualItemsList,
@@ -522,7 +523,7 @@ public class UpdateItemEventHandler implements EventHandler {
     olAccumulativeResults.getResultedErrorItems().addAll(errors);
     dataImportEventPayload.getContext().put(OL_ACCUMULATIVE_RESULTS, Json.encode(olAccumulativeResults));
     handle(dataImportEventPayload).whenComplete((res, e) -> {
-      actualizeOLAccumulativeResults(olAccumulativeResults, res);
+      actualizeOlAccumulativeResults(olAccumulativeResults, res);
       future.complete(res);
     });
   }
@@ -575,7 +576,7 @@ public class UpdateItemEventHandler implements EventHandler {
     return errorsAsStringJson;
   }
 
-  private OlItemAccumulativeResults buildOLAccumulativeResults(DataImportEventPayload dataImportEventPayload) {
+  private OlItemAccumulativeResults buildOlAccumulativeResults(DataImportEventPayload dataImportEventPayload) {
     OlItemAccumulativeResults olAccumulativeResults;
     if (dataImportEventPayload.getContext().get(OL_ACCUMULATIVE_RESULTS) == null) {
       olAccumulativeResults = new OlItemAccumulativeResults();
@@ -585,7 +586,7 @@ public class UpdateItemEventHandler implements EventHandler {
     return olAccumulativeResults;
   }
 
-  private void actualizeOLAccumulativeResults(OlItemAccumulativeResults olAccumulativeResults,
+  private void actualizeOlAccumulativeResults(OlItemAccumulativeResults olAccumulativeResults,
                                               DataImportEventPayload dataImportEventPayload) {
     OlItemAccumulativeResults actualOlAccumulativeResults = constructOlAccumulativeResults(dataImportEventPayload);
     olAccumulativeResults.setResultedErrorItems(actualOlAccumulativeResults.getResultedErrorItems());

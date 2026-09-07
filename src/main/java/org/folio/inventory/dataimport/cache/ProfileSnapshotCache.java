@@ -23,9 +23,9 @@ import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
 /**
- * Cache for storing ProfileSnapshotWrapper entities by jobProfileSnapshotId
+ * Cache for storing ProfileSnapshotWrapper entities by jobProfileSnapshotId.
  */
-public class ProfileSnapshotCache {
+public final class ProfileSnapshotCache {
 
   private static final Logger LOGGER = LogManager.getLogger();
 
@@ -83,7 +83,7 @@ public class ProfileSnapshotCache {
         if (httpResponse.statusCode() == HttpStatus.SC_OK) {
           LOGGER.info("JobProfileSnapshot was loaded by id '{}'", profileSnapshotId);
           return CompletableFuture.completedFuture(
-            Optional.of(Json.decodeValue(httpResponse.body(), (ProfileSnapshotWrapper.class))));
+            Optional.of(Json.decodeValue(httpResponse.body(), ProfileSnapshotWrapper.class)));
         } else if (httpResponse.statusCode() == HttpStatus.SC_NOT_FOUND) {
           LOGGER.warn("JobProfileSnapshot was not found by id '{}'", profileSnapshotId);
           return CompletableFuture.completedFuture(Optional.empty());

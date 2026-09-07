@@ -2,7 +2,6 @@ package org.folio.inventory.dataimport.handlers.actions;
 
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_ITEM_CREATED;
-import static org.folio.inventory.dataimport.handlers.actions.CreateItemEventHandler.ACTION_HAS_NO_MAPPING_MSG;
 import static org.folio.inventory.dataimport.util.DataImportConstants.UNIQUE_ID_ERROR_MESSAGE;
 import static org.folio.inventory.domain.items.ItemStatusName.AVAILABLE;
 import static org.folio.rest.jaxrs.model.EntityType.ITEM;
@@ -42,15 +41,16 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+import lombok.SneakyThrows;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.ItemWriterFactory;
 import org.folio.inventory.dataimport.ItemsMapperFactory;
@@ -89,12 +89,136 @@ import org.mockito.quality.Strictness;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class CreateItemEventHandlerTest {
 
-  private static final String PARSED_CONTENT_WITHOUT_HOLDING_ID =
-    "{ \"leader\":\"01314nam  22003851a 4500\", \"fields\":[ { \"001\":\"ybp7406411\" } ] }";
-  private static final String PARSED_CONTENT_WITH_HOLDING_ID =
-    "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"945\":{\"subfields\":[{\"a\":\"OM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"AM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"h\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } }]}";
-  private static final String PARSED_CONTENT_WITH_INVALID_MULTIPLE_FIELDS =
-    "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"945\":{\"subfields\":[{\"a\":\"AM\"}],\"ind1\":\" \",\"ind2\":\" \"}}, {\"945\":{\"subfields\":[{\"a\":\"OM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"AM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}}, {\"945\":{\"subfields\":[{\"h\":\"fake\"}],\"ind1\":\" \",\"ind2\":\" \"}}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"h\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } }]}";
+  private static final String PARSED_CONTENT_WITHOUT_HOLDING_ID = """
+    {
+      "leader": "01314nam  22003851a 4500",
+      "fields": [
+        {
+          "001": "ybp7406411"
+        }
+      ]
+    }
+    """;
+  private static final String PARSED_CONTENT_WITH_HOLDING_ID = """
+    {
+      "leader": "01314nam  22003851a 4500",
+      "fields": [
+        {
+          "001": "ybp7406411"
+        },
+        {
+          "945": {
+            "subfields": [
+              {
+                "a": "OM"
+              },
+              {
+                "h": "KU/CC/DI/M"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "945": {
+            "subfields": [
+              {
+                "a": "AM"
+              },
+              {
+                "h": "KU/CC/DI/M"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "999": {
+            "ind1": "f",
+            "ind2": "f",
+            "subfields": [
+              {
+                "h": "957985c6-97e3-4038-b0e7-343ecd0b8120"
+              }
+            ]
+          }
+        }
+      ]
+    }
+    """;
+  private static final String PARSED_CONTENT_WITH_INVALID_MULTIPLE_FIELDS = """
+    {
+      "leader": "01314nam  22003851a 4500",
+      "fields": [
+        {
+          "001": "ybp7406411"
+        },
+        {
+          "945": {
+            "subfields": [
+              {
+                "a": "AM"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "945": {
+            "subfields": [
+              {
+                "a": "OM"
+              },
+              {
+                "h": "KU/CC/DI/M"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "945": {
+            "subfields": [
+              {
+                "a": "AM"
+              },
+              {
+                "h": "KU/CC/DI/M"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "945": {
+            "subfields": [
+              {
+                "h": "fake"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "999": {
+            "ind1": "f",
+            "ind2": "f",
+            "subfields": [
+              {
+                "h": "957985c6-97e3-4038-b0e7-343ecd0b8120"
+              }
+            ]
+          }
+        }
+      ]
+    }
+    """;
   private static final String ITEMS_SHOULD_HAVE_SAME_MATERIAL_TYPE =
     "All Items should have the same material type, during the creation of open order";
   private static final String RECORD_ID = UUID.randomUUID().toString();
@@ -185,7 +309,7 @@ class CreateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     createItemHandler =
       new CreateItemEventHandler(mockedStorage, mappingMetadataCache, itemIdStorageService, orderHelperService);
@@ -208,7 +332,7 @@ class CreateItemEventHandlerTest {
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
 
     String expectedHoldingId = UUID.randomUUID().toString();
     JsonArray holdingsAsJson = new JsonArray(List.of(
@@ -251,6 +375,7 @@ class CreateItemEventHandlerTest {
     assertEquals(expectedPoLineId, createdItem.getString("purchaseOrderLineIdentifier"));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldCreateMultipleItems()
     throws InterruptedException,
@@ -262,7 +387,7 @@ class CreateItemEventHandlerTest {
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
 
     String materialTypeId = UUID.randomUUID().toString();
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()),
@@ -322,6 +447,7 @@ class CreateItemEventHandlerTest {
     }
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldCreateMultipleItemsAndSkipItemsWithInvalidHoldingsIdentifiers()
     throws InterruptedException,
@@ -333,7 +459,7 @@ class CreateItemEventHandlerTest {
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
 
     String materialTypeId = UUID.randomUUID().toString();
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()),
@@ -404,6 +530,7 @@ class CreateItemEventHandlerTest {
     }
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldCreateMultipleItemsAndPopulatePartialErrorsForFailedItems()
     throws InterruptedException,
@@ -418,7 +545,7 @@ class CreateItemEventHandlerTest {
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
 
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
@@ -486,17 +613,15 @@ class CreateItemEventHandlerTest {
   }
 
   @Test
-  void shouldPopulateSameHoldingsItForAllItemsIfOnlyOneHoldingExist()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException {
+  @SneakyThrows
+  void shouldPopulateSameHoldingsItForAllItemsIfOnlyOneHoldingExist() {
     // given
     doAnswer(invocationOnMock -> {
       Item item = invocationOnMock.getArgument(0);
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
 
     String materialTypeId = UUID.randomUUID().toString();
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()),
@@ -509,10 +634,9 @@ class CreateItemEventHandlerTest {
       StringValue.of("645398607547"));
 
     String expectedHoldingId1 = UUID.randomUUID().toString();
-    JsonArray holdingsAsJson = new JsonArray(List.of(
-      new JsonObject()
-        .put("id", expectedHoldingId1)
-        .put("permanentLocationId", PERMANENT_LOCATION_ID)));
+    JsonArray holdingsAsJson = new JsonArray(List.of(new JsonObject()
+      .put("id", expectedHoldingId1)
+      .put("permanentLocationId", PERMANENT_LOCATION_ID)));
 
     String expectedPoLineId = UUID.randomUUID().toString();
     JsonObject poLineAsJson = new JsonObject().put("id", expectedPoLineId);
@@ -563,7 +687,7 @@ class CreateItemEventHandlerTest {
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
 
     String expectedHoldingId = UUID.randomUUID().toString();
     JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId);
@@ -610,7 +734,7 @@ class CreateItemEventHandlerTest {
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
 
     String permanentLocationId = UUID.randomUUID().toString();
     String expectedHoldingId = UUID.randomUUID().toString();
@@ -667,7 +791,7 @@ class CreateItemEventHandlerTest {
       successHandler.accept(new Success<>(item));
       return null;
     }).when(mockedItemCollection)
-      .add(argThat(item -> item.getBarcode().equals("645398607547")), any(Consumer.class), any(Consumer.class));
+      .add(argThat(item -> item.getBarcode().equals("645398607547")), any(), any());
 
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()),
       StringValue.of(UUID.randomUUID().toString()),
@@ -721,7 +845,7 @@ class CreateItemEventHandlerTest {
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
 
     // given
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(""),
@@ -776,7 +900,7 @@ class CreateItemEventHandlerTest {
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
 
     // given
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of("fakeStatus"),
@@ -833,7 +957,7 @@ class CreateItemEventHandlerTest {
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
 
     doAnswer(invocationOnMock -> {
       Item itemByCql = new Item(null, null, null, new Status(AVAILABLE), null, null, null);
@@ -842,8 +966,8 @@ class CreateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection)
-      .findByCql(argThat(query -> query.contains("745398607547")), any(PagingParameters.class), any(Consumer.class),
-        any(Consumer.class));
+      .findByCql(argThat(query -> query.contains("745398607547")), any(PagingParameters.class), any(),
+        any());
 
     Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
@@ -897,7 +1021,7 @@ class CreateItemEventHandlerTest {
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
     // given
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()),
       StringValue.of(UUID.randomUUID().toString()),
@@ -949,7 +1073,7 @@ class CreateItemEventHandlerTest {
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
 
     // given
     doAnswer(invocationOnMock -> {
@@ -997,6 +1121,7 @@ class CreateItemEventHandlerTest {
     assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldNotRequestWhenCreatedItemHasEmptyBarcode()
     throws UnsupportedEncodingException, ExecutionException, InterruptedException, TimeoutException {
@@ -1009,15 +1134,14 @@ class CreateItemEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(mockedItemCollection)
-      .findByCql(argThat(query -> query.contains("745398607547")), any(PagingParameters.class), any(Consumer.class),
-        any(Consumer.class));
+      .findByCql(argThat(query -> query.contains("745398607547")), any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> {
       Item item = invocationOnMock.getArgument(0);
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
     String permanentLocationId2 = UUID.randomUUID().toString();
 
     JsonArray holdingsAsJson = new JsonArray(List.of(
@@ -1068,7 +1192,7 @@ class CreateItemEventHandlerTest {
 
     // then
     verify(mockedItemCollection, times(0))
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
   }
 
   @Test
@@ -1117,7 +1241,7 @@ class CreateItemEventHandlerTest {
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
 
     String expectedHoldingId = UUID.randomUUID().toString();
     JsonObject holdingAsJson = new JsonObject().put("id", expectedHoldingId);
@@ -1169,7 +1293,6 @@ class CreateItemEventHandlerTest {
   @Test
   void shouldReturnFailedFutureWhenCurrentActionProfileHasNoMappingProfile() {
     // given
-//    CreateItemEventHandler createItemHandler = new CreateItemEventHandler(mockedStorage, mappingMetadataCache, itemIdStorageService, orderHelperService);
     Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_HOLDING_ID));
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
@@ -1186,7 +1309,7 @@ class CreateItemEventHandlerTest {
 
     // then
     ExecutionException exception = assertThrows(ExecutionException.class, future::get);
-    assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
+    assertEquals("Action profile to create an Item requires a mapping profile", exception.getCause().getMessage());
   }
 
   @Test
@@ -1262,7 +1385,7 @@ class CreateItemEventHandlerTest {
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
 
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()),
       StringValue.of(UUID.randomUUID().toString()),
@@ -1308,17 +1431,15 @@ class CreateItemEventHandlerTest {
   }
 
   @Test
-  void shouldCreateMultipleItemsWithDifferentMaterialTypesWhenNoPoLineInTheContext()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException {
+  @SneakyThrows
+  void shouldCreateMultipleItemsWithDifferentMaterialTypesWhenNoPoLineInTheContext() {
     // given
     doAnswer(invocationOnMock -> {
       Item item = invocationOnMock.getArgument(0);
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
 
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(AVAILABLE.value()),
       StringValue.of(UUID.randomUUID().toString()),
@@ -1332,8 +1453,7 @@ class CreateItemEventHandlerTest {
 
     String expectedHoldingId2 = UUID.randomUUID().toString();
     String expectedHoldingId1 = UUID.randomUUID().toString();
-    JsonArray holdingsAsJson = new JsonArray(List.of(
-      new JsonObject()
+    JsonArray holdingsAsJson = new JsonArray(List.of(new JsonObject()
         .put("id", expectedHoldingId1)
         .put("permanentLocationId", PERMANENT_LOCATION_ID),
       new JsonObject()
@@ -1373,7 +1493,8 @@ class CreateItemEventHandlerTest {
     }
   }
 
-  @Test()
+  @SuppressWarnings("checkstyle:MethodLength")
+  @Test
   void shouldNotCreateItemIfStatisticalCodeIdIsInvalid() {
     MappingProfile invalidStatCodeMappingProfile = new MappingProfile()
       .withId(UUID.randomUUID().toString())
@@ -1391,7 +1512,7 @@ class CreateItemEventHandlerTest {
             .withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING)
         )));
 
-    ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
+    final ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withProfileId(jobProfile.getId())
       .withContentType(JOB_PROFILE)
@@ -1441,7 +1562,8 @@ class CreateItemEventHandlerTest {
     );
   }
 
-  @Test()
+  @SuppressWarnings("checkstyle:MethodLength")
+  @Test
   void shouldCreateMultipleItemsAndReturnPartialErrorsForItemWithInvalidStatisticalCode()
     throws ExecutionException, InterruptedException, TimeoutException {
     MappingProfile invalidStatCodeMappingProfile = new MappingProfile()
@@ -1460,7 +1582,7 @@ class CreateItemEventHandlerTest {
             .withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING)
         )));
 
-    ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
+    final ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withProfileId(jobProfile.getId())
       .withContentType(JOB_PROFILE)
@@ -1495,7 +1617,7 @@ class CreateItemEventHandlerTest {
       Consumer<Success<Item>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(item));
       return null;
-    }).when(mockedItemCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedItemCollection).add(any(), any(), any());
 
     String expectedHoldingId1 = UUID.randomUUID().toString();
     String expectedHoldingId2 = UUID.randomUUID().toString();

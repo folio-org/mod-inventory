@@ -52,9 +52,9 @@ import org.folio.JobProfile;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 import org.folio.inventory.consortium.entities.SharingInstance;
@@ -97,10 +97,122 @@ import org.mockito.quality.Strictness;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class CreateHoldingEventHandlerTest {
 
-  private static final String PARSED_CONTENT_WITH_INSTANCE_ID =
-    "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"945\":{\"subfields\":[{\"a\":\"OM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"AM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"asdf\"},{\"h\":\"fcd64ce1-6995-48f0-840e-89ffa2288371\"}],\"ind1\":\" \",\"ind2\":\" \"}}, {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } }]}";
-  private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID =
-    "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"945\":{\"subfields\":[{\"a\":\"OM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"AM\"},{\"h\":\"KU/CC/DI/M\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"945\":{\"subfields\":[{\"a\":\"asdf\"},{\"h\":\"fcd64ce1-6995-48f0-840e-89ffa2288371\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+  private static final String PARSED_CONTENT_WITH_INSTANCE_ID = """
+    {
+      "leader": "01314nam  22003851a 4500",
+      "fields": [
+        {
+          "001": "ybp7406411"
+        },
+        {
+          "945": {
+            "subfields": [
+              {
+                "a": "OM"
+              },
+              {
+                "h": "KU/CC/DI/M"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "945": {
+            "subfields": [
+              {
+                "a": "AM"
+              },
+              {
+                "h": "KU/CC/DI/M"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "945": {
+            "subfields": [
+              {
+                "a": "asdf"
+              },
+              {
+                "h": "fcd64ce1-6995-48f0-840e-89ffa2288371"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "999": {
+            "ind1": "f",
+            "ind2": "f",
+            "subfields": [
+              {
+                "i": "957985c6-97e3-4038-b0e7-343ecd0b8120"
+              }
+            ]
+          }
+        }
+      ]
+    }
+    """;
+
+  private static final String PARSED_CONTENT_WITHOUT_INSTANCE_ID = """
+    {
+      "leader": "01314nam  22003851a 4500",
+      "fields": [
+        {
+          "001": "ybp7406411"
+        },
+        {
+          "945": {
+            "subfields": [
+              {
+                "a": "OM"
+              },
+              {
+                "h": "KU/CC/DI/M"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "945": {
+            "subfields": [
+              {
+                "a": "AM"
+              },
+              {
+                "h": "KU/CC/DI/M"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        },
+        {
+          "945": {
+            "subfields": [
+              {
+                "a": "asdf"
+              },
+              {
+                "h": "fcd64ce1-6995-48f0-840e-89ffa2288371"
+              }
+            ],
+            "ind1": " ",
+            "ind2": " "
+          }
+        }
+      ]
+    }
+    """;
   private static final String FOLIO_SOURCE_ID = "f32d531e-df79-46b3-8932-cdd35f7a2264";
   private static final String RECORD_ID = UUID.randomUUID().toString();
   private static final String ITEM_ID = UUID.randomUUID().toString();
@@ -175,7 +287,7 @@ class CreateHoldingEventHandlerTest {
       successHandler.accept(new Success<>(result));
       return null;
     }).when(holdingsRecordsCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> Future.succeededFuture(Optional.empty())).when(consortiumServiceImpl)
       .getConsortiumConfiguration(any());
@@ -185,7 +297,7 @@ class CreateHoldingEventHandlerTest {
       Consumer<Success<HoldingsRecord>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(holdingsRecord));
       return null;
-    }).when(holdingsRecordsCollection).add(any(), any(Consumer.class), any(Consumer.class));
+    }).when(holdingsRecordsCollection).add(any(), any(), any());
 
     doAnswer(invocationOnMock -> {
       RecordToEntity recordToItem = RecordToEntity.builder().recordId(RECORD_ID).entityId(ITEM_ID).build();
@@ -243,6 +355,7 @@ class CreateHoldingEventHandlerTest {
     assertEquals(FOLIO_SOURCE_ID, holding.getString("sourceId"));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldProcessEventAndCreateShadowInstanceIfConsortiumEnabledAndInstanceNotExistAtLocalStorage()
     throws IOException, InterruptedException, ExecutionException, TimeoutException {
@@ -299,8 +412,8 @@ class CreateHoldingEventHandlerTest {
 
     verify(consortiumServiceImpl).createShadowInstance(argThat(context -> context.getTenantId().equals(localTenant)),
       eq(instanceId),
-      argThat((consortiumCredentials -> consortiumCredentials.centralTenantId().equals(centralTenantId)
-                                        && consortiumCredentials.consortiumId().equals(consortiumId))));
+      argThat(consortiumCredentials -> consortiumCredentials.centralTenantId().equals(centralTenantId)
+                                       && consortiumCredentials.consortiumId().equals(consortiumId)));
 
     assertEquals(DI_INVENTORY_HOLDING_CREATED.value(), actualDataImportEventPayload.getEventType());
     assertNotNull(actualDataImportEventPayload.getContext().get(HOLDINGS.value()));
@@ -767,7 +880,7 @@ class CreateHoldingEventHandlerTest {
           new MappingRule().withPath("permanentLocationId").withValue("permanentLocationExpression"),
           new MappingRule().withPath("invalidField").withValue("invalidFieldValue"))));
 
-    ProfileSnapshotWrapper profileSnapshot = new ProfileSnapshotWrapper()
+    final ProfileSnapshotWrapper profileSnapshot = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withProfileId(jobProfile.getId())
       .withContentType(JOB_PROFILE)
@@ -846,6 +959,7 @@ class CreateHoldingEventHandlerTest {
     assertEquals(ACTION_HAS_NO_MAPPING_MSG, exception.getCause().getMessage());
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldNotCreateSingleHoldingIfMappedStatisticalCodeIdIsInvalid() {
     MappingProfile invalidStatCodeMappingProfile = new MappingProfile()
@@ -859,7 +973,7 @@ class CreateHoldingEventHandlerTest {
           new MappingRule().withName("statisticalCodeId").withPath("statisticalCodeIds[]").withValue("990$a")
             .withEnabled("true").withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
 
-    ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
+    final ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withProfileId(jobProfile.getId())
       .withContentType(JOB_PROFILE)
@@ -905,6 +1019,7 @@ class CreateHoldingEventHandlerTest {
     );
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldCreateMultipleHoldingsAndReturnPartialErrorsForHoldingWithInvalidStatisticalCode()
     throws ExecutionException, InterruptedException, TimeoutException {
@@ -920,7 +1035,7 @@ class CreateHoldingEventHandlerTest {
           new MappingRule().withName("statisticalCodeId").withPath("holdings.statisticalCodeIds[]").withValue("990$a")
             .withEnabled("true").withRepeatableFieldAction(MappingRule.RepeatableFieldAction.EXTEND_EXISTING))));
 
-    ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
+    final ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withProfileId(jobProfile.getId())
       .withContentType(JOB_PROFILE)
@@ -977,8 +1092,8 @@ class CreateHoldingEventHandlerTest {
       .map(JsonObject.class::cast)
       .map(j -> j.mapTo(HoldingsRecord.class))
       .toList();
-    assertEquals(firstPermanentLocationId, (holdings.getFirst().getPermanentLocationId()));
-    assertEquals(secondPermanentLocationId, (holdings.getLast().getPermanentLocationId()));
+    assertEquals(firstPermanentLocationId, holdings.getFirst().getPermanentLocationId());
+    assertEquals(secondPermanentLocationId, holdings.getLast().getPermanentLocationId());
 
     for (HoldingsRecord holding : holdings) {
       assertNotNull(holding.getId());

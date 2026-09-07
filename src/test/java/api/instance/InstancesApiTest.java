@@ -66,7 +66,7 @@ import support.InstanceApiClient;
 
 public class InstancesApiTest extends ApiTests {
 
-  private static final InventoryConfiguration config = new InventoryConfigurationImpl();
+  private static final InventoryConfiguration CONFIG = new InventoryConfigurationImpl();
   private final String tagNameOne = "important";
   private final String tagNameTwo = "very important";
   private final String dateTypeId = "0750f52b-3bfc-458d-9307-e9afc8bcdffa";
@@ -79,9 +79,10 @@ public class InstancesApiTest extends ApiTests {
     sourceRecordStorageClient.disableFailureEmulation();
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   @SneakyThrows
-  void canCreateInstanceWithoutAnIDAndHRID() {
+  void canCreateInstanceWithoutAnIdAndHrid() {
     String testNote = "this is a note";
     JsonArray adminNote = new JsonArray();
     adminNote.add(testNote);
@@ -164,7 +165,7 @@ public class InstancesApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void canCreateAnInstanceWithAnIDAndHRID() {
+  void canCreateAnInstanceWithAnIdAndHrid() {
     String instanceId = UUID.randomUUID().toString();
     final String hrid = "in777";
 
@@ -611,7 +612,7 @@ public class InstancesApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void canUpdateAnExistingMARCInstanceIfNoChanges() {
+  void canUpdateAnExistingMarcInstanceIfNoChanges() {
     UUID id = UUID.randomUUID();
     // Create new Instance
     JsonObject newInstance = createInstance(treasureIslandInstance(id));
@@ -631,12 +632,12 @@ public class InstancesApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void canNotUpdateAnExistingMARCInstanceIfBlockedFieldsAreChanged() {
+  void canNotUpdateAnExistingMarcInstanceIfBlockedFieldsAreChanged() {
     UUID id = UUID.randomUUID();
     createInstance(treasureIslandInstance(id));
     JsonObject instanceForUpdate = marcInstanceWithDefaultBlockedFields(id);
 
-    for (String field : config.getInstanceBlockedFields()) {
+    for (String field : CONFIG.getInstanceBlockedFields()) {
       // Put Instance for update
       Response putResponse =
         instancesClient.attemptToReplace(UUID.fromString(instanceForUpdate.getString("id")), instanceForUpdate);
@@ -650,13 +651,13 @@ public class InstancesApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void canNotUpdateAnExistingMARCInstanceIfBlockedFieldsAreChangedToNulls() {
+  void canNotUpdateAnExistingMarcInstanceIfBlockedFieldsAreChangedToNulls() {
     UUID id = UUID.randomUUID();
     JsonObject createInstanceRequest = treasureIslandInstance(id)
       .put("hrid", "test-hrid-0")
       .put("statusId", "test-statusId-0");
     // Create new Instance
-    JsonObject newInstance = createInstance(createInstanceRequest);
+    final JsonObject newInstance = createInstance(createInstanceRequest);
 
     JsonObject instanceForUpdate = treasureIslandInstance(id);
     // Put Instance for update
@@ -668,12 +669,11 @@ public class InstancesApiTest extends ApiTests {
     JsonArray errors = putResponse.getJson().getJsonArray("errors");
     assertThat(errors.size(), is(1));
     assertThat(errors.getJsonObject(0).getString("message"), is(
-      "Instance is controlled by MARC record, these fields are blocked and can not be updated: " +
-      "physicalDescriptions,notes,languages,precedingTitles,identifiers,instanceTypeId,modeOfIssuanceId,subjects,dates,"
-      +
-      "source,title,indexTitle,publicationFrequency,electronicAccess,publicationRange," +
-      "classifications,succeedingTitles,editions,hrid,series,instanceFormatIds,publication,contributors," +
-      "alternativeTitles"));
+      "Instance is controlled by MARC record, these fields are blocked and can not be updated: "
+      + "physicalDescriptions,notes,languages,precedingTitles,identifiers,instanceTypeId,"
+      + "modeOfIssuanceId,subjects,dates,source,title,indexTitle,publicationFrequency,"
+      + "electronicAccess,publicationRange,classifications,succeedingTitles,editions,hrid,series,"
+      + "instanceFormatIds,publication,contributors,alternativeTitles"));
 
     // Get existing Instance
     Response getResponse = instancesClient.getById(UUID.fromString(newInstance.getString("id")));
@@ -690,7 +690,7 @@ public class InstancesApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void canUpdateAnExistingMARCInstanceIfBlockedFieldsAreNotChanged() {
+  void canUpdateAnExistingMarcInstanceIfBlockedFieldsAreNotChanged() {
     UUID id = UUID.randomUUID();
     JsonObject createInstanceRequest = treasureIslandInstance(id)
       .put("sourceRecordFormat", "test-format-0"); // 'sourceRecordFormat' is non blocked field
@@ -788,7 +788,7 @@ public class InstancesApiTest extends ApiTests {
   @SneakyThrows
   void canSoftDeleteInstance() {
     UUID instanceId = UUID.randomUUID();
-    JsonObject instanceToDelete = createInstance(marcInstanceWithDefaultBlockedFields(instanceId));
+    final JsonObject instanceToDelete = createInstance(marcInstanceWithDefaultBlockedFields(instanceId));
 
     JsonObject sourceRecord = new JsonObject().put("id", instanceId.toString());
 
@@ -955,7 +955,7 @@ public class InstancesApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void cannotChangeHRID() {
+  void cannotChangeHrid() {
     UUID instanceId = UUID.randomUUID();
     JsonObject createdInstance = createInstance(smallAngryPlanet(instanceId));
 
@@ -980,7 +980,7 @@ public class InstancesApiTest extends ApiTests {
 
   @Test
   @SneakyThrows
-  void cannotRemoveHRID() {
+  void cannotRemoveHrid() {
     UUID instanceId = UUID.randomUUID();
     JsonObject createdInstance = createInstance(smallAngryPlanet(instanceId));
 

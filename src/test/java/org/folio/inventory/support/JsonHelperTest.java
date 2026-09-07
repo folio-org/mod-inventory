@@ -48,17 +48,17 @@ class JsonHelperTest {
 
   @Test
   void shouldNotIncludeOnlyNullValues() {
-    var notNullString = "notNull";
-    var key = "key";
-    var rootKey = "root";
-    var arrayKey = "array";
-    var jsonArrayKey = "jsonArray";
-    var arrayListKey = "arrayList";
-    var value = new JsonObject();
-    var nestedValue = new JsonObject();
-    var list = new ArrayList<JsonObject>();
-    var arrayList = new ArrayList<JsonArray>();
-    var jsonArray = new JsonArray();
+    final var notNullString = "notNull";
+    final var key = "key";
+    final var rootKey = "root";
+    final var arrayKey = "array";
+    final var jsonArrayKey = "jsonArray";
+    final var arrayListKey = "arrayList";
+    final var value = new JsonObject();
+    final var nestedValue = new JsonObject();
+    final var list = new ArrayList<JsonObject>();
+    final var arrayList = new ArrayList<JsonArray>();
+    final var jsonArray = new JsonArray();
 
     nestedValue.put(notNullString, notNullString);
     nestedValue.put("null", null);
@@ -73,10 +73,10 @@ class JsonHelperTest {
     putNotNullValues(representation, arrayListKey, arrayList);
     putNotNullValues(representation, jsonArrayKey, jsonArray);
 
-    var objResult = representation.getJsonObject(rootKey).getJsonObject(key);
-    var listResult = representation.getJsonArray(arrayKey);
-    var arrayListResult = representation.getJsonArray(arrayListKey).getJsonArray(0).getJsonObject(0);
-    var jsonArrayResult = representation.getJsonArray(jsonArrayKey).getJsonObject(0);
+    final var objResult = representation.getJsonObject(rootKey).getJsonObject(key);
+    final var listResult = representation.getJsonArray(arrayKey);
+    final var arrayListResult = representation.getJsonArray(arrayListKey).getJsonArray(0).getJsonObject(0);
+    final var jsonArrayResult = representation.getJsonArray(jsonArrayKey).getJsonObject(0);
     assertThat(objResult.size(), is(2));
     assertThat(objResult.getValue(notNullString), is(notNullString));
     assertThat(arrayListResult.size(), is(2));

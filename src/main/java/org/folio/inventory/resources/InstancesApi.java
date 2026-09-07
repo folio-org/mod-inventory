@@ -6,6 +6,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.apache.commons.lang3.BooleanUtils.isFalse;
 import static org.apache.commons.lang3.BooleanUtils.isTrue;
 import static org.apache.commons.lang3.ObjectUtils.notEqual;
+import static org.folio.HttpStatus.SC_NOT_FOUND;
 import static org.folio.inventory.support.CompletableFutures.failedFuture;
 import static org.folio.inventory.support.EndpointFailureHandler.doExceptionally;
 import static org.folio.inventory.support.EndpointFailureHandler.getKnownException;
@@ -13,11 +14,13 @@ import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 import static org.folio.inventory.support.http.server.SuccessResponse.noContent;
 import static org.folio.inventory.validation.InstancesValidators.refuseWhenHridChanged;
 
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.handler.BodyHandler;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -30,12 +33,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.HttpStatus;
 import org.folio.inventory.common.WebContext;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.services.ConsortiumService;
 import org.folio.inventory.domain.instances.Instance;
@@ -63,6 +67,7 @@ import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.validation.InstancePrecedingSucceedingTitleValidators;
 import org.folio.inventory.validation.InstancesValidators;
 import org.folio.rest.client.SourceStorageRecordsClient;
+import org.jspecify.annotations.NonNull;
 
 public class InstancesApi extends AbstractInstances {
   public static final String SUPPRESSION_FLAGS_INCONSISTENCY_MESSAGE =
@@ -178,47 +183,46 @@ public class InstancesApi extends AbstractInstances {
       }).exceptionally(doExceptionally(routingContext));
   }
 
-  private void update(RoutingContext rContext) {
-    WebContext wContext = new WebContext(rContext);
-    JsonObject instanceRequest = rContext.body().asJsonObject();
+  private void update(RoutingContext routingContext) {
+    WebContext webContext = new WebContext(routingContext);
+    JsonObject instanceRequest = routingContext.body().asJsonObject();
     Instance updatedInstance = Instance.fromJson(instanceRequest);
-    InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
+    InstanceCollection instanceCollection = storage.getInstanceCollection(webContext);
 
     completedFuture(updatedInstance)
       .thenCompose(this::refuseWhenSuppressFlagsInvalid)
       .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
-      .thenCompose(instance -> instanceCollection.findById(rContext.request().getParam("id")))
+      .thenCompose(instance -> instanceCollection.findById(routingContext.request().getParam("id")))
       .thenCompose(InstancesValidators::refuseWhenInstanceNotFound)
-      .thenCompose(
-        existingInstance -> fetchPrecedingSucceedingTitles(new Success<>(existingInstance), rContext, wContext))
+      .thenCompose(existingInstance -> findPrecedingSucceedingTitles(new Success<>(existingInstance),
+        routingContext, webContext))
       .thenCompose(existingInstance -> refuseWhenBlockedFieldsChanged(existingInstance, updatedInstance))
       .thenCompose(existingInstance -> refuseWhenHridChanged(existingInstance, updatedInstance))
-      .thenAccept(existingInstance -> updateInstance(existingInstance, updatedInstance, rContext, wContext))
-      .exceptionally(doExceptionally(rContext));
+      .thenAccept(existingInstance -> updateInstance(existingInstance, updatedInstance, routingContext, webContext))
+      .exceptionally(doExceptionally(routingContext));
   }
 
-  private void patch(RoutingContext rContext) {
-    WebContext wContext = new WebContext(rContext);
-    JsonObject patchJson = rContext.body().asJsonObject();
-    String id = rContext.request().getParam("id");
-    InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
+  private void patch(RoutingContext routingContext) {
+    WebContext webContext = new WebContext(routingContext);
+    JsonObject patchJson = routingContext.body().asJsonObject();
+    String id = routingContext.request().getParam("id");
+    InstanceCollection instanceCollection = storage.getInstanceCollection(webContext);
 
     completedFuture(patchJson)
       .thenCompose(patch -> instanceCollection.findById(id))
       .thenCompose(InstancesValidators::refuseWhenInstanceNotFound)
       .thenCompose(existingInstance ->
-        fetchPrecedingSucceedingTitles(new Success<>(existingInstance), rContext, wContext))
+        findPrecedingSucceedingTitles(new Success<>(existingInstance), routingContext, webContext))
       .thenCompose(existingInstance ->
-        fetchInstanceRelationships(new Success<>(existingInstance), rContext, wContext))
-      .thenCompose(existingInstance ->
-        applyPatch(existingInstance, patchJson)
-          .thenCompose(patchedInstance ->
-            refuseWhenSuppressFlagsInvalid(patchedInstance)
-              .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
-              .thenCompose(i -> refuseWhenBlockedFieldsChanged(existingInstance, patchedInstance))
-              .thenCompose(i -> refuseWhenHridChanged(existingInstance, patchedInstance))
-              .thenAccept(i -> patchInstance(existingInstance, patchedInstance, patchJson, rContext, wContext))))
-      .exceptionally(doExceptionally(rContext));
+        fetchInstanceRelationships(new Success<>(existingInstance), routingContext, webContext))
+      .thenCompose(existingInstance -> applyPatch(existingInstance, patchJson)
+        .thenCompose(patchedInstance ->
+          refuseWhenSuppressFlagsInvalid(patchedInstance)
+            .thenCompose(InstancePrecedingSucceedingTitleValidators::refuseWhenUnconnectedHasNoTitle)
+            .thenCompose(i -> refuseWhenBlockedFieldsChanged(existingInstance, patchedInstance))
+            .thenCompose(i -> refuseWhenHridChanged(existingInstance, patchedInstance))
+            .thenAccept(i -> patchInstance(existingInstance, patchedInstance, patchJson, routingContext, webContext))))
+      .exceptionally(doExceptionally(routingContext));
   }
 
   private CompletableFuture<Instance> applyPatch(Instance existingInstance, JsonObject patchJson) {
@@ -238,7 +242,7 @@ public class InstancesApi extends AbstractInstances {
   }
 
   /**
-   * Call Source record storage to update suppress from discovery flag in underlying record
+   * Call Source record storage to update suppress from discovery flag in underlying record.
    *
    * @param srsClient       - SourceStorageRecordsClient
    * @param updatedInstance - Updated instance entity
@@ -269,9 +273,9 @@ public class InstancesApi extends AbstractInstances {
     }
   }
 
-  private CompletableFuture<Void> deleteSourceStorageRecord(WebContext wContext, String instanceId) {
+  private CompletableFuture<Void> deleteSourceStorageRecord(WebContext webContext, String instanceId) {
     try {
-      SourceStorageRecordsClient srsClient = getSourceStorageRecordsClient(wContext);
+      SourceStorageRecordsClient srsClient = getSourceStorageRecordsClient(webContext);
       return srsClient.deleteSourceStorageRecordsById(instanceId, INSTANCE_ID_TYPE)
         .toCompletionStage()
         .toCompletableFuture()
@@ -282,12 +286,7 @@ public class InstancesApi extends AbstractInstances {
               instanceId);
             return CompletableFuture.completedFuture(null);
           } else {
-            String errorMessage = response.statusCode() == HttpStatus.HTTP_NOT_FOUND.toInt()
-                                  ? format(
-              "MARC record was not set for deletion because it was not found by instance ID: %s", instanceId)
-                                  : format(
-                                    "Failed to set MARC record for deletion by instanceID: %s, statusCode: %s, body: %s",
-                                    instanceId, response.statusCode(), response.bodyAsString());
+            var errorMessage = getErrorMessage(instanceId, response);
             log.warn("deleteSourceStorageRecord:: {}", errorMessage);
             return CompletableFuture.failedFuture(new InternalServerErrorException(errorMessage));
           }
@@ -297,6 +296,18 @@ public class InstancesApi extends AbstractInstances {
         instanceId, e);
       return CompletableFuture.failedFuture(e);
     }
+  }
+
+  private @NonNull String getErrorMessage(String instanceId, HttpResponse<Buffer> response) {
+    String errorMessage;
+    if (response.statusCode() == SC_NOT_FOUND) {
+      errorMessage = format("MARC record was not set for deletion because it was not found by instance ID: %s",
+        instanceId);
+    } else {
+      errorMessage = format("Failed to set MARC record for deletion by instanceID: %s, statusCode: %s, body: %s",
+        instanceId, response.statusCode(), response.bodyAsString());
+    }
+    return errorMessage;
   }
 
   private CompletableFuture<Void> unDeleteSourceStorageRecord(SourceStorageRecordsClient srsClient,
@@ -323,13 +334,13 @@ public class InstancesApi extends AbstractInstances {
     }
   }
 
-  private SourceStorageRecordsClient getSourceStorageRecordsClient(WebContext wContext) {
-    return new SourceStorageRecordsClient(wContext.getOkapiLocation(), wContext.getTenantId(), wContext.getToken(),
-      client);
+  private SourceStorageRecordsClient getSourceStorageRecordsClient(WebContext webContext) {
+    return new SourceStorageRecordsClient(webContext.getOkapiLocation(), webContext.getTenantId(),
+      webContext.getToken(), client);
   }
 
   /**
-   * Returns true if given Instance has linked record in source-record-storage
+   * Returns true if given Instance has linked record in source-record-storage.
    *
    * @param instance given instance
    * @return boolean
@@ -339,61 +350,62 @@ public class InstancesApi extends AbstractInstances {
   }
 
   /**
-   * Updates given Instance
+   * Updates given Instance.
    *
    * @param existingInstance existing instance
    * @param updatedInstance  instance for update
-   * @param rContext         routing context
-   * @param wContext         web context
+   * @param routingContext   routing context
+   * @param webContext       web context
    */
   private void updateInstance(Instance existingInstance,
                               Instance updatedInstance,
-                              RoutingContext rContext,
-                              WebContext wContext) {
-    InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
+                              RoutingContext routingContext,
+                              WebContext webContext) {
+    InstanceCollection instanceCollection = storage.getInstanceCollection(webContext);
     instanceCollection.update(
       updatedInstance,
-      v -> updateRelatedRecords(rContext, wContext, updatedInstance)
-        .thenCompose(ignored -> updateVisibilityFlagsInSrs(existingInstance, updatedInstance, wContext))
-        .thenAccept(ignored -> noContent(rContext.response()))
-        .exceptionally(doExceptionally(rContext)),
-      FailureResponseConsumer.serverError(rContext.response()));
+      v -> updateRelatedRecords(routingContext, webContext, updatedInstance)
+        .thenCompose(ignored -> updateVisibilityFlagsInSrs(existingInstance, updatedInstance, webContext))
+        .thenAccept(ignored -> noContent(routingContext.response()))
+        .exceptionally(doExceptionally(routingContext)),
+      FailureResponseConsumer.serverError(routingContext.response()));
   }
 
   /**
-   * Patches given Instance
+   * Patches given Instance.
    *
    * @param existingInstance existing instance
    * @param patchedInstance  instance for update
    * @param patchJson        patch body
-   * @param rContext         routing context
-   * @param wContext         web context
+   * @param routingContext   routing context
+   * @param webContext       web context
    */
   private void patchInstance(Instance existingInstance,
                              Instance patchedInstance,
                              JsonObject patchJson,
-                             RoutingContext rContext,
-                             WebContext wContext) {
-    InstanceCollection instanceCollection = storage.getInstanceCollection(wContext);
+                             RoutingContext routingContext,
+                             WebContext webContext) {
+    InstanceCollection instanceCollection = storage.getInstanceCollection(webContext);
     instanceCollection.patch(
       existingInstance.getId(),
       patchJson,
 
-      v -> updateRelatedRecords(rContext, wContext, patchedInstance)
-        .thenCompose(ignored -> updateVisibilityFlagsInSrs(existingInstance, patchedInstance, wContext))
-        .thenAccept(ignored -> noContent(rContext.response()))
-        .exceptionally(doExceptionally(rContext)),
-      FailureResponseConsumer.serverError(rContext.response()));
+      v -> updateRelatedRecords(routingContext, webContext, patchedInstance)
+        .thenCompose(ignored -> updateVisibilityFlagsInSrs(existingInstance, patchedInstance, webContext))
+        .thenAccept(ignored -> noContent(routingContext.response()))
+        .exceptionally(doExceptionally(routingContext)),
+      FailureResponseConsumer.serverError(routingContext.response()));
   }
 
-  private CompletableFuture<Void> updateVisibilityFlagsInSrs(Instance existing, Instance updated, WebContext wContext) {
+  private CompletableFuture<Void> updateVisibilityFlagsInSrs(Instance existing, Instance updated,
+                                                             WebContext webContext) {
     if (!isInstanceControlledByRecord(updated)) {
       return CompletableFuture.completedFuture(null);
     }
     if (isTrue(updated.getDeleted()) && notEqual(existing.getDeleted(), updated.getDeleted())) {
-      return deleteSourceStorageRecord(wContext, updated.getId());
+      return deleteSourceStorageRecord(webContext, updated.getId());
     } else if (isFalse(updated.getDeleted())) {
-      SourceStorageRecordsClient srsClient = getSourceStorageRecordsClient(wContext);
+      SourceStorageRecordsClient srsClient = getSourceStorageRecordsClient(webContext);
       CompletableFuture<Void> future = CompletableFuture.completedFuture(null);
 
       if (notEqual(existing.getDiscoverySuppress(), updated.getDiscoverySuppress())) {
@@ -409,7 +421,7 @@ public class InstancesApi extends AbstractInstances {
 
   /**
    * Compares existing instance with it's version for update,
-   * returns true if blocked fields are changed
+   * returns true if blocked fields are changed.
    *
    * @param existingInstance instance that exists in database
    * @param updatedInstance  instance with changes for update
@@ -420,7 +432,8 @@ public class InstancesApi extends AbstractInstances {
     JsonObject updatedInstanceJson = JsonObject.mapFrom(updatedInstance);
 
     // We still need zeroing "succeedingInstanceId" in precedingTitles and "precedingInstanceId" in succeedingTitles
-    // because these fields are not provided for/from UI requests. We just ignore these fields on comparing as a blocked fields.
+    // because these fields are not provided for/from UI requests.
+    // We just ignore these fields on comparing as a blocked fields.
     // Anyway they are filled after this comparing while fetching from DB in "updatePrecedingSucceedingTitles"-method.
     zeroingField(existingInstanceJson.getJsonArray(Instance.PRECEDING_TITLES_KEY),
       PrecedingSucceedingTitle.SUCCEEDING_INSTANCE_ID_KEY);
@@ -484,9 +497,8 @@ public class InstancesApi extends AbstractInstances {
     instance.setDeleted(true);
     return instanceCollection.update(instance)
       .thenApply(v -> {
-        log.info(
-          "updateVisibility:: staffSuppress, discoverySuppress and deleted properties are set to true for instance with id: '{}'",
-          instance.getId());
+        log.info("updateVisibility:: staffSuppress, discoverySuppress and deleted properties are set "
+                 + "to true for instance with id: '{}'", instance.getId());
         return instance;
       });
   }
@@ -501,7 +513,7 @@ public class InstancesApi extends AbstractInstances {
         if (instance != null) {
           completedFuture(instance)
             .thenCompose(response -> fetchInstanceRelationships(it, routingContext, context))
-            .thenCompose(response -> fetchPrecedingSucceedingTitles(it, routingContext, context))
+            .thenCompose(response -> findPrecedingSucceedingTitles(it, routingContext, context))
             .thenCompose(response -> setBoundWithFlag(it, routingContext, context))
             .thenAccept(response -> successResponse(routingContext, response));
         } else {
@@ -522,7 +534,7 @@ public class InstancesApi extends AbstractInstances {
   }
 
   /**
-   * Fetches instance relationships for multiple Instance records, populates, responds
+   * Fetches instance relationships for multiple Instance records, populates, responds.
    *
    * @param instancesResponse Multi record Instances result
    * @param routingContext    Routing
@@ -623,43 +635,48 @@ public class InstancesApi extends AbstractInstances {
           .withCollectionResourceClient(createItemsStorageClient(routingContext, webContext))
           .build()
           .find(holdingsRecordIds, this::cqlMatchAnyByHoldingsRecordIds)
-          .thenCompose(
-            items -> {
-              if (items.isEmpty()) {
-                return CompletableFuture.completedFuture(Collections.emptyList());
-              }
-              List<String> itemIds = new ArrayList<>();
-              Map<String, String> itemHoldingsMap = new HashMap<>();
-              for (JsonObject item : items) {
-                itemHoldingsMap.put(item.getString("id"), item.getString(holdingsRecordIdKey));
-                itemIds.add(item.getString("id"));
-              }
-              // Then look up the items in bound-with-parts
-              return MultipleRecordsFetchClient
-                .builder()
-                .withCollectionPropertyName("boundWithParts")
-                .withExpectedStatus(200)
-                .withCollectionResourceClient(createBoundWithPartsClient(routingContext, webContext))
-                .build()
-                .find(itemIds, this::cqlMatchAnyByItemIds)
-                .thenCompose(boundWithParts2 ->
-                {
-                  List<String> boundWithItemIds =
-                    boundWithParts2.stream()
-                      .map(boundWithPart2 -> boundWithPart2.getString("itemId"))
-                      .distinct()
-                      .toList();
-                  for (String itemId : boundWithItemIds) {
-                    holdingsRecordsThatAreBoundWith.add(itemHoldingsMap.get(itemId));
-                  }
-                  return completedFuture(holdingsRecordsThatAreBoundWith);
-                });
-            });
+          .thenCompose(processBoundWithItemHoldings(routingContext, webContext, holdingsRecordIdKey,
+            holdingsRecordsThatAreBoundWith));
       });
   }
 
+  private Function<List<JsonObject>, CompletionStage<List<String>>> processBoundWithItemHoldings(
+    RoutingContext routingContext, WebContext webContext, String holdingsRecordIdKey,
+    List<String> holdingsRecordsThatAreBoundWith) {
+    return items -> {
+      if (items.isEmpty()) {
+        return CompletableFuture.completedFuture(Collections.emptyList());
+      }
+      List<String> itemIds = new ArrayList<>();
+      Map<String, String> itemHoldingsMap = new HashMap<>();
+      for (JsonObject item : items) {
+        itemHoldingsMap.put(item.getString("id"), item.getString(holdingsRecordIdKey));
+        itemIds.add(item.getString("id"));
+      }
+      // Then look up the items in bound-with-parts
+      return MultipleRecordsFetchClient
+        .builder()
+        .withCollectionPropertyName("boundWithParts")
+        .withExpectedStatus(200)
+        .withCollectionResourceClient(createBoundWithPartsClient(routingContext, webContext))
+        .build()
+        .find(itemIds, this::cqlMatchAnyByItemIds)
+        .thenCompose(boundWithParts2 -> {
+          List<String> boundWithItemIds =
+            boundWithParts2.stream()
+              .map(boundWithPart2 -> boundWithPart2.getString("itemId"))
+              .distinct()
+              .toList();
+          for (String itemId : boundWithItemIds) {
+            holdingsRecordsThatAreBoundWith.add(itemHoldingsMap.get(itemId));
+          }
+          return completedFuture(holdingsRecordsThatAreBoundWith);
+        });
+    };
+  }
+
   /**
-   * Checks if any holdings/items under the listed instances are parts of bound-withs
+   * Checks if any holdings/items under the listed instances are parts of bound-withs.
    * and sets a flag on each Instance in the response where that is true
    *
    * @param instancesResponse Instance result set
@@ -701,7 +718,7 @@ public class InstancesApi extends AbstractInstances {
   }
 
   /**
-   * Fetches instance relationships for a single Instance result, populates, responds
+   * Fetches instance relationships for a single Instance result, populates, responds.
    *
    * @param success        Single record Instance result
    * @param routingContext Routing
@@ -771,8 +788,8 @@ public class InstancesApi extends AbstractInstances {
     return completedFuture(instance);
   }
 
-  private CompletableFuture<Instance> fetchPrecedingSucceedingTitles(
-    Success<Instance> success, RoutingContext routingContext, WebContext context) {
+  private CompletableFuture<Instance> findPrecedingSucceedingTitles(Success<Instance> success,
+                                                                    RoutingContext routingContext, WebContext context) {
 
     Instance instance = success.result();
     List<String> instanceIds = getInstanceIdsFromInstanceResult(success);
@@ -809,11 +826,11 @@ public class InstancesApi extends AbstractInstances {
     if (success.result() instanceof Instance instance) {
       instanceIds = Collections.singletonList(instance.getId());
     } else if (success.result() instanceof MultipleRecords) {
-      instanceIds = (((MultipleRecords<Instance>) success.result()).records().stream()
+      instanceIds = ((MultipleRecords<Instance>) success.result()).records().stream()
         .map(Instance::getId)
         .filter(Objects::nonNull)
         .distinct()
-        .collect(Collectors.toList()));
+        .collect(Collectors.toList());
     }
     return instanceIds;
   }
@@ -896,15 +913,25 @@ public class InstancesApi extends AbstractInstances {
       rel.getString(PrecedingSucceedingTitle.PRECEDING_INSTANCE_ID_KEY));
   }
 
-  private CompletionStage<Instance> withSucceedingTitles(Instance instance,
-                                                         List<CompletableFuture<PrecedingSucceedingTitle>> succeedingTitleCompletableFutures) {
+  private CompletionStage<Instance> withSucceedingTitles(
+    Instance instance,
+    List<CompletableFuture<PrecedingSucceedingTitle>> succeedingTitleCompletableFutures) {
 
     return allResultsOf(succeedingTitleCompletableFutures)
       .thenApply(instance::setSucceedingTitles);
   }
 
-  private CompletableFuture<Instance> withPrecedingTitles(Instance instance,
-                                                          List<CompletableFuture<PrecedingSucceedingTitle>> precedingTitleCompletableFutures) {
+  private CompletableFuture<InstancesResponse> withSucceedingTitles(
+    InstancesResponse instance,
+    Map<String, List<CompletableFuture<PrecedingSucceedingTitle>>> precedingTitles) {
+
+    return mapToCompletableFutureMap(precedingTitles)
+      .thenApply(instance::setSucceedingTitlesMap);
+  }
+
+  private CompletableFuture<Instance> withPrecedingTitles(
+    Instance instance,
+    List<CompletableFuture<PrecedingSucceedingTitle>> precedingTitleCompletableFutures) {
 
     return allResultsOf(precedingTitleCompletableFutures)
       .thenApply(instance::setPrecedingTitles);
@@ -916,14 +943,6 @@ public class InstancesApi extends AbstractInstances {
 
     return mapToCompletableFutureMap(precedingTitles)
       .thenApply(instance::setPrecedingTitlesMap);
-  }
-
-  private CompletableFuture<InstancesResponse> withSucceedingTitles(
-    InstancesResponse instance,
-    Map<String, List<CompletableFuture<PrecedingSucceedingTitle>>> precedingTitles) {
-
-    return mapToCompletableFutureMap(precedingTitles)
-      .thenApply(instance::setSucceedingTitlesMap);
   }
 
   private CompletableFuture<Map<String, List<PrecedingSucceedingTitle>>> mapToCompletableFutureMap(

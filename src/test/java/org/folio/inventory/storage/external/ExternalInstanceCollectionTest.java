@@ -2,15 +2,15 @@ package org.folio.inventory.storage.external;
 
 import static api.ApiTestSuite.REQUEST_ID;
 import static api.ApiTestSuite.USER_ID;
-import static support.FutureAssistance.fail;
-import static support.FutureAssistance.getOnCompletion;
-import static support.FutureAssistance.succeed;
-import static support.FutureAssistance.waitForCompletion;
 import static org.folio.inventory.domain.instances.InstanceSource.LINKED_DATA;
 import static org.folio.inventory.domain.instances.InstanceSource.MARC;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static support.FutureAssistance.fail;
+import static support.FutureAssistance.getOnCompletion;
+import static support.FutureAssistance.succeed;
+import static support.FutureAssistance.waitForCompletion;
 
 import io.vertx.core.json.JsonObject;
 import java.util.ArrayList;
@@ -21,15 +21,15 @@ import java.util.concurrent.ExecutionException;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.Strings;
 import org.folio.inventory.common.Context;
-import support.WaitForAllFutures;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import support.WaitForAllFutures;
 
 class ExternalInstanceCollectionTest extends AbstractExternalStorageTest {
 
@@ -279,7 +279,7 @@ class ExternalInstanceCollectionTest extends AbstractExternalStorageTest {
 
     getOnCompletion(allAddsFuture);
 
-    Instance addedSmallAngryPlanet = getOnCompletion(firstAddFuture);
+    final Instance addedSmallAngryPlanet = getOnCompletion(firstAddFuture);
 
     CompletableFuture<MultipleRecords<Instance>> findFuture = new CompletableFuture<>();
 
@@ -299,7 +299,7 @@ class ExternalInstanceCollectionTest extends AbstractExternalStorageTest {
   @Test
   @SneakyThrows
   void anInstanceCanBeUpdatedByIdRetainingSourceOfExistingInstance() {
-    String expectedTitle = "Updated title";
+    final String expectedTitle = "Updated title";
     CompletableFuture<Instance> addFinished = new CompletableFuture<>();
 
     collection.add(sourceLinkDataInstance(), succeed(addFinished), fail(addFinished));

@@ -12,15 +12,12 @@ import org.hamcrest.TypeSafeMatcher;
 
 public class ResponseMatchers {
 
-  public static Matcher<Response> hasValidationError(
-    String expectedMessage, String expectedKey, String expectedValue) {
-
+  public static Matcher<Response> hasValidationError(String expectedMessage, String expectedKey, String expectedValue) {
     return new TypeSafeMatcher<>() {
       @Override
       public void describeTo(Description description) {
         description
-          .appendText("Response has 422 status and 'message' - ").appendValue(
-            expectedMessage)
+          .appendText("Response has 422 status and 'message' - ").appendValue(expectedMessage)
           .appendText(", 'key' - ").appendValue(expectedKey)
           .appendText(" and 'value' - ").appendValue(expectedValue);
       }
@@ -51,7 +48,6 @@ public class ResponseMatchers {
                      && Objects.equals(expectedValue, value);
             }
           }
-
           return false;
         } catch (DecodeException ex) {
           return false;

@@ -1,6 +1,6 @@
 package org.folio.inventory;
 
-public class Logging {
+public final class Logging {
 
   private Logging() { }
 

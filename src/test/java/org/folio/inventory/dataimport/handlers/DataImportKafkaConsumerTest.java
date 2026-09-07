@@ -51,6 +51,7 @@ import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.rest.jaxrs.model.Event;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -232,7 +233,9 @@ class DataImportKafkaConsumerTest extends KafkaTest {
   }
 
   @Test
-  void shouldProcessEventIfEventPayloadContainsCancelledJobExecutionIdButEventTypeIsDiSrsMarcBibRecordModifiedReadyForPostProcessing(
+  @DisplayName("should process event if job is cancelled but event type is "
+               + "DI_SRS_MARC_BIB_RECORD_MODIFIED_READY_FOR_POST_PROCESSING")
+  void shouldProcessEventIfEventPayloadContainsCancelledJobExecutionIdButEventTypeIsDiSrsMarcBibRecordModified(
     VertxTestContext testContext) {
     // given
     String expectedKafkaRecordKey = "test_key";

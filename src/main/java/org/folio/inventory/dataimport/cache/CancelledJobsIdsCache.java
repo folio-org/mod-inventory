@@ -4,7 +4,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import java.util.concurrent.TimeUnit;
 
-public class CancelledJobsIdsCache {
+public final class CancelledJobsIdsCache {
 
   private static final String EXPIRATION_TIME_PARAMETER = "inventory.cancelled-jobs-cache.expiration.time.minutes";
   private static final String DEFAULT_EXPIRATION_TIME_MINUTES = "1440";
@@ -25,9 +25,6 @@ public class CancelledJobsIdsCache {
     return getInstance(false);
   }
 
-  /**
-   * Used for testing
-   */
   public static synchronized CancelledJobsIdsCache getInstance(boolean returnNew) {
     if (instance == null || returnNew) {
       instance = new CancelledJobsIdsCache();

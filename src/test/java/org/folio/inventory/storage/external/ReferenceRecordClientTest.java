@@ -1,12 +1,12 @@
 package org.folio.inventory.storage.external;
 
-import static support.FutureAssistance.waitForCompletion;
 import static org.folio.inventory.storage.external.ReferenceRecordClientTest.CauseMatcher.causeMatches;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static support.FutureAssistance.waitForCompletion;
 
 import java.net.URI;
 import java.net.URL;

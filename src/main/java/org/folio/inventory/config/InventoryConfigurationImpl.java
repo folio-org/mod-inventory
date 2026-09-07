@@ -5,7 +5,7 @@ import java.util.Set;
 import org.folio.inventory.domain.instances.Instance;
 
 /**
- * Stores configuration properties for Inventory entities: Instances, Items, Holdings
+ * Stores configuration properties for Inventory entities: Instances, Items, Holdings.
  */
 public class InventoryConfigurationImpl implements InventoryConfiguration {
   private static final Set<String> INSTANCE_BLOCKED_FIELDS = Sets.newHashSet(

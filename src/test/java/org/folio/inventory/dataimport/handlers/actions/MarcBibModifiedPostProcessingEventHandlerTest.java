@@ -172,9 +172,9 @@ class MarcBibModifiedPostProcessingEventHandlerTest {
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifiedEventHandler.handle(dataImportEventPayload);
 
-    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
-    JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
-    Instance updatedInstance = Instance.fromJson(instanceJson);
+    final DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    final JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
+    final Instance updatedInstance = Instance.fromJson(instanceJson);
 
     // then
     verify(mappingMetadataCache).get(eq(dataImportEventPayload.getJobExecutionId()),
@@ -288,7 +288,7 @@ class MarcBibModifiedPostProcessingEventHandlerTest {
   }
 
   @Test
-  void shouldNotUpdateInstanceIfOLErrorExist() {
+  void shouldNotUpdateInstanceIfOlErrorExist() {
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
 
@@ -302,7 +302,8 @@ class MarcBibModifiedPostProcessingEventHandlerTest {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(
-        "Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
+        "Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed ("
+        + "optimistic locking): Stored _version is 2, _version of request is 1",
         409));
       return null;
     }).when(mockedInstanceCollection).update(any(), any(), any());

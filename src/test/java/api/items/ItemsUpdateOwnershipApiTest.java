@@ -59,15 +59,16 @@ public class ItemsUpdateOwnershipApiTest extends ConsortiumApiTests {
 
   private static final String ID = "id";
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @ParameterizedTest
   @ValueSource(ints = {0, 101})
   @SneakyThrows
   void canUpdateItemsOwnershipToDifferentTenant_withOptionalExtraHoldingsAtSource(int extraHoldingsCount) {
-    UUID instanceId = UUID.randomUUID();
-    JsonObject instance = smallAngryPlanet(instanceId);
-    String itemHrId = "it0000001";
-    String locationId = UUID.randomUUID().toString();
-    JsonObject location = new JsonObject().put("id", locationId).put("name", "location");
+    final UUID instanceId = UUID.randomUUID();
+    final JsonObject instance = smallAngryPlanet(instanceId);
+    final String itemHrId = "it0000001";
+    final String locationId = UUID.randomUUID().toString();
+    final JsonObject location = new JsonObject().put("id", locationId).put("name", "location");
 
     createSharedInstanceAcrossTenants(instance);
     InstanceApiClient.createInstance(collegeOkapiClient, instance.put("source", CONSORTIUM_FOLIO.getValue()));
@@ -119,11 +120,11 @@ public class ItemsUpdateOwnershipApiTest extends ConsortiumApiTests {
       .map(object -> object.getString(ID))
       .toList();
 
-    var targetTenantHoldingsIds = targetHoldingsRecordItems.stream()
+    final var targetTenantHoldingsIds = targetHoldingsRecordItems.stream()
       .map(object -> object.getString(HOLDINGS_RECORD_ID))
       .toList();
 
-    JsonObject movedSecondItem = targetHoldingsRecordItems.stream()
+    final JsonObject movedSecondItem = targetHoldingsRecordItems.stream()
       .filter(item -> secondItem.getId().toString().equals(item.getString(ID)))
       .findFirst()
       .orElseThrow();
@@ -547,5 +548,4 @@ public class ItemsUpdateOwnershipApiTest extends ConsortiumApiTests {
   private UUID createHoldingForInstanceAtCollege(UUID instanceId) {
     return collegeHoldingsStorageClient.create(new HoldingRequestBuilder().forInstance(instanceId)).getId();
   }
-
 }

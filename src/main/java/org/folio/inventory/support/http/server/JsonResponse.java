@@ -10,7 +10,7 @@ import io.vertx.core.json.JsonObject;
 import java.util.Collections;
 import java.util.List;
 
-public class JsonResponse {
+public final class JsonResponse {
 
   public static final String ERRORS = "errors";
 
@@ -80,7 +80,7 @@ public class JsonResponse {
 
     response.setStatusCode(statusCode);
     response.putHeader(HttpHeaders.CONTENT_TYPE, String.format("%s; charset=utf-8",
-      HttpHeaderValues.APPLICATION_JSON.toString()));
+      HttpHeaderValues.APPLICATION_JSON));
 
     response.putHeader(HttpHeaders.CONTENT_LENGTH, Integer.toString(buffer.length()));
 

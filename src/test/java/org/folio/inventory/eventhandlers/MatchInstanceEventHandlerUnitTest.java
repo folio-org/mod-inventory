@@ -52,9 +52,9 @@ import org.folio.MappingMetadataDto;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 import org.folio.inventory.consortium.services.ConsortiumService;
@@ -97,10 +97,89 @@ class MatchInstanceEventHandlerUnitTest {
   private static final String ID_FIELD = "id";
   private static final String MAPPING_PARAMS = "MAPPING_PARAMS";
   private static final String RELATIONS = "MATCHING_PARAMETERS_RELATIONS";
-  private static final String MATCHING_RELATIONS =
-    "{\"item.statisticalCodeIds[]\":\"statisticalCode\",\"instance.classifications[].classificationTypeId\":\"classificationTypes\",\"instance.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"item.permanentLoanTypeId\":\"loantypes\",\"holdingsrecord.temporaryLocationId\":\"locations\",\"holdingsrecord.statisticalCodeIds[]\":\"statisticalCode\",\"instance.statusId\":\"instanceStatuses\",\"instance.natureOfContentTermIds\":\"natureOfContentTerms\",\"item.notes[].itemNoteTypeId\":\"itemNoteTypes\",\"holdingsrecord.permanentLocationId\":\"locations\",\"instance.alternativeTitles[].alternativeTitleTypeId\":\"alternativeTitleTypes\",\"holdingsrecord.illPolicyId\":\"illPolicies\",\"item.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.identifiers[].identifierTypeId\":\"identifierTypes\",\"holdingsrecord.holdingsTypeId\":\"holdingsTypes\",\"item.permanentLocationId\":\"locations\",\"instance.modeOfIssuanceId\":\"issuanceModes\",\"item.itemLevelCallNumberTypeId\":\"callNumberTypes\",\"instance.notes[].instanceNoteTypeId\":\"instanceNoteTypes\",\"instance.instanceFormatIds\":\"instanceFormats\",\"holdingsrecord.callNumberTypeId\":\"callNumberTypes\",\"holdingsrecord.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.instanceTypeId\":\"instanceTypes\",\"instance.statisticalCodeIds[]\":\"statisticalCode\",\"instancerelationship.instanceRelationshipTypeId\":\"instanceRelationshipTypes\",\"item.temporaryLoanTypeId\":\"loantypes\",\"item.temporaryLocationId\":\"locations\",\"item.materialTypeId\":\"materialTypes\",\"holdingsrecord.notes[].holdingsNoteTypeId\":\"holdingsNoteTypes\",\"instance.contributors[].contributorNameTypeId\":\"contributorNameTypes\",\"item.itemDamagedStatusId\":\"itemDamageStatuses\",\"instance.contributors[].contributorTypeId\":\"contributorTypes\"}";
-  private static final String LOCATIONS_PARAMS =
-    "{\"initialized\":true,\"locations\":[{\"id\":\"53cf956f-c1df-410b-8bea-27f712cca7c0\",\"name\":\"Annex\",\"code\":\"KU/CC/DI/A\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257690,\"updatedDate\":1592219257690}},{\"id\":\"b241764c-1466-4e1d-a028-1a3684a5da87\",\"name\":\"Popular Reading Collection\",\"code\":\"KU/CC/DI/P\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257711,\"updatedDate\":1592219257711}}]}";
+  private static final String MATCHING_RELATIONS = """
+    {
+      "item.statisticalCodeIds[]": "statisticalCode",
+      "instance.classifications[].classificationTypeId": "classificationTypes",
+      "instance.electronicAccess[].relationshipId": "electronicAccessRelationships",
+      "item.permanentLoanTypeId": "loantypes",
+      "holdingsrecord.temporaryLocationId": "locations",
+      "holdingsrecord.statisticalCodeIds[]": "statisticalCode",
+      "instance.statusId": "instanceStatuses",
+      "instance.natureOfContentTermIds": "natureOfContentTerms",
+      "item.notes[].itemNoteTypeId": "itemNoteTypes",
+      "holdingsrecord.permanentLocationId": "locations",
+      "instance.alternativeTitles[].alternativeTitleTypeId": "alternativeTitleTypes",
+      "holdingsrecord.illPolicyId": "illPolicies",
+      "item.electronicAccess[].relationshipId": "electronicAccessRelationships",
+      "instance.identifiers[].identifierTypeId": "identifierTypes",
+      "holdingsrecord.holdingsTypeId": "holdingsTypes",
+      "item.permanentLocationId": "locations",
+      "instance.modeOfIssuanceId": "issuanceModes",
+      "item.itemLevelCallNumberTypeId": "callNumberTypes",
+      "instance.notes[].instanceNoteTypeId": "instanceNoteTypes",
+      "instance.instanceFormatIds": "instanceFormats",
+      "holdingsrecord.callNumberTypeId": "callNumberTypes",
+      "holdingsrecord.electronicAccess[].relationshipId": "electronicAccessRelationships",
+      "instance.instanceTypeId": "instanceTypes",
+      "instance.statisticalCodeIds[]": "statisticalCode",
+      "instancerelationship.instanceRelationshipTypeId": "instanceRelationshipTypes",
+      "item.temporaryLoanTypeId": "loantypes",
+      "item.temporaryLocationId": "locations",
+      "item.materialTypeId": "materialTypes",
+      "holdingsrecord.notes[].holdingsNoteTypeId": "holdingsNoteTypes",
+      "instance.contributors[].contributorNameTypeId": "contributorNameTypes",
+      "item.itemDamagedStatusId": "itemDamageStatuses",
+      "instance.contributors[].contributorTypeId": "contributorTypes"
+    }
+    """;
+  private static final String LOCATIONS_PARAMS = """
+    {
+      "initialized": true,
+      "locations": [
+        {
+          "id": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+          "name": "Annex",
+          "code": "KU/CC/DI/A",
+          "isActive": true,
+          "institutionId": "40ee00ca-a518-4b49-be01-0638d0a4ac57",
+          "campusId": "62cf76b7-cca5-4d33-9217-edf42ce1a848",
+          "libraryId": "5d78803e-ca04-4b4a-aeae-2c63b924518b",
+          "primaryServicePoint": "3a40852d-49fd-4df2-a1f9-6e2641a6e91f",
+          "servicePointIds": [
+            "3a40852d-49fd-4df2-a1f9-6e2641a6e91f"
+          ],
+          "servicePoints": [
+    
+          ],
+          "metadata": {
+            "createdDate": 1592219257690,
+            "updatedDate": 1592219257690
+          }
+        },
+        {
+          "id": "b241764c-1466-4e1d-a028-1a3684a5da87",
+          "name": "Popular Reading Collection",
+          "code": "KU/CC/DI/P",
+          "isActive": true,
+          "institutionId": "40ee00ca-a518-4b49-be01-0638d0a4ac57",
+          "campusId": "62cf76b7-cca5-4d33-9217-edf42ce1a848",
+          "libraryId": "5d78803e-ca04-4b4a-aeae-2c63b924518b",
+          "primaryServicePoint": "3a40852d-49fd-4df2-a1f9-6e2641a6e91f",
+          "servicePointIds": [
+            "3a40852d-49fd-4df2-a1f9-6e2641a6e91f"
+          ],
+          "servicePoints": [
+    
+          ],
+          "metadata": {
+            "createdDate": 1592219257711,
+            "updatedDate": 1592219257711
+          }
+        }
+      ]
+    }
+    """;
   private static final String CENTRAL_TENANT_ID_KEY = "CENTRAL_TENANT_ID";
   private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
 
@@ -156,8 +235,7 @@ class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
-        any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
@@ -193,8 +271,7 @@ class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
-        any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -203,8 +280,7 @@ class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
-        any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> Future.succeededFuture(
       Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
@@ -230,9 +306,8 @@ class MatchInstanceEventHandlerUnitTest {
       new Instance(INSTANCE_ID, 5, UUID.randomUUID().toString(), "CONSORTIUM-MARC", "Wonderful", "12334");
 
     InstanceCollection instanceCollectionCentralTenant = mock(InstanceCollection.class);
-    when(storage.getInstanceCollection(
-      Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(
-      instanceCollectionCentralTenant);
+    when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId))))
+      .thenReturn(instanceCollectionCentralTenant);
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -241,8 +316,7 @@ class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
-        any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -251,8 +325,7 @@ class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
-        any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> Future.succeededFuture(
       Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
@@ -292,8 +365,7 @@ class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
-        any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -302,8 +374,7 @@ class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
-        any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> Future.succeededFuture(
       Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
@@ -332,8 +403,8 @@ class MatchInstanceEventHandlerUnitTest {
 
     InstanceCollection instanceCollectionCentralTenant = mock(InstanceCollection.class);
     when(storage.getInstanceCollection(
-      Mockito.argThat(context -> context.getTenantId().equals(centralTenantId)))).thenReturn(
-      instanceCollectionCentralTenant);
+      Mockito.argThat(context -> context.getTenantId().equals(centralTenantId))))
+      .thenReturn(instanceCollectionCentralTenant);
 
     Instance instance = new Instance(UUID.randomUUID().toString(), 5, INSTANCE_HRID, "MARC", "Wonderful", "12334");
 
@@ -344,8 +415,7 @@ class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
-        any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -354,8 +424,7 @@ class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(Consumer.class),
-        any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> Future.succeededFuture(
       Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
@@ -363,19 +432,20 @@ class MatchInstanceEventHandlerUnitTest {
 
     DataImportEventPayload eventPayload = createEventPayload();
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
-      assertNull(throwable);
-      assertEquals(1, updatedEventPayload.getEventsChain().size());
-      assertEquals(
-        updatedEventPayload.getEventsChain(),
-        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
-      );
-      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
-      JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
-      assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), instance.getId());
-      assertEquals(centralTenantId, updatedEventPayload.getContext().get(CENTRAL_TENANT_ID_KEY));
-      testContext.completeNow();
-    }));
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) ->
+      testContext.verify(() -> {
+        assertNull(throwable);
+        assertEquals(1, updatedEventPayload.getEventsChain().size());
+        assertEquals(
+          updatedEventPayload.getEventsChain(),
+          singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
+        );
+        assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), updatedEventPayload.getEventType());
+        JsonObject matchedInstanceAsJsonObject = new JsonObject(updatedEventPayload.getContext().get(INSTANCE.value()));
+        assertEquals(matchedInstanceAsJsonObject.getString(ID_FIELD), instance.getId());
+        assertEquals(centralTenantId, updatedEventPayload.getContext().get(CENTRAL_TENANT_ID_KEY));
+        testContext.completeNow();
+      }));
   }
 
   @Test
@@ -399,7 +469,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(instanceCollectionCentralTenant)
       .findByCql(eq(format("%s == \"%s\"", PreloadingFields.POL.getExistingMatchField(), INSTANCE_HRID)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -409,7 +479,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("%s == \"%s\"", PreloadingFields.POL.getExistingMatchField(), INSTANCE_HRID)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> Future.succeededFuture(
       Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
@@ -455,7 +525,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(instanceCollectionCentralTenant)
       .findByCql(eq(format("%s == \"%s\"", PreloadingFields.VRN.getExistingMatchField(), INSTANCE_HRID)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
@@ -465,7 +535,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("%s == \"%s\"", PreloadingFields.VRN.getExistingMatchField(), INSTANCE_HRID)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> Future.succeededFuture(
       Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
@@ -499,7 +569,7 @@ class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
@@ -525,7 +595,7 @@ class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
@@ -550,7 +620,7 @@ class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
@@ -579,7 +649,7 @@ class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
@@ -601,7 +671,7 @@ class MatchInstanceEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
@@ -615,7 +685,7 @@ class MatchInstanceEventHandlerUnitTest {
   void shouldFailOnHandleEventPayloadIfExceptionThrown(VertxTestContext testContext)
     throws UnsupportedEncodingException {
     doThrow(new UnsupportedEncodingException()).when(instanceCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
@@ -704,7 +774,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == \"%s\"", INSTANCE_HRID, INSTANCE_ID)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     HashMap<String, String> context = new HashMap<>();
     context.put(EntityType.INSTANCE.value(), JsonObject.mapFrom(createInstance()).encode());
@@ -737,9 +807,8 @@ class MatchInstanceEventHandlerUnitTest {
       successHandler.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(
-          format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, multiMatchResult.get(0), multiMatchResult.get(1))),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID,
+        multiMatchResult.get(0), multiMatchResult.get(1))), any(PagingParameters.class), any(), any());
 
     HashMap<String, String> context = new HashMap<>();
     context.put(MULTI_MATCH_IDS, Json.encode(multiMatchResult));
@@ -782,7 +851,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     // Central: same instances returned for the MULTI_MATCH_IDS-scoped query (shadow copies)
     doAnswer(invocation -> {
@@ -792,7 +861,7 @@ class MatchInstanceEventHandlerUnitTest {
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID,
           matchedInstances.get(0).getId(), matchedInstances.get(1).getId())),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     MatchProfile subMatchProfile = new MatchProfile()
       .withExistingRecordType(INSTANCE)
@@ -832,7 +901,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     HashMap<String, String> context = new HashMap<>();
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
@@ -863,7 +932,7 @@ class MatchInstanceEventHandlerUnitTest {
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, marcBibMultiMatchResult.get(0),
           marcBibMultiMatchResult.get(1))),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     HashMap<String, String> context = new HashMap<>();
     context.put(INSTANCES_IDS_KEY, Json.encode(marcBibMultiMatchResult));
@@ -905,7 +974,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     // Central: 0 results (no shadow instances) - the IDs filter is applied but nothing is found
     doAnswer(ans -> {
@@ -913,7 +982,7 @@ class MatchInstanceEventHandlerUnitTest {
       callback.accept(new Success<>(new MultipleRecords<>(new ArrayList<>(), 0)));
       return null;
     }).when(centralInstanceCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     var context = new HashMap<String, String>();
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
@@ -965,7 +1034,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == \"%s\"", INSTANCE_HRID, INSTANCE_ID)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     // Central: scoped by INSTANCE_ID (expected after fix) -> finds SC1 only
     doAnswer(ans -> {
@@ -974,7 +1043,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(centralInstanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == (%s)", INSTANCE_HRID, INSTANCE_ID)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     // Central: unscoped query (what happens WITHOUT Fix #3) -> 2 results -> should trigger error
     doAnswer(ans -> {
@@ -983,7 +1052,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(centralInstanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     // Context simulates state after Match 1: INSTANCE = SC1 (central original, uuid = INSTANCE_ID)
     var context = new HashMap<String, String>();
@@ -1004,13 +1073,13 @@ class MatchInstanceEventHandlerUnitTest {
   @Test
   void shouldPreserveMultiMatchIdsScopeForCentralTenantQueryInConsortium(VertxTestContext testContext)
     throws UnsupportedEncodingException {
-    var centralTenantId = "consortium";
-    var consortiumId = "consortiumId";
-    var uuid1 = UUID.randomUUID().toString();
-    var uuid2 = UUID.randomUUID().toString();
-    var multiMatchIds = List.of(uuid1, uuid2);
-    var localInstance = createInstance();
-    var shadowInstance = new Instance(INSTANCE_ID, 5, INSTANCE_HRID, "CONSORTIUM-MARC", "Wonderful", "12334");
+    final var centralTenantId = "consortium";
+    final var consortiumId = "consortiumId";
+    final var uuid1 = UUID.randomUUID().toString();
+    final var uuid2 = UUID.randomUUID().toString();
+    final var multiMatchIds = List.of(uuid1, uuid2);
+    final var localInstance = createInstance();
+    final var shadowInstance = new Instance(INSTANCE_ID, 5, INSTANCE_HRID, "CONSORTIUM-MARC", "Wonderful", "12334");
 
     var centralInstanceCollection = mock(InstanceCollection.class);
     when(storage.getInstanceCollection(Mockito.argThat(ctx -> ctx.getTenantId().equals(centralTenantId))))
@@ -1026,7 +1095,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, uuid1, uuid2)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     // Central: scoped query (expected after fix) -> 1 shadow result
     doAnswer(ans -> {
@@ -1035,7 +1104,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(centralInstanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, uuid1, uuid2)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     // Central: unscoped query (what happens WITHOUT the fix) -> 2 results -> should trigger error
     doAnswer(ans -> {
@@ -1044,7 +1113,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(centralInstanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     var context = new HashMap<String, String>();
     context.put(MULTI_MATCH_IDS, Json.encode(multiMatchIds));
@@ -1064,13 +1133,13 @@ class MatchInstanceEventHandlerUnitTest {
   @Test
   void shouldPreserveInstancesIdsScopeForCentralTenantQueryInConsortium(VertxTestContext testContext)
     throws UnsupportedEncodingException {
-    var centralTenantId = "consortium";
-    var consortiumId = "consortiumId";
-    var uuid1 = UUID.randomUUID().toString();
-    var uuid2 = UUID.randomUUID().toString();
-    var instancesIds = List.of(uuid1, uuid2);
-    var localInstance = createInstance();
-    var shadowInstance = new Instance(INSTANCE_ID, 5, INSTANCE_HRID, "CONSORTIUM-MARC", "Wonderful", "12334");
+    final var centralTenantId = "consortium";
+    final var consortiumId = "consortiumId";
+    final var uuid1 = UUID.randomUUID().toString();
+    final var uuid2 = UUID.randomUUID().toString();
+    final var instancesIds = List.of(uuid1, uuid2);
+    final var localInstance = createInstance();
+    final var shadowInstance = new Instance(INSTANCE_ID, 5, INSTANCE_HRID, "CONSORTIUM-MARC", "Wonderful", "12334");
 
     var centralInstanceCollection = mock(InstanceCollection.class);
     when(storage.getInstanceCollection(Mockito.argThat(ctx -> ctx.getTenantId().equals(centralTenantId))))
@@ -1086,7 +1155,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, uuid1, uuid2)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     // Central: scoped query (expected after fix) -> 1 shadow result
     doAnswer(ans -> {
@@ -1095,7 +1164,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(centralInstanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, uuid1, uuid2)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     // Central: unscoped query (what happens WITHOUT the fix) -> 2 results -> should trigger error
     doAnswer(ans -> {
@@ -1104,7 +1173,7 @@ class MatchInstanceEventHandlerUnitTest {
       return null;
     }).when(centralInstanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
     var context = new HashMap<String, String>();
     context.put(INSTANCES_IDS_KEY, Json.encode(instancesIds));

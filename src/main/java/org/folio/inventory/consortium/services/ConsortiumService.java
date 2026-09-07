@@ -8,7 +8,7 @@ import org.folio.inventory.consortium.entities.SharingInstance;
 
 public interface ConsortiumService {
   /**
-   * Runs job at mod-consortia that creates shadow instance for local tenant
+   * Runs job at mod-consortia that creates shadow instance for local tenant.
    *
    * @param context                 - Context for creating shadow instance.
    * @param instanceId              - id of shadow instance to create.
@@ -19,7 +19,7 @@ public interface ConsortiumService {
                                                ConsortiumConfiguration consortiumConfiguration);
 
   /**
-   * Retrieves centralTenantId and consortiumId
+   * Retrieves centralTenantId and consortiumId.
    *
    * @param context - Context for retrieving centralTenantId.
    * @return - future of consortiumConfiguration
@@ -27,11 +27,11 @@ public interface ConsortiumService {
   Future<Optional<ConsortiumConfiguration>> getConsortiumConfiguration(Context context);
 
   /**
-   * Starts sharing instance process
+   * Starts sharing instance process.
    *
    * @param context         - Context for running sharing process.
    * @param consortiumId    - Consortium id for running sharing process.
-   * @param sharingInstance - Sharing Instance entity that configures sourceTenantId, targetTenantId and instanceIdentifier.
+   * @param sharingInstance - Sharing Instance that configures sourceTenantId, targetTenantId and instanceIdentifier.
    * @return - future of sharingInstance
    */
   Future<SharingInstance> shareInstance(Context context, String consortiumId, SharingInstance sharingInstance);

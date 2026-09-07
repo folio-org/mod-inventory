@@ -100,7 +100,7 @@ public class FakeStorageModuleBuilder {
   }
 
   FakeStorageModuleBuilder withRequiredProperties(String... requiredProperties) {
-    return withRequiredProperties(Arrays.asList(requiredProperties));
+    return withRequiredPropertiesCollection(Arrays.asList(requiredProperties));
   }
 
   FakeStorageModuleBuilder withDefault(String property, Supplier<Object> supplier) {
@@ -133,9 +133,7 @@ public class FakeStorageModuleBuilder {
       Arrays.asList(preProcessors));
   }
 
-  private FakeStorageModuleBuilder withRequiredProperties(
-    Collection<String> requiredProperties) {
-
+  private FakeStorageModuleBuilder withRequiredPropertiesCollection(Collection<String> requiredProperties) {
     return new FakeStorageModuleBuilder(
       this.rootPath,
       this.collectionPropertyName,

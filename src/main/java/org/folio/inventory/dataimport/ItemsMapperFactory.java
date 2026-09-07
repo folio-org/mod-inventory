@@ -23,7 +23,7 @@ public class ItemsMapperFactory implements MapperFactory {
   public boolean isEligiblePayload(DataImportEventPayload eventPayload) {
     LinkedHashMap<String, String> map = (LinkedHashMap<String, String>) eventPayload.getCurrentNode().getContent();
     String existingRecordType = map.get(EXISTING_RECORD_TYPE);
-    return (ProfileType.MAPPING_PROFILE.equals(eventPayload.getCurrentNode().getContentType()))
-           && (existingRecordType.equals(ActionProfile.FolioRecord.ITEM.value()));
+    return ProfileType.MAPPING_PROFILE.equals(eventPayload.getCurrentNode().getContentType())
+           && existingRecordType.equals(ActionProfile.FolioRecord.ITEM.value());
   }
 }

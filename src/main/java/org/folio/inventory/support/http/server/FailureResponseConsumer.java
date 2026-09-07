@@ -6,7 +6,7 @@ import io.vertx.core.http.HttpServerResponse;
 import java.util.function.Consumer;
 import org.folio.inventory.common.domain.Failure;
 
-public class FailureResponseConsumer {
+public final class FailureResponseConsumer {
   private FailureResponseConsumer() { }
 
   public static Consumer<Failure> serverError(final HttpServerResponse response) {

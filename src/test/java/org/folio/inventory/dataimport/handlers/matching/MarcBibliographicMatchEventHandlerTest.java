@@ -63,9 +63,9 @@ import org.folio.Record;
 import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.entities.ConsortiumConfiguration;
 import org.folio.inventory.consortium.services.ConsortiumService;
@@ -82,6 +82,7 @@ import org.folio.rest.jaxrs.model.RecordMatchingDto;
 import org.folio.rest.jaxrs.model.RecordsIdentifiersCollection;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -93,8 +94,30 @@ import org.mockito.quality.Strictness;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
 
-  private static final String PARSED_CONTENT =
-    "{\"leader\": \"01589ccm a2200373   4500\", \"fields\": [{\"001\": \"12345\"},{\"999\": {\"ind1\": \"f\", \"ind2\": \"f\", \"subfields\": [{\"s\": \"acf4f6e2-115c-4509-9d4c-536c758ef917\"},{\"i\": \"681394b4-10d8-4cb1-a618-0f9bd6152119\"}]}}]}";
+  private static final String PARSED_CONTENT = """
+    {
+      "leader": "01589ccm a2200373   4500",
+      "fields": [
+        {
+          "001": "12345"
+        },
+        {
+          "999": {
+            "ind1": "f",
+            "ind2": "f",
+            "subfields": [
+              {
+                "s": "acf4f6e2-115c-4509-9d4c-536c758ef917"
+              },
+              {
+                "i": "681394b4-10d8-4cb1-a618-0f9bd6152119"
+              }
+            ]
+          }
+        }
+      ]
+    }
+    """;
   private static final String RECORDS_MATCHING_PATH = "/source-storage/records/matching";
   private static final String SOURCE_STORAGE_RECORDS_PATH_REGEX = "/source-storage/records/.{36}";
   private static final String TENANT_ID = "diku";
@@ -159,7 +182,7 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
       Consumer<Success<MultipleRecords<HoldingsRecord>>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(new MultipleRecords<>(List.of(), 0)));
       return null;
-    }).when(mockedHoldingsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any());
+    }).when(mockedHoldingsCollection).findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     matchMarcBibEventHandler =
       new MarcBibliographicMatchEventHandler(consortiumService, vertx.createHttpClient(), mockedStorage);
@@ -246,8 +269,9 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
   }
 
   @Test
-  void shouldPopulatePayloadWithInstancesIdsOfMatchedRecordsIfMultipleRecordsMatchCriteriaAndNextProfileIsEligibleForMultiMatchResult(
-    VertxTestContext testContext) {
+  @DisplayName("should populate payload with instances ids if multiple records match criteria "
+               + "and next profile is eligible for multi-match result")
+  void shouldPopulatePayloadWithInstancesIdsOfMatchedRecordsIfMultipleRecords(VertxTestContext testContext) {
     List<String> instanceIds = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
     List<RecordIdentifiersDto> recordsIdentifiers = instanceIds.stream()
       .map(id -> new RecordIdentifiersDto()
@@ -279,11 +303,12 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
   }
 
   @Test
-  void shouldRequestRecordsIdentifiersMultipleTimesIfMultipleRecordsMatchCriteriaOnParticularTenant(Vertx vertx,
-                                                                                                    VertxTestContext testContext) {
-    int recordsIdentifiersLimit = 2;
-    int totalRecordsIdentifiers = 5;
-    int expectedRequestsNumber = Math.round(((float) totalRecordsIdentifiers) / ((float) recordsIdentifiersLimit));
+  void shouldRequestRecordsIdentifiersMultipleTimesIfMultipleRecordsMatchCriteriaOnParticularTenant(
+    Vertx vertx,
+    VertxTestContext testContext) {
+    final int recordsIdentifiersLimit = 2;
+    final int totalRecordsIdentifiers = 5;
+    final int expectedRequestsNumber = Math.round((float) totalRecordsIdentifiers / (float) recordsIdentifiersLimit);
     System.setProperty(RECORDS_IDENTIFIERS_FETCH_LIMIT_PARAM, String.valueOf(recordsIdentifiersLimit));
 
     when(consortiumService.getConsortiumConfiguration(any(Context.class)))
@@ -567,7 +592,7 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
   @Test
   void shouldLoadInstanceAndHoldingFromLocalTenantIfMatchedRecordAtLocalTenant(VertxTestContext testContext)
     throws UnsupportedEncodingException {
-    HoldingsRecord existingHoldingsRecord = new HoldingsRecord().withId(UUID.randomUUID().toString());
+    final HoldingsRecord existingHoldingsRecord = new HoldingsRecord().withId(UUID.randomUUID().toString());
 
     when(consortiumService.getConsortiumConfiguration(any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.empty()));
@@ -586,7 +611,7 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
       Consumer<Success<MultipleRecords<HoldingsRecord>>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(new MultipleRecords<>(List.of(existingHoldingsRecord), 1)));
       return null;
-    }).when(mockedHoldingsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any());
+    }).when(mockedHoldingsCollection).findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
 
@@ -762,7 +787,7 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
 
   @Test
   void shouldReturnFailedFutureIfGotErrorWhileLoadingMatchedRecordById(VertxTestContext testContext) {
-    DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
+    final DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
 
     when(consortiumService.getConsortiumConfiguration(any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.empty()));
@@ -789,7 +814,7 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
   @Test
   void shouldReturnFailedFutureIfFailedToLoadHoldingsForMatchedRecord(VertxTestContext testContext)
     throws UnsupportedEncodingException {
-    DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
+    final DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
 
     when(consortiumService.getConsortiumConfiguration(any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.empty()));
@@ -808,7 +833,7 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(3);
       failureHandler.accept(new Failure("Internal Server Error", SC_INTERNAL_SERVER_ERROR));
       return null;
-    }).when(mockedHoldingsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any());
+    }).when(mockedHoldingsCollection).findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
 
@@ -822,7 +847,7 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
   @Test
   void shouldNotSetHoldingIfMultipleHoldingsWereFoundForMatchedRecord(VertxTestContext testContext)
     throws UnsupportedEncodingException {
-    DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
+    final DataImportEventPayload eventPayload = createEventPayload(TENANT_ID);
 
     when(consortiumService.getConsortiumConfiguration(any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.empty()));
@@ -842,7 +867,7 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
       successHandler.accept(
         new Success<>(new MultipleRecords<>(List.of(new HoldingsRecord(), new HoldingsRecord()), 2)));
       return null;
-    }).when(mockedHoldingsCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any());
+    }).when(mockedHoldingsCollection).findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     CompletableFuture<DataImportEventPayload> future = matchMarcBibEventHandler.handle(eventPayload);
 
@@ -899,7 +924,7 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
 
   @Test
   void shouldMatchRecordAndTakeIntoAccountPreviouslyMatchedRecord(VertxTestContext testContext) {
-    Record previouslyMatchedRecord = new Record().withMatchedId(UUID.randomUUID().toString());
+    final Record previouslyMatchedRecord = new Record().withMatchedId(UUID.randomUUID().toString());
     when(consortiumService.getConsortiumConfiguration(any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.empty()));
 
@@ -965,17 +990,6 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
     return createEventPayload(tenantId, null);
   }
 
-  private DataImportEventPayload createEventPayloadWithSubmatchProfile() {
-    ProfileSnapshotWrapper subMatchProfileWrapper = new ProfileSnapshotWrapper()
-      .withProfileId(matchProfile.getId())
-      .withContentType(MATCH_PROFILE)
-      .withOrder(0)
-      .withReactTo(MATCH)
-      .withContent(JsonObject.mapFrom(matchProfile).getMap());
-
-    return createEventPayload(TENANT_ID, subMatchProfileWrapper);
-  }
-
   private DataImportEventPayload createEventPayload(String tenantId, ProfileSnapshotWrapper nextProfileWrapper) {
     Record marcRecord = new Record()
       .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
@@ -989,6 +1003,9 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
       matchProfileWrapper.getChildSnapshotWrappers().add(nextProfileWrapper);
     }
 
+    var context = new HashMap<String, String>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
+
     return new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
@@ -996,8 +1013,17 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
       .withTenant(tenantId)
       .withToken(TOKEN)
       .withCurrentNode(matchProfileWrapper)
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
-      }});
+      .withContext(context);
+  }
+
+  private DataImportEventPayload createEventPayloadWithSubmatchProfile() {
+    ProfileSnapshotWrapper subMatchProfileWrapper = new ProfileSnapshotWrapper()
+      .withProfileId(matchProfile.getId())
+      .withContentType(MATCH_PROFILE)
+      .withOrder(0)
+      .withReactTo(MATCH)
+      .withContent(JsonObject.mapFrom(matchProfile).getMap());
+
+    return createEventPayload(TENANT_ID, subMatchProfileWrapper);
   }
 }

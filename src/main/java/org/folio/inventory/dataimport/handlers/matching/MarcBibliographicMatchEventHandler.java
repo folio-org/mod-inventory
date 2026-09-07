@@ -87,8 +87,8 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
       InstanceCollection instanceCollection = storage.getInstanceCollection(context);
 
       if (isBlank(instanceId)) {
-        LOG.info(
-          "ensureRelatedEntities:: Skipping instance loading for matched MARC-BIB record because the matched MARC-BIB does not contain instanceId");
+        LOG.info("ensureRelatedEntities:: Skipping instance loading for matched MARC-BIB record "
+                 + "because the matched MARC-BIB does not contain instanceId");
         return Future.succeededFuture();
       }
 
@@ -139,8 +139,8 @@ public class MarcBibliographicMatchEventHandler extends AbstractMarcMatchEventHa
           promise.complete(findResult.result().records());
         },
         failure -> {
-          String msg = format(
-            "Error loading inventory holdings for matched MARC-BIB, instanceId: '%s' statusCode: '%s', message: '%s'",
+          String msg = format("Error loading inventory holdings for matched MARC-BIB, "
+                              + "instanceId: '%s' statusCode: '%s', message: '%s'",
             instanceId, failure.statusCode(), failure.reason());
           LOG.warn("getHoldingsByInstanceId:: {}", msg);
           promise.fail(msg);

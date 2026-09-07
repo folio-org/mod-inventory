@@ -109,8 +109,8 @@ class UpdateInstanceIngressEventHandlerUnitTest {
     // given
     var event = new InstanceIngressEvent()
       .withId(UUID.randomUUID().toString());
-    var expectedMessage = format("InstanceIngressEvent message does not contain " +
-                                 "required data to update Instance for eventId: '%s'", event.getId());
+    var expectedMessage = format("InstanceIngressEvent message does not contain "
+                                 + "required data to update Instance for eventId: '%s'", event.getId());
 
     // when
     var future = handler.handle(event);
@@ -192,8 +192,8 @@ class UpdateInstanceIngressEventHandlerUnitTest {
       return null;
     }).when(instanceCollection).findById(any(), any(), any());
     var expectedMessage = "Mapped Instance is invalid: [Field 'title' is a required field and can not be null, "
-                          + "Field 'instanceTypeId' is a required field and can not be null], from InstanceIngressEvent with id '"
-                          + event.getId() + "'";
+                          + "Field 'instanceTypeId' is a required field and can not be null],"
+                          + " from InstanceIngressEvent with id '" + event.getId() + "'";
 
     // when
     var future = handler.handle(event);
@@ -412,7 +412,7 @@ class UpdateInstanceIngressEventHandlerUnitTest {
   }
 
   @Test
-  void shouldReturnFailedFuture_ifItsFailedToPutNewRecordToSRS() {
+  void shouldReturnFailedFuture_ifItsFailedToPutNewRecordToSrs() {
     // given
     var event = new InstanceIngressEvent()
       .withId(UUID.randomUUID().toString())
@@ -518,6 +518,7 @@ class UpdateInstanceIngressEventHandlerUnitTest {
     assertThat(exception.getCause().getMessage()).isEqualTo(expectedMessage);
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldReturnSucceededFuture_ifProcessFinishedCorrectly() throws ExecutionException, InterruptedException {
     // given
@@ -590,16 +591,17 @@ class UpdateInstanceIngressEventHandlerUnitTest {
     assertEquals(TENANT, contextCaptor.getValue().getTenantId());
     assertEquals(USER_ID, contextCaptor.getValue().getUserId());
 
-    var recordSentToSRS = recordCaptor.getValue();
-    assertThat(recordSentToSRS.getId()).isNotNull();
-    assertThat(recordSentToSRS.getId()).isNotEqualTo(initialSrsId);
-    assertThat(recordSentToSRS.getMatchedId()).isEqualTo(initialSrsId);
-    assertThat(recordSentToSRS.getRecordType()).isEqualTo(Record.RecordType.MARC_BIB);
-    assertThat(getValueFromDataField(recordSentToSRS, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I)).hasValue(
-      instance.getId());
-    assertThat(getValueFromDataField(recordSentToSRS, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_L)).hasValue(
-      linkedDataId);
-    assertThat(getValueFromDataField(recordSentToSRS, FIELD_999, INDICATOR_F, INDICATOR_F, 's')).hasValue(initialSrsId);
+    var recordSentToSrs = recordCaptor.getValue();
+    assertThat(recordSentToSrs.getId()).isNotNull();
+    assertThat(recordSentToSrs.getId()).isNotEqualTo(initialSrsId);
+    assertThat(recordSentToSrs.getMatchedId()).isEqualTo(initialSrsId);
+    assertThat(recordSentToSrs.getRecordType()).isEqualTo(Record.RecordType.MARC_BIB);
+    assertThat(getValueFromDataField(recordSentToSrs, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I))
+      .hasValue(instance.getId());
+    assertThat(getValueFromDataField(recordSentToSrs, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_L))
+      .hasValue(linkedDataId);
+    assertThat(getValueFromDataField(recordSentToSrs, FIELD_999, INDICATOR_F, INDICATOR_F, 's'))
+      .hasValue(initialSrsId);
   }
 
   private String metadataCacheKey() {

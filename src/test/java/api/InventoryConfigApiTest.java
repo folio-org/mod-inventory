@@ -17,7 +17,7 @@ import support.ApiTests;
 
 public class InventoryConfigApiTest extends ApiTests {
 
-  private static final InventoryConfiguration config = new InventoryConfigurationImpl();
+  private static final InventoryConfiguration CONFIG = new InventoryConfigurationImpl();
 
   @SneakyThrows
   @Test
@@ -29,7 +29,7 @@ public class InventoryConfigApiTest extends ApiTests {
     assertThat(getResponse.statusCode(), is(HttpResponseStatus.OK.code()));
     JsonObject actualResponse = getResponse.getJson();
 
-    for (String blockedField : config.getInstanceBlockedFields()) {
+    for (String blockedField : CONFIG.getInstanceBlockedFields()) {
       assertTrue(actualResponse.getJsonArray("blockedFields").contains(blockedField));
     }
   }
@@ -44,7 +44,7 @@ public class InventoryConfigApiTest extends ApiTests {
     assertThat(getResponse.statusCode(), is(HttpResponseStatus.OK.code()));
     JsonObject actualResponse = getResponse.getJson();
 
-    for (String blockedField : config.getHoldingsBlockedFields()) {
+    for (String blockedField : CONFIG.getHoldingsBlockedFields()) {
       assertTrue(actualResponse.getJsonArray("blockedFields").contains(blockedField));
     }
   }

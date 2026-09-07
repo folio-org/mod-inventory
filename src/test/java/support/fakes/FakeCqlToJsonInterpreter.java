@@ -19,16 +19,16 @@ import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class FakeCQLToJSONInterpreter {
+public class FakeCqlToJsonInterpreter {
 
-  private static final Logger LOGGER = LogManager.getLogger(FakeCQLToJSONInterpreter.class);
+  private static final Logger LOGGER = LogManager.getLogger(FakeCqlToJsonInterpreter.class);
 
   // " or ) at the left and a-z at right
   private static final String OR_REGEX = "(?<=[\")]) or (?=[a-z])";
   private static final Pattern PATTERN = Pattern.compile(OR_REGEX);
   private final boolean diagnosticsEnabled;
 
-  public FakeCQLToJSONInterpreter(boolean diagnosticsEnabled) {
+  public FakeCqlToJsonInterpreter(boolean diagnosticsEnabled) {
     this.diagnosticsEnabled = diagnosticsEnabled;
   }
 

@@ -31,9 +31,8 @@ import org.folio.processing.exceptions.EventProcessingException;
 public class PrecedingSucceedingTitlesHelper {
 
   private static final Logger LOGGER = LogManager.getLogger(PrecedingSucceedingTitlesHelper.class);
-
-  private WebClient webClient;
   private final Function<Context, OkapiHttpClient> okapiHttpClientCreator;
+  private WebClient webClient;
 
   public PrecedingSucceedingTitlesHelper(WebClient webClient) {
     this.webClient = webClient;
@@ -80,13 +79,12 @@ public class PrecedingSucceedingTitlesHelper {
     titlesIds.forEach(id -> precedingSucceedingTitlesRepository
       .delete(id)
       .whenComplete((v, e) -> {
-          if (e != null) {
-            LOGGER.error("Error during deleting PrecedingSucceedingTitles with ids {}", id, e);
-            LOGGER.info("Error during deleting PrecedingSucceedingTitles retry delete PrecedingSucceedingTitles");
-            precedingSucceedingTitlesRepository.delete(id);
-          }
+        if (e != null) {
+          LOGGER.error("Error during deleting PrecedingSucceedingTitles with ids {}", id, e);
+          LOGGER.info("Error during deleting PrecedingSucceedingTitles retry delete PrecedingSucceedingTitles");
+          precedingSucceedingTitlesRepository.delete(id);
         }
-      ));
+      }));
     return Future.succeededFuture();
   }
 
@@ -125,14 +123,13 @@ public class PrecedingSucceedingTitlesHelper {
     var apply = okapiHttpClientCreator.apply(context);
     apply.put(requestUrl, JsonObject.mapFrom(precedingSucceedingTitles))
       .whenComplete((v, e) -> {
-          if (e != null) {
-            LOGGER.error("Error during updating preceding/succeeding titles for instance {}", instance.getId(), e);
-            promise.fail(e);
-          } else {
-            promise.complete();
-          }
+        if (e != null) {
+          LOGGER.error("Error during updating preceding/succeeding titles for instance {}", instance.getId(), e);
+          promise.fail(e);
+        } else {
+          promise.complete();
         }
-      );
+      });
 
     return promise.future();
   }

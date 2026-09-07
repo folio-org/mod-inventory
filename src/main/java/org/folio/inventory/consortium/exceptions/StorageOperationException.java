@@ -13,7 +13,6 @@ public class StorageOperationException extends RuntimeException {
     this.statusCode = failure.statusCode();
   }
 
-
   public StorageOperationException(String message, Integer statusCode) {
     super(message);
     this.statusCode = statusCode;

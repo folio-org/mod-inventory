@@ -8,9 +8,6 @@ package org.folio.inventory.domain.instances;
 
 import io.vertx.core.json.JsonObject;
 
-/**
- * @author ne
- */
 public class AlternativeTitle extends Authorized {
 
   public static final String ALTERNATIVE_TITLE_TYPE_ID_KEY = "alternativeTitleTypeId";

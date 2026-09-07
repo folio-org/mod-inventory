@@ -13,7 +13,7 @@ import org.folio.inventory.domain.instances.Instance;
 /**
  * Util for detailed validation different entities.
  */
-public class ValidationUtil {
+public final class ValidationUtil {
 
   private static final String INVALID_STATISTICAL_CODE_MSG = "Provided Statistical code(s) are not a valid values: ";
   private static final String STATISTICAL_CODE_IDS_FIELD = "statisticalCodeIds";
@@ -29,7 +29,7 @@ public class ValidationUtil {
    * @param instance target Instance for validation
    * @return ArrayList with errors when the needed fields are NOT as UUID.
    */
-  public static List<String> validateUUIDs(Instance instance) {
+  public static List<String> validateUuids(Instance instance) {
     ArrayList<String> errorMessages = new ArrayList<>();
 
     validateField(errorMessages, instance.getNatureOfContentTermIds(), "natureOfContentTermIds");
@@ -43,7 +43,8 @@ public class ValidationUtil {
    * Invalid holdings are reported as {@link PartialError} entries.
    *
    * @param holdingsToValidate array of holding JSON objects to validate
-   * @return {@link Map.Entry} where the key is the array of valid holdings and the value is the list of validation errors
+   * @return {@link Map.Entry} where the key is the array of valid holdings and
+   *   the value is the list of validation errors
    */
   public static Map.Entry<JsonArray, List<PartialError>> validateHoldings(JsonArray holdingsToValidate) {
     List<PartialError> validationErrors = new ArrayList<>();

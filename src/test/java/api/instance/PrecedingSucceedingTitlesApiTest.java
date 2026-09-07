@@ -286,12 +286,12 @@ public class PrecedingSucceedingTitlesApiTest extends ApiTests {
   @Test
   @SneakyThrows
   void canCreateAnInstanceWithConnectedPrecedingTitles() {
-    UUID nodId = UUID.randomUUID();
-    UUID uprootedId = UUID.randomUUID();
-    String nodPrecedingTitleId = UUID.randomUUID().toString();
-    String uprootedPrecedingTitleId = UUID.randomUUID().toString();
-    IndividualResource nod = instancesClient.create(nod(nodId));
-    IndividualResource uprooted = instancesClient.create(uprooted(uprootedId));
+    final UUID nodId = UUID.randomUUID();
+    final UUID uprootedId = UUID.randomUUID();
+    final String nodPrecedingTitleId = UUID.randomUUID().toString();
+    final String uprootedPrecedingTitleId = UUID.randomUUID().toString();
+    final IndividualResource nod = instancesClient.create(nod(nodId));
+    final IndividualResource uprooted = instancesClient.create(uprooted(uprootedId));
 
     JsonObject nodPrecedingTitle = createConnectedPrecedingTitle(nodPrecedingTitleId, nodId.toString());
     JsonObject uprootedPrecedingTitle = createConnectedPrecedingTitle(uprootedPrecedingTitleId, uprootedId.toString());
@@ -304,7 +304,8 @@ public class PrecedingSucceedingTitlesApiTest extends ApiTests {
 
     IndividualResource createdInstance = instancesClient.create(smallAngryPlanetJson);
 
-    // Fetch the created instance because POST response body does not include all data for the preceding/succeeding titles fields
+    // Fetch the created instance because POST response body does not include
+    // all data for the preceding/succeeding titles fields
     Response getResponse = instancesClient.getById(createdInstance.getId());
     assertThat(getResponse.statusCode(), is(200));
     JsonArray actualPrecedingTitles = getResponse.getJson().getJsonArray("precedingTitles");
@@ -321,12 +322,12 @@ public class PrecedingSucceedingTitlesApiTest extends ApiTests {
   @Test
   @SneakyThrows
   void canCreateAnInstanceWithConnectedSucceedingTitles() {
-    UUID nodId = UUID.randomUUID();
-    UUID uprootedId = UUID.randomUUID();
-    String nodPrecedingTitleId = UUID.randomUUID().toString();
-    String uprootedPrecedingTitleId = UUID.randomUUID().toString();
-    IndividualResource nod = instancesClient.create(nod(nodId));
-    IndividualResource uprooted = instancesClient.create(uprooted(uprootedId));
+    final UUID nodId = UUID.randomUUID();
+    final UUID uprootedId = UUID.randomUUID();
+    final String nodPrecedingTitleId = UUID.randomUUID().toString();
+    final String uprootedPrecedingTitleId = UUID.randomUUID().toString();
+    final IndividualResource nod = instancesClient.create(nod(nodId));
+    final IndividualResource uprooted = instancesClient.create(uprooted(uprootedId));
 
     JsonObject nodSucceedingTitle = createConnectedSucceedingTitle(nodPrecedingTitleId, nodId.toString());
     JsonObject uprootedSucceedingTitle =
@@ -449,12 +450,12 @@ public class PrecedingSucceedingTitlesApiTest extends ApiTests {
   @Test
   @SneakyThrows
   void canCreateAnInstanceWithConnectedSucceedingAndPrecedingTitles() {
-    UUID nodId = UUID.randomUUID();
-    UUID uprootedId = UUID.randomUUID();
-    String nodPrecedingTitleId = UUID.randomUUID().toString();
-    String uprootedSucceedingTitleId = UUID.randomUUID().toString();
-    IndividualResource nod = instancesClient.create(nod(nodId));
-    IndividualResource uprooted = instancesClient.create(uprooted(uprootedId));
+    final UUID nodId = UUID.randomUUID();
+    final UUID uprootedId = UUID.randomUUID();
+    final String nodPrecedingTitleId = UUID.randomUUID().toString();
+    final String uprootedSucceedingTitleId = UUID.randomUUID().toString();
+    final IndividualResource nod = instancesClient.create(nod(nodId));
+    final IndividualResource uprooted = instancesClient.create(uprooted(uprootedId));
 
     JsonObject nodPrecedingTitle = createConnectedPrecedingTitle(nodPrecedingTitleId, nodId.toString());
     JsonObject uprootedSucceedingTitle =

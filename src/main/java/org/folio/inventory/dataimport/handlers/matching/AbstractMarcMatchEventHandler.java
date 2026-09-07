@@ -120,9 +120,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       Value<?> value =
         MarcValueReaderUtil.readValueFromRecord(recordAsString, matchDetail.getIncomingMatchExpression());
       if (value.getType() == MISSING) {
-        LOG.info(
-          "handle:: Could not find records by matching criteria because incoming record does not contain specified field, jobExecutionId: '{}'",
-          payload.getJobExecutionId());
+        LOG.info("handle:: Could not find records by matching criteria because incoming "
+                 + "record does not contain specified field, jobExecutionId: '{}'", payload.getJobExecutionId());
         return CompletableFuture.completedFuture(payload);
       }
 
@@ -176,7 +175,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
   }
 
   /**
-   * Retrieves a {@link MatchDetail} from the given {@link DataImportEventPayload}
+   * Retrieves a {@link MatchDetail} from the given {@link DataImportEventPayload}.
    *
    * @param dataImportEventPayload event payload to retrieve from
    * @return {@link MatchDetail}
@@ -360,11 +359,11 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
   private Future<RecordsIdentifiersCollection> getAllMatchedRecordsIdentifiers(RecordMatchingDto recordMatchingDto,
                                                                                DataImportEventPayload payload,
-                                                                               SourceStorageRecordsClient sourceStorageRecordsClient) {
-    return getMatchedRecordsIdentifiers(recordMatchingDto, payload, sourceStorageRecordsClient)
+                                                                               SourceStorageRecordsClient client) {
+    return getMatchedRecordsIdentifiers(recordMatchingDto, payload, client)
       .compose(recordsIdentifiersCollection -> {
         if (recordsIdentifiersCollection.getIdentifiers().size() < recordsIdentifiersCollection.getTotalRecords()) {
-          return getRemainingRecordsIdentifiers(recordMatchingDto, payload, sourceStorageRecordsClient,
+          return getRemainingRecordsIdentifiers(recordMatchingDto, payload, client,
             recordsIdentifiersCollection);
         }
         return Future.succeededFuture(recordsIdentifiersCollection);
@@ -373,18 +372,18 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
   private Future<RecordsIdentifiersCollection> getRemainingRecordsIdentifiers(RecordMatchingDto recordMatchingDto,
                                                                               DataImportEventPayload payload,
-                                                                              SourceStorageRecordsClient sourceStorageRecordsClient,
-                                                                              RecordsIdentifiersCollection recordsIdentifiersCollection) {
+                                                                              SourceStorageRecordsClient client,
+                                                                              RecordsIdentifiersCollection idsCol) {
     RecordMatchingDto matchingRequest = JsonObject.mapFrom(recordMatchingDto).mapTo(RecordMatchingDto.class);
     Future<RecordsIdentifiersCollection> future = Future.succeededFuture();
 
-    for (int offset = recordsIdentifiersLimit; offset < recordsIdentifiersCollection.getTotalRecords();
+    for (int offset = recordsIdentifiersLimit; offset < idsCol.getTotalRecords();
          offset += recordsIdentifiersLimit) {
       matchingRequest.setOffset(offset);
-      future = future.compose(v -> getMatchedRecordsIdentifiers(matchingRequest, payload, sourceStorageRecordsClient)
+      future = future.compose(v -> getMatchedRecordsIdentifiers(matchingRequest, payload, client)
         .map(identifiersCollection -> {
-          recordsIdentifiersCollection.getIdentifiers().addAll(identifiersCollection.getIdentifiers());
-          return recordsIdentifiersCollection;
+          idsCol.getIdentifiers().addAll(identifiersCollection.getIdentifiers());
+          return idsCol;
         }));
     }
     return future;
@@ -392,14 +391,14 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
   private Future<RecordsIdentifiersCollection> getMatchedRecordsIdentifiers(RecordMatchingDto recordMatchingDto,
                                                                             DataImportEventPayload payload,
-                                                                            SourceStorageRecordsClient sourceStorageRecordsClient) {
-    return sourceStorageRecordsClient.postSourceStorageRecordsMatching(recordMatchingDto)
+                                                                            SourceStorageRecordsClient client) {
+    return client.postSourceStorageRecordsMatching(recordMatchingDto)
       .compose(response -> {
         if (response.statusCode() == HttpStatus.SC_OK) {
           return Future.succeededFuture(response.bodyAsJson(RecordsIdentifiersCollection.class));
         }
-        String msg = format(
-          "Failed to request records identifiers by matching criteria, responseStatus: '%s', body: '%s', jobExecutionId: '%s', tenant: '%s'",
+        var msg = format("Failed to request records identifiers by matching criteria, "
+                         + "responseStatus: '%s', body: '%s', jobExecutionId: '%s', tenant: '%s'",
           response.statusCode(), response.bodyAsString(), payload.getJobExecutionId(), payload.getTenant());
         return Future.failedFuture(msg);
       });
@@ -465,7 +464,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
   /**
    * Prepares {@link DataImportEventPayload} for the further processing
-   * based on the number of specified records in {@code records} list
+   * based on the number of specified records in {@code records} list.
    *
    * @param recordOptional matched record retrieved during matching processing
    * @param payload        event payload to prepare
@@ -498,9 +497,8 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
 
   private Future<DataImportEventPayload> handlePayloadWithMultiMatchResult(DataImportEventPayload payload) {
     if (canNextProfileProcessMultiMatchResult(payload)) {
-      LOG.info(
-        "handlePayloadWithMultiMatchResult:: Multiple records were found which match criteria, jobExecutionId: '{}', tenantId: '{}'",
-        payload.getJobExecutionId(), payload.getTenant());
+      LOG.info("handlePayloadWithMultiMatchResult:: Multiple records were found which match criteria, "
+               + "jobExecutionId: '{}', tenantId: '{}'", payload.getJobExecutionId(), payload.getTenant());
       payload.setEventType(matchedEventType.toString());
       return Future.succeededFuture(payload);
     }
@@ -523,7 +521,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
     return false;
   }
 
-  private static class RecordsMatchingContext {
+  private static final class RecordsMatchingContext {
 
     private SourceStorageRecordsClient localTenantRecordsClient;
     private SourceStorageRecordsClient centralTenantRecordsClient;

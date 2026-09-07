@@ -89,7 +89,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   public static final String ITEM_WITH_PARTS_ERROR =
     "Ownership of bound with parts item cannot be updated, item id: %s";
   private static final Logger LOGGER = LogManager.getLogger(MethodHandles.lookup().lookupClass());
-  private static final ObjectMapper objectMapper = new ObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final String HOLDINGS_RECORD_ID = "holdingsRecordId";
   private static final String ITEM_ID = "itemId";
   private static final String INSTANCE_ID = "instanceId";
@@ -117,7 +117,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   }
 
   /**
-   * Fetches source record by external ID from the source storage records client
+   * Fetches source record by external ID from the source storage records client.
    */
   CompletableFuture<Record> getSourceRecordByExternalId(String externalId,
                                                         SourceStorageRecordsClientWrapper srsClient) {
@@ -172,7 +172,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   }
 
   /**
-   * Finds a matching target holding for the given source holding
+   * Finds a matching target holding for the given source holding.
    */
   HoldingsRecord findMatchingTargetHolding(HoldingsRecord sourceHolding, List<HoldingsRecord> targetHoldings) {
     return targetHoldings.stream()
@@ -183,7 +183,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   }
 
   /**
-   * Creates holdings records in the target tenant
+   * Creates holdings records in the target tenant.
    */
   CompletableFuture<List<HoldingsRecord>> createHoldingsInTargetTenant(List<HoldingsRecord> holdingsRecords,
                                                                        List<NotUpdatedEntity> notUpdatedEntities,
@@ -199,7 +199,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   }
 
   /**
-   * Initializes all clients and collections needed for the update process
+   * Initializes all clients and collections needed for the update process.
    */
   HoldingsOwnershipUpdateContext initializeUpdateContext(RoutingContext routingContext,
                                                          WebContext context,
@@ -385,12 +385,10 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       });
   }
 
-  private CompletableFuture<List<String>> verifyLinkedInstanceAndUpdateOwnership(RoutingContext routingContext,
-                                                                                 HoldingsRecord holdingsRecord,
-                                                                                 Context targetTenantContext,
-                                                                                 ItemsUpdateOwnership itemsUpdateOwnership,
-                                                                                 List<NotUpdatedEntity> notUpdatedEntities,
-                                                                                 WebContext context) {
+  private CompletableFuture<List<String>> verifyLinkedInstanceAndUpdateOwnership(
+    RoutingContext routingContext, HoldingsRecord holdingsRecord,
+    Context targetTenantContext, ItemsUpdateOwnership itemsUpdateOwnership,
+    List<NotUpdatedEntity> notUpdatedEntities, WebContext context) {
     return storage.getInstanceCollection(targetTenantContext)
       .findById(holdingsRecord.getInstanceId())
       .thenCompose(instance -> {
@@ -464,8 +462,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     HoldingsUpdateOwnership holdingsUpdateOwnership,
     List<NotUpdatedEntity> notUpdatedEntities, RoutingContext routingContext,
     WebContext context, Context targetTenantContext) {
-    LOGGER.info(
-      "updateOwnershipOfHoldingsRecords:: Starting ownership update for holdings: {}, source tenant: {}, target tenant: {}",
+    LOGGER.info("updateOwnershipOfHoldingsRecords:: Starting ownership update for holdings: {}, "
+                + "source tenant: {}, target tenant: {}",
       holdingsUpdateOwnership.getHoldingsRecordIds(), context.getTenantId(), targetTenantContext.getTenantId());
 
     try {
@@ -483,21 +481,21 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           return processHoldingsOwnershipUpdate(validatedHoldings, notUpdatedEntities, updateContext);
         })
         .exceptionally(throwable -> {
-          LOGGER.error(
-            "updateOwnershipOfHoldingsRecords:: Failed to update holdings ownership for holdings: {}, target tenant: {}",
+          LOGGER.error("updateOwnershipOfHoldingsRecords:: Failed to update holdings ownership for holdings: {},"
+                       + "target tenant: {}",
             holdingsUpdateOwnership.getHoldingsRecordIds(), targetTenantContext.getTenantId(), throwable);
           throw new CompletionException(throwable);
         });
     } catch (Exception e) {
-      LOGGER.error(
-        "updateOwnershipOfHoldingsRecords:: Unexpected error during holdings ownership update for holdings: {}, target tenant: {}",
+      LOGGER.error("updateOwnershipOfHoldingsRecords:: Unexpected error during holdings ownership update "
+                   + "for holdings: {}, target tenant: {}",
         holdingsUpdateOwnership.getHoldingsRecordIds(), targetTenantContext.getTenantId(), e);
       return CompletableFuture.failedFuture(e);
     }
   }
 
   /**
-   * Fetches and validates holdings records from the source tenant
+   * Fetches and validates holdings records from the source tenant.
    */
   private CompletableFuture<List<HoldingsRecord>> fetchAndValidateHoldingsRecords(
     HoldingsUpdateOwnership holdingsUpdateOwnership,
@@ -539,7 +537,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   }
 
   /**
-   * Main processing method for holdings ownership update
+   * Main processing method for holdings ownership update.
    */
   private CompletableFuture<List<String>> processHoldingsOwnershipUpdate(List<HoldingsRecord> holdingsRecords,
                                                                          List<NotUpdatedEntity> notUpdatedEntities,
@@ -699,9 +697,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         v -> LOGGER.info("moveSrsRecordsForMarcHoldings:: Finished processing MARC SRS records for the batch."))
       .exceptionally(throwable -> {
         Throwable cause = throwable instanceof CompletionException ? throwable.getCause() : throwable;
-        LOGGER.error(
-          "moveSrsRecordsForMarcHoldings:: A batch-level error occurred, likely during snapshot creation. Marking all MARC holdings in this batch as not updated.",
-          cause);
+        LOGGER.error("moveSrsRecordsForMarcHoldings:: A batch-level error occurred, likely during snapshot"
+                     + " creation. Marking all MARC holdings in this batch as not updated.", cause);
         String errorMessage =
           "Failed to process the batch of MARC records due to a system error: " + cause.getMessage();
         marcHoldingsToProcess.forEach(h -> {
@@ -803,6 +800,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     return future;
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   private CompletableFuture<Void> moveSingleMarcHoldingsSrsRecord(HoldingsRecord sourceHolding, Record marcSrsRecord,
                                                                   HoldingsRecord targetHolding,
                                                                   List<NotUpdatedEntity> notUpdatedEntities,
@@ -815,7 +813,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
     CompletableFuture<Void> result = new CompletableFuture<>();
 
     try {
-      String jsonTargetHolding = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(targetHolding);
+      String jsonTargetHolding = OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(targetHolding);
       LOGGER.trace("moveSingleMarcHoldingsSrsRecord:: targetHolding: \n{}", jsonTargetHolding);
       LOGGER.debug("moveSingleMarcHoldingsSrsRecord:: Preparing to move SRS record for holdings: {}, hrId: {}",
         targetHolding.getId(), targetHolding.getHrid());
@@ -997,7 +995,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .toList();
 
     return CompletableFuture.allOf(createFutures.toArray(new CompletableFuture[0]))
-      .handle((vVoid, throwable) -> createFutures.stream()
+      .handle((v, throwable) -> createFutures.stream()
         .filter(future -> !future.isCompletedExceptionally())
         .map(CompletableFuture::join)
         .toList());
@@ -1025,7 +1023,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .toList();
 
     return CompletableFuture.allOf(createFutures.toArray(new CompletableFuture[0]))
-      .handle((vVoid, throwable) -> createFutures.stream()
+      .handle((v, throwable) -> createFutures.stream()
         .filter(future -> !future.isCompletedExceptionally())
         .map(CompletableFuture::join)
         .toList());
@@ -1077,17 +1075,16 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
       .map(item -> {
         CompletableFuture<String> future = new CompletableFuture<>();
         itemCollection.delete(item.getId(), success -> {
-            LOGGER.debug("deleteSourceItems:: Successfully deleted item with id: {}", item.getId());
-            future.complete(item.getId());
-          },
-          failure -> {
-            LOGGER.warn(
-              "deleteSourceItems:: Error during deleting item with id: {} for holdingsRecord with id {}, status code: {}, reason: {}",
-              item.getId(), item.getHoldingId(), failure.statusCode(), failure.reason());
-            notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(getEntityIdForError.apply(item))
-              .withErrorMessage(failure.reason()));
-            future.complete(null);
-          });
+          LOGGER.debug("deleteSourceItems:: Successfully deleted item with id: {}", item.getId());
+          future.complete(item.getId());
+        }, failure -> {
+          LOGGER.warn("deleteSourceItems:: Error during deleting item with id: {} for "
+                      + "holdingsRecord with id {}, status code: {}, reason: {}",
+            item.getId(), item.getHoldingId(), failure.statusCode(), failure.reason());
+          notUpdatedEntities.add(new NotUpdatedEntity().withEntityId(getEntityIdForError.apply(item))
+            .withErrorMessage(failure.reason()));
+          future.complete(null);
+        });
         return future;
       }).toList();
 
@@ -1098,11 +1095,9 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
         .toList());
   }
 
-  private CompletableFuture<List<HoldingsRecord>> validateHoldingsRecordsBoundWith(List<HoldingsRecord> holdingsRecords,
-                                                                                   List<NotUpdatedEntity> notUpdatedEntities,
-                                                                                   RoutingContext routingContext,
-                                                                                   WebContext context) {
-
+  private CompletableFuture<List<HoldingsRecord>> validateHoldingsRecordsBoundWith(
+    List<HoldingsRecord> holdingsRecords, List<NotUpdatedEntity> notUpdatedEntities,
+    RoutingContext routingContext, WebContext context) {
     LOGGER.info("validateHoldingsRecordsBoundWith:: Validating holdings records bound with parts: {}", holdingsRecords);
 
     try {
@@ -1201,9 +1196,8 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
           return CompletableFuture.completedFuture(firstPageRecords);
         }
 
-        LOGGER.info(
-          "getHoldingsByInstanceId:: Total holdings {} exceeds page size {}, fetching remaining pages for instanceId: {}",
-          totalRecords, HOLDINGS_PAGE_SIZE, instanceId);
+        LOGGER.info("getHoldingsByInstanceId:: Total holdings {} exceeds page size {}, "
+                    + "fetching remaining pages for instanceId: {}", totalRecords, HOLDINGS_PAGE_SIZE, instanceId);
 
         List<HoldingsRecord> allRecords = new ArrayList<>(firstPageRecords);
         List<CompletableFuture<MultipleRecords<HoldingsRecord>>> pageFutures = new ArrayList<>();
@@ -1328,7 +1322,7 @@ public class UpdateOwnershipApi extends AbstractInventoryResource {
   }
 
   /**
-   * Context class to hold all the clients and collections needed for the update process
+   * Context class to hold all the clients and collections needed for the update process.
    */
   record HoldingsOwnershipUpdateContext(
     MultipleRecordsFetchClient holdingsRecordFetchClient,

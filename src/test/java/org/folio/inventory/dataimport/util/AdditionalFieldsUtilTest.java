@@ -338,13 +338,85 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldNotSortExistingFieldsWhenAddFieldToToMarcRecord() {
     // given
     String instanceId = "12345";
-    String parsedContent =
-      "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
-    String expectedParsedContent =
-      "{\"leader\":\"00113nam  22000731a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"999\":{\"subfields\":[{\"i\":\"12345\"}],\"ind1\":\"f\",\"ind2\":\"f\"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00115nam  22000731a 4500",
+        "fields": [
+          {
+            "001": "ybp7406411"
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
+    String expectedParsedContent = """
+      {
+        "leader": "00113nam  22000731a 4500",
+        "fields": [
+          {
+            "001": "ybp7406411"
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "999": {
+              "subfields": [
+                {
+                  "i": "12345"
+                }
+              ],
+              "ind1": "f",
+              "ind2": "f"
+            }
+          }
+        ]
+      }
+      """;
     ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
     var marcRecord = new Record().withId(UUID.randomUUID().toString()).withParsedRecord(parsedRecord);
     // when
@@ -355,12 +427,70 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldNotAdd035FieldIf001And003FieldsNotExists() {
     // given
-    String parsedContent =
-      "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"003\":\"in001\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
-    String expectedParsedContent =
-      "{\"leader\":\"00068nam  22000491a 4500\",\"fields\":[{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00115nam  22000731a 4500",
+        "fields": [
+          {
+            "003": "in001"
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
+    String expectedParsedContent = """
+      {
+        "leader": "00068nam  22000491a 4500",
+        "fields": [
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
 
     var marcRecord = new Record().withId(UUID.randomUUID().toString())
@@ -375,12 +505,87 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldAdd035If001NotEqual003() {
     // given
-    String parsedContent =
-      "{\"leader\":\"00086nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"},{\"003\":\"ybp7406411\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
-    String expectedParsedContent =
-      "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00086nam  22000611a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "003": "ybp7406411"
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
+    String expectedParsedContent = """
+      {
+        "leader": "00120nam  22000731a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(ybp7406411)in001"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
 
     var marcRecord = new Record().withId(UUID.randomUUID().toString())
@@ -395,17 +600,74 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldRemovePeriodsAndSpacesAfterNormalization() {
     // given
-    var parsedContent = "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-                        "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)on. 607TST .001\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
-                        +
-                        "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    var parsedContent = """
+      {
+        "leader": "00120nam  22000731a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(OCoLC)on. 607TST .001"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
 
-    var expectedParsedContent = "{\"leader\":\"00098nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-                                "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)607TST001\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
-                                +
-                                "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    var expectedParsedContent = """
+      {
+        "leader": "00098nam  22000611a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(OCoLC)607TST001"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
 
     var marcRecord = new Record().withId(UUID.randomUUID().toString())
@@ -419,37 +681,289 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldPreserveOrderOf035FieldsAfterNormalization() {
     // given
-    var parsedContent = "{\"leader\":\"00198cama 22003611a 4500\",\"fields\":[" +
-                        "{\"001\":\"10065352\"}," +
-                        "{\"005\":\"20220127143948.0\"}," +
-                        "{\"008\":\"761216s1853mauch0010eng\"}," +
-                        "{\"906\":{\"subfields\":[{\"a\":\"7\"},{\"b\":\"cbc\"},{\"c\":\"oclcrpl\"},{\"d\":\"u\"},{\"e\":\"ncip\"},{\"f\":\"19\"},{\"g\":\"y-gencatlg\"}],\"ind1\":\"\",\"ind2\":\"\"}},"
-                        +
-                        "{\"035\":{\"subfields\":[{\"9\":\"(DLC)01012052\"}],\"ind1\":\"\",\"ind2\":\"\"}}," +
-                        "{\"010\":{\"subfields\":[{\"a\":\"01012052\"}],\"ind1\":\"\",\"ind2\":\"\"}}," +
-                        "{\"022\":{\"subfields\":[{\"a\":\"0022-0469\"}],\"ind1\":\"\",\"ind2\":\"\"}}," +
-                        "{\"030\":{\"subfields\":[{\"a\":\"0030-0469\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-                        "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)on2628488\"}],\"ind1\":\"\",\"ind2\":\"\"}}," +
-                        "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)2628488\"}],\"ind1\":\"\",\"ind2\":\"\"}}," +
-                        "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)00012345\"}],\"ind1\":\"\",\"ind2\":\"\"}}," +
-                        "{\"040\":{\"subfields\":[{\"a\":\"DLC\"},{\"b\":\"eng\"},{\"c\":\"O\"},{\"d\":\"O\"},{\"d\":\"DLC\"}],\"ind1\":\"\",\"ind2\":\"\"}}]}";
+    var parsedContent = """
+      {
+        "leader": "00198cama 22003611a 4500",
+        "fields": [
+          {
+            "001": "10065352"
+          },
+          {
+            "005": "20220127143948.0"
+          },
+          {
+            "008": "761216s1853mauch0010eng"
+          },
+          {
+            "906": {
+              "subfields": [
+                {
+                  "a": "7"
+                },
+                {
+                  "b": "cbc"
+                },
+                {
+                  "c": "oclcrpl"
+                },
+                {
+                  "d": "u"
+                },
+                {
+                  "e": "ncip"
+                },
+                {
+                  "f": "19"
+                },
+                {
+                  "g": "y-gencatlg"
+                }
+              ],
+              "ind1": "",
+              "ind2": ""
+            }
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "9": "(DLC)01012052"
+                }
+              ],
+              "ind1": "",
+              "ind2": ""
+            }
+          },
+          {
+            "010": {
+              "subfields": [
+                {
+                  "a": "01012052"
+                }
+              ],
+              "ind1": "",
+              "ind2": ""
+            }
+          },
+          {
+            "022": {
+              "subfields": [
+                {
+                  "a": "0022-0469"
+                }
+              ],
+              "ind1": "",
+              "ind2": ""
+            }
+          },
+          {
+            "030": {
+              "subfields": [
+                {
+                  "a": "0030-0469"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(OCoLC)on2628488"
+                }
+              ],
+              "ind1": "",
+              "ind2": ""
+            }
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(OCoLC)2628488"
+                }
+              ],
+              "ind1": "",
+              "ind2": ""
+            }
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(OCoLC)00012345"
+                }
+              ],
+              "ind1": "",
+              "ind2": ""
+            }
+          },
+          {
+            "040": {
+              "subfields": [
+                {
+                  "a": "DLC"
+                },
+                {
+                  "b": "eng"
+                },
+                {
+                  "c": "O"
+                },
+                {
+                  "d": "O"
+                },
+                {
+                  "d": "DLC"
+                }
+              ],
+              "ind1": "",
+              "ind2": ""
+            }
+          }
+        ]
+      }
+      """;
 
-    var expectedParsedContent = "{\"leader\":\"00372cama 22001571a 4500\",\"fields\":[" +
-                                "{\"001\":\"10065352\"}," +
-                                "{\"005\":\"20220127143948.0\"}," +
-                                "{\"008\":\"761216s1853mauch0010eng\"}," +
-                                "{\"906\":{\"subfields\":[{\"a\":\"7\"},{\"b\":\"cbc\"},{\"c\":\"oclcrpl\"},{\"d\":\"u\"},{\"e\":\"ncip\"},{\"f\":\"19\"},{\"g\":\"y-gencatlg\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
-                                +
-                                "{\"035\":{\"subfields\":[{\"9\":\"(DLC)01012052\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-                                "{\"010\":{\"subfields\":[{\"a\":\"01012052\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-                                "{\"022\":{\"subfields\":[{\"a\":\"0022-0469\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-                                "{\"030\":{\"subfields\":[{\"a\":\"0030-0469\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-                                "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)2628488\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
-                                +
-                                "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)12345\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-                                "{\"040\":{\"subfields\":[{\"a\":\"DLC\"},{\"b\":\"eng\"},{\"c\":\"O\"},{\"d\":\"O\"},{\"d\":\"DLC\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    var expectedParsedContent = """
+      {
+        "leader": "00372cama 22001571a 4500",
+        "fields": [
+          {
+            "001": "10065352"
+          },
+          {
+            "005": "20220127143948.0"
+          },
+          {
+            "008": "761216s1853mauch0010eng"
+          },
+          {
+            "906": {
+              "subfields": [
+                {
+                  "a": "7"
+                },
+                {
+                  "b": "cbc"
+                },
+                {
+                  "c": "oclcrpl"
+                },
+                {
+                  "d": "u"
+                },
+                {
+                  "e": "ncip"
+                },
+                {
+                  "f": "19"
+                },
+                {
+                  "g": "y-gencatlg"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "9": "(DLC)01012052"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "010": {
+              "subfields": [
+                {
+                  "a": "01012052"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "022": {
+              "subfields": [
+                {
+                  "a": "0022-0469"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "030": {
+              "subfields": [
+                {
+                  "a": "0030-0469"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(OCoLC)2628488"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(OCoLC)12345"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "040": {
+              "subfields": [
+                {
+                  "a": "DLC"
+                },
+                {
+                  "b": "eng"
+                },
+                {
+                  "c": "O"
+                },
+                {
+                  "d": "O"
+                },
+                {
+                  "d": "DLC"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
 
     ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
 
@@ -464,12 +978,70 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldNotAdd035if001IsNull() {
     // given
-    String parsedContent =
-      "{\"leader\":\"00086nam  22000611a 4500\",\"fields\":[{\"003\":\"in001\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
-    String expectedParsedContent =
-      "{\"leader\":\"00068nam  22000491a 4500\",\"fields\":[{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00086nam  22000611a 4500",
+        "fields": [
+          {
+            "003": "in001"
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
+    String expectedParsedContent = """
+      {
+        "leader": "00068nam  22000491a 4500",
+        "fields": [
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
 
     var marcRecord = new Record().withId(UUID.randomUUID().toString())
@@ -484,10 +1056,55 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldFill001IfHrIdNotEmpty() {
     // given: 001 already holds the target hrid
-    String parsedContent =
-      "{\"leader\":\"00118nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"003\":\"qwerty\"},{\"035\":{\"subfields\":[{\"a\":\"(NhFolYBP)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00118nam  22000731a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "003": "qwerty"
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(NhFolYBP)in001"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     ParsedRecord parsedRecord = new ParsedRecord();
     parsedRecord.setContent(parsedContent);
 
@@ -503,12 +1120,98 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldNotFill001IfHrIdIsNull() {
     // given
-    String parsedContent =
-      "{\"leader\":\"00118nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"003\":\"qwerty\"},{\"035\":{\"subfields\":[{\"a\":\"(NhFolYBP)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
-    String expectedParsedContent =
-      "{\"leader\":\"00119nam  22000731a 4500\",\"fields\":[{\"003\":\"qwerty\"},{\"035\":{\"subfields\":[{\"a\":\"(NhFolYBP)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00118nam  22000731a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "003": "qwerty"
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(NhFolYBP)in001"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
+    String expectedParsedContent = """
+      {
+        "leader": "00119nam  22000731a 4500",
+        "fields": [
+          {
+            "003": "qwerty"
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(NhFolYBP)in001"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
 
     var marcRecord = new Record().withId(UUID.randomUUID().toString())
@@ -523,9 +1226,46 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldNotUpdate005Field() {
-    String parsedContent =
-      "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"003\":\"qwerty\"},{\"005\":\"20141107001016.0\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00115nam  22000731a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "003": "qwerty"
+          },
+          {
+            "005": "20141107001016.0"
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     var marcRecord = new Record().withId(UUID.randomUUID().toString())
       .withParsedRecord(new ParsedRecord().withContent(parsedContent))
       .withGeneration(0)
@@ -542,9 +1282,46 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldUpdate005Field() {
-    String parsedContent =
-      "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"003\":\"qwerty\"},{\"005\":\"20141107001016.0\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00115nam  22000731a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "003": "qwerty"
+          },
+          {
+            "005": "20141107001016.0"
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     var marcRecord = new Record().withId(UUID.randomUUID().toString())
       .withParsedRecord(new ParsedRecord().withContent(parsedContent))
       .withGeneration(0)
@@ -562,11 +1339,48 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldUpdate005FieldWithExactValue_whenUsingFixedClock() {
     // given: an injectable Clock makes the value written to 005 fully deterministic - no more asserting only
     // that a date "looks close enough" to Instant.now() at assertion time.
-    String parsedContent =
-      "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"003\":\"qwerty\"},{\"005\":\"20141107001016.0\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00115nam  22000731a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "003": "qwerty"
+          },
+          {
+            "005": "20141107001016.0"
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     var marcRecord = new Record().withId(UUID.randomUUID().toString())
       .withParsedRecord(new ParsedRecord().withContent(parsedContent))
       .withGeneration(0)
@@ -602,6 +1416,7 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void recalculateLeaderAndParsedRecordLogsOversizedRecordWarning_whenSerializedContentExceedsMarc21LengthLimit() {
     // given: one field with a huge subfield value pushes the total ISO 2709 record length past marc4j's
     // MARC21 99999-byte ceiling. MarcStreamWriter throws MarcException past that limit; before this fix,
@@ -755,7 +1570,7 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
-  void addFieldToMarcRecordDoesNotThrow_whenFieldTagIsAControlField() {
+  void addFieldToMarcRecordDoesNotThrow_whenFieldTagIsControlField() {
     // given: "001" is a control field in this fixture (a plain string value, no indicators/subfields).
     // getSingleFieldByIndicators used to cast every VariableField to DataField unconditionally, so this call
     // threw a ClassCastException that addFieldToMarcRecord's catch swallowed into "false".
@@ -792,6 +1607,7 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void caching() {
     // given: content carrying a random marker field so its canonical cache key is guaranteed unique to this
     // test run - the cache is now content-addressed (equals/hashCode, not identity), so reusing the shared
@@ -804,7 +1620,7 @@ class AdditionalFieldsUtilTest {
         .put("ind2", " ")));
     String parsedRecordContent = contentWithUniqueMarker.encode();
     ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedRecordContent);
-    var marcRecord = new Record().withId(UUID.randomUUID().toString()).withParsedRecord(parsedRecord);
+    final var marcRecord = new Record().withId(UUID.randomUUID().toString()).withParsedRecord(parsedRecord);
     String instanceId = UUID.randomUUID().toString();
 
     MarcContentCacheStats initialCacheStats = getCacheStats();
@@ -845,7 +1661,7 @@ class AdditionalFieldsUtilTest {
     assertEquals(1, cacheStats.loadCount());
     // update field: this record is re-read from cache (a genuine equals()-based hit, not an identity fluke),
     // mutated, and re-keyed under its new content
-    String contentBeforeUpdate = parsedRecordContent;
+    final var contentBeforeUpdate = parsedRecordContent;
     addDataFieldToMarcRecord(marcRecord, "035", ' ', ' ', 'a', instanceId);
     cacheStats = getCacheStats().minus(initialCacheStats);
     assertEquals(2, cacheStats.requestCount());
@@ -910,12 +1726,76 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
-  void shouldRemove003ifHRIDManipulationAlreadyDone() {
+  @SuppressWarnings("checkstyle:MethodLength")
+  void shouldRemove003ifHridManipulationAlreadyDone() {
     // given
-    String parsedContent =
-      "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"003\":\"qwerty\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
-    String expectedParsedContent =
-      "{\"leader\":\"00086nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00115nam  22000731a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "003": "qwerty"
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
+    String expectedParsedContent = """
+      {
+        "leader": "00086nam  22000611a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     ParsedRecord parsedRecord = new ParsedRecord();
     parsedRecord.setContent(parsedContent);
 
@@ -932,12 +1812,76 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldNotProcessRecord() {
     // given
-    String parsedContent =
-      "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"003\":\"qwerty\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
-    String expectedParsedContent =
-      "{\"leader\":\"00086nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00115nam  22000731a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "003": "qwerty"
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
+    String expectedParsedContent = """
+      {
+        "leader": "00086nam  22000611a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     ParsedRecord parsedRecord = new ParsedRecord();
     parsedRecord.setContent(parsedContent);
 
@@ -954,12 +1898,73 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldNotAdd035AndAdd001FieldsIf001And003FieldsNotExists() {
     // given
-    String parsedContent =
-      "{\"leader\":\"00116nam  22000732a 4900\",\"fields\":[{\"003\":\"in001\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
-    String expectedParsedContent =
-      "{\"leader\":\"00086nam  22000612a 4900\",\"fields\":[{\"001\":\"in001\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00116nam  22000732a 4900",
+        "fields": [
+          {
+            "003": "in001"
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
+    String expectedParsedContent = """
+      {
+        "leader": "00086nam  22000612a 4900",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     ParsedRecord parsedRecord = new ParsedRecord();
     parsedRecord.setContent(parsedContent);
 
@@ -976,12 +1981,84 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldRemove035() {
     // given
-    String parsedContent =
-      "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
-    String expectedParsedContent =
-      "{\"leader\":\"00086nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"},{\"507\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}},{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00120nam  22000731a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(ybp7406411)in001"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
+    String expectedParsedContent = """
+      {
+        "leader": "00086nam  22000611a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "507": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     ParsedRecord parsedRecord = new ParsedRecord();
     parsedRecord.setContent(parsedContent);
 
@@ -1013,20 +2090,75 @@ class AdditionalFieldsUtilTest {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void reorderMarcRecordFieldsDoesNotThrow_whenSystemOrderContentHasAnEmptyFieldNode() {
     // given: an empty field node ({}) mixed into the system-reordered content's "fields" array. Before the
     // getTagFromNode guard, node.fieldNames().next() threw NoSuchElementException on this node, which
     // reorderMarcRecordFields' own catch-all then swallowed into the un-reordered systemOrderContent fallback -
     // so this scenario was already "safe" from a crash-propagation standpoint, but only by accident. This test
     // pins the actual (post-guard) behaviour instead of just asserting "doesn't throw".
-    var sourceOrderContent =
-      "{\"fields\":[{\"245\":{\"subfields\":[{\"a\":\"Title\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
-    var systemOrderContent = "{\"leader\":\"00000nam a2200000 a 4500\",\"fields\":["
-                             + "{\"001\":\"in001\"},{},"
-                             + "{\"245\":{\"subfields\":[{\"a\":\"Title\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
-    var expectedReorderedContent = "{\"leader\":\"00000nam a2200000 a 4500\",\"fields\":["
-                                   + "{\"001\":\"in001\"},"
-                                   + "{\"245\":{\"subfields\":[{\"a\":\"Title\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    var sourceOrderContent = """
+      {
+        "fields": [
+          {
+            "245": {
+              "subfields": [
+                {
+                  "a": "Title"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
+    var systemOrderContent = """
+      {
+        "leader": "00000nam a2200000 a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+      
+          },
+          {
+            "245": {
+              "subfields": [
+                {
+                  "a": "Title"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
+    var expectedReorderedContent = """
+      {
+        "leader": "00000nam a2200000 a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "245": {
+              "subfields": [
+                {
+                  "a": "Title"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
 
     // when
     var actualReorderedContent = assertDoesNotThrow(() ->
@@ -1041,14 +2173,48 @@ class AdditionalFieldsUtilTest {
   @DisplayName("should produce content identical to the sequential update005/move001To035/normalize035 calls "
                + "when 005 needs updating, 001 is present, and an OCoLC-prefixed 035 exists")
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldProduceSameContentAsSequentialCalls_whenStandardManipulationUpdates005Moves001AndNormalizes035() {
     // given: two identical records - a 001 to move to 035, an existing OCoLC-prefixed 035 to normalize, and no
     // field-protection settings, so field 005 also needs updating
-    String parsedContent =
-      "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},{\"003\":\"qwerty\"},"
-      + "{\"005\":\"20141107001016.0\"},"
-      + "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)on. 607TST .001\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
-      + "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00115nam  22000731a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "003": "qwerty"
+          },
+          {
+            "005": "20141107001016.0"
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(OCoLC)on. 607TST .001"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     var mappingParameters = new MappingParameters();
     Clock fixedClock = Clock.fixed(Instant.parse("2024-03-15T10:30:45.123Z"), ZoneId.of("UTC"));
 
@@ -1070,14 +2236,45 @@ class AdditionalFieldsUtilTest {
   @DisplayName("should produce content identical to the sequential update005/move001To035/normalize035 calls "
                + "when 005 is protected, 001 is absent, and no OCoLC-prefixed 035 exists")
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldProduceSameContentAsSequentialCalls_whenStandardManipulationSkipsAllThreeSteps() {
     // given: two identical records - no 001 (move001To035 only removes 003), no OCoLC-prefixed 035
     // (normalize035 is a no-op), and a field-protection setting that protects 005 (so 005 is skipped too)
-    String parsedContent =
-      "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"003\":\"qwerty\"},"
-      + "{\"005\":\"20141107001016.0\"},"
-      + "{\"035\":{\"subfields\":[{\"a\":\"(NhFolYBP)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
-      + "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00115nam  22000731a 4500",
+        "fields": [
+          {
+            "003": "qwerty"
+          },
+          {
+            "005": "20141107001016.0"
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(NhFolYBP)in001"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     var mappingParameters = new MappingParameters().withMarcFieldProtectionSettings(
       List.of(new MarcFieldProtectionSetting().withField(FIELD_005).withData("*")));
     Clock fixedClock = Clock.fixed(Instant.parse("2024-03-15T10:30:45.123Z"), ZoneId.of("UTC"));
@@ -1100,15 +2297,56 @@ class AdditionalFieldsUtilTest {
   @DisplayName("should produce content identical to the sequential update005/normalize035/remove035WithHrId calls "
                + "when the record is a MARC_BIB and the 035-with-hrid removal actually runs")
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldProduceSameContentAsSequentialCalls_whenReplaceManipulationRunsHrIdRemovalOnMarcBib() {
     // given: two identical MARC_BIB records - an OCoLC-prefixed 035 to normalize, and a second 035 whose
     // subfield contains the 001 hrid value, so remove035FieldWhenRecordContainsHrId actually removes it
-    String parsedContent =
-      "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},"
-      + "{\"005\":\"20141107001016.0\"},"
-      + "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
-      + "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)on. 607TST .001\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
-      + "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leadder": "00115nam  22000731a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "005": "20141107001016.0"
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(ybp7406411)in001"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(OCoLC)on. 607TST .001"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     var mappingParameters = new MappingParameters();
     Clock fixedClock = Clock.fixed(Instant.parse("2024-03-15T10:30:45.123Z"), ZoneId.of("UTC"));
 
@@ -1130,15 +2368,56 @@ class AdditionalFieldsUtilTest {
   @DisplayName("should produce content identical to the sequential update005/normalize035/remove035WithHrId calls "
                + "when the record is not a MARC_BIB and the 035-with-hrid removal is skipped")
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void shouldProduceSameContentAsSequentialCalls_whenReplaceManipulationSkipsHrIdRemovalOnNonMarcBib() {
     // given: same fixture as the MARC_BIB case, but recorded as a MARC_AUTHORITY record, so
     // remove035FieldWhenRecordContainsHrId's MARC_BIB guard skips the 035-with-hrid removal entirely on both sides
-    String parsedContent =
-      "{\"leader\":\"00115nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"},"
-      + "{\"005\":\"20141107001016.0\"},"
-      + "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
-      + "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)on. 607TST .001\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
-      + "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}";
+    String parsedContent = """
+      {
+        "leader": "00115nam  22000731a 4500",
+        "fields": [
+          {
+            "001": "in001"
+          },
+          {
+            "005": "20141107001016.0"
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(ybp7406411)in001"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "035": {
+              "subfields": [
+                {
+                  "a": "(OCoLC)on. 607TST .001"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          },
+          {
+            "500": {
+              "subfields": [
+                {
+                  "a": "data"
+                }
+              ],
+              "ind1": " ",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
     var mappingParameters = new MappingParameters();
     Clock fixedClock = Clock.fixed(Instant.parse("2024-03-15T10:30:45.123Z"), ZoneId.of("UTC"));
 
@@ -1208,124 +2487,838 @@ class AdditionalFieldsUtilTest {
 
   static class OclcFieldNormalizationTest {
 
+    @SuppressWarnings("checkstyle:MethodLength")
     static Stream<Arguments> data() {
       return Stream.of(
         Arguments.of(
-          "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
-          "{\"a\":\"(OCoLC)00006475800\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
-
-          "{\"leader\":\"00115nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
-          "{\"a\":\"(OCoLC)6475800\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+          """
+            {
+              "leader": "00120nam  22000731a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(ybp7406411)in001"
+                      },
+                      {
+                        "a": "(OCoLC)00006475800"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """,
+          """
+            {
+              "leader": "00115nam  22000611a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(ybp7406411)in001"
+                      },
+                      {
+                        "a": "(OCoLC)6475800"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """
         ),
         Arguments.of(
-          "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
-          "{\"a\":\"(OCoLC)tfe0006475800\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+          """
+            {
+              "leader": "00120nam  22000731a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(ybp7406411)in001"
+                      },
+                      {
+                        "a": "(OCoLC)tfe0006475800"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """,
 
-          "{\"leader\":\"00118nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
-          "{\"a\":\"(OCoLC)tfe6475800\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+          """
+            {
+              "leader": "00118nam  22000611a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(ybp7406411)in001"
+                      },
+                      {
+                        "a": "(OCoLC)tfe6475800"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """
         ),
         Arguments.of(
-          "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
-          "{\"a\":\"(OCoLC)00064758\"}," +
-          "{\"a\":\"(OCoLC)ocm00064758\"}," +
-          "{\"z\":\"(OCoLC)00024758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+          """
+            {
+              "leader": "00120nam  22000731a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(ybp7406411)in001"
+                      },
+                      {
+                        "a": "(OCoLC)00064758"
+                      },
+                      {
+                        "a": "(OCoLC)ocm00064758"
+                      },
+                      {
+                        "z": "(OCoLC)00024758"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """,
 
-          "{\"leader\":\"00127nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
-          "{\"a\":\"(OCoLC)64758\"},{\"z\":\"(OCoLC)24758\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+          """
+            {
+              "leader": "00127nam  22000611a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(ybp7406411)in001"
+                      },
+                      {
+                        "a": "(OCoLC)64758"
+                      },
+                      {
+                        "z": "(OCoLC)24758"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """
         ),
         Arguments.of(
-          "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)00064758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocn000064758\"} ],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocm0000064758\"}, {\"z\":\"(OCoLC)11114758\"} ],\"ind1\":\" \"," +
-          "\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+          """
+            {
+              "leader": "00120nam  22000731a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)00064758"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)ocn000064758"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)ocm0000064758"
+                      },
+                      {
+                        "z": "(OCoLC)11114758"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """,
 
-          "{\"leader\":\"00111nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)64758\"},{\"z\":\"(OCoLC)11114758\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
-          +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+          """
+            {
+              "leader": "00111nam  22000611a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)64758"
+                      },
+                      {
+                        "z": "(OCoLC)11114758"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """
         ),
         Arguments.of(
-          "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocn00064758\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocm000064758\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+          """
+            {
+              "leader": "00120nam  22000731a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(ybp7406411)in001"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)ocn00064758"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)ocm000064758"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """,
 
-          "{\"leader\":\"00128nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)64758\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+          """
+            {
+              "leader": "00128nam  22000731a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(ybp7406411)in001"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)64758"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """
         ),
         Arguments.of(
-          "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocn607TST001\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+          """
+            {
+              "leader": "00120nam  22000731a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)ocn607TST001"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """,
 
-          "{\"leader\":\"00098nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)607TST001\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+          """
+            {
+              "leader": "00098nam  22000611a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)607TST001"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """
         ),
         Arguments.of(
-          "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC-M)ocn0001234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(ABC)ocn0001234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocn0001234\"}, {\"a\":\"(OCoLC)ocn1234\"}, {\"b\":\"(OCoLC)ocn1234\"}],\"ind1\":\" \",\"ind2\":\" \"}},"
-          +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocm1234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocn00098765\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)ocn0001234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+          """
+            {
+              "leader": "00120nam  22000731a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC-M)ocn0001234"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(ABC)ocn0001234"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)ocn0001234"
+                      },
+                      {
+                        "a": "(OCoLC)ocn1234"
+                      },
+                      {
+                        "b": "(OCoLC)ocn1234"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)ocm1234"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)ocn00098765"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)ocn0001234"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """,
 
-          "{\"leader\":\"00218nam  22001091a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC-M)ocn0001234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(ABC)ocn0001234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"035\":{\"subfields\":[{\"b\":\"(OCoLC)1234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)98765\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)1234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+          """
+            {
+              "leader": "00218nam  22001091a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC-M)ocn0001234"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(ABC)ocn0001234"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "b": "(OCoLC)1234"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)98765"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)1234"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """
         ),
         Arguments.of(
-          "{\"leader\":\"00126nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)1234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC-M)1234456\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+          """
+            {
+              "leader": "00126nam  22000731a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)1234"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC-M)1234456"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """,
 
-          "{\"leader\":\"00126nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC)1234\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(OCoLC-M)1234456\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+          """
+            {
+              "leader": "00126nam  22000731a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC)1234"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(OCoLC-M)1234456"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """
         ),
         Arguments.of(
-          "{\"leader\":\"00120nam  22000731a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
-          "{\"a\":\"   (OCoLC)000012345\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}",
+          """
+            {
+              "leader": "00120nam  22000731a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(ybp7406411)in001"
+                      },
+                      {
+                        "a": "   (OCoLC)000012345"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """,
 
-          "{\"leader\":\"00113nam  22000611a 4500\",\"fields\":[{\"001\":\"in001\"}," +
-          "{\"035\":{\"subfields\":[{\"a\":\"(ybp7406411)in001\"}," +
-          "{\"a\":\"(OCoLC)12345\"}],\"ind1\":\" \",\"ind2\":\" \"}}," +
-          "{\"500\":{\"subfields\":[{\"a\":\"data\"}],\"ind1\":\" \",\"ind2\":\" \"}}]}"
+          """
+            {
+              "leader": "00113nam  22000611a 4500",
+              "fields": [
+                {
+                  "001": "in001"
+                },
+                {
+                  "035": {
+                    "subfields": [
+                      {
+                        "a": "(ybp7406411)in001"
+                      },
+                      {
+                        "a": "(OCoLC)12345"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                },
+                {
+                  "500": {
+                    "subfields": [
+                      {
+                        "a": "data"
+                      }
+                    ],
+                    "ind1": " ",
+                    "ind2": " "
+                  }
+                }
+              ]
+            }
+            """
         )
       );
     }
 
     @ParameterizedTest
     @MethodSource("data")
-    void shouldNormalizeOCoLCField035(String parsedContent, String expectedParsedContent) {
+    void shouldNormalizeOcolcField035(String parsedContent, String expectedParsedContent) {
       // given
       ParsedRecord parsedRecord = new ParsedRecord().withContent(parsedContent);
 

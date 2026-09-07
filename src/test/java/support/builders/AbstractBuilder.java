@@ -2,7 +2,6 @@ package support.builders;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-
 import java.util.UUID;
 
 public abstract class AbstractBuilder implements Builder {

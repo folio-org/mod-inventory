@@ -118,6 +118,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
     this.instanceLinkClient = instanceLinkClient;
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Override
   public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
     logParametersEventHandler(LOGGER, dataImportEventPayload);
@@ -136,8 +137,6 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
       var instanceRecordId = payloadContext.get(DataImportHeaders.RECORD_ID);
-      var eventChunkId = payloadContext.get(DataImportHeaders.CHUNK_ID);
-      String chunkId = eventChunkId;
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
         LOGGER.error(ACTION_HAS_NO_MAPPING_MSG + " jobExecutionId: {} recordId: {}", jobExecutionId, instanceRecordId);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
@@ -162,19 +161,20 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
         return CompletableFuture.failedFuture(new DataImportException(msg));
       }
 
+      var eventChunkId = payloadContext.get(DataImportHeaders.CHUNK_ID);
       if (isNotBlank(payloadContext.get(CENTRAL_TENANT_ID)) && isCentralTenantInstanceUpdateForbidden(payloadContext)) {
-        LOGGER.warn(
-          "handle:: Failed to process instance update, reason: '{}', jobExecutionId: '{}', recordId: '{}', chunkId: '{}'",
-          USER_HAS_NO_PERMISSION_MSG, jobExecutionId, instanceRecordId, chunkId);
+        LOGGER.warn("handle:: Failed to process instance update, reason: '{}', "
+                    + "jobExecutionId: '{}', recordId: '{}', chunkId: '{}'",
+          USER_HAS_NO_PERMISSION_MSG, jobExecutionId, instanceRecordId, eventChunkId);
         return CompletableFuture.failedFuture(new EventProcessingException(USER_HAS_NO_PERMISSION_MSG));
       }
 
       if (isShadowInstance(instanceToUpdate)) {
-        LOGGER.info("handle:: Processing Consortium Instance jobExecutionId: {} recordId: {}", jobExecutionId,
-          instanceRecordId);
+        LOGGER.info("handle:: Processing Consortium Instance jobExecutionId: {} recordId: {}",
+          jobExecutionId, instanceRecordId);
         if (isCentralTenantInstanceUpdateForbidden(payloadContext)) {
-          LOGGER.warn(
-            "handle:: Failed to process instance update, reason: '{}', jobExecutionId: '{}', recordId: '{}', chunkId: '{}'",
+          LOGGER.warn("handle:: Failed to process instance update, reason: '{}', "
+                      + "jobExecutionId: '{}', recordId: '{}', chunkId: '{}'",
             USER_HAS_NO_PERMISSION_MSG, dataImportEventPayload.getJobExecutionId(), instanceRecordId, eventChunkId);
           return CompletableFuture.failedFuture(new EventProcessingException(USER_HAS_NO_PERMISSION_MSG));
         }
@@ -198,15 +198,13 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
                   dataImportEventPayload.getContext().put(CENTRAL_TENANT_ID, centralTenantId);
                 })
                 .onFailure(e -> {
-                  LOGGER.warn(
-                    "Error retrieving inventory Instance from central tenant jobExecutionId: '{}' recordId: '{}' chunkId: '{}'",
-                    jobExecutionId, instanceRecordId, chunkId, e);
+                  LOGGER.warn("Error retrieving inventory Instance from central tenant jobExecutionId: '{}'"
+                              + " recordId: '{}' chunkId: '{}'", jobExecutionId, instanceRecordId, eventChunkId, e);
                   future.completeExceptionally(e);
                 });
             } else {
-              LOGGER.warn(
-                "handle:: Can't retrieve centralTenantId updating Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}'",
-                jobExecutionId, instanceRecordId, chunkId);
+              LOGGER.warn("handle:: Can't retrieve centralTenantId updating Instance by jobExecutionId: '{}' "
+                          + "and recordId: '{}' and chunkId: '{}'", jobExecutionId, instanceRecordId, eventChunkId);
               future.completeExceptionally(new NotFoundException("Can't retrieve centralTenantId updating Instance"));
             }
             return Future.succeededFuture();
@@ -229,7 +227,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
           })
           .onFailure(e -> {
             LOGGER.warn("Error retrieving inventory Instance jobExecutionId: '{}' recordId: '{}' chunkId: '{}'",
-              jobExecutionId, instanceRecordId, chunkId, e);
+              jobExecutionId, instanceRecordId, eventChunkId, e);
             future.completeExceptionally(e);
           });
       }
@@ -262,7 +260,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
     instanceCollection.update(instance, success -> promise.complete(instance),
       failure -> {
         if (failure.statusCode() == HttpStatus.SC_CONFLICT) {
-          processOLError(instance, instanceCollection, eventPayload, promise, failure);
+          processOlError(instance, instanceCollection, eventPayload, promise, failure);
         } else {
           eventPayload.getContext().remove(CURRENT_RETRY_NUMBER);
           LOGGER.error("updateInstanceAndRetryIfOlExists:: Error updating Instance - {}, status code {}",
@@ -294,6 +292,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
     return !permissions.contains(CENTRAL_RECORD_UPDATE_PERMISSION);
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   private void processInstanceUpdate(DataImportEventPayload dataImportEventPayload,
                                      InstanceCollection instanceCollection, Context context, Instance instanceToUpdate,
                                      CompletableFuture<DataImportEventPayload> future,
@@ -330,11 +329,11 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
         org.folio.rest.jaxrs.model.Record targetRecord =
           Json.decodeValue(marcBibAsJson, org.folio.rest.jaxrs.model.Record.class);
         Instance mappedInstance = Instance.fromJson(instanceAsJson);
-        List<String> invalidUUIDsErrors = ValidationUtil.validateUUIDs(mappedInstance);
-        if (!invalidUUIDsErrors.isEmpty()) {
+        List<String> invalidUuidsErrors = ValidationUtil.validateUuids(mappedInstance);
+        if (!invalidUuidsErrors.isEmpty()) {
           String msg =
             format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ",
-              invalidUUIDsErrors,
+              invalidUuidsErrors,
               jobExecutionId, recordId, chunkId);
           LOGGER.warn(msg);
           return Future.failedFuture(msg);
@@ -619,7 +618,7 @@ public class ReplaceInstanceEventHandler extends AbstractInstanceEventHandler {
     return promise.future();
   }
 
-  private void processOLError(Instance instance, InstanceCollection instanceCollection,
+  private void processOlError(Instance instance, InstanceCollection instanceCollection,
                               DataImportEventPayload eventPayload, Promise<Instance> promise, Failure failure) {
     int currentRetryNumber = eventPayload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(
       eventPayload.getContext().get(CURRENT_RETRY_NUMBER));

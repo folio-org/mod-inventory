@@ -49,8 +49,7 @@ public class HoldingsApi {
   private static final String BLOCKED_FIELDS_UPDATED_ERROR_MSG = "Holdings is controlled by MARC record, "
                                                                  + "these fields are blocked and can not be updated: ";
   private static final String SUPPRESS_FROM_DISCOVERY_ERROR_MSG =
-    "Suppress from discovery wasn't changed for SRS record" +
-    ". Holdings id:'%s', status code: '%s'";
+    "Suppress from discovery wasn't changed for SRS record. Holdings id:'%s', status code: '%s'";
   private static final String MARC = "MARC";
   private static final String INVENTORY_PATH = "/inventory";
   private static final String HOLDINGS_PATH = INVENTORY_PATH + "/holdings";
@@ -71,31 +70,31 @@ public class HoldingsApi {
     router.put(HOLDINGS_PATH + "/:id").handler(this::update);
   }
 
-  private void update(RoutingContext rContext) {
+  private void update(RoutingContext routingContext) {
     try {
-      var wContext = new WebContext(rContext);
-      var updatedHoldings = rContext.body().asPojo(HoldingsRecord.class);
-      var holdingsRecordCollection = storage.getHoldingsRecordCollection(wContext);
-      var holdingRecordSourceCollection = storage.getHoldingsRecordsSourceCollection(wContext);
+      var webContext = new WebContext(routingContext);
+      var updatedHoldings = routingContext.body().asPojo(HoldingsRecord.class);
+      var holdingsRecordCollection = storage.getHoldingsRecordCollection(webContext);
+      var holdingRecordSourceCollection = storage.getHoldingsRecordsSourceCollection(webContext);
       // metadata is a readonly field; setting it to null helps prevent unexpected issues during request processing
       updatedHoldings.setMetadata(null);
 
       completedFuture(updatedHoldings)
-        .thenCompose(holdingsRecord -> holdingsRecordCollection.findById(rContext.request().getParam(ID_FIELD)))
+        .thenCompose(holdingsRecord -> holdingsRecordCollection.findById(routingContext.request().getParam(ID_FIELD)))
         .thenCompose(this::refuseWhenHoldingsNotFound)
         .thenCompose(existingHoldings -> refuseWhenBlockedFieldsChanged(existingHoldings, updatedHoldings))
         .thenCompose(existingHoldings -> refuseWhenHridChanged(existingHoldings, updatedHoldings))
         .thenAccept(
           existingHoldings -> updateHoldings(updatedHoldings, holdingsRecordCollection, holdingRecordSourceCollection,
-            rContext, wContext))
+            routingContext, webContext))
         .exceptionally(throwable -> {
           LOGGER.error(throwable);
-          handleFailure(throwable, rContext);
+          handleFailure(throwable, routingContext);
           return null;
         });
     } catch (Exception e) {
       LOGGER.error(e);
-      handleFailure(e, rContext);
+      handleFailure(e, routingContext);
     }
   }
 
@@ -146,52 +145,57 @@ public class HoldingsApi {
 
   private void updateHoldings(HoldingsRecord holdingsRecord, HoldingsRecordCollection holdingsRecordCollection,
                               HoldingsRecordsSourceCollection recordsSourceCollection,
-                              RoutingContext rContext, WebContext wContext) {
+                              RoutingContext routingContext, WebContext webContext) {
     holdingsRecordCollection.update(holdingsRecord,
       v -> {
         if (Optional.ofNullable(holdingsRecord.getDiscoverySuppress()).orElse(false)) {
-          recordsSourceCollection.findById(holdingsRecord.getSourceId()).thenAccept(source ->
-          {
-            if (MARC.equals(source.getName())) {
-              updateSuppressFromDiscoveryFlag(wContext, rContext, holdingsRecord);
-            } else { noContent(rContext.response()); }
-          });
-        } else { noContent(rContext.response()); }
+          recordsSourceCollection
+            .findById(holdingsRecord.getSourceId())
+            .thenAccept(source -> {
+              if (MARC.equals(source.getName())) {
+                updateSuppressFromDiscoveryFlag(webContext, routingContext, holdingsRecord);
+              } else {
+                noContent(routingContext.response());
+              }
+            });
+        } else {
+          noContent(routingContext.response());
+        }
       },
-      FailureResponseConsumer.serverError(rContext.response())
+      FailureResponseConsumer.serverError(routingContext.response())
     );
   }
 
-  private void updateSuppressFromDiscoveryFlag(WebContext wContext, RoutingContext rContext,
+  private void updateSuppressFromDiscoveryFlag(WebContext webContext, RoutingContext routingContext,
                                                HoldingsRecord updatedHoldings) {
     try {
-      getSourceStorageRecordsClient(wContext)
+      getSourceStorageRecordsClient(webContext)
         .putSourceStorageRecordsSuppressFromDiscoveryById(updatedHoldings.getId(), HOLDING_ID_TYPE,
           updatedHoldings.getDiscoverySuppress(), httpClientResponse -> {
             if (httpClientResponse.result().statusCode() == HttpStatus.HTTP_OK.toInt()) {
               LOGGER.info(format("Suppress from discovery flag was updated for record in SRS. Holding id: %s",
                 updatedHoldings.getId()));
-              noContent(rContext.response());
+              noContent(routingContext.response());
             } else {
               var errMsg = format(SUPPRESS_FROM_DISCOVERY_ERROR_MSG, updatedHoldings.getId(),
                 httpClientResponse.result().statusCode());
               LOGGER.error(errMsg);
-              internalError(rContext.response(), errMsg);
+              internalError(routingContext.response(), errMsg);
             }
           });
     } catch (Exception e) {
       LOGGER.error("Error during updating suppress from discovery flag for record in SRS", e);
-      handleFailure(e, rContext);
+      handleFailure(e, routingContext);
     }
   }
 
-  private SourceStorageRecordsClient getSourceStorageRecordsClient(WebContext wContext) {
+  private SourceStorageRecordsClient getSourceStorageRecordsClient(WebContext webContext) {
     var folioHeaders = FolioHeaders.builder()
-      .connectionUrl(wContext.getOkapiLocation())
-      .userId(wContext.getUserId())
-      .token(wContext.getToken())
-      .requestId(wContext.getRequestId())
-      .tenant(wContext.getTenantId());
+      .connectionUrl(webContext.getOkapiLocation())
+      .userId(webContext.getUserId())
+      .token(webContext.getToken())
+      .requestId(webContext.getRequestId())
+      .tenant(webContext.getTenantId());
     return new SourceStorageRecordsClientWrapper(folioHeaders, client);
   }
 }

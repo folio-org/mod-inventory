@@ -216,7 +216,7 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
       })
       .onFailure(cause -> {
         if (cause instanceof OptimisticLockingException) {
-          processOLError(payload, mappingMetadataDto, promise, cause, context);
+          processOlError(payload, mappingMetadataDto, promise, cause, context);
         } else {
           payload.getContext().remove(CURRENT_RETRY_NUMBER);
           LOGGER.warn("updateRelatedEntity:: Error updating inventory instance by id: '{}' by jobExecutionId: '{}'",
@@ -275,10 +275,9 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
       ExternalIdsHolder holder = parsedRecord.getExternalIdsHolder();
       if (isBlank(subfield999ffI) && holder != null
           && (!isBlank(holder.getInstanceId()) || !isBlank(holder.getInstanceHrid()))) {
-        LOGGER.info(
-          "syncExternalIdsHolderWithParsedRecord:: Clearing stale externalIdsHolder (instanceId='{}', instanceHrid='{}') "
-          +
-          "because 999ff$i was removed from parsed record by MODIFY profile, jobExecutionId: {}, recordId: {}",
+        LOGGER.info("syncExternalIdsHolderWithParsedRecord:: Clearing stale externalIdsHolder "
+                    + "(instanceId='{}', instanceHrid='{}') because 999ff$i was removed from parsed record "
+                    + "by MODIFY profile, jobExecutionId: {}, recordId: {}",
           holder.getInstanceId(), holder.getInstanceHrid(), payload.getJobExecutionId(), parsedRecord.getId());
         holder.setInstanceId(null);
         holder.setInstanceHrid(null);
@@ -321,15 +320,14 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
     return preparedPayload;
   }
 
-  private void processOLError(DataImportEventPayload payload, MappingMetadataDto mappingMetadataDto,
+  private void processOlError(DataImportEventPayload payload, MappingMetadataDto mappingMetadataDto,
                               Promise<Void> promise, Throwable cause, Context context) {
     int currentRetryNumber = payload.getContext().get(CURRENT_RETRY_NUMBER) == null
                              ? 0 : Integer.parseInt(payload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       payload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn(
-        "processOLError:: Error updating Instance - {}. Retry MarcBibModifiedPostProcessingEventHandler handler...",
-        cause.getMessage());
+      LOGGER.warn("processOLError:: Error updating Instance - {}. "
+                  + "Retry MarcBibModifiedPostProcessingEventHandler handler...", cause.getMessage());
       updateRelatedEntity(payload, mappingMetadataDto, context).onComplete(res -> {
         if (res.failed()) {
           promise.fail(res.cause());

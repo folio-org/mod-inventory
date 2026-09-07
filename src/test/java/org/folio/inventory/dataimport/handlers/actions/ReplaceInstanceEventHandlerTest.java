@@ -141,18 +141,377 @@ import support.TestUtil;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
 
-  private static final String PARSED_CONTENT =
-    "{\"leader\":\"01314nam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"titleValue\"}]}},{\"336\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}]}},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}}]}";
-  private static final String PARSED_CONTENT_WITH_DELETED_05 =
-    "{\"leader\":\"01314dam  22003851a 4500\",\"fields\":[{\"001\":\"ybp7406411\"},{\"003\":\"in001\"},{\"245\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"a\":\"titleValue\"}]}},{\"336\":{\"ind1\":\"1\",\"ind2\":\"0\",\"subfields\":[{\"b\":\"b6698d38-149f-11ec-82a8-0242ac130003\"}]}},{\"780\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"Houston oil directory\"}]}},{\"785\":{\"ind1\":\"0\",\"ind2\":\"0\",\"subfields\":[{\"t\":\"SAIS review of international affairs\"},{\"x\":\"1945-4724\"}]}},{\"500\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Adaptation of Xi xiang ji by Wang Shifu.\"}]}},{\"520\":{\"ind1\":\" \",\"ind2\":\" \",\"subfields\":[{\"a\":\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\"}]}}]}";
-  private static final String RESPONSE_CONTENT =
-    "{\"id\":\"%s\",\"matchedId\":\"%s\",\"generation\":1,\"parsedRecord\":{"
-    + "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\""
-    + "}}";
-  private static final String EXISTING_SRS_CONTENT =
-    "{\"id\":\"%s\",\"matchedId\":\"%s\",\"generation\":%d,\"parsedRecord\":{"
-    + "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\""
-    + "}}";
+  private static final String PARSED_CONTENT = """
+    {
+      "leader": "01314nam  22003851a 4500",
+      "fields": [
+        {
+          "001": "ybp7406411"
+        },
+        {
+          "245": {
+            "ind1": "1",
+            "ind2": "0",
+            "subfields": [
+              {
+                "a": "titleValue"
+              }
+            ]
+          }
+        },
+        {
+          "336": {
+            "ind1": "1",
+            "ind2": "0",
+            "subfields": [
+              {
+                "b": "b6698d38-149f-11ec-82a8-0242ac130003"
+              }
+            ]
+          }
+        },
+        {
+          "780": {
+            "ind1": "0",
+            "ind2": "0",
+            "subfields": [
+              {
+                "t": "Houston oil directory"
+              }
+            ]
+          }
+        },
+        {
+          "785": {
+            "ind1": "0",
+            "ind2": "0",
+            "subfields": [
+              {
+                "t": "SAIS review of international affairs"
+              },
+              {
+                "x": "1945-4724"
+              }
+            ]
+          }
+        },
+        {
+          "500": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "Adaptation of Xi xiang ji by Wang Shifu."
+              }
+            ]
+          }
+        },
+        {
+          "520": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "Ben shu miao shu."
+              }
+            ]
+          }
+        }
+      ]
+    }
+    """;
+  private static final String PARSED_CONTENT_WITH_DELETED_05 = """
+    {
+      "leader": "01314dam  22003851a 4500",
+      "fields": [
+        {
+          "001": "ybp7406411"
+        },
+        {
+          "003": "in001"
+        },
+        {
+          "245": {
+            "ind1": "1",
+            "ind2": "0",
+            "subfields": [
+              {
+                "a": "titleValue"
+              }
+            ]
+          }
+        },
+        {
+          "336": {
+            "ind1": "1",
+            "ind2": "0",
+            "subfields": [
+              {
+                "b": "b6698d38-149f-11ec-82a8-0242ac130003"
+              }
+            ]
+          }
+        },
+        {
+          "780": {
+            "ind1": "0",
+            "ind2": "0",
+            "subfields": [
+              {
+                "t": "Houston oil directory"
+              }
+            ]
+          }
+        },
+        {
+          "785": {
+            "ind1": "0",
+            "ind2": "0",
+            "subfields": [
+              {
+                "t": "SAIS review of international affairs"
+              },
+              {
+                "x": "1945-4724"
+              }
+            ]
+          }
+        },
+        {
+          "500": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "Adaptation of Xi xiang ji by Wang Shifu."
+              }
+            ]
+          }
+        },
+        {
+          "520": {
+            "ind1": " ",
+            "ind2": " ",
+            "subfields": [
+              {
+                "a": "Ben shu miao shu."
+              }
+            ]
+          }
+        }
+      ]
+    }
+    """;
+  private static final String RESPONSE_CONTENT = """
+    {
+      "id": "%s",
+      "matchedId": "%s",
+      "generation": 1,
+      "parsedRecord": {
+        "content": {
+          "leader": "00574nam  22001211a 4500",
+          "fields": [
+            {
+              "035": {
+                "subfields": [
+                  {
+                    "a": "(in001)ybp7406411"
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
+            },
+            {
+              "245": {
+                "subfields": [
+                  {
+                    "a": "titleValue"
+                  }
+                ],
+                "ind1": "1",
+                "ind2": "0"
+              }
+            },
+            {
+              "336": {
+                "subfields": [
+                  {
+                    "b": "b6698d38-149f-11ec-82a8-0242ac130003"
+                  }
+                ],
+                "ind1": "1",
+                "ind2": "0"
+              }
+            },
+            {
+              "780": {
+                "subfields": [
+                  {
+                    "t": "Houston oil directory"
+                  }
+                ],
+                "ind1": "0",
+                "ind2": "0"
+              }
+            },
+            {
+              "785": {
+                "subfields": [
+                  {
+                    "t": "SAIS review of international affairs"
+                  },
+                  {
+                    "x": "1945-4724"
+                  }
+                ],
+                "ind1": "0",
+                "ind2": "0"
+              }
+            },
+            {
+              "500": {
+                "subfields": [
+                  {
+                    "a": "Adaptation of Xi xiang ji by Wang Shifu."
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
+            },
+            {
+              "520": {
+                "subfields": [
+                  {
+                    "a": "Ben shu miao shu."
+                  }
+                ],
+                "ind1": " ",
+                "ind2": " "
+              }
+            },
+            {
+              "999": {
+                "subfields": [
+                  {
+                    "i": "4d4545df-b5ba-4031-a031-70b1c1b2fc5d"
+                  }
+                ],
+                "ind1": "f",
+                "ind2": "f"
+              }
+            }
+          ]
+        }
+      }
+    }
+    """;
+  private static final String EXISTING_SRS_CONTENT = """
+    {
+       "id": "%s",
+       "matchedId": "%s",
+       "generation": %d,
+       "parsedRecord": {
+         "content": {
+           "leader": "00574nam22001211a4500",
+           "fields": [
+             {
+               "035": {
+                 "subfields": [
+                   {
+                     "a": "(in001)ybp7406411"
+                   }
+                 ],
+                 "ind1": "",
+                 "ind2": ""
+               }
+             },
+             {
+               "245": {
+                 "subfields": [
+                   {
+                     "a": "titleValue"
+                   }
+                 ],
+                 "ind1": "1",
+                 "ind2": "0"
+               }
+             },
+             {
+               "336": {
+                 "subfields": [
+                   {
+                     "b": "b6698d38-149f-11ec-82a8-0242ac130003"
+                   }
+                 ],
+                 "ind1": "1",
+                 "ind2": "0"
+               }
+             },
+             {
+               "780": {
+                 "subfields": [
+                   {
+                     "t": "Houstonoildirectory"
+                   }
+                 ],
+                 "ind1": "0",
+                 "ind2": "0"
+               }
+             },
+             {
+               "785": {
+                 "subfields": [
+                   {
+                     "t": "SAISreviewofinternationalaffairs"
+                   },
+                   {
+                     "x": "1945-4724"
+                   }
+                 ],
+                 "ind1": "0",
+                 "ind2": "0"
+               }
+             },
+             {
+               "500": {
+                 "subfields": [
+                   {
+                     "a": "AdaptationofXixiangjibyWangShifu."
+                   }
+                 ],
+                 "ind1": "",
+                 "ind2": ""
+               }
+             },
+             {
+               "520": {
+                 "subfields": [
+                   {
+                     "a": "Benshumiaoshulecuiyingyinghezhangshengweizhengquhunyinziyoulijinquzhejianxinzhihou."
+                   }
+                 ],
+                 "ind1": "",
+                 "ind2": ""
+               }
+             },
+             {
+               "999": {
+                 "subfields": [
+                   {
+                     "i": "4d4545df-b5ba-4031-a031-70b1c1b2fc5d"
+                   }
+                 ],
+                 "ind1": "f",
+                 "ind2": "f"
+               }
+             }
+           ]
+         }
+       }
+     }
+    """;
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/bib-rules.json";
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
   private static final String SOURCE_RECORDS_PATH = "/source-storage/records";
@@ -396,9 +755,9 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     replaceInstanceEventHandler = spy(new ReplaceInstanceEventHandler(storage, precedingSucceedingTitlesHelper,
       metadataCache, vertx.createHttpClient(), consortiumServiceImpl, instanceLinkClient, snapshotService));
 
-    var recordUUID = UUID.randomUUID().toString();
+    var recordId = UUID.randomUUID().toString();
     HttpResponse<Buffer> recordHttpResponse =
-      buildHttpResponseWithBuffer(Buffer.buffer(String.format(EXISTING_SRS_CONTENT, recordUUID, recordUUID, 0)),
+      buildHttpResponseWithBuffer(Buffer.buffer(String.format(EXISTING_SRS_CONTENT, recordId, recordId, 0)),
         HttpStatus.SC_OK);
     when(sourceStorageClient.getSourceStorageRecordsFormattedById(any(), any()))
       .thenReturn(Future.succeededFuture(recordHttpResponse));
@@ -413,7 +772,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(instanceRecord));
       return null;
-    }).when(instanceRecordCollection).update(any(), any(Consumer.class), any(Consumer.class));
+    }).when(instanceRecordCollection).update(any(), any(), any());
 
     doReturn(sourceStorageClient).when(replaceInstanceEventHandler)
       .getSourceStorageClient(any(), any(), any(), any(), any());
@@ -428,6 +787,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     when(fakeReaderFactory.createReader()).thenReturn(fakeReader);
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldProcessEvent() throws InterruptedException, ExecutionException, TimeoutException {
     String instanceTypeId = UUID.randomUUID().toString();
@@ -452,11 +812,109 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
 
     mockInstance(MARC_INSTANCE_SOURCE);
 
-    Buffer buffer = Buffer.buffer("{\"parsedRecord\":{" +
-                                  "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
-                                  "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\""
-                                  +
-                                  "}}");
+    Buffer buffer = Buffer.buffer("""
+      {
+        "parsedRecord": {
+          "id": "990fad8b-64ec-4de4-978c-9f8bbed4c6d3",
+          "content": {
+            "leader": "00574nam  22001211a 4500",
+            "fields": [
+              {
+                "035": {
+                  "subfields": [
+                    {
+                      "a": "(in001)ybp7406411"
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "245": {
+                  "subfields": [
+                    {
+                      "a": "titleValue"
+                    }
+                  ],
+                  "ind1": "1",
+                  "ind2": "0"
+                }
+              },
+              {
+                "336": {
+                  "subfields": [
+                    {
+                      "b": "b6698d38-149f-11ec-82a8-0242ac130003"
+                    }
+                  ],
+                  "ind1": "1",
+                  "ind2": "0"
+                }
+              },
+              {
+                "780": {
+                  "subfields": [
+                    {
+                      "t": "Houston oil directory"
+                    }
+                  ],
+                  "ind1": "0",
+                  "ind2": "0"
+                }
+              },
+              {
+                "785": {
+                  "subfields": [
+                    {
+                      "t": "SAIS review of international affairs"
+                    },
+                    {
+                      "x": "1945-4724"
+                    }
+                  ],
+                  "ind1": "0",
+                  "ind2": "0"
+                }
+              },
+              {
+                "500": {
+                  "subfields": [
+                    {
+                      "a": "Adaptation of Xi xiang ji by Wang Shifu."
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "520": {
+                  "subfields": [
+                    {
+                      "a": "Ben shu miao shu."
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "999": {
+                  "subfields": [
+                    {
+                      "i": "4d4545df-b5ba-4031-a031-70b1c1b2fc5d"
+                    }
+                  ],
+                  "ind1": "f",
+                  "ind2": "f"
+                }
+              }
+            ]
+          }
+        }
+      }
+      """);
     HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
     when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(
       Future.succeededFuture(respForPass));
@@ -493,6 +951,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldProcessEventAndMarkInstanceAndRecordAsDeletedIfLeaderIsDeleted()
     throws InterruptedException, ExecutionException, TimeoutException {
@@ -521,11 +980,109 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
 
     mockInstance(MARC_INSTANCE_SOURCE);
 
-    Buffer buffer = Buffer.buffer("{\"parsedRecord\":{" +
-                                  "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
-                                  "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\""
-                                  +
-                                  "}}");
+    Buffer buffer = Buffer.buffer("""
+      {
+        "parsedRecord": {
+          "id": "990fad8b-64ec-4de4-978c-9f8bbed4c6d3",
+          "content": {
+            "leader": "00574nam  22001211a 4500",
+            "fields": [
+              {
+                "035": {
+                  "subfields": [
+                    {
+                      "a": "(in001)ybp7406411"
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "245": {
+                  "subfields": [
+                    {
+                      "a": "titleValue"
+                    }
+                  ],
+                  "ind1": "1",
+                  "ind2": "0"
+                }
+              },
+              {
+                "336": {
+                  "subfields": [
+                    {
+                      "b": "b6698d38-149f-11ec-82a8-0242ac130003"
+                    }
+                  ],
+                  "ind1": "1",
+                  "ind2": "0"
+                }
+              },
+              {
+                "780": {
+                  "subfields": [
+                    {
+                      "t": "Houston oil directory"
+                    }
+                  ],
+                  "ind1": "0",
+                  "ind2": "0"
+                }
+              },
+              {
+                "785": {
+                  "subfields": [
+                    {
+                      "t": "SAIS review of international affairs"
+                    },
+                    {
+                      "x": "1945-4724"
+                    }
+                  ],
+                  "ind1": "0",
+                  "ind2": "0"
+                }
+              },
+              {
+                "500": {
+                  "subfields": [
+                    {
+                      "a": "Adaptation of Xi xiang ji by Wang Shifu."
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "520": {
+                  "subfields": [
+                    {
+                      "a": "Ben shu miao shu."
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "999": {
+                  "subfields": [
+                    {
+                      "i": "4d4545df-b5ba-4031-a031-70b1c1b2fc5d"
+                    }
+                  ],
+                  "ind1": "f",
+                  "ind2": "f"
+                }
+              }
+            ]
+          }
+        }
+      }
+      """);
     HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
     when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(
       Future.succeededFuture(respForPass));
@@ -564,14 +1121,15 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), argThat(r -> {
       Optional<Character> leader = ParsedRecordUtil.getLeaderStatus(r.getParsedRecord());
-      return r.getState() == Record.State.DELETED && r.getAdditionalInfo().getSuppressDiscovery() &&
-             r.getDeleted() && leader.isPresent() && leader.get().equals(LEADER_STATUS_DELETED);
+      return r.getState() == Record.State.DELETED && r.getAdditionalInfo().getSuppressDiscovery()
+             && r.getDeleted() && leader.isPresent() && leader.get().equals(LEADER_STATUS_DELETED);
     }));
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(),
       argThat(this::verifyParsedContentSerialization));
     WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldProcessEventAndUnMarkInstanceAndRecordDeleted()
     throws InterruptedException, ExecutionException, TimeoutException {
@@ -598,11 +1156,109 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
 
     mockInstance(MARC_INSTANCE_SOURCE, true);
 
-    Buffer buffer = Buffer.buffer("{\"parsedRecord\":{" +
-                                  "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
-                                  "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\""
-                                  +
-                                  "}}");
+    Buffer buffer = Buffer.buffer("""
+      {
+         "parsedRecord": {
+           "id": "990fad8b-64ec-4de4-978c-9f8bbed4c6d3",
+           "content": {
+             "leader": "00574nam  22001211a 4500",
+             "fields": [
+               {
+                 "035": {
+                   "subfields": [
+                     {
+                       "a": "(in001)ybp7406411"
+                     }
+                   ],
+                   "ind1": " ",
+                   "ind2": " "
+                 }
+               },
+               {
+                 "245": {
+                   "subfields": [
+                     {
+                       "a": "titleValue"
+                     }
+                   ],
+                   "ind1": "1",
+                   "ind2": "0"
+                 }
+               },
+               {
+                 "336": {
+                   "subfields": [
+                     {
+                       "b": "b6698d38-149f-11ec-82a8-0242ac130003"
+                     }
+                   ],
+                   "ind1": "1",
+                   "ind2": "0"
+                 }
+               },
+               {
+                 "780": {
+                   "subfields": [
+                     {
+                       "t": "Houston oil directory"
+                     }
+                   ],
+                   "ind1": "0",
+                   "ind2": "0"
+                 }
+               },
+               {
+                 "785": {
+                   "subfields": [
+                     {
+                       "t": "SAIS review of international affairs"
+                     },
+                     {
+                       "x": "1945-4724"
+                     }
+                   ],
+                   "ind1": "0",
+                   "ind2": "0"
+                 }
+               },
+               {
+                 "500": {
+                   "subfields": [
+                     {
+                       "a": "Adaptation of Xi xiang ji by Wang Shifu."
+                     }
+                   ],
+                   "ind1": " ",
+                   "ind2": " "
+                 }
+               },
+               {
+                 "520": {
+                   "subfields": [
+                     {
+                       "a": "Ben shu miao shu."
+                     }
+                   ],
+                   "ind1": " ",
+                   "ind2": " "
+                 }
+               },
+               {
+                 "999": {
+                   "subfields": [
+                     {
+                       "i": "4d4545df-b5ba-4031-a031-70b1c1b2fc5d"
+                     }
+                   ],
+                   "ind1": "f",
+                   "ind2": "f"
+                 }
+               }
+             ]
+           }
+         }
+       }
+      """);
     HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
     when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(
       Future.succeededFuture(respForPass));
@@ -641,12 +1297,13 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
     verify(sourceStorageClient).putSourceStorageRecordsGenerationById(any(), argThat(r -> {
       Optional<Character> leader = ParsedRecordUtil.getLeaderStatus(r.getParsedRecord());
-      return r.getState() == Record.State.ACTUAL && r.getAdditionalInfo().getSuppressDiscovery() &&
-             !r.getDeleted() && leader.isPresent() && !leader.get().equals(LEADER_STATUS_DELETED);
+      return r.getState() == Record.State.ACTUAL && r.getAdditionalInfo().getSuppressDiscovery()
+             && !r.getDeleted() && leader.isPresent() && !leader.get().equals(LEADER_STATUS_DELETED);
     }));
     WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldReplaceExistingPrecedingTitleOnInstanceUpdate() throws InterruptedException, ExecutionException {
     JsonObject existingPrecedingTitle = new JsonObject()
@@ -720,6 +1377,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldProcessEventIfPayloadHasShadowInstance()
     throws InterruptedException, ExecutionException, TimeoutException {
@@ -815,6 +1473,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldFailIfErrorDuringCreatingOfSnapshotForConsortiumInstance() {
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
@@ -885,6 +1544,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     assertThrows(ExecutionException.class, () -> future.get(20, TimeUnit.SECONDS));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldUpdateSharedFolioInstanceOnCentralTenantIfPayloadContainsCentralTenantIdAndSharedInstance()
     throws InterruptedException, ExecutionException, TimeoutException {
@@ -967,6 +1627,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     assertNotNull(recordCaptor.getValue().getMatchedId());
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldUpdateSharedMarcInstanceOnCentralTenantIfPayloadContainsCentralTenantIdAndSharedInstance()
     throws InterruptedException, ExecutionException, TimeoutException {
@@ -1104,7 +1765,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
 
     // MOST IMPORTANT: Verify that instance update was NOT called (0 times)
     // because SRS operation failed before reaching instance update
-    verify(instanceRecordCollection, times(0)).update(any(Instance.class), any(Consumer.class), any(Consumer.class));
+    verify(instanceRecordCollection, times(0)).update(any(Instance.class), any(), any());
   }
 
   @Test
@@ -1212,7 +1873,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
   }
 
   @Test
-  void shouldNotProcessEventIfMArcBibliographicIsNotExistsInContext() {
+  void shouldNotProcessEventIfMarcBibliographicIsNotExistsInContext() {
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
 
@@ -1293,8 +1954,9 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.MILLISECONDS));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
-  void shouldNotProcessEventIfNatureContentFieldIsNotUUID() {
+  void shouldNotProcessEventIfNatureContentFieldIsNotUuid() {
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
 
@@ -1318,11 +1980,109 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
 
     mockInstance(MARC_INSTANCE_SOURCE);
 
-    Buffer buffer = Buffer.buffer("{\"parsedRecord\":{" +
-                                  "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
-                                  "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\""
-                                  +
-                                  "}}");
+    Buffer buffer = Buffer.buffer("""
+      {
+        "parsedRecord": {
+          "id": "990fad8b-64ec-4de4-978c-9f8bbed4c6d3",
+          "content": {
+            "leader": "00574nam  22001211a 4500",
+            "fields": [
+              {
+                "035": {
+                  "subfields": [
+                    {
+                      "a": "(in001)ybp7406411"
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "245": {
+                  "subfields": [
+                    {
+                      "a": "titleValue"
+                    }
+                  ],
+                  "ind1": "1",
+                  "ind2": "0"
+                }
+              },
+              {
+                "336": {
+                  "subfields": [
+                    {
+                      "b": "b6698d38-149f-11ec-82a8-0242ac130003"
+                    }
+                  ],
+                  "ind1": "1",
+                  "ind2": "0"
+                }
+              },
+              {
+                "780": {
+                  "subfields": [
+                    {
+                      "t": "Houston oil directory"
+                    }
+                  ],
+                  "ind1": "0",
+                  "ind2": "0"
+                }
+              },
+              {
+                "785": {
+                  "subfields": [
+                    {
+                      "t": "SAIS review of international affairs"
+                    },
+                    {
+                      "x": "1945-4724"
+                    }
+                  ],
+                  "ind1": "0",
+                  "ind2": "0"
+                }
+              },
+              {
+                "500": {
+                  "subfields": [
+                    {
+                      "a": "Adaptation of Xi xiang ji by Wang Shifu."
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "520": {
+                  "subfields": [
+                    {
+                      "a": "Ben shu miao shu."
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "999": {
+                  "subfields": [
+                    {
+                      "i": "4d4545df-b5ba-4031-a031-70b1c1b2fc5d"
+                    }
+                  ],
+                  "ind1": "f",
+                  "ind2": "f"
+                }
+              }
+            ]
+          }
+        }
+      }
+      """);
     HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
     when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(
       Future.succeededFuture(respForPass));
@@ -1408,7 +2168,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
   }
 
   @Test
-  void shouldNotProcessEventIfOLErrorExists() {
+  void shouldNotProcessEventIfOlErrorExists() {
     String instanceTypeId = UUID.randomUUID().toString();
     String title = "titleValue";
 
@@ -1427,7 +2187,8 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(
-        "Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
+        "Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed "
+        + "(optimistic locking): Stored _version is 2, _version of request is 1",
         409));
       return null;
     }).when(instanceRecordCollection).update(any(), any(), any());
@@ -1486,6 +2247,10 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
       .put("source", "FOLIO")
       .put("_version", INSTANCE_VERSION);
 
+    var context = new HashMap<String, String>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
+    context.put(INSTANCE.value(), instanceJson.encode());
+
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withJobExecutionId(UUID.randomUUID().toString())
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
@@ -1493,10 +2258,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
       .withTenant(TENANT_ID)
       .withOkapiUrl(WIRE_MOCK.baseUrl())
       .withToken(TOKEN)
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
-        put(INSTANCE.value(), instanceJson.encode());
-      }});
+      .withContext(context);
 
     CompletableFuture<DataImportEventPayload> future = replaceInstanceEventHandler.handle(dataImportEventPayload);
     DataImportEventPayload actualDataImportEventPayload = future.get(20, TimeUnit.SECONDS);
@@ -1514,8 +2276,9 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     assertNotNull(recordId, recordCaptor.getValue().getMatchedId());
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
-  void shouldProcessEventEvenIfRecordIsNotExistsInSRS()
+  void shouldProcessEventEvenIfRecordIsNotExistsInSrs()
     throws InterruptedException, ExecutionException, TimeoutException {
     WIRE_MOCK.stubFor(get(new UrlPathPattern(new RegexPattern(SOURCE_RECORDS_PATH + "/.{36}" + "/formatted"), true))
       .willReturn(WireMock.notFound()));
@@ -1531,11 +2294,109 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
 
     mockInstance(MARC_INSTANCE_SOURCE);
 
-    Buffer buffer = Buffer.buffer("{\"parsedRecord\":{" +
-                                  "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
-                                  "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\""
-                                  +
-                                  "}}");
+    Buffer buffer = Buffer.buffer("""
+      {
+        "parsedRecord": {
+          "id": "990fad8b-64ec-4de4-978c-9f8bbed4c6d3",
+          "content": {
+            "leader": "00574nam  22001211a 4500",
+            "fields": [
+              {
+                "035": {
+                  "subfields": [
+                    {
+                      "a": "(in001)ybp7406411"
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "245": {
+                  "subfields": [
+                    {
+                      "a": "titleValue"
+                    }
+                  ],
+                  "ind1": "1",
+                  "ind2": "0"
+                }
+              },
+              {
+                "336": {
+                  "subfields": [
+                    {
+                      "b": "b6698d38-149f-11ec-82a8-0242ac130003"
+                    }
+                  ],
+                  "ind1": "1",
+                  "ind2": "0"
+                }
+              },
+              {
+                "780": {
+                  "subfields": [
+                    {
+                      "t": "Houston oil directory"
+                    }
+                  ],
+                  "ind1": "0",
+                  "ind2": "0"
+                }
+              },
+              {
+                "785": {
+                  "subfields": [
+                    {
+                      "t": "SAIS review of international affairs"
+                    },
+                    {
+                      "x": "1945-4724"
+                    }
+                  ],
+                  "ind1": "0",
+                  "ind2": "0"
+                }
+              },
+              {
+                "500": {
+                  "subfields": [
+                    {
+                      "a": "Adaptation of Xi xiang ji by Wang Shifu."
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "520": {
+                  "subfields": [
+                    {
+                      "a": "Ben shu miao shu."
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "999": {
+                  "subfields": [
+                    {
+                      "i": "4d4545df-b5ba-4031-a031-70b1c1b2fc5d"
+                    }
+                  ],
+                  "ind1": "f",
+                  "ind2": "f"
+                }
+              }
+            ]
+          }
+        }
+      }
+      """);
     HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
 
     when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(
@@ -1585,6 +2446,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldUpdateInstanceWithoutRelatedMarcRecord()
     throws InterruptedException, ExecutionException, TimeoutException {
@@ -1613,11 +2475,109 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
 
     mockInstance(MARC_INSTANCE_SOURCE);
 
-    Buffer buffer = Buffer.buffer("{\"parsedRecord\":{" +
-                                  "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
-                                  "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\""
-                                  +
-                                  "}}");
+    Buffer buffer = Buffer.buffer("""
+      {
+        "parsedRecord": {
+          "id": "990fad8b-64ec-4de4-978c-9f8bbed4c6d3",
+          "content": {
+            "leader": "00574nam  22001211a 4500",
+            "fields": [
+              {
+                "035": {
+                  "subfields": [
+                    {
+                      "a": "(in001)ybp7406411"
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "245": {
+                  "subfields": [
+                    {
+                      "a": "titleValue"
+                    }
+                  ],
+                  "ind1": "1",
+                  "ind2": "0"
+                }
+              },
+              {
+                "336": {
+                  "subfields": [
+                    {
+                      "b": "b6698d38-149f-11ec-82a8-0242ac130003"
+                    }
+                  ],
+                  "ind1": "1",
+                  "ind2": "0"
+                }
+              },
+              {
+                "780": {
+                  "subfields": [
+                    {
+                      "t": "Houston oil directory"
+                    }
+                  ],
+                  "ind1": "0",
+                  "ind2": "0"
+                }
+              },
+              {
+                "785": {
+                  "subfields": [
+                    {
+                      "t": "SAIS review of international affairs"
+                    },
+                    {
+                      "x": "1945-4724"
+                    }
+                  ],
+                  "ind1": "0",
+                  "ind2": "0"
+                }
+              },
+              {
+                "500": {
+                  "subfields": [
+                    {
+                      "a": "Adaptation of Xi xiang ji by Wang Shifu."
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "520": {
+                  "subfields": [
+                    {
+                      "a": "Ben shu miao shu."
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "999": {
+                  "subfields": [
+                    {
+                      "i": "4d4545df-b5ba-4031-a031-70b1c1b2fc5d"
+                    }
+                  ],
+                  "ind1": "f",
+                  "ind2": "f"
+                }
+              }
+            ]
+          }
+        }
+      }
+      """);
     HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_CREATED);
     when(sourceStorageClient.postSourceStorageRecords(any())).thenReturn(Future.succeededFuture(respForPass));
 
@@ -1656,6 +2616,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldProcessEventWithExternalEntity() throws InterruptedException, ExecutionException, TimeoutException {
     String instanceTypeId = UUID.randomUUID().toString();
@@ -1692,7 +2653,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(returnedInstance));
       return null;
-    }).when(instanceRecordCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
+    }).when(instanceRecordCollection).findById(anyString(), any(), any());
 
     Buffer buffer = Buffer.buffer(String.format(RESPONSE_CONTENT, recordId, recordId));
     HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
@@ -1731,11 +2692,12 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldProcessEventAndUpdateSuppressFromDiscovery()
     throws InterruptedException, ExecutionException, TimeoutException {
-    String instanceTypeId = UUID.randomUUID().toString();
-    String recordId = UUID.randomUUID().toString();
+    final String instanceTypeId = UUID.randomUUID().toString();
+    final String recordId = UUID.randomUUID().toString();
 
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId),
       BooleanValue.of(MappingRule.BooleanFieldAction.ALL_TRUE));
@@ -1757,11 +2719,109 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
 
     mockInstance(MARC_INSTANCE_SOURCE);
 
-    Buffer buffer = Buffer.buffer("{\"parsedRecord\":{" +
-                                  "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\"," +
-                                  "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"780\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"Houston oil directory\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"785\\\":{\\\"subfields\\\":[{\\\"t\\\":\\\"SAIS review of international affairs\\\"},{\\\"x\\\":\\\"1945-4724\\\"}],\\\"ind1\\\":\\\"0\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"500\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Adaptation of Xi xiang ji by Wang Shifu.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"520\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"Ben shu miao shu le cui ying ying he zhang sheng wei zheng qu hun yin zi you li jin qu zhe jian xin zhi hou, zhong cheng juan shu de ai qing gu shi. jie lu le bao ban hun yin he feng jian li jiao de zui e.\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\""
-                                  +
-                                  "}}");
+    Buffer buffer = Buffer.buffer("""
+      {
+        "parsedRecord": {
+          "id": "990fad8b-64ec-4de4-978c-9f8bbed4c6d3",
+          "content": {
+            "leader": "00574nam  22001211a 4500",
+            "fields": [
+              {
+                "035": {
+                  "subfields": [
+                    {
+                      "a": "(in001)ybp7406411"
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "245": {
+                  "subfields": [
+                    {
+                      "a": "titleValue"
+                    }
+                  ],
+                  "ind1": "1",
+                  "ind2": "0"
+                }
+              },
+              {
+                "336": {
+                  "subfields": [
+                    {
+                      "b": "b6698d38-149f-11ec-82a8-0242ac130003"
+                    }
+                  ],
+                  "ind1": "1",
+                  "ind2": "0"
+                }
+              },
+              {
+                "780": {
+                  "subfields": [
+                    {
+                      "t": "Houston oil directory"
+                    }
+                  ],
+                  "ind1": "0",
+                  "ind2": "0"
+                }
+              },
+              {
+                "785": {
+                  "subfields": [
+                    {
+                      "t": "SAIS review of international affairs"
+                    },
+                    {
+                      "x": "1945-4724"
+                    }
+                  ],
+                  "ind1": "0",
+                  "ind2": "0"
+                }
+              },
+              {
+                "500": {
+                  "subfields": [
+                    {
+                      "a": "Adaptation of Xi xiang ji by Wang Shifu."
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "520": {
+                  "subfields": [
+                    {
+                      "a": "Ben shu miao shu."
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "999": {
+                  "subfields": [
+                    {
+                      "i": "4d4545df-b5ba-4031-a031-70b1c1b2fc5d"
+                    }
+                  ],
+                  "ind1": "f",
+                  "ind2": "f"
+                }
+              }
+            ]
+          }
+        }
+      }
+      """);
     HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
     when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(
       Future.succeededFuture(respForPass));
@@ -1773,7 +2833,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(returnedInstance));
       return null;
-    }).when(instanceRecordCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
+    }).when(instanceRecordCollection).findById(anyString(), any(), any());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
@@ -1805,12 +2865,12 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldRemove035FieldWhenRecordContainsHrId() throws Exception {
-    String hrId = "in00000000052";
-
-    String instanceTypeId = UUID.randomUUID().toString();
-    String recordId = UUID.randomUUID().toString();
+    final String hrId = "in00000000052";
+    final String instanceTypeId = UUID.randomUUID().toString();
+    final String recordId = UUID.randomUUID().toString();
 
     when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(instanceTypeId),
       BooleanValue.of(MappingRule.BooleanFieldAction.ALL_TRUE));
@@ -1847,7 +2907,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(returnedInstance));
       return null;
-    }).when(instanceRecordCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
+    }).when(instanceRecordCollection).findById(anyString(), any(), any());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_INSTANCE_CREATED.value())
@@ -1974,16 +3034,68 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
       replaceInstanceEventHandler.getPostProcessingInitializationEventType());
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   @SneakyThrows
   void shouldNotUpdateLinksWhenIncomingZeroSubfieldIsSameAsExisting() {
     // given
-    var incomingParsedContent =
-      "{\"leader\":\"02340cam a2200301Ki 4500\",\"fields\":[{\"001\":\"ybp7406411\"}," +
-      "{\"100\":{\"subfields\":[{\"a\":\"Chin, Staceyann Test,\"},{\"e\":\"author updated.\"},{\"0\":\"http://id.loc.gov/authorities/names/n2008052404\"}],\"ind1\":\"1\",\"ind2\":\" \"}}]}";
-    var expectedParsedContent =
-      "{\"leader\":\"00220cam a2200061Ki 4500\",\"fields\":[{\"001\":\"ybp7406411\"}," +
-      "{\"100\":{\"subfields\":[{\"a\":\"Chin, Staceyann Test,\"},{\"e\":\"author updated.\"},{\"0\":\"http://id.loc.gov/authorities/names/n2008052404\"},{\"9\":\"5a56ffa8-e274-40ca-8620-34a23b5b45dd\"}],\"ind1\":\"1\",\"ind2\":\" \"}}]}";
+    final var incomingParsedContent = """
+      {
+        "leader": "02340cam a2200301Ki 4500",
+        "fields": [
+          {
+            "001": "ybp7406411"
+          },
+          {
+            "100": {
+              "subfields": [
+                {
+                  "a": "Chin, Staceyann Test,"
+                },
+                {
+                  "e": "author updated."
+                },
+                {
+                  "0": "http://id.loc.gov/authorities/names/n2008052404"
+                }
+              ],
+              "ind1": "1",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
+    final var expectedParsedContent = """
+      {
+        "leader": "00220cam a2200061Ki 4500",
+        "fields": [
+          {
+            "001": "ybp7406411"
+          },
+          {
+            "100": {
+              "subfields": [
+                {
+                  "a": "Chin, Staceyann Test,"
+                },
+                {
+                  "e": "author updated."
+                },
+                {
+                  "0": "http://id.loc.gov/authorities/names/n2008052404"
+                },
+                {
+                  "9": "5a56ffa8-e274-40ca-8620-34a23b5b45dd"
+                }
+              ],
+              "ind1": "1",
+              "ind2": " "
+            }
+          }
+        ]
+      }
+      """;
 
     var instanceTypeId = UUID.randomUUID().toString();
     var title = "titleValue";
@@ -2066,16 +3178,17 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     verify(instanceLinkClient, times(0)).updateInstanceLinks(any(), any(), any());
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldDeleteAdministrativeNote_whenDeleteIncomingActionIsApplied()
     throws InterruptedException, ExecutionException, TimeoutException {
     // arrange
-    String instanceTypeId = UUID.randomUUID().toString();
-    String title = "titleValue";
-    String noteToDelete = "Withdrawn as part of workflow";
-    String noteToKeep1 = "Catalogued by staff";
-    String noteToKeep2 = "Source: OCLC";
-    String noteToKeep3 = "Review pending";
+    final String instanceTypeId = UUID.randomUUID().toString();
+    final String title = "titleValue";
+    final String noteToDelete = "Withdrawn as part of workflow";
+    final String noteToKeep1 = "Catalogued by staff";
+    final String noteToKeep2 = "Source: OCLC";
+    final String noteToKeep3 = "Review pending";
 
     when(fakeReader.read(any(MappingRule.class))).thenReturn(
       StringValue.of(instanceTypeId),
@@ -2095,7 +3208,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(existingInstance));
       return null;
-    }).when(instanceRecordCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
+    }).when(instanceRecordCollection).findById(anyString(), any(), any());
 
     HashMap<String, String> context = new HashMap<>();
     Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
@@ -2108,10 +3221,62 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
       .put("discoverySuppress", false)
       .encode());
 
-    Buffer buffer = Buffer.buffer("{\"parsedRecord\":{"
-                                  + "\"id\":\"990fad8b-64ec-4de4-978c-9f8bbed4c6d3\","
-                                  + "\"content\":\"{\\\"leader\\\":\\\"00574nam  22001211a 4500\\\",\\\"fields\\\":[{\\\"035\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"(in001)ybp7406411\\\"}],\\\"ind1\\\":\\\" \\\",\\\"ind2\\\":\\\" \\\"}},{\\\"245\\\":{\\\"subfields\\\":[{\\\"a\\\":\\\"titleValue\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"336\\\":{\\\"subfields\\\":[{\\\"b\\\":\\\"b6698d38-149f-11ec-82a8-0242ac130003\\\"}],\\\"ind1\\\":\\\"1\\\",\\\"ind2\\\":\\\"0\\\"}},{\\\"999\\\":{\\\"subfields\\\":[{\\\"i\\\":\\\"4d4545df-b5ba-4031-a031-70b1c1b2fc5d\\\"}],\\\"ind1\\\":\\\"f\\\",\\\"ind2\\\":\\\"f\\\"}}]}\""
-                                  + "}}");
+    Buffer buffer = Buffer.buffer("""
+      {
+        "parsedRecord": {
+          "id": "990fad8b-64ec-4de4-978c-9f8bbed4c6d3",
+          "content": {
+            "leader": "00574nam  22001211a 4500",
+            "fields": [
+              {
+                "035": {
+                  "subfields": [
+                    {
+                      "a": "(in001)ybp7406411"
+                    }
+                  ],
+                  "ind1": " ",
+                  "ind2": " "
+                }
+              },
+              {
+                "245": {
+                  "subfields": [
+                    {
+                      "a": "titleValue"
+                    }
+                  ],
+                  "ind1": "1",
+                  "ind2": "0"
+                }
+              },
+              {
+                "336": {
+                  "subfields": [
+                    {
+                      "b": "b6698d38-149f-11ec-82a8-0242ac130003"
+                    }
+                  ],
+                  "ind1": "1",
+                  "ind2": "0"
+                }
+              },
+              {
+                "999": {
+                  "subfields": [
+                    {
+                      "i": "4d4545df-b5ba-4031-a031-70b1c1b2fc5d"
+                    }
+                  ],
+                  "ind1": "f",
+                  "ind2": "f"
+                }
+              }
+            ]
+          }
+        }
+      }
+      """);
     HttpResponse<Buffer> respForPass = buildHttpResponseWithBuffer(buffer, HttpStatus.SC_OK);
     when(sourceStorageClient.putSourceStorageRecordsGenerationById(any(), any())).thenReturn(
       Future.succeededFuture(respForPass));
@@ -2160,7 +3325,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(returnedInstance));
       return null;
-    }).when(instanceRecordCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
+    }).when(instanceRecordCollection).findById(anyString(), any(), any());
   }
 
   private static String readFileFromPath(String path) throws IOException {

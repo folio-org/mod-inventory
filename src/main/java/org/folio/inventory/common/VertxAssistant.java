@@ -57,7 +57,7 @@ public class VertxAssistant {
                              Map<String, Object> config,
                              int verticleInstancesNumber,
                              CompletableFuture<String> deployed) {
-    long startTime = System.currentTimeMillis();
+    final long startTime = System.currentTimeMillis();
 
     DeploymentOptions options = new DeploymentOptions();
     options.setConfig(new JsonObject(config));

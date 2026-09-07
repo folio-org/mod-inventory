@@ -4,7 +4,6 @@ import static java.lang.String.format;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.INSTANCE_ID_TYPE;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
@@ -70,7 +69,7 @@ public class SourceStorageHelper {
           LOGGER.debug(MARC_SOURCE_RETRIEVED_MSG, instanceId, tenantId);
           return Future.succeededFuture(response.bodyAsJson(Record.class));
         } else {
-          String errorMessage =  format(FAILED_TO_RETRIEVE_MARC_RECORD_STATUS_MSG, instanceId, tenantId, statusCode);
+          String errorMessage = format(FAILED_TO_RETRIEVE_MARC_RECORD_STATUS_MSG, instanceId, tenantId, statusCode);
           LOGGER.error(errorMessage);
           return Future.failedFuture(new StorageOperationException(errorMessage, statusCode));
         }

@@ -96,8 +96,8 @@ class RestDataImportHelperTest {
       .onComplete(asyncResult -> {
         // then
         assertTrue(asyncResult.failed());
-        assertEquals("Error receiving new JobExecution for sharing instance with InstanceId=" +
-                     expectedJobExecutionId + ". Status message: Ok. Status code: 500",
+        assertEquals("Error receiving new JobExecution for sharing instance with InstanceId="
+                     + expectedJobExecutionId + ". Status message: Ok. Status code: 500",
           asyncResult.cause().getMessage());
       });
   }
@@ -123,8 +123,9 @@ class RestDataImportHelperTest {
       .onComplete(asyncResult -> {
         // then
         assertTrue(asyncResult.failed());
-        assertEquals(
-          "class java.lang.String cannot be cast to class io.vertx.core.json.JsonObject (java.lang.String is in module java.base of loader 'bootstrap'; io.vertx.core.json.JsonObject is in unnamed module of loader 'app')",
+        assertEquals("class java.lang.String cannot be cast to class io.vertx.core.json.JsonObject "
+                     + "(java.lang.String is in module java.base of loader 'bootstrap'; "
+                     + "io.vertx.core.json.JsonObject is in unnamed module of loader 'app')",
           asyncResult.cause().getMessage());
       });
   }
@@ -149,8 +150,8 @@ class RestDataImportHelperTest {
       .onComplete(asyncResult -> {
         // then
         assertTrue(asyncResult.failed());
-        assertEquals("Response body doesn't contains JobExecution object for sharing instance with InstanceId=" +
-                     expectedJobExecutionId + ".", asyncResult.cause().getMessage());
+        assertEquals("Response body doesn't contains JobExecution object for sharing instance with InstanceId="
+                     + expectedJobExecutionId + ".", asyncResult.cause().getMessage());
       });
   }
 
@@ -198,8 +199,8 @@ class RestDataImportHelperTest {
       .onComplete(asyncResult -> {
         // then
         assertFalse(asyncResult.succeeded());
-        assertEquals("Failed to set JobProfile for JobExecution with jobExecutionId=" +
-                     expectedJobExecutionId + ". Status message: Ok. Status code: 500",
+        assertEquals("Failed to set JobProfile for JobExecution with jobExecutionId="
+                     + expectedJobExecutionId + ". Status message: Ok. Status code: 500",
           asyncResult.cause().getMessage());
       });
   }

@@ -118,15 +118,15 @@ public class RestDataImportHelper {
       changeManagerClient.postChangeManagerJobExecutions(initJobExecutionsRqDto, response -> {
         var statusCode = response.result().statusCode();
         if (statusCode != HttpStatus.SC_CREATED) {
-          String errorMessage = format("Error receiving new JobExecution for sharing instance with InstanceId=%s. " +
-                                       "Status message: %s. Status code: %s", instanceId,
+          String errorMessage = format("Error receiving new JobExecution for sharing instance with InstanceId=%s. "
+                                       + "Status message: %s. Status code: %s", instanceId,
             response.result().statusMessage(), statusCode);
           LOGGER.error("initJobExecution:: {}", errorMessage);
           promise.fail(new HttpException(statusCode, errorMessage, response.cause()));
         } else {
           JsonObject responseBody = response.result().bodyAsJsonObject();
-          LOGGER.trace("initJobExecution:: ResponseBody: {} for sharing instance with InstanceId={}.", responseBody,
-            instanceId);
+          LOGGER.trace("initJobExecution:: ResponseBody: {} for sharing instance with InstanceId={}.",
+            responseBody, instanceId);
           JsonArray jobExecutions = responseBody.getJsonArray(FIELD_JOB_EXECUTIONS);
           LOGGER.trace("initJobExecution:: ResponseBody.JobExecutions: {} for sharing instance with InstanceId={}.",
             jobExecutions, instanceId);
@@ -159,8 +159,8 @@ public class RestDataImportHelper {
       changeManagerClient.putChangeManagerJobExecutionsJobProfileById(jobExecutionId, JOB_PROFILE_INFO, response -> {
         var statusCode = response.result().statusCode();
         if (statusCode != HttpStatus.SC_OK) {
-          String errorMessage = format("Failed to set JobProfile for JobExecution with jobExecutionId=%s. " +
-                                       "Status message: %s. Status code: %s", jobExecutionId,
+          String errorMessage = format("Failed to set JobProfile for JobExecution with jobExecutionId=%s. "
+                                       + "Status message: %s. Status code: %s", jobExecutionId,
             response.result().statusMessage(), statusCode);
           LOGGER.warn("setDefaultJobProfileToJobExecution:: {}", errorMessage);
           promise.fail(new HttpException(statusCode, format(errorMessage, jobExecutionId), response.cause()));
@@ -172,8 +172,8 @@ public class RestDataImportHelper {
         }
       });
     } catch (Exception ex) {
-      LOGGER.error(format("setDefaultJobProfileToJobExecution:: Failed to link JobProfile to JobExecution " +
-                          "with jobExecutionId=%s. Error: %s", jobExecutionId, ex.getCause()));
+      LOGGER.error(format("setDefaultJobProfileToJobExecution:: Failed to link JobProfile to JobExecution "
+                          + "with jobExecutionId=%s. Error: %s", jobExecutionId, ex.getCause()));
       promise.fail(ex);
     }
     return promise.future();
@@ -237,8 +237,8 @@ public class RestDataImportHelper {
     try {
       changeManagerClient.getChangeManagerJobExecutionsById(jobExecutionId, response -> {
         if (response.result().statusCode() != HttpStatus.SC_OK) {
-          String errorMessage = format("Error getting jobExecution by jobExecutionId=%s. " +
-                                       "Status message: %s. Status code: %s", jobExecutionId,
+          String errorMessage = format("Error getting jobExecution by jobExecutionId=%s. "
+                                       + "Status message: %s. Status code: %s", jobExecutionId,
             response.result().statusMessage(),
             response.result().statusCode());
           LOGGER.error("getJobExecutionStatusByJobExecutionId:: {}", errorMessage);
@@ -288,8 +288,8 @@ public class RestDataImportHelper {
     getJobExecutionStatusByJobExecutionId(jobExecutionId, changeManagerClient).onComplete(jobExecution -> {
       if (jobExecution.succeeded()) {
         String jobExecutionStatus = jobExecution.result();
-        LOGGER.info(
-          "checkDataImportStatus:: Check import status for DI with jobExecutionId={}, InstanceId={}, JobExecutionStatus={}",
+        LOGGER.info("checkDataImportStatus:: Check import status for DI with jobExecutionId={}, "
+                    + "InstanceId={}, JobExecutionStatus={}",
           jobExecutionId, sharingInstanceMetadata.getInstanceIdentifier(), jobExecutionStatus);
         if (jobExecutionStatus.equals(STATUS_COMMITTED) || jobExecutionStatus.equals(STATUS_ERROR)) {
           promise.complete(jobExecutionStatus);

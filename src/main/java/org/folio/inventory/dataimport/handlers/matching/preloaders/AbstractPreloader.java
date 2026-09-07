@@ -24,7 +24,7 @@ import org.folio.rest.jaxrs.model.MatchExpression;
  * It check whether match expression contains any of defined fields that imply preloading
  * If field is not found - initial query returned
  * If field is found - extract field values, pass them to preloading implementation, then -
- * construct query with new values returned from preloading implementation
+ * construct query with new values returned from preloading implementation.
  *
  */
 public abstract class AbstractPreloader {
@@ -67,7 +67,7 @@ public abstract class AbstractPreloader {
                                                                             List<String> loadingParameters);
 
   /**
-   * Reads incoming record match values from event payload
+   * Reads incoming record match values from event payload.
    *
    * @return record field values according to match details
    *

@@ -63,7 +63,7 @@ public final class AdditionalFieldsUtil {
   }
 
   /**
-   * Adds field if it does not exist and a subfield with a value to that field
+   * Adds field if it does not exist and a subfield with a value to that field.
    *
    * @param recordForUpdate record that needs to be updated
    * @param field           field that should contain new subfield
@@ -108,7 +108,7 @@ public final class AdditionalFieldsUtil {
   }
 
   /**
-   * Adds new controlled field to marc record
+   * Adds new controlled field to marc record.
    *
    * @param recordForUpdate record that needs to be updated
    * @param field           tag of controlled field
@@ -123,7 +123,7 @@ public final class AdditionalFieldsUtil {
   }
 
   /**
-   * Move 001 tag value to 035 tag
+   * Move 001 tag value to 035 tag.
    *
    * @param srcRecord input record to modify
    */
@@ -241,7 +241,7 @@ public final class AdditionalFieldsUtil {
   }
 
   /**
-   * Read value from controlled field in marc record
+   * Read value from controlled field in marc record.
    *
    * @param srcRecord marc record
    * @param tag       tag to read
@@ -291,7 +291,7 @@ public final class AdditionalFieldsUtil {
   }
 
   /**
-   * Remove field from marc record
+   * Remove field from marc record.
    *
    * @param recordForUpdate record that needs to be updated
    * @param fieldName       tag of the field
@@ -304,7 +304,7 @@ public final class AdditionalFieldsUtil {
   }
 
   /**
-   * remove field from marc record
+   * remove field from marc record.
    *
    * @param recordForUpdate record that needs to be updated
    * @param field           tag of the field
@@ -331,7 +331,7 @@ public final class AdditionalFieldsUtil {
   }
 
   /**
-   * Adds new data field to marc record
+   * Adds new data field to marc record.
    *
    * @param recordForUpdate record that needs to be updated
    * @param tag             tag of data field
@@ -352,7 +352,7 @@ public final class AdditionalFieldsUtil {
   }
 
   /**
-   * Check if data field with the same value exist
+   * Check if data field with the same value exist.
    *
    * @param recordForUpdate record that needs to be updated
    * @param tag             tag of data field
@@ -375,7 +375,7 @@ public final class AdditionalFieldsUtil {
   }
 
   /**
-   * Move original marc hrId to 035 tag and assign created by inventory hrId into 001 tag
+   * Move original marc hrId to 035 tag and assign created by inventory hrId into 001 tag.
    *
    * @param srcRecord record to update
    * @param hrid      hrid to assign into the 001 tag
@@ -499,6 +499,6 @@ public final class AdditionalFieldsUtil {
   }
 
   private static boolean isValidIdAndHrid(String id, String hrid, String externalId, String externalHrid) {
-    return isNotEmpty(externalId) && (Objects.equals(id, externalId) && !Objects.equals(hrid, externalHrid));
+    return isNotEmpty(externalId) && Objects.equals(id, externalId) && !Objects.equals(hrid, externalHrid);
   }
 }

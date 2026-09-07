@@ -70,7 +70,8 @@ public abstract class AbstractInstances {
   }
 
   /**
-   * Fetch existing relationships for the instance from storage, compare them to the request. Delete, add, and modify relations as needed.
+   * Fetch existing relationships for the instance from storage, compare them to the request.
+   * Delete, add, and modify relations as needed.
    *
    * @param instance       The instance request containing relationship arrays to persist.
    * @param routingContext The routing context for the request.
@@ -91,7 +92,7 @@ public abstract class AbstractInstances {
     instanceRelationshipsClient.getAll(query, future::complete);
 
     return future.thenCompose(result ->
-      updateInstanceRelationships(instance, instanceRelationshipsRepository, context, result));
+      doUpdateInstanceRelationships(instance, instanceRelationshipsRepository, context, result));
   }
 
   protected CompletableFuture<List<Response>> updatePrecedingSucceedingTitles(
@@ -109,11 +110,11 @@ public abstract class AbstractInstances {
     precedingSucceedingTitlesClient.getAll(query, future::complete);
 
     return future.thenCompose(result ->
-      updatePrecedingSucceedingTitles(instance, precedingSucceedingTitlesRepository, result));
+      doUpdatePrecedingSucceedingTitles(instance, precedingSucceedingTitlesRepository, result));
   }
 
   /**
-   * Populates multiple Instances representation (downwards)
+   * Populates multiple Instances representation (downwards).
    *
    * @param instancesResponse Set of Instances to transform to representations
    * @return Result set as JSON object
@@ -211,9 +212,9 @@ public abstract class AbstractInstances {
           exception.toString())));
   }
 
-  private CompletableFuture<List<Response>> updateInstanceRelationships(Instance instance,
-                                                                        CollectionResourceRepository instanceRelationshipsClient,
-                                                                        WebContext context, Response result) {
+  private CompletableFuture<List<Response>> doUpdateInstanceRelationships(Instance instance,
+                                                                          CollectionResourceRepository repository,
+                                                                          WebContext context, Response result) {
 
     JsonObject json = result.getJson();
     List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("instanceRelationships"));
@@ -223,7 +224,7 @@ public abstract class AbstractInstances {
     Map<String, InstanceRelationship> updatingRelationships = new HashMap<>();
     if (instance.getParentInstances() != null) {
       instance.getParentInstances().forEach(parent -> {
-        String id = (parent.id() == null ? UUID.randomUUID().toString() : parent.id());
+        String id = parent.id() == null ? UUID.randomUUID().toString() : parent.id();
         updatingRelationships.put(id,
           new InstanceRelationship(
             id,
@@ -234,7 +235,7 @@ public abstract class AbstractInstances {
     }
     if (instance.getChildInstances() != null) {
       instance.getChildInstances().forEach(child -> {
-        String id = (child.id() == null ? UUID.randomUUID().toString() : child.id());
+        String id = child.id() == null ? UUID.randomUUID().toString() : child.id();
         updatingRelationships.put(id,
           new InstanceRelationship(
             id,
@@ -245,14 +246,14 @@ public abstract class AbstractInstances {
     }
 
     return validateNewRelationships(context, existingRelationships, updatingRelationships, instance)
-      .thenCompose(
-        v -> allResultsOf(update(instanceRelationshipsClient, existingRelationships, updatingRelationships)));
+      .thenCompose(v -> allResultsOf(update(repository, existingRelationships, updatingRelationships)));
   }
 
-  private CompletableFuture<List<Instance>> validateNewRelationships(WebContext context,
-                                                                     Map<String, InstanceRelationship> existingRelationships,
-                                                                     Map<String, InstanceRelationship> updatingRelationships,
-                                                                     Instance instance) {
+  private CompletableFuture<List<Instance>> validateNewRelationships(
+    WebContext context,
+    Map<String, InstanceRelationship> existingRelationships,
+    Map<String, InstanceRelationship> updatingRelationships,
+    Instance instance) {
     return consortiumService.getConsortiumConfiguration(context).toCompletionStage().toCompletableFuture()
       .thenCompose(consortiumConfigurationOptional -> {
         List<CompletableFuture<Instance>> validateNewRelationshipFutures = new ArrayList<>();
@@ -287,19 +288,16 @@ public abstract class AbstractInstances {
                                                                     : relationship.subInstanceId();
   }
 
-  private CompletableFuture<List<Response>> updatePrecedingSucceedingTitles(Instance instance,
-                                                                            CollectionResourceRepository precedingSucceedingTitlesClient,
-                                                                            Response result) {
+  private CompletableFuture<List<Response>> doUpdatePrecedingSucceedingTitles(Instance instance,
+                                                                              CollectionResourceRepository repository,
+                                                                              Response result) {
 
-    JsonObject json = result.getJson();
-    List<JsonObject> relationsList = JsonArrayHelper.toList(json.getJsonArray("precedingSucceedingTitles"));
-    Map<String, PrecedingSucceedingTitle> existingPrecedingSucceedingTitles =
-      getExistedPrecedingSucceedingTitles(relationsList);
-    Map<String, PrecedingSucceedingTitle> updatingPrecedingSucceedingTitles =
-      getUpdatingPrecedingSucceedingTitles(instance);
+    var json = result.getJson();
+    var relationsList = JsonArrayHelper.toList(json.getJsonArray("precedingSucceedingTitles"));
+    var existingPrecedingSucceedingTitles = getExistedPrecedingSucceedingTitles(relationsList);
+    var updatingPrecedingSucceedingTitles = getUpdatingPrecedingSucceedingTitles(instance);
 
-    List<CompletableFuture<Response>> allFutures = update(precedingSucceedingTitlesClient,
-      existingPrecedingSucceedingTitles, updatingPrecedingSucceedingTitles);
+    var allFutures = update(repository, existingPrecedingSucceedingTitles, updatingPrecedingSucceedingTitles);
 
     return allResultsOf(allFutures);
   }
@@ -365,7 +363,7 @@ public abstract class AbstractInstances {
 
     if (instance.getSucceedingTitles() != null) {
       instance.getSucceedingTitles().forEach(child -> {
-        String id = (child.id() == null ? UUID.randomUUID().toString() : child.id());
+        String id = child.id() == null ? UUID.randomUUID().toString() : child.id();
         updatingPrecedingSucceedingTitles.put(id,
           new PrecedingSucceedingTitle(
             id,
@@ -383,7 +381,7 @@ public abstract class AbstractInstances {
 
     if (instance.getPrecedingTitles() != null) {
       instance.getPrecedingTitles().forEach(parent -> {
-        String id = (parent.id() == null ? UUID.randomUUID().toString() : parent.id());
+        String id = parent.id() == null ? UUID.randomUUID().toString() : parent.id();
         PrecedingSucceedingTitle precedingSucceedingTitle = new PrecedingSucceedingTitle(
           id,
           parent.precedingInstanceId(),

@@ -65,7 +65,7 @@ class HoldingsPreloaderTest {
 
   @Test
   @SneakyThrows
-  void shouldPreloadByPOL() {
+  void shouldPreloadByOrderLine() {
     MatchExpression incomingMatchExpression = new MatchExpression()
       .withDataValueType(VALUE_FROM_RECORD)
       .withFields(List.of(

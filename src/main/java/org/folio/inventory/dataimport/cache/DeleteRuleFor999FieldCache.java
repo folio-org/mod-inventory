@@ -18,10 +18,12 @@ import org.folio.rest.jaxrs.model.MarcSubfield;
  * Cache that memoizes, per {@link MappingProfile} id, whether the profile contains at least one
  * MARC-modification rule with action {@link MarcMappingDetail.Action#DELETE} targeting field "999"
  * and at least one of subfields $i, $s or wildcard {@code *} (all other subfields are ignored).
+ *
  * <p>
  * Keyed by MappingProfile id (stable UUID). Value is {@link Boolean}. Used by
  * {@code AbstractModifyEventHandler} to skip the {@code externalIdsHolder} synchronization step
  * when the profile does not delete 999 (i.e., typical case), avoiding the JSON decode/encode cost.
+ *
  * <p>
  * Uses synchronous {@link Cache} because the computation is purely in-memory (no IO). The Vertx
  * instance is passed only to bind Caffeine's maintenance executor to the Vertx event loop, so

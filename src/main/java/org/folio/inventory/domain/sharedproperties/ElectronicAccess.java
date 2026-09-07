@@ -2,10 +2,6 @@ package org.folio.inventory.domain.sharedproperties;
 
 import io.vertx.core.json.JsonObject;
 
-/**
- *
- * @author ne
- */
 public record ElectronicAccess(String uri, String linkText, String materialsSpecification, String publicNote,
                                String relationshipId) {
   // JSON property names

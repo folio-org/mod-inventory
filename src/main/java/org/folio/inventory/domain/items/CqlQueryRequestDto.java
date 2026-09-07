@@ -8,7 +8,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 
 /**
- * DTO for fetching inventory items record by POST request
+ * DTO for fetching inventory items record by POST request.
  *
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -17,10 +17,10 @@ import jakarta.validation.constraints.DecimalMin;
   "limit",
   "query"
 })
-public class CQLQueryRequestDto {
+public class CqlQueryRequestDto {
 
   /**
-   * Skip over a number of elements by specifying an offset value for the query
+   * Skip over a number of elements by specifying an offset value for the query.
    *
    */
   @JsonProperty("offset")
@@ -29,7 +29,7 @@ public class CQLQueryRequestDto {
   @DecimalMax("2147483647")
   private Integer offset = 0;
   /**
-   * Limit the number of elements returned in the response
+   * Limit the number of elements returned in the response.
    *
    */
   @JsonProperty("limit")
@@ -38,7 +38,7 @@ public class CQLQueryRequestDto {
   @DecimalMax("2147483647")
   private Integer limit = 10;
   /**
-   * A query expressed as a CQL string
+   * A query expressed as a CQL string.
    *
    */
   @JsonProperty("query")
@@ -46,7 +46,7 @@ public class CQLQueryRequestDto {
   private String query;
 
   /**
-   * Skip over a number of elements by specifying an offset value for the query
+   * Skip over a number of elements by specifying an offset value for the query.
    *
    */
   @JsonProperty("offset")
@@ -55,7 +55,7 @@ public class CQLQueryRequestDto {
   }
 
   /**
-   * Skip over a number of elements by specifying an offset value for the query
+   * Skip over a number of elements by specifying an offset value for the query.
    *
    */
   @JsonProperty("offset")
@@ -64,7 +64,7 @@ public class CQLQueryRequestDto {
   }
 
   /**
-   * Limit the number of elements returned in the response
+   * Limit the number of elements returned in the response.
    *
    */
   @JsonProperty("limit")
@@ -73,7 +73,7 @@ public class CQLQueryRequestDto {
   }
 
   /**
-   * Limit the number of elements returned in the response
+   * Limit the number of elements returned in the response.
    *
    */
   @JsonProperty("limit")
@@ -82,7 +82,7 @@ public class CQLQueryRequestDto {
   }
 
   /**
-   * A query expressed as a CQL string
+   * A query expressed as a CQL string.
    *
    */
   @JsonProperty("query")
@@ -91,7 +91,7 @@ public class CQLQueryRequestDto {
   }
 
   /**
-   * A query expressed as a CQL string
+   * A query expressed as a CQL string.
    *
    */
   @JsonProperty("query")
@@ -99,7 +99,7 @@ public class CQLQueryRequestDto {
     this.query = query;
   }
 
-  public CQLQueryRequestDto withQuery(String query) {
+  public CqlQueryRequestDto withQuery(String query) {
     this.query = query;
     return this;
   }

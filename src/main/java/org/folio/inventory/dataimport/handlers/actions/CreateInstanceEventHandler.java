@@ -34,6 +34,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
+import org.folio.MappingMetadataDto;
 import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
@@ -44,7 +45,6 @@ import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.dataimport.util.ValidationUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
-import org.folio.inventory.domain.relationship.RecordToEntity;
 import org.folio.inventory.services.IdStorageService;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.exception.DuplicateEventException;
@@ -80,128 +80,44 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
   }
 
   @Override
-  public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload dataImportEventPayload) {
-    logParametersEventHandler(LOGGER, dataImportEventPayload);
+  public CompletableFuture<DataImportEventPayload> handle(DataImportEventPayload payload) {
+    logParametersEventHandler(LOGGER, payload);
     CompletableFuture<DataImportEventPayload> future = new CompletableFuture<>();
     try {
-      dataImportEventPayload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
+      payload.setEventType(DI_INVENTORY_INSTANCE_CREATED.value());
 
-      HashMap<String, String> payloadContext = dataImportEventPayload.getContext();
+      HashMap<String, String> payloadContext = payload.getContext();
       if (payloadContext == null || payloadContext.isEmpty()
-          || isEmpty(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()))
-      ) {
+          || isEmpty(payloadContext.get(MARC_BIBLIOGRAPHIC.value()))) {
         LOGGER.error(PAYLOAD_HAS_NO_DATA_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
-      String jobExecutionId = dataImportEventPayload.getJobExecutionId();
-      String recordId = dataImportEventPayload.getContext().get(DataImportHeaders.RECORD_ID);
-      if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
+
+      String jobExecutionId = payload.getJobExecutionId();
+      String recordId = payloadContext.get(DataImportHeaders.RECORD_ID);
+      if (payload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
         LOGGER.error("handle:: {} jobExecutionId: {} recordId: {}", ACTION_HAS_NO_MAPPING_MSG, jobExecutionId,
           recordId);
         return CompletableFuture.failedFuture(
           new EventProcessingException(format(ACTION_HAS_NO_MAPPING_MSG, jobExecutionId, recordId)));
       }
 
-      Context context =
-        EventHandlingUtil.constructContext(dataImportEventPayload.getTenant(), dataImportEventPayload.getToken(),
-          dataImportEventPayload.getOkapiUrl(),
-          payloadContext.get(DataImportHeaders.USER_ID), payloadContext.get(XOkapiHeaders.REQUEST_ID.toLowerCase()));
+      Context context = buildContext(payload, payloadContext);
       Record targetRecord = Json.decodeValue(payloadContext.get(EntityType.MARC_BIBLIOGRAPHIC.value()), Record.class);
-      var sourceContent = targetRecord.getParsedRecord().getContent().toString();
+      String sourceContent = targetRecord.getParsedRecord().getContent().toString();
 
-      if (!Boolean.parseBoolean(payloadContext.get("acceptInstanceId")) && contains999ffSubfieldIValue(targetRecord)) {
+      if (!Boolean.parseBoolean(payloadContext.get("acceptInstanceId")) && contains999ffSubfieldI(targetRecord)) {
         LOGGER.error("handle:: {} jobExecutionId: {} recordId: {} ", INSTANCE_CREATION_999_ERROR_MESSAGE,
           jobExecutionId, recordId);
         return CompletableFuture.failedFuture(new EventProcessingException(INSTANCE_CREATION_999_ERROR_MESSAGE));
       }
 
-      String chunkId = dataImportEventPayload.getContext().get(DataImportHeaders.CHUNK_ID);
+      String chunkId = payloadContext.get(DataImportHeaders.CHUNK_ID);
       LOGGER.info("Create instance with jobExecutionId: {} , recordId: {} , chunkId: {}", jobExecutionId, recordId,
         chunkId);
 
-      Future<RecordToEntity> recordToInstanceFuture =
-        idStorageService.store(targetRecord.getId(), super.getInstanceId(targetRecord),
-          dataImportEventPayload.getTenant());
-      recordToInstanceFuture.onSuccess(res -> {
-          String instanceId = res.getEntityId();
-          getMappingMetadataCache().get(jobExecutionId, context)
-            .compose(parametersOptional -> parametersOptional
-              .map(mappingMetadata -> {
-                MappingParameters mappingParameters =
-                  Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
-                AdditionalFieldsUtil.executeStandardFieldsManipulation(targetRecord, mappingParameters,
-                  Clock.systemDefaultZone());
-                payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
-                return prepareAndExecuteMapping(dataImportEventPayload, new JsonObject(mappingMetadata.getMappingRules()),
-                  mappingParameters);
-              })
-              .orElseGet(
-                () -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId, recordId, chunkId))))
-            .compose(v -> {
-              InstanceCollection instanceCollection = storage.getInstanceCollection(context);
-              JsonObject instanceAsJson = prepareInstance(dataImportEventPayload, instanceId, jobExecutionId);
-              List<String> requiredFieldsErrors =
-                EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, INSTANCE_REQUIRED_FIELDS);
-              if (!requiredFieldsErrors.isEmpty()) {
-                String msg =
-                  format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ",
-                    requiredFieldsErrors,
-                    jobExecutionId, recordId, chunkId);
-                LOGGER.warn(msg);
-                return Future.failedFuture(msg);
-              }
-
-              Instance mappedInstance = Instance.fromJson(instanceAsJson);
-
-              List<String> invalidUUIDsErrors = ValidationUtil.validateUUIDs(mappedInstance);
-              if (!invalidUUIDsErrors.isEmpty()) {
-                String msg =
-                  format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ",
-                    invalidUUIDsErrors,
-                    jobExecutionId, recordId, chunkId);
-                LOGGER.warn(msg);
-                return Future.failedFuture(msg);
-              }
-
-              markInstanceAndRecordAsDeletedIfNeeded(mappedInstance, targetRecord);
-              return addInstance(mappedInstance, instanceCollection)
-                .compose(
-                  createdInstance -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(mappedInstance,
-                    context).map(createdInstance))
-                .compose(createdInstance -> executeFieldsManipulation(createdInstance, targetRecord))
-                .compose(createdInstance -> {
-                  var targetContent = targetRecord.getParsedRecord().getContent().toString();
-                  var content = reorderMarcRecordFields(sourceContent, targetContent, targetRecord.getId());
-                  targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(content));
-                  setSuppressFromDiscovery(targetRecord, createdInstance.getDiscoverySuppress());
-                  return saveRecordInSrsAndHandleResponse(dataImportEventPayload, targetRecord, createdInstance,
-                    instanceCollection,
-                    dataImportEventPayload.getTenant(), context.getUserId(), context.getRequestId());
-                });
-            })
-            .onSuccess(ar -> {
-              dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(ar));
-              orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(dataImportEventPayload,
-                  DI_INVENTORY_INSTANCE_CREATED, context)
-                .onComplete(result -> future.complete(dataImportEventPayload));
-            })
-            .onFailure(e -> {
-              if (!(e instanceof DuplicateEventException)) {
-                LOGGER.error(
-                  "Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
-                  jobExecutionId,
-                  recordId, chunkId, e);
-              }
-              future.completeExceptionally(e);
-            });
-        })
-        .onFailure(failure -> {
-          LOGGER.error(
-            "Error creating inventory recordId and instanceId relationship by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
-            jobExecutionId, recordId,
-            chunkId, failure);
-          future.completeExceptionally(failure);
-        });
+      storeAndProcess(targetRecord, sourceContent, payload, payloadContext, context, jobExecutionId, recordId, chunkId,
+        future);
     } catch (Exception e) {
       LOGGER.error("Error creating inventory Instance", e);
       future.completeExceptionally(e);
@@ -243,7 +159,118 @@ public class CreateInstanceEventHandler extends AbstractInstanceEventHandler {
     return promise.future();
   }
 
-  private boolean contains999ffSubfieldIValue(Record targetRecord) {
+  private Context buildContext(DataImportEventPayload payload, HashMap<String, String> payloadContext) {
+    return EventHandlingUtil.constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(),
+      payloadContext.get(DataImportHeaders.USER_ID), payloadContext.get(XOkapiHeaders.REQUEST_ID.toLowerCase()));
+  }
+
+  private void storeAndProcess(Record targetRecord, String sourceContent, DataImportEventPayload payload,
+                               HashMap<String, String> payloadContext, Context context,
+                               String jobExecutionId, String recordId, String chunkId,
+                               CompletableFuture<DataImportEventPayload> future) {
+    idStorageService.store(targetRecord.getId(), super.getInstanceId(targetRecord), payload.getTenant())
+      .onSuccess(res -> {
+        String instanceId = res.getEntityId();
+        createInstance(instanceId, payload, payloadContext, context, targetRecord, sourceContent,
+          jobExecutionId, recordId, chunkId)
+          .onSuccess(createdInstance -> completeWithOrderProcessing(createdInstance, payload, context, future))
+          .onFailure(e -> {
+            if (!(e instanceof DuplicateEventException)) {
+              LOGGER.error(
+                "Error creating inventory Instance by jobExecutionId: '{}' and recordId: '{}' and chunkId: '{}' ",
+                jobExecutionId, recordId, chunkId, e);
+            }
+            future.completeExceptionally(e);
+          });
+      })
+      .onFailure(failure -> {
+        LOGGER.error("Error creating inventory recordId and instanceId relationship by jobExecutionId: '{}' "
+                     + "and recordId: '{}' and chunkId: '{}' ", jobExecutionId, recordId, chunkId, failure);
+        future.completeExceptionally(failure);
+      });
+  }
+
+  private void completeWithOrderProcessing(Instance createdInstance, DataImportEventPayload payload,
+                                           Context context, CompletableFuture<DataImportEventPayload> future) {
+    payload.getContext().put(INSTANCE.value(), Json.encode(createdInstance));
+    orderHelperService.fillPayloadForOrderPostProcessingIfNeeded(payload, DI_INVENTORY_INSTANCE_CREATED, context)
+      .onComplete(result -> future.complete(payload));
+  }
+
+  private Future<Instance> createInstance(String instanceId, DataImportEventPayload payload,
+                                          HashMap<String, String> payloadContext, Context context, Record targetRecord,
+                                          String sourceContent, String jobExecutionId, String recordId,
+                                          String chunkId) {
+    InstanceCollection instanceCollection = storage.getInstanceCollection(context);
+    return getMappingMetadataCache().get(jobExecutionId, context)
+      .compose(parametersOptional -> parametersOptional
+        .map(mappingMetadata -> applyFieldsManipulationAndMap(mappingMetadata, targetRecord, payload, payloadContext))
+        .orElseGet(
+          () -> Future.failedFuture(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, jobExecutionId, recordId, chunkId))))
+      .compose(v -> buildAndPersistInstance(instanceId, payload, context, targetRecord, sourceContent,
+        instanceCollection, jobExecutionId, recordId, chunkId));
+  }
+
+  private Future<Void> applyFieldsManipulationAndMap(MappingMetadataDto mappingMetadata, Record targetRecord,
+                                                     DataImportEventPayload payload,
+                                                     HashMap<String, String> payloadContext) {
+    MappingParameters mappingParameters =
+      Json.decodeValue(mappingMetadata.getMappingParams(), MappingParameters.class);
+    AdditionalFieldsUtil.executeStandardFieldsManipulation(targetRecord, mappingParameters, Clock.systemDefaultZone());
+    payloadContext.put(EntityType.MARC_BIBLIOGRAPHIC.value(), Json.encode(targetRecord));
+    return prepareAndExecuteMapping(payload, new JsonObject(mappingMetadata.getMappingRules()), mappingParameters);
+  }
+
+  private Future<Instance> buildAndPersistInstance(String instanceId, DataImportEventPayload payload,
+                                                   Context context, Record targetRecord, String sourceContent,
+                                                   InstanceCollection instanceCollection,
+                                                   String jobExecutionId, String recordId, String chunkId) {
+    JsonObject instanceAsJson = prepareInstance(payload, instanceId, jobExecutionId);
+
+    List<String> requiredFieldsErrors =
+      EventHandlingUtil.validateJsonByRequiredFields(instanceAsJson, INSTANCE_REQUIRED_FIELDS);
+    if (!requiredFieldsErrors.isEmpty()) {
+      return failWithInvalidInstanceMsg(requiredFieldsErrors, jobExecutionId, recordId, chunkId);
+    }
+
+    Instance mappedInstance = Instance.fromJson(instanceAsJson);
+
+    List<String> invalidUuidsErrors = ValidationUtil.validateUuids(mappedInstance);
+    if (!invalidUuidsErrors.isEmpty()) {
+      return failWithInvalidInstanceMsg(invalidUuidsErrors, jobExecutionId, recordId, chunkId);
+    }
+
+    markInstanceAndRecordAsDeletedIfNeeded(mappedInstance, targetRecord);
+    return persistInstance(mappedInstance, instanceCollection, context, targetRecord, sourceContent, payload);
+  }
+
+  private <T> Future<T> failWithInvalidInstanceMsg(List<String> errors,
+                                                   String jobExecutionId, String recordId, String chunkId) {
+    String msg = format("Mapped Instance is invalid: %s, by jobExecutionId: '%s' and recordId: '%s' and chunkId: '%s' ",
+      errors, jobExecutionId, recordId, chunkId);
+    LOGGER.warn(msg);
+    return Future.failedFuture(msg);
+  }
+
+  private Future<Instance> persistInstance(Instance instance, InstanceCollection instanceCollection,
+                                           Context context, Record targetRecord, String sourceContent,
+                                           DataImportEventPayload payload) {
+    return addInstance(instance, instanceCollection)
+      .compose(createdInstance -> getPrecedingSucceedingTitlesHelper()
+        .createPrecedingSucceedingTitles(instance, context)
+        .map(createdInstance))
+      .compose(createdInstance -> executeFieldsManipulation(createdInstance, targetRecord))
+      .compose(createdInstance -> {
+        var targetContent = targetRecord.getParsedRecord().getContent().toString();
+        var reorderedContent = reorderMarcRecordFields(sourceContent, targetContent, targetRecord.getId());
+        targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(reorderedContent));
+        setSuppressFromDiscovery(targetRecord, createdInstance.getDiscoverySuppress());
+        return saveRecordInSrsAndHandleResponse(payload, targetRecord, createdInstance, instanceCollection,
+          payload.getTenant(), context.getUserId(), context.getRequestId());
+      });
+  }
+
+  private boolean contains999ffSubfieldI(Record targetRecord) {
     return AdditionalFieldsUtil.getValueFromDataField(targetRecord, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I)
       .isPresent();
   }

@@ -9,6 +9,7 @@ import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
 import static org.folio.dataimport.util.marc.MarcConstants.INDICATOR_F;
 import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_I;
 import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_L;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValueFromDataField;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
 import static org.folio.rest.jaxrs.model.InstanceIngressPayload.SourceType.LINKED_DATA;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -37,7 +38,6 @@ import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.services.SnapshotService;
-import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.instanceingress.InstanceIngressEventConsumer;
@@ -110,8 +110,8 @@ class CreateInstanceIngressEventHandlerUnitTest {
     // given
     var event = new InstanceIngressEvent()
       .withId(UUID.randomUUID().toString());
-    var expectedMessage = format("InstanceIngressEvent message does not contain " +
-                                 "required data to create Instance for eventId: '%s'", event.getId());
+    var expectedMessage = format("InstanceIngressEvent message does not contain "
+                                 + "required data to create Instance for eventId: '%s'", event.getId());
 
     // when
     var future = handler.handle(event);
@@ -184,8 +184,8 @@ class CreateInstanceIngressEventHandlerUnitTest {
       .postSourceStorageSnapshots(any());
 
     var expectedMessage = "Mapped Instance is invalid: [Field 'title' is a required field and can not be null, "
-                          + "Field 'instanceTypeId' is a required field and can not be null], from InstanceIngressEvent with id '"
-                          + event.getId() + "'";
+                          + "Field 'instanceTypeId' is a required field and can not be null], "
+                          + "from InstanceIngressEvent with id '" + event.getId() + "'";
 
     // when
     var future = handler.handle(event);
@@ -340,6 +340,7 @@ class CreateInstanceIngressEventHandlerUnitTest {
     assertThat(exception.getCause().getMessage()).startsWith(expectedMessage);
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldReturnSucceededFuture_ifProcessFinishedCorrectly() throws ExecutionException, InterruptedException {
     // given
@@ -390,14 +391,12 @@ class CreateInstanceIngressEventHandlerUnitTest {
 
     var recordCaptor = ArgumentCaptor.forClass(Record.class);
     verify(sourceStorageClient).postSourceStorageRecords(recordCaptor.capture());
-    var recordSentToSRS = recordCaptor.getValue();
-    assertThat(recordSentToSRS.getId()).isEqualTo(event.getEventPayload().getSourceRecordIdentifier());
-    assertThat(recordSentToSRS.getRecordType()).isEqualTo(Record.RecordType.MARC_BIB);
-    assertThat(
-      AdditionalFieldsUtil.getValueFromDataField(recordSentToSRS, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I))
+    var recordSentToSrs = recordCaptor.getValue();
+    assertThat(recordSentToSrs.getId()).isEqualTo(event.getEventPayload().getSourceRecordIdentifier());
+    assertThat(recordSentToSrs.getRecordType()).isEqualTo(Record.RecordType.MARC_BIB);
+    assertThat(getValueFromDataField(recordSentToSrs, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I))
       .hasValue(instance.getId());
-    assertThat(
-      AdditionalFieldsUtil.getValueFromDataField(recordSentToSRS, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_L))
+    assertThat(getValueFromDataField(recordSentToSrs, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_L))
       .hasValue(linkedDataId);
   }
 

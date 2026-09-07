@@ -8,7 +8,7 @@ import io.vertx.core.json.JsonObject;
 import lombok.SneakyThrows;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 
-public class InstanceApiClient {
+public final class InstanceApiClient {
 
   private InstanceApiClient() { }
 

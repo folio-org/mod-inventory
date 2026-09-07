@@ -19,7 +19,8 @@ import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.exceptions.NotFoundException;
 
-public class InstanceUtil {
+public final class InstanceUtil {
+
   private static final Logger LOGGER = LogManager.getLogger(InstanceUtil.class);
   private static final String STATISTICAL_CODE_IDS_PROPERTY = "statisticalCodeIds";
   private static final String NATURE_OF_CONTENT_TERM_IDS_PROPERTY = "natureOfContentTermIds";
@@ -30,7 +31,7 @@ public class InstanceUtil {
   private InstanceUtil() { }
 
   /**
-   * Merges fields from Instances which are NOT controlled by the underlying SRS MARC
+   * Merges fields from Instances which are NOT controlled by the underlying SRS MARC.
    *
    * @param existing - Instance in DB
    * @param mapped   - Instance after mapping
@@ -71,7 +72,8 @@ public class InstanceUtil {
   }
 
   public static JsonObject mergeInstances(JsonObject existing, JsonObject mapped) {
-    //Statistical code, nature of content terms, administrative notes, parent/childInstances don`t revealed via mergeIn() because of simple array type.
+    //Statistical code, nature of content terms, administrative notes, parent/childInstances
+    // don`t revealed via mergeIn() because of simple array type.
     JsonArray statisticalCodeIds = existing.getJsonArray(STATISTICAL_CODE_IDS_PROPERTY);
     JsonArray natureOfContentTermIds = existing.getJsonArray(NATURE_OF_CONTENT_TERM_IDS_PROPERTY);
     JsonArray administrativeNotes = existing.getJsonArray(ADMINISTRATIVE_NOTES_PROPERTY);
@@ -88,15 +90,15 @@ public class InstanceUtil {
 
   public static Future<Instance> findInstanceById(String instanceId, InstanceCollection instanceCollection) {
     Promise<Instance> promise = Promise.promise();
-    instanceCollection.findById(instanceId, success -> {
+    instanceCollection.findById(instanceId,
+      success -> {
         if (success.result() == null) {
           LOGGER.warn("findInstanceById:: Can't find Instance by id: {} ", instanceId);
           promise.fail(new NotFoundException(format("Can't find Instance by id: %s", instanceId)));
         } else {
           promise.complete(success.result());
         }
-      },
-      failure -> {
+      }, failure -> {
         LOGGER.warn(format("findInstanceById:: Error retrieving Instance by id %s - %s, status code %s", instanceId,
           failure.reason(), failure.statusCode()));
         promise.fail(failure.reason());

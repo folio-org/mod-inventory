@@ -76,6 +76,7 @@ class OrderHelperServiceTest extends BaseWireMockTest {
     mocks.close();
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldFillPayloadIfOrderActionProfileExistsAndCurrentProfileIsTheLastOne(VertxTestContext testContext) {
     JobProfile jobProfile = new JobProfile()
@@ -168,6 +169,7 @@ class OrderHelperServiceTest extends BaseWireMockTest {
     }));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldNotFillPayloadEventIfOrderActionProfileNotExistsAndCurrentProfileIsTheLastOne(
     VertxTestContext testContext) {
@@ -260,6 +262,7 @@ class OrderHelperServiceTest extends BaseWireMockTest {
     }));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldNotFillPayloadIfOrderActionProfileExistsAndCurrentProfileIsNotTheLastOne(VertxTestContext testContext) {
     JobProfile jobProfile = new JobProfile()

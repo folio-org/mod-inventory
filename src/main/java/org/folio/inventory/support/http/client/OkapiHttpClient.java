@@ -21,7 +21,7 @@ public class OkapiHttpClient extends AbstractOkapiHttpClient {
   private final WebClient webClient;
 
   /**
-   * HTTP client that calls via Okapi
+   * HTTP client that calls via Okapi.
    *
    * @param vertx            Vert.x handle
    * @param okapiUrl         Okapi URL (java.net.URL)
@@ -45,7 +45,7 @@ public class OkapiHttpClient extends AbstractOkapiHttpClient {
   }
 
   /**
-   * HTTP client that calls via Okapi
+   * HTTP client that calls via Okapi.
    *
    * @param webClient        web client to use for HTTP requests
    * @param okapiUrl         Okapi URL (java.net.URL)

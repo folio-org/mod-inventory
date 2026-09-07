@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers;
 import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
 import static org.folio.dataimport.util.marc.MarcConstants.INDICATOR_F;
 import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_I;
+import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.getValueFromDataField;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_TYPE;
 import static org.folio.inventory.kafka.EntityLinksKafkaTopic.LINKS_STATS;
 import static org.folio.rest.jaxrs.model.LinkUpdateReport.Status.FAIL;
@@ -37,7 +38,6 @@ import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.consumers.MarcBibUpdateKafkaConsumer;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
-import org.folio.inventory.dataimport.util.AdditionalFieldsUtil;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.exceptions.NotFoundException;
@@ -240,9 +240,8 @@ class MarcBibUpdateKafkaConsumerTest extends KafkaTest {
   @SneakyThrows
   void shouldSendFailedLinkReportEvent(VertxTestContext testContext) {
     // given
-    var instanceId =
-      AdditionalFieldsUtil.getValueFromDataField(marcRecord, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I)
-        .orElse(null);
+    final var instanceId = getValueFromDataField(marcRecord, FIELD_999, INDICATOR_F, INDICATOR_F, SUBFIELD_I)
+      .orElse(null);
 
     marcRecord.setId(INVALID_INSTANCE_ID);
     marcRecord.getExternalIdsHolder().setInstanceId(INVALID_INSTANCE_ID);

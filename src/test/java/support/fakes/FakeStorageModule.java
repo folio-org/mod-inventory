@@ -277,7 +277,7 @@ class FakeStorageModule extends AbstractVerticle {
 
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
-    List<JsonObject> filteredItems = new FakeCQLToJSONInterpreter(false)
+    List<JsonObject> filteredItems = new FakeCqlToJsonInterpreter(false)
       .execute(resourcesForTenant.values(), query);
 
     List<JsonObject> pagedItems = filteredItems.stream()
@@ -308,7 +308,7 @@ class FakeStorageModule extends AbstractVerticle {
 
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
-    List<JsonObject> filteredItems = new FakeCQLToJSONInterpreter(false)
+    List<JsonObject> filteredItems = new FakeCqlToJsonInterpreter(false)
       .execute(resourcesForTenant.values(), query);
 
     List<JsonObject> pagedItems = filteredItems.stream()
@@ -479,18 +479,17 @@ class FakeStorageModule extends AbstractVerticle {
     CompletableFuture<JsonObject> lastPreProcess = completedFuture(newBody);
 
     for (RecordPreProcessor preProcessor : recordPreProcessors) {
-      lastPreProcess = lastPreProcess
-        .thenCompose(prev -> {
-            try {
-              return preProcessor.process(tenant, oldBody, newBody);
-            } catch (Exception ex) {
-              CompletableFuture<JsonObject> future = new CompletableFuture<>();
-              future.completeExceptionally(ex);
+      lastPreProcess = lastPreProcess.thenCompose(prev -> {
+          try {
+            return preProcessor.process(tenant, oldBody, newBody);
+          } catch (Exception ex) {
+            CompletableFuture<JsonObject> future = new CompletableFuture<>();
+            future.completeExceptionally(ex);
 
-              return future;
-            }
+            return future;
           }
-        );
+        }
+      );
     }
 
     return lastPreProcess;
@@ -572,7 +571,9 @@ class FakeStorageModule extends AbstractVerticle {
   }
 
   private static void deepMergeInto(JsonObject target, JsonObject patch) {
-    if (patch == null) { return; }
+    if (patch == null) {
+      return;
+    }
 
     for (String key : patch.fieldNames()) {
       Object patchVal = patch.getValue(key);

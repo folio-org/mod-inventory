@@ -14,7 +14,8 @@ import org.folio.rest.client.SourceStorageSnapshotsClient;
 import org.folio.rest.jaxrs.model.Snapshot;
 
 /**
- * Wrapper class for SourceStorageSnapshotsClient to handle POST and PUT HTTP requests with x-okapi-user-id and x-okapi-request-id headers.
+ * Wrapper class for SourceStorageSnapshotsClient to handle POST and PUT HTTP
+ * requests with x-okapi-user-id and x-okapi-request-id headers.
  */
 public class SourceStorageSnapshotsClientWrapper extends SourceStorageSnapshotsClient {
 

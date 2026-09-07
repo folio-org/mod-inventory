@@ -13,7 +13,7 @@ import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.user.UserCollection;
 import org.folio.inventory.storage.external.ExternalStorageCollections;
 
-public class Storage {
+public final class Storage {
   private final Function<Context, CollectionProvider> providerFactory;
 
   private Storage(final Function<Context, CollectionProvider> providerFactory) {

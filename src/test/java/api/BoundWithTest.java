@@ -17,6 +17,7 @@ import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.inventory.support.http.client.Response;
 import org.junit.jupiter.api.Test;
+import support.ApiRoot;
 import support.ApiTests;
 import support.FutureAssistance;
 import support.builders.BoundWithPartRequestBuilder;
@@ -27,6 +28,7 @@ import support.fixtures.InstanceFixture;
 public class BoundWithTest extends ApiTests {
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void boundWithFlagsArePresentOnInstancesAndItemsAsExpected()
     throws InterruptedException, MalformedURLException, TimeoutException, ExecutionException {
     IndividualResource instance1 = instancesStorageClient.create(InstanceFixture.smallAngryPlanet(UUID.randomUUID()));
@@ -148,8 +150,8 @@ public class BoundWithTest extends ApiTests {
     boundWithPartsStorageClient.create(
       new BoundWithPartRequestBuilder(item1a.getJson().getString("id"), holdings3a.getJson().getString("id")).create());
 
-    Response itemResponse = FutureAssistance.getOnCompletion(okapiClient.get(ApiTestSuite.apiRoot() +
-                                                                             "/inventory/items/" + item1a.getId()), 5,
+    var url = ApiRoot.item(item1a.getId());
+    Response itemResponse = FutureAssistance.getOnCompletion(okapiClient.get(url), 5,
       SECONDS);
 
     assertThat("Item has boundWithTitles array with three titles",
@@ -160,6 +162,7 @@ public class BoundWithTest extends ApiTests {
   //       due to the complexities of the queries, not all of which are
   //       necessarily supported by the fake storage modules.
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void canRetrieveBoundWithItemByHoldingsRecordId() throws InterruptedException, TimeoutException, ExecutionException {
     IndividualResource instance1 = instancesStorageClient.create(InstanceFixture.smallAngryPlanet(UUID.randomUUID()));
     IndividualResource holdings1a = holdingsStorageClient.create(new HoldingRequestBuilder()
@@ -186,9 +189,9 @@ public class BoundWithTest extends ApiTests {
 
     // Need straight Okapi client for the option to set extra parameters
     OkapiHttpClient okapiClient = ApiTestSuite.createOkapiHttpClient();
-    Response itemsResponse1 = FutureAssistance.getOnCompletion(okapiClient.get(ApiTestSuite.apiRoot() +
-                                              "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-                                                                               + holdings2a.getJson().getString("id")),
+    var url = ApiTestSuite.apiRoot() + "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+              + holdings2a.getJson().getString("id");
+    Response itemsResponse1 = FutureAssistance.getOnCompletion(okapiClient.get(url),
       5, SECONDS);
 
     assertThat("Two items are found for holdings record: " + itemsResponse1.getJson().encodePrettily(),
@@ -197,7 +200,7 @@ public class BoundWithTest extends ApiTests {
     boolean foundBoundWithItem = false;
     boolean foundNonBoundWithItem = false;
     for (Object o : itemsForHoldingsId1) {
-      JsonObject item = ((JsonObject) o);
+      JsonObject item = (JsonObject) o;
       String barcode = item.getString("barcode");
       assertThat("The items returned are 'ITEM 1A' and 'ITEM 2A'",
         Arrays.asList("ITEM 1A", "ITEM 2A").contains(barcode), is(true));
@@ -206,16 +209,16 @@ public class BoundWithTest extends ApiTests {
         foundBoundWithItem = item.getBoolean("isBoundWith");
       } else if (barcode.equals("ITEM 2A")) {
         assertThat("ITEM 2A is not bound-with ", item.getBoolean("isBoundWith"), is(false));
-        foundNonBoundWithItem = !(item.getBoolean("isBoundWith"));
+        foundNonBoundWithItem = !item.getBoolean("isBoundWith");
       }
     }
     assertThat("Found one bound-with and one non-bound-with item " + itemsResponse1.getJson().encodePrettily(),
       foundBoundWithItem && foundNonBoundWithItem, is(true));
 
-    Response itemsResponse2 = FutureAssistance.getOnCompletion(okapiClient.get(ApiTestSuite.apiRoot() +
-                                              "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-                                                                               + holdings1a.getJson().getString("id")
-                                                                               + "&offset=0&limit=20000"), 5, SECONDS);
+    var itemsQueryUrl = ApiTestSuite.apiRoot() + "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+                        + holdings1a.getJson().getString("id")
+                        + "&offset=0&limit=20000";
+    Response itemsResponse2 = FutureAssistance.getOnCompletion(okapiClient.get(itemsQueryUrl), 5, SECONDS);
 
     assertThat("One and only one bound-with item is found: ", itemsResponse2.getJson().getInteger("totalRecords"),
       is(1));
@@ -226,27 +229,23 @@ public class BoundWithTest extends ApiTests {
     assertThat("The bound-with item returned is the item with barcode 'ITEM 1A'", item2.getString("barcode"),
       is("ITEM 1A"));
 
-    Response itemsResponse3 = FutureAssistance.getOnCompletion(okapiClient.get(ApiTestSuite.apiRoot() +
-                                              "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-                                              + holdings1a.getJson().getString("id")
-                                                                               + "&relations=onlyBoundWithsSkipDirectlyLinkedItem"),
-      5, SECONDS);
+    var holdingsItemUrl = ApiTestSuite.apiRoot() + "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+                          + holdings1a.getJson().getString("id")
+                          + "&relations=onlyBoundWithsSkipDirectlyLinkedItem";
+    Response itemsResponse3 = FutureAssistance.getOnCompletion(okapiClient.get(holdingsItemUrl), 5, SECONDS);
     assertThat("No item is found for 'holdings1a' when relations is set to onlyBoundWithsSkipDirectlyLinkedItem: ",
       itemsResponse3.getJson().getInteger("totalRecords"), is(0));
 
-    Response itemsResponse4 = FutureAssistance.getOnCompletion(okapiClient.get(ApiTestSuite.apiRoot() +
-                                              "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-                                                                               + holdings1a.getJson().getString("id")
-                                                                               + "&relations=onlyBoundWiths"), 5,
-      SECONDS);
+    var boundWithItemsUrl = ApiTestSuite.apiRoot() + "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+                            + holdings1a.getJson().getString("id")
+                            + "&relations=onlyBoundWiths";
+    Response itemsResponse4 = FutureAssistance.getOnCompletion(okapiClient.get(boundWithItemsUrl), 5, SECONDS);
     assertThat("One item is found for 'holdings1a' when relations is set to onlyBoundWiths: ",
       itemsResponse4.getJson().getInteger("totalRecords"), is(1));
 
-    Response itemsResponse5 = FutureAssistance.getOnCompletion(okapiClient.get(ApiTestSuite.apiRoot() +
-                                              "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-                                                                               + holdings3a.getJson().getString("id")
-                                                                               + "&offset=string&limit=string"), 5,
-      SECONDS);
+    var itemsByHoldingsRecordUrl = ApiTestSuite.apiRoot() + "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+                                   + holdings3a.getJson().getString("id") + "&offset=string&limit=string";
+    Response itemsResponse5 = FutureAssistance.getOnCompletion(okapiClient.get(itemsByHoldingsRecordUrl), 5, SECONDS);
     assertThat("One item is found for 'holdings3a' (non-bound-with) with relations criterion: ",
       itemsResponse5.getJson().getInteger("totalRecords"), is(1));
   }
@@ -262,10 +261,9 @@ public class BoundWithTest extends ApiTests {
       itemsClient.create(new ItemRequestBuilder()
         .forHolding(holdings1.getId()).withBarcode("bc-" + i));
     }
-    Response itemsResponse = FutureAssistance.getOnCompletion(okapiClient.get(ApiTestSuite.apiRoot() +
-                                             "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-                                                                              + holdings1.getJson().getString("id")
-                                                                              + "&offset=0&limit=700"), 5, SECONDS);
+    var url = ApiTestSuite.apiRoot() + "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+              + holdings1.getJson().getString("id") + "&offset=0&limit=700";
+    Response itemsResponse = FutureAssistance.getOnCompletion(okapiClient.get(url), 5, SECONDS);
     assertThat("page of 700 items returned for 'holdings1': ", itemsResponse.getJson().getJsonArray("items").size(),
       is(700));
     assertThat("a total of 1100 items reported for 'holdings1': ", itemsResponse.getJson().getInteger("totalRecords"),
@@ -273,6 +271,7 @@ public class BoundWithTest extends ApiTests {
   }
 
   @Test
+  @SuppressWarnings("checkstyle:MethodLength")
   void canRetrieveManyBoundWithsAndRegularItemsThroughItemsByHoldingsId()
     throws InterruptedException, TimeoutException, ExecutionException, MalformedURLException {
     IndividualResource instance1 = instancesStorageClient.create(InstanceFixture.smallAngryPlanet(UUID.randomUUID()));
@@ -298,22 +297,21 @@ public class BoundWithTest extends ApiTests {
     List<JsonObject> items2 = itemsStorageClient.getMany("", 1000);
     assertThat("There are 800 items in storage ", items2.size(), is(800));
 
-    Response itemsByHoldingsIdResponse = FutureAssistance.getOnCompletion(okapiClient.get(ApiTestSuite.apiRoot() +
-                                                         "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-                                                                                          + holdings1a.getJson()
-                                                                                            .getString("id")), 5,
-      SECONDS);
+    var itemsByHoldingsIdUrl = ApiTestSuite.apiRoot() + "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+                               + holdings1a.getJson()
+                                 .getString("id");
+    Response itemsByHoldingsIdResponse =
+      FutureAssistance.getOnCompletion(okapiClient.get(itemsByHoldingsIdUrl), 5, SECONDS);
 
     assertThat("Can retrieve many items by holdings record id", itemsByHoldingsIdResponse.statusCode(), is(200));
     assertThat("default limit of 200 is applied", itemsByHoldingsIdResponse.getJson().getJsonArray("items").size(),
       is(200));
     assertThat("total records is 800", itemsByHoldingsIdResponse.getJson().getInteger("totalRecords"), is(800));
 
-    Response itemsByHoldingsIdResponseWithLimit =
-      FutureAssistance.getOnCompletion(okapiClient.get(ApiTestSuite.apiRoot() +
-                                                                  "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-                                                       + holdings1a.getJson().getString("id") + "&limit=600"), 5,
-        SECONDS);
+    var itemsByHoldingsUrl = ApiTestSuite.apiRoot() + "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+                             + holdings1a.getJson().getString("id") + "&limit=600";
+    var itemsByHoldingsIdResponseWithLimit =
+      FutureAssistance.getOnCompletion(okapiClient.get(itemsByHoldingsUrl), 5, SECONDS);
 
     assertThat("Can retrieve many items by holdings record id with limit",
       itemsByHoldingsIdResponseWithLimit.statusCode(), is(200));
@@ -322,11 +320,9 @@ public class BoundWithTest extends ApiTests {
     assertThat("total records is 800 with limit applied",
       itemsByHoldingsIdResponseWithLimit.getJson().getInteger("totalRecords"), is(800));
 
-    Response itemsByHoldingsIdResponseOnlyBoundWiths = FutureAssistance.getOnCompletion(
-      okapiClient.get(ApiTestSuite.apiRoot() +
-                                                                       "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-                                                                       + holdings1a.getJson().getString("id")
-                      + "&limit=600&relations=onlyBoundWiths"), 5, SECONDS);
+    var url = ApiTestSuite.apiRoot() + "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+              + holdings1a.getJson().getString("id") + "&limit=600&relations=onlyBoundWiths";
+    var itemsByHoldingsIdResponseOnlyBoundWiths = FutureAssistance.getOnCompletion(okapiClient.get(url), 5, SECONDS);
 
     assertThat("Can retrieve many items by holdings record id with relations=onlyBoundWiths",
       itemsByHoldingsIdResponseOnlyBoundWiths.statusCode(), is(200));
@@ -355,9 +351,8 @@ public class BoundWithTest extends ApiTests {
       boundWithPartsStorageClient.create(
         new BoundWithPartRequestBuilder(item.getJson().getString("id"), holdings.getJson().getString("id")).create());
     }
-    Response itemResponse = FutureAssistance.getOnCompletion(okapiClient.get(ApiTestSuite.apiRoot() +
-                                                                             "/inventory/items/" + item.getId()), 5,
-      SECONDS);
+    var url = ApiTestSuite.apiRoot() + "/inventory/items/" + item.getId();
+    Response itemResponse = FutureAssistance.getOnCompletion(okapiClient.get(url), 5, SECONDS);
 
     var boundWithTitles = itemResponse.getJson().getJsonArray("boundWithTitles");
     assertThat("Item has boundWithTitles array with 200 titles", boundWithTitles.size(), is(200));
@@ -371,23 +366,21 @@ public class BoundWithTest extends ApiTests {
   void mustQueryBoundWithItemsByHoldingsRecordIdId()
     throws InterruptedException, TimeoutException, ExecutionException {
 
-    Response itemsResponse1 = FutureAssistance.getOnCompletion(okapiClient.get(ApiTestSuite.apiRoot() +
-                                              "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-                                                                               + UUID.randomUUID()), 5, SECONDS);
+    var itemsQueryUrl = ApiTestSuite.apiRoot() + "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+                        + UUID.randomUUID();
+    Response itemsResponse1 = FutureAssistance.getOnCompletion(okapiClient.get(itemsQueryUrl), 5, SECONDS);
 
     assertThat("Response code 200 (OK) expected when querying by holdingsRecordId",
       itemsResponse1.statusCode(), is(200));
 
-    Response itemsResponse3 = FutureAssistance.getOnCompletion(okapiClient.get(ApiTestSuite.apiRoot() +
-                                                                               "/inventory/items-by-holdings-id/"), 5,
-      SECONDS);
+    var itemsByHoldingsRecordUrl = ApiTestSuite.apiRoot() + "/inventory/items-by-holdings-id/";
+    Response itemsResponse3 = FutureAssistance.getOnCompletion(okapiClient.get(itemsByHoldingsRecordUrl), 5, SECONDS);
 
     assertThat("Response code 400 (bad request) expected when not querying by holdingsRecordId",
       itemsResponse3.statusCode(), is(400));
 
-    Response itemsResponse4 = FutureAssistance.getOnCompletion(okapiClient.get(ApiTestSuite.apiRoot() +
-                                                                               "/inventory/items-by-holdings-id/?query=holdingsRecordId"),
-      5, SECONDS);
+    var itemsByHoldingsRecordIdUrl = ApiTestSuite.apiRoot() + "/inventory/items-by-holdings-id/?query=holdingsRecordId";
+    Response itemsResponse4 = FutureAssistance.getOnCompletion(okapiClient.get(itemsByHoldingsRecordIdUrl), 5, SECONDS);
 
     assertThat("Response code 400 (bad request) expected when not querying by holdingsRecordId",
       itemsResponse4.statusCode(), is(400));
@@ -397,19 +390,16 @@ public class BoundWithTest extends ApiTests {
   void mustPassValidRelationsParameterValue()
     throws InterruptedException, TimeoutException, ExecutionException {
 
-    Response itemsResponse1 = FutureAssistance.getOnCompletion(okapiClient.get(ApiTestSuite.apiRoot() +
-                                              "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-                                                                               + UUID.randomUUID()
-                                                                               + "&relations=onlyBoundWiths"), 5,
-      SECONDS);
+    var requestUrl = ApiTestSuite.apiRoot() + "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+                     + UUID.randomUUID() + "&relations=onlyBoundWiths";
+    Response itemsResponse1 = FutureAssistance.getOnCompletion(okapiClient.get(requestUrl), 5, SECONDS);
 
     assertThat("Response code 200 (OK) expected when querying by holdingsRecordId and relations=onlyBoundWiths",
       itemsResponse1.statusCode(), is(200));
 
-    Response itemsResponse2 = FutureAssistance.getOnCompletion(okapiClient.get(ApiTestSuite.apiRoot() +
-                                              "/inventory/items-by-holdings-id?query=holdingsRecordId=="
-                                                                               + UUID.randomUUID()
-                                                                               + "&relations=RANDOM"), 5, SECONDS);
+    var inventoryItemsUrl = ApiTestSuite.apiRoot() + "/inventory/items-by-holdings-id?query=holdingsRecordId=="
+                            + UUID.randomUUID() + "&relations=RANDOM";
+    Response itemsResponse2 = FutureAssistance.getOnCompletion(okapiClient.get(inventoryItemsUrl), 5, SECONDS);
 
     assertThat("Response code 400 (bad request) expected when providing invalid 'relations' parameter value",
       itemsResponse2.statusCode(), is(400));

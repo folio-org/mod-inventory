@@ -59,7 +59,7 @@ public class TenantItemsApi {
 
   /**
    * This API is meant to be used by UI to fetch different items from several
-   * tenants together within one call
+   * tenants together within one call.
    *
    */
   private void getItemsFromTenants(RoutingContext routingContext) {

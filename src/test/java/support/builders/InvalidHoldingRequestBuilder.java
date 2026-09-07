@@ -2,7 +2,6 @@ package support.builders;
 
 import api.ApiTestSuite;
 import io.vertx.core.json.JsonObject;
-
 import java.util.UUID;
 
 public class InvalidHoldingRequestBuilder extends AbstractBuilder {

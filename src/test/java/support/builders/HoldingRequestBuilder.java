@@ -2,10 +2,8 @@ package support.builders;
 
 import api.ApiTestSuite;
 import io.vertx.core.json.JsonObject;
-
 import java.util.List;
 import java.util.UUID;
-
 import org.folio.inventory.domain.items.EffectiveCallNumberComponents;
 
 public class HoldingRequestBuilder extends AbstractBuilder {

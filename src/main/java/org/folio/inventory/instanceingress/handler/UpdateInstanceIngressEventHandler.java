@@ -10,7 +10,6 @@ import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
-
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -154,8 +153,7 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
         sourceStorageRecordsClient.putSourceStorageRecordsGenerationById(matchedId, targetRecord)
           .onComplete(ar -> {
             var result = ar.result();
-            if (ar.succeeded() &&
-                result.statusCode() == HttpStatus.HTTP_OK.toInt()) {
+            if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_OK.toInt()) {
               LOGGER.info("Update MARC record in SRS with id: '{}', instanceId: '{}', from tenant: {}",
                 targetRecord.getId(), instance.getId(), context.getTenantId());
               promise.complete(instance);

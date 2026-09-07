@@ -101,7 +101,7 @@ public interface InstanceIngressEventHandler {
       return failIfErrors(errors, event.getId(), logger)
         .orElseGet(() -> {
           var mappedInstance = Instance.fromJson(instanceAsJson);
-          var uuidErrors = ValidationUtil.validateUUIDs(mappedInstance);
+          var uuidErrors = ValidationUtil.validateUuids(mappedInstance);
           return failIfErrors(uuidErrors, event.getId(), logger).orElseGet(
             () -> Future.succeededFuture(mappedInstance));
         });
@@ -149,9 +149,10 @@ public interface InstanceIngressEventHandler {
     }
   }
 
-  default Future<Instance> executeFieldsManipulation(Instance instance, Record srcRecord,
-                                                     Map<String, Object> eventProperties,
-                                                     BiFunction<Instance, Record, Future<Instance>> fieldsManipulationFunction) {
+  default Future<Instance> executeFieldsManipulation(
+    Instance instance, Record srcRecord,
+    Map<String, Object> eventProperties,
+    BiFunction<Instance, Record, Future<Instance>> fieldsManipulationFunction) {
     if (eventProperties.containsKey(LINKED_DATA_ID)) {
       AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, FIELD_999, SUBFIELD_L,
         String.valueOf(eventProperties.get(LINKED_DATA_ID)));
@@ -159,8 +160,9 @@ public interface InstanceIngressEventHandler {
     return fieldsManipulationFunction.apply(instance, srcRecord);
   }
 
-  default Future<Snapshot> postSnapshotInSrsAndHandleResponse(String id, Context context,
-                                                              BiFunction<Context, Snapshot, Future<Snapshot>> postSnapshotFunction) {
+  default Future<Snapshot> postSnapshotInSrsAndHandleResponse(
+    String id, Context context,
+    BiFunction<Context, Snapshot, Future<Snapshot>> postSnapshotFunction) {
     var snapshot = new Snapshot()
       .withJobExecutionId(id)
       .withProcessingStartedDate(new Date())

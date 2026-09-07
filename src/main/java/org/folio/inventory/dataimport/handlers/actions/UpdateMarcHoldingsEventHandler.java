@@ -261,7 +261,7 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
   private void failureUpdateHandler(DataImportEventPayload payload, String id, HoldingsRecordCollection collection,
                                     Promise<HoldingsRecord> promise, Failure failure) {
     if (failure.statusCode() == HttpStatus.SC_CONFLICT) {
-      processOLError(failure, payload, id, collection, promise);
+      processOlError(failure, payload, id, collection, promise);
     } else {
       promise.fail(new DataImportException(format(CANNOT_UPDATE_HOLDING_ERROR_MESSAGE,
         id, payload.getJobExecutionId(), failure.reason(), failure.statusCode())));
@@ -293,12 +293,14 @@ public class UpdateMarcHoldingsEventHandler implements EventHandler {
   /**
    * This method handles the Optimistic Locking error.
    * The Optimistic Locking error occurs when the updating record has matched and has not updated yet.
-   * In this time some another request wants to update the matched record. This happens rarely, however it has a place to be.
+   * In this time some another request wants to update the matched record.
+   * This happens rarely, however it has a place to be.
    * In such case the method retries a record update:
    * - it calls this 'UpdateMarcHoldingsEventHandler' again keeping a number of calls(retries) in the event context;
-   * - when a number of retries exceeded the maximum limit (see <>MAX_RETRIES_COUNT</>) then event handling goes ahead as usual.
+   * - when a number of retries exceeded the maximum limit (see MAX_RETRIES_COUNT)
+   * then event handling goes ahead as usual.
    */
-  private void processOLError(Failure failure, DataImportEventPayload payload, String recordId,
+  private void processOlError(Failure failure, DataImportEventPayload payload, String recordId,
                               HoldingsRecordCollection recordCollection, Promise<HoldingsRecord> promise) {
     int currentRetryNumber = payload.getContext().get(CURRENT_RETRY_NUMBER) == null ? 0 : Integer.parseInt(
       payload.getContext().get(CURRENT_RETRY_NUMBER));

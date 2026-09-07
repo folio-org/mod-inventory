@@ -84,6 +84,9 @@ class CommonMatchEventHandlerTest {
       .withContentType(MATCH_PROFILE)
       .withContent(JsonObject.mapFrom(instanceMatchProfile).getMap());
 
+    var context = new HashMap<String, String>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
@@ -91,9 +94,7 @@ class CommonMatchEventHandlerTest {
       .withTenant(TENANT_ID)
       .withToken(TOKEN)
       .withCurrentNode(instanceMatchProfileWrapper)
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-      }});
+      .withContext(context);
 
     when(matchInstanceHandler.handle(eventPayload)).thenReturn(CompletableFuture.completedFuture(eventPayload));
     when(
@@ -117,6 +118,9 @@ class CommonMatchEventHandlerTest {
       .withContentType(MATCH_PROFILE)
       .withContent(JsonObject.mapFrom(instanceMatchProfile).getMap());
 
+    var context = new HashMap<String, String>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
@@ -124,9 +128,7 @@ class CommonMatchEventHandlerTest {
       .withTenant(TENANT_ID)
       .withToken(TOKEN)
       .withCurrentNode(instanceMatchProfileWrapper)
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-      }});
+      .withContext(context);
 
     when(matchHoldingsHandler.handle(eventPayload)).thenReturn(CompletableFuture.completedFuture(eventPayload));
     when(
@@ -150,6 +152,9 @@ class CommonMatchEventHandlerTest {
       .withContentType(MATCH_PROFILE)
       .withContent(JsonObject.mapFrom(instanceMatchProfile).getMap());
 
+    var context = new HashMap<String, String>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
@@ -157,9 +162,7 @@ class CommonMatchEventHandlerTest {
       .withTenant(TENANT_ID)
       .withToken(TOKEN)
       .withCurrentNode(instanceMatchProfileWrapper)
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-      }});
+      .withContext(context);
 
     when(matchItemHandler.handle(eventPayload)).thenReturn(CompletableFuture.completedFuture(eventPayload));
     when(matchItemHandler.isEligible(argThat(payload -> payload.getCurrentNode().equals(instanceMatchProfileWrapper))))
@@ -182,6 +185,9 @@ class CommonMatchEventHandlerTest {
       .withContentType(MATCH_PROFILE)
       .withContent(JsonObject.mapFrom(instanceMatchProfile).getMap());
 
+    var context = new HashMap<String, String>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
@@ -189,9 +195,7 @@ class CommonMatchEventHandlerTest {
       .withTenant(TENANT_ID)
       .withToken(TOKEN)
       .withCurrentNode(instanceMatchProfileWrapper)
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-      }});
+      .withContext(context);
 
     when(matchMarcBibHandler.handle(eventPayload)).thenReturn(CompletableFuture.completedFuture(eventPayload));
     when(
@@ -203,6 +207,7 @@ class CommonMatchEventHandlerTest {
     verify(matchMarcBibHandler).handle(eventPayload);
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldCallMatchInstanceHandlerIfMultipleMarcBibMatchResultOccursAndNextNodeIsMatchInstanceProfile()
     throws ExecutionException, InterruptedException, TimeoutException {
@@ -224,16 +229,21 @@ class CommonMatchEventHandlerTest {
       .withContent(JsonObject.mapFrom(marcBibMatchProfile).getMap())
       .withChildSnapshotWrappers(List.of(instanceMatchProfileWrapper));
 
-    DataImportEventPayload eventPayload = new DataImportEventPayload()
+    var context = new HashMap<String, String>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+
+    final DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(OKAPI_URL)
       .withTenant(TENANT_ID)
       .withToken(TOKEN)
       .withCurrentNode(marcBibMatchProfileWrapper)
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-      }});
+      .withContext(context);
+
+    var context2 = new HashMap<String, String>();
+    context2.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    context2.put(INSTANCES_IDS_KEY, JsonArray.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()).encode());
 
     DataImportEventPayload marcBibMatchingResultPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_MATCHED.value())
@@ -242,10 +252,7 @@ class CommonMatchEventHandlerTest {
       .withTenant(TENANT_ID)
       .withToken(TOKEN)
       .withCurrentNode(marcBibMatchProfileWrapper)
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-        put(INSTANCES_IDS_KEY, JsonArray.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()).encode());
-      }});
+      .withContext(context2);
 
     assertEquals(DI_SRS_MARC_BIB_RECORD_MATCHED.value(), marcBibMatchingResultPayload.getEventType());
     assertNotNull(marcBibMatchingResultPayload.getContext().get(INSTANCES_IDS_KEY));
@@ -267,6 +274,7 @@ class CommonMatchEventHandlerTest {
     assertFalse(payload.getContext().containsKey(INSTANCES_IDS_KEY));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldCallMatchHoldingHandlerIfMultipleMarcBibMatchResultOccursAndNextNodeIsMatchHoldingProfile()
     throws ExecutionException, InterruptedException, TimeoutException {
@@ -288,16 +296,21 @@ class CommonMatchEventHandlerTest {
       .withContent(JsonObject.mapFrom(marcBibMatchProfile).getMap())
       .withChildSnapshotWrappers(List.of(holdingsMatchProfileWrapper));
 
-    DataImportEventPayload eventPayload = new DataImportEventPayload()
+    var context = new HashMap<String, String>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+
+    final DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(OKAPI_URL)
       .withTenant(TENANT_ID)
       .withToken(TOKEN)
       .withCurrentNode(marcBibMatchProfileWrapper)
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-      }});
+      .withContext(context);
+
+    var context2 = new HashMap<String, String>();
+    context2.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    context2.put(INSTANCES_IDS_KEY, JsonArray.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()).encode());
 
     DataImportEventPayload marcBibMatchingResultPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_MATCHED.value())
@@ -306,10 +319,7 @@ class CommonMatchEventHandlerTest {
       .withTenant(TENANT_ID)
       .withToken(TOKEN)
       .withCurrentNode(marcBibMatchProfileWrapper)
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-        put(INSTANCES_IDS_KEY, JsonArray.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()).encode());
-      }});
+      .withContext(context2);
 
     assertEquals(DI_SRS_MARC_BIB_RECORD_MATCHED.value(), marcBibMatchingResultPayload.getEventType());
     assertNotNull(marcBibMatchingResultPayload.getContext().get(INSTANCES_IDS_KEY));
@@ -344,16 +354,21 @@ class CommonMatchEventHandlerTest {
         .withContentType(ACTION_PROFILE)
         .withContent(JsonObject.mapFrom(new ActionProfile()).getMap())));
 
-    DataImportEventPayload eventPayload = new DataImportEventPayload()
+    var context = new HashMap<String, String>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+
+    final DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
       .withOkapiUrl(OKAPI_URL)
       .withTenant(TENANT_ID)
       .withToken(TOKEN)
       .withCurrentNode(marcBibMatchProfileWrapper)
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-      }});
+      .withContext(context);
+
+    var context2 = new HashMap<String, String>();
+    context2.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+    context2.put(INSTANCES_IDS_KEY, JsonArray.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()).encode());
 
     DataImportEventPayload marcBibMatchingResultPayload = new DataImportEventPayload()
       .withEventType(DI_SRS_MARC_BIB_RECORD_MATCHED.value())
@@ -362,10 +377,7 @@ class CommonMatchEventHandlerTest {
       .withTenant(TENANT_ID)
       .withToken(TOKEN)
       .withCurrentNode(marcBibMatchProfileWrapper)
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-        put(INSTANCES_IDS_KEY, JsonArray.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()).encode());
-      }});
+      .withContext(context2);
 
     assertEquals(DI_SRS_MARC_BIB_RECORD_MATCHED.value(), marcBibMatchingResultPayload.getEventType());
     assertNotNull(marcBibMatchingResultPayload.getContext().get(INSTANCES_IDS_KEY));
@@ -387,6 +399,9 @@ class CommonMatchEventHandlerTest {
       .withIncomingRecordType(MARC_AUTHORITY)
       .withExistingRecordType(AUTHORITY);
 
+    var context = new HashMap<String, String>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withEventType(DI_MARC_FOR_UPDATE_RECEIVED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
@@ -396,9 +411,7 @@ class CommonMatchEventHandlerTest {
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
         .withContent(JsonObject.mapFrom(matchProfile).getMap()))
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-      }});
+      .withContext(context);
 
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(eventPayload);
 
@@ -411,6 +424,9 @@ class CommonMatchEventHandlerTest {
       .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
       .withExistingRecordType(INSTANCE);
 
+    var context = new HashMap<String, String>();
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
+
     DataImportEventPayload eventPayload = new DataImportEventPayload()
       .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
@@ -420,9 +436,7 @@ class CommonMatchEventHandlerTest {
       .withCurrentNode(new ProfileSnapshotWrapper()
         .withContentType(MATCH_PROFILE)
         .withContent(JsonObject.mapFrom(matchProfile).getMap()))
-      .withContext(new HashMap<>() {{
-        put(MARC_BIBLIOGRAPHIC.value(), Json.encode(new Record()));
-      }});
+      .withContext(context);
 
     when(matchInstanceHandler.isEligible(eventPayload)).thenReturn(true);
     when(matchInstanceHandler.handle(eventPayload)).thenThrow(EventProcessingException.class);

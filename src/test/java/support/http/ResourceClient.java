@@ -25,7 +25,7 @@ import org.joda.time.DateTime;
 import support.builders.Builder;
 import support.fakes.EndpointFailureDescriptor;
 
-public class ResourceClient {
+public final class ResourceClient {
 
   private final OkapiHttpClient client;
   private final UrlMaker urlMaker;
@@ -326,6 +326,13 @@ public class ResourceClient {
     return getFinished.toCompletableFuture().get(5, SECONDS);
   }
 
+  public void disableFailureEmulation()
+    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
+
+    emulateFailure(new EndpointFailureDescriptor()
+      .setFailureExpireDate(DateTime.now().minusMinutes(1).toDate()));
+  }
+
   public void emulateFailure(EndpointFailureDescriptor failureDescriptor)
     throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
 
@@ -333,13 +340,6 @@ public class ResourceClient {
       JsonObject.mapFrom(failureDescriptor));
 
     assertThat(future.toCompletableFuture().get(5, SECONDS).statusCode(), is(201));
-  }
-
-  public void disableFailureEmulation()
-    throws MalformedURLException, InterruptedException, ExecutionException, TimeoutException {
-
-    emulateFailure(new EndpointFailureDescriptor()
-      .setFailureExpireDate(DateTime.now().minusMinutes(1).toDate()));
   }
 
   public void emulateFailure(int statusCode, String method, String body)

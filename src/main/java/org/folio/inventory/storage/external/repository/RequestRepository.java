@@ -14,7 +14,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-
 import org.folio.inventory.domain.view.request.Request;
 import org.folio.inventory.storage.external.Clients;
 import org.folio.inventory.storage.external.CollectionResourceRepository;

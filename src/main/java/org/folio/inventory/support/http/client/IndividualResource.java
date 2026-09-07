@@ -1,7 +1,6 @@
 package org.folio.inventory.support.http.client;
 
 import io.vertx.core.json.JsonObject;
-
 import java.util.UUID;
 
 public class IndividualResource {

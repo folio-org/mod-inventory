@@ -6,7 +6,7 @@ import java.net.URL;
 import java.util.UUID;
 import lombok.SneakyThrows;
 
-public class ApiRoot {
+public final class ApiRoot {
 
   private ApiRoot() { }
 
@@ -20,18 +20,13 @@ public class ApiRoot {
   }
 
   @SneakyThrows
-  public static URL holdings() {
-    return new URI(String.format("%s/holdings", inventory())).toURL();
-  }
-
-  @SneakyThrows
-  public static URL instancesBatch() {
-    return new URI(String.format("%s/instances/batch", inventory())).toURL();
-  }
-
-  @SneakyThrows
   public static URL instances(String query) {
     return new URI(String.format("%s/instances?%s", inventory(), query)).toURL();
+  }
+
+  @SneakyThrows
+  public static URL holdings() {
+    return new URI(String.format("%s/holdings", inventory())).toURL();
   }
 
   @SneakyThrows
@@ -47,6 +42,21 @@ public class ApiRoot {
   @SneakyThrows
   public static URL items() {
     return new URI(String.format("%s/items", inventory())).toURL();
+  }
+
+  @SneakyThrows
+  public static URL items(String query) {
+    return new URI(String.format("%s/items?%s", inventory(), query)).toURL();
+  }
+
+  @SneakyThrows
+  public static URL item(UUID id) {
+    return item(id.toString());
+  }
+
+  @SneakyThrows
+  public static URL item(String id) {
+    return new URI(String.format("%s/%s", items(), id)).toURL();
   }
 
   @SneakyThrows
@@ -67,11 +77,6 @@ public class ApiRoot {
   @SneakyThrows
   public static URL updateHoldingsRecordsOwnership() {
     return new URI(String.format("%s/holdings/update-ownership", inventory())).toURL();
-  }
-
-  @SneakyThrows
-  public static URL items(String query) {
-    return new URI(String.format("%s/items?%s", inventory(), query)).toURL();
   }
 
   @SneakyThrows

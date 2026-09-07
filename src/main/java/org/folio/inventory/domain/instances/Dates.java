@@ -14,7 +14,7 @@ public record Dates(String dateTypeId, String date1, String date2) {
   public static final String DATE2_KEY = "date2";
 
   public static JsonObject datesToJson(Dates dates) {
-    if (dates == null || (dates.date1() == null && dates.date2() == null && dates.dateTypeId() == null)) {
+    if (dates == null || dates.date1() == null && dates.date2() == null && dates.dateTypeId() == null) {
       return null;
     }
     var json = new JsonObject();

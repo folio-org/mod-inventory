@@ -2,7 +2,7 @@ package org.folio.inventory.common.domain;
 
 import org.apache.commons.lang3.StringUtils;
 import org.folio.inventory.common.WebContext;
-import org.folio.inventory.domain.items.CQLQueryRequestDto;
+import org.folio.inventory.domain.items.CqlQueryRequestDto;
 
 public record PagingParameters(Integer limit, Integer offset) {
 
@@ -24,7 +24,7 @@ public record PagingParameters(Integer limit, Integer offset) {
     }
   }
 
-  public static PagingParameters from(CQLQueryRequestDto cqlQueryRequestDto) {
+  public static PagingParameters from(CqlQueryRequestDto cqlQueryRequestDto) {
     return new PagingParameters(cqlQueryRequestDto.getLimit(), cqlQueryRequestDto.getOffset());
   }
 

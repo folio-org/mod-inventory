@@ -9,10 +9,6 @@ package org.folio.inventory.domain.items;
 import io.vertx.core.json.JsonObject;
 import org.folio.inventory.domain.user.User;
 
-/**
- *
- * @author ne
- */
 public record CirculationNote(String id, String noteType, String note, Boolean staffOnly, User source, String date) {
   public static final String ID_KEY = "id";
   public static final String NOTE_TYPE_KEY = "noteType";

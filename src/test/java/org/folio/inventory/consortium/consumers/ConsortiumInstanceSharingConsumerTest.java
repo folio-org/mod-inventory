@@ -53,7 +53,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import support.KafkaTest;
 import support.TestUtil;
 
-// TODO: refactor and move out static mocking, may be required changes to implementation
 @ExtendWith({VertxExtension.class, MockitoExtension.class})
 class ConsortiumInstanceSharingConsumerTest extends KafkaTest {
   private static final String INSTANCE_PATH = "src/test/resources/handlers/instance.json";
@@ -91,9 +90,9 @@ class ConsortiumInstanceSharingConsumerTest extends KafkaTest {
     }
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
-  void shouldShareInstanceWithFOLIOSource(VertxTestContext testContext) {
-
+  void shouldShareInstanceWithFolioSource(VertxTestContext testContext) {
     // given
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
     jsonInstance.put("source", "FOLIO");
@@ -178,8 +177,7 @@ class ConsortiumInstanceSharingConsumerTest extends KafkaTest {
   }
 
   @Test
-  void shouldNotShareInstanceWithNotFOLIOAndMARCSource(VertxTestContext testContext) {
-
+  void shouldNotShareInstanceWithNotFolioAndMarcSource(VertxTestContext testContext) {
     // given
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
     jsonInstance.put("source", "SOURCE");
@@ -387,15 +385,15 @@ class ConsortiumInstanceSharingConsumerTest extends KafkaTest {
     Future<String> future = consortiumInstanceSharingConsumer.handle(kafkaRecord);
     future.onComplete(testContext.failing(err -> testContext.verify(() -> {
       assertTrue(err.getMessage()
-        .contains("Error sharing Instance with InstanceId=" + instanceId + " to the target tenant consortium. " +
-                  "Because the instance is not found on the source tenant university"));
+        .contains("Error sharing Instance with InstanceId=" + instanceId + " to the target tenant consortium. "
+                  + "Because the instance is not found on the source tenant university"));
       testContext.completeNow();
     })));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
-  void shouldShareInstanceWithMARCSource(VertxTestContext testContext) {
-
+  void shouldShareInstanceWithMarcSource(VertxTestContext testContext) {
     // given
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
     jsonInstance.put("source", "MARC");
@@ -464,9 +462,9 @@ class ConsortiumInstanceSharingConsumerTest extends KafkaTest {
     })));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
-  void shouldNotShareInstanceWithMARCSourceBecauseDIFailed(VertxTestContext testContext) {
-
+  void shouldNotShareInstanceWithMarcSourceBecauseDiFailed(VertxTestContext testContext) {
     // given
     JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
     jsonInstance.put("source", "MARC");
@@ -519,8 +517,8 @@ class ConsortiumInstanceSharingConsumerTest extends KafkaTest {
     when(sharingHandler.publishInstance(any(), any(), any(), any(), any()))
       .thenReturn(Future.failedFuture("ERROR"));
 
-    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString())).when(eventIdStorageService)
-      .store(any(), any());
+    doAnswer(invocationOnMock -> Future.succeededFuture(UUID.randomUUID().toString()))
+      .when(eventIdStorageService).store(any(), any());
 
     //when
     consortiumInstanceSharingConsumer = spy(

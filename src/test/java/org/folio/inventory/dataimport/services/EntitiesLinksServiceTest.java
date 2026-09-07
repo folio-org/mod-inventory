@@ -32,12 +32,59 @@ import org.junit.jupiter.api.extension.ExtendWith;
 class EntitiesLinksServiceTest extends BaseWireMockTest {
 
   private static final String AUTHORITY_ID = "58600684-c647-408d-bf3e-756e9055a988";
-  private static final String INSTANCE_AUTHORITY_LINKS_BODY =
-    "{\"links\":[{\"id\":1,\"authorityId\":\"58600684-c647-408d-bf3e-756e9055a988\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":1,\"status\":\"ACTUAL\"}],\"totalRecords\":1}";
-  private static final String INSTANCE_AUTHORITY_LINKS =
-    "{\"links\":[{\"authorityId\":\"58600684-c647-408d-bf3e-756e9055a988\",\"authorityNaturalId\":\"test123\",\"instanceId\":\"eb89b292-d2b7-4c36-9bfc-f816d6f96418\",\"linkingRuleId\":1,\"status\":\"ACTUAL\"}]}";
-  private static final String LINKING_RULES_INSTANCE_AUTHORITY =
-    "[{\"id\":1,\"bibField\":\"100\",\"authorityField\":\"100\",\"authoritySubfields\":[\"a\",\"b\",\"c\",\"d\",\"j\",\"q\"],\"validation\":{\"existence\":[{\"t\":false}]},\"autoLinkingEnabled\":true}]";
+  private static final String INSTANCE_AUTHORITY_LINKS_BODY = """
+    {
+      "links": [
+        {
+          "id": 1,
+          "authorityId": "58600684-c647-408d-bf3e-756e9055a988",
+          "authorityNaturalId": "test123",
+          "instanceId": "eb89b292-d2b7-4c36-9bfc-f816d6f96418",
+          "linkingRuleId": 1,
+          "status": "ACTUAL"
+        }
+      ],
+      "totalRecords": 1
+    }
+    """;
+  private static final String INSTANCE_AUTHORITY_LINKS = """
+    {
+      "links": [
+        {
+          "authorityId": "58600684-c647-408d-bf3e-756e9055a988",
+          "authorityNaturalId": "test123",
+          "instanceId": "eb89b292-d2b7-4c36-9bfc-f816d6f96418",
+          "linkingRuleId": 1,
+          "status": "ACTUAL"
+        }
+      ]
+    }
+    """;
+  private static final String LINKING_RULES_INSTANCE_AUTHORITY = """
+    [
+      {
+        "id": 1,
+        "bibField": "100",
+        "authorityField": "100",
+        "authoritySubfields": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "j",
+          "q"
+        ],
+        "validation": {
+          "existence": [
+            {
+              "t": false
+            }
+          ]
+        },
+        "autoLinkingEnabled": true
+      }
+    ]
+    """;
 
   private final String localTenant = "tenant";
   private final String token = "token";
@@ -75,7 +122,7 @@ class EntitiesLinksServiceTest extends BaseWireMockTest {
   }
 
   @Test
-  void shouldReturnConsortiumExceptionIfLinksResponseCodeIsNotOK(VertxTestContext testContext) {
+  void shouldReturnConsortiumExceptionIfLinksResponseCodeIsNotOk(VertxTestContext testContext) {
     WIRE_MOCK.stubFor(WireMock.get(new UrlPathPattern(new RegexPattern("/links/instances/" + instanceId), true))
       .willReturn(WireMock.notFound()));
     entitiesLinksService.getInstanceAuthorityLinks(context, instanceId).onComplete(ar -> testContext.verify(() -> {
@@ -124,7 +171,7 @@ class EntitiesLinksServiceTest extends BaseWireMockTest {
   }
 
   @Test
-  void shouldReturnConsortiumExceptionIfLinkingRulesResponseCodeIsNotOK(VertxTestContext testContext) {
+  void shouldReturnConsortiumExceptionIfLinkingRulesResponseCodeIsNotOk(VertxTestContext testContext) {
     WIRE_MOCK.stubFor(WireMock.get(new UrlPathPattern(new RegexPattern("/linking-rules/instance-authority"), true))
       .willReturn(WireMock.notFound()));
     entitiesLinksService.getLinkingRules(context).onComplete(ar -> testContext.verify(() -> {

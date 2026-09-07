@@ -2,29 +2,29 @@ package org.folio.inventory.storage.external;
 
 import static api.ApiTestSuite.REQUEST_ID;
 import static api.ApiTestSuite.USER_ID;
-import static support.FutureAssistance.fail;
-import static support.FutureAssistance.getOnCompletion;
-import static support.FutureAssistance.succeed;
-import static support.FutureAssistance.waitForCompletion;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static support.FutureAssistance.fail;
+import static support.FutureAssistance.getOnCompletion;
+import static support.FutureAssistance.succeed;
+import static support.FutureAssistance.waitForCompletion;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import lombok.SneakyThrows;
 import org.apache.commons.lang3.Strings;
-import support.WaitForAllFutures;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import support.WaitForAllFutures;
 
 class ExternalItemCollectionTest extends AbstractExternalStorageTest {
 
@@ -257,7 +257,7 @@ class ExternalItemCollectionTest extends AbstractExternalStorageTest {
 
     getOnCompletion(allAddsFuture);
 
-    Item addedSmallAngryPlanet = getOnCompletion(firstAddFuture);
+    final Item addedSmallAngryPlanet = getOnCompletion(firstAddFuture);
 
     CompletableFuture<MultipleRecords<Item>> findFuture = new CompletableFuture<>();
 
@@ -297,7 +297,6 @@ class ExternalItemCollectionTest extends AbstractExternalStorageTest {
       fail(otherFindFuture));
 
     Item foundItem = getOnCompletion(findFuture);
-    Item otherFoundItem = getOnCompletion(otherFindFuture);
 
     assertThat(foundItem, notNullValue());
     assertThat(foundItem.getBarcode(), is("036000291452"));
@@ -305,6 +304,8 @@ class ExternalItemCollectionTest extends AbstractExternalStorageTest {
     assertThat(foundItem.getMaterialTypeId(), is(bookMaterialTypeId));
     assertThat(foundItem.getPermanentLoanTypeId(), is(canCirculateLoanTypeId));
     assertThat(foundItem.getTemporaryLocationId(), is(annexLibraryLocationId));
+
+    Item otherFoundItem = getOnCompletion(otherFindFuture);
 
     assertThat(otherFoundItem, notNullValue());
     assertThat(otherFoundItem.getBarcode(), is("565578437802"));

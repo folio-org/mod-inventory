@@ -1,7 +1,7 @@
 package org.folio.inventory.consortium.exceptions;
 
 /**
- * Exception that used for consortium process
+ * Exception that used for consortium process.
  */
 public class ConsortiumException extends RuntimeException {
 

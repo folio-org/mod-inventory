@@ -118,6 +118,7 @@ public class MoveApi extends AbstractInventoryResource {
       });
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   private void moveHoldings(RoutingContext routingContext) {
     LOGGER.info("moveHoldings:: Staring holdings move operation.");
     WebContext context = new WebContext(routingContext);
@@ -272,7 +273,7 @@ public class MoveApi extends AbstractInventoryResource {
       .toList();
 
     CompletableFuture.allOf(updates.toArray(new CompletableFuture[0]))
-      .handle((vVoid, throwable) -> updates.stream()
+      .handle((v, throwable) -> updates.stream()
         .filter(future -> !future.isCompletedExceptionally())
         .map(CompletableFuture::join)
         .map(Item::getId)
@@ -298,7 +299,7 @@ public class MoveApi extends AbstractInventoryResource {
       .toList();
 
     CompletableFuture.allOf(updateFutures.toArray(new CompletableFuture[0]))
-      .handle((vVoid, throwable) -> updateFutures.stream()
+      .handle((v, throwable) -> updateFutures.stream()
         .filter(future -> !future.isCompletedExceptionally())
         .map(CompletableFuture::join)
         .map(HoldingsRecord::getId)

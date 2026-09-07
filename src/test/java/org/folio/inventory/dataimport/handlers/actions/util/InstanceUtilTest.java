@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 
 class InstanceUtilTest {
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldMergeInstances() {
     Set<AlternativeTitle> alternativeTitles = new HashSet<>();
@@ -35,7 +36,7 @@ class InstanceUtilTest {
       .withContributorTypeText("text")
       .withPrimary(true));
 
-    Instance mapped = new Instance()
+    final Instance mapped = new Instance()
       .withId("30773a27-b485-4dab-aeb6-b8c04fa3cb17")
       .withHrid("in000000001")
       .withModeOfIssuanceId("30773a27-b485-4dab-aeb6-b8c04fa3cb18")

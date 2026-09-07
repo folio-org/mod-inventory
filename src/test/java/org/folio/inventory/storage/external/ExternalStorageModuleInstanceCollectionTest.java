@@ -37,16 +37,16 @@ class ExternalStorageModuleInstanceCollectionTest extends BaseWireMockTest {
 
   private static final String INSTANCE_PATH_PATTERN = "/instance-storage/instances/[a-z0-9-]+";
 
-  private static final VertxAssistant vertxAssistant = new VertxAssistant();
+  private static final VertxAssistant VERTX_ASSISTANT = new VertxAssistant();
 
   @BeforeAll
   static void beforeAll() {
-    vertxAssistant.start();
+    VERTX_ASSISTANT.start();
   }
 
   @AfterAll
   static void afterAll() {
-    vertxAssistant.stop();
+    VERTX_ASSISTANT.stop();
   }
 
   /**
@@ -200,7 +200,7 @@ class ExternalStorageModuleInstanceCollectionTest extends BaseWireMockTest {
   // ---------------------------------------------------------------------------
 
   private InstanceCollection createCollection() {
-    return vertxAssistant.createUsingVertx(vertx ->
+    return VERTX_ASSISTANT.createUsingVertx(vertx ->
       new ExternalStorageModuleInstanceCollection(
         WIRE_MOCK.baseUrl(), TENANT, TOKEN, USER_ID, REQUEST_ID,
         vertx.createHttpClient()));
@@ -209,19 +209,29 @@ class ExternalStorageModuleInstanceCollectionTest extends BaseWireMockTest {
   private Context createContext() {
     return new Context() {
       @Override
-      public String getTenantId() { return TENANT; }
+      public String getTenantId() {
+        return TENANT;
+      }
 
       @Override
-      public String getToken() { return TOKEN; }
+      public String getToken() {
+        return TOKEN;
+      }
 
       @Override
-      public String getOkapiLocation() { return WIRE_MOCK.baseUrl(); }
+      public String getOkapiLocation() {
+        return WIRE_MOCK.baseUrl();
+      }
 
       @Override
-      public String getUserId() { return USER_ID; }
+      public String getUserId() {
+        return USER_ID;
+      }
 
       @Override
-      public String getRequestId() { return REQUEST_ID; }
+      public String getRequestId() {
+        return REQUEST_ID;
+      }
     };
   }
 

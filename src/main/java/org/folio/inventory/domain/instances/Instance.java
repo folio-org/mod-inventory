@@ -184,26 +184,23 @@ public class Instance {
       .setSourceRecordFormat(instanceJson.getString(SOURCE_RECORD_FORMAT_KEY))
       .setStatusId(instanceJson.getString(STATUS_ID_KEY))
       .setStatusUpdatedDate(instanceJson.getString(STATUS_UPDATED_DATE_KEY))
-      .setTags(getTags(instanceJson))
+      .setTags(getTagsFromJson(instanceJson))
       .setNatureOfContentTermIds(toListOfStrings(instanceJson.getJsonArray(NATURE_OF_CONTENT_TERM_IDS_KEY)))
       .setDates(convertToDates(retrieveDatesFromJson(instanceJson)));
   }
 
   /**
-   *
-   * @return JSON representation of the Instance, compatible with FOLIO's
-   *   Instance storage API.
+   * Return JSON representation of the Instance, compatible with FOLIO's Instance storage API.
    */
   @JsonIgnore
   public JsonObject getJsonForStorage() {
     JsonObject json = new JsonObject();
-    //TODO: Review if this shouldn't be defaulting here
-    json.put(ID, getId() != null
-                 ? getId()
-                 : UUID.randomUUID().toString());
+    json.put(ID, getOrGenerateId());
     putIfNotNull(json, VERSION_KEY, version);
     json.put(HRID_KEY, hrid);
-    if (source != null) { json.put(SOURCE_KEY, source); }
+    if (source != null) {
+      json.put(SOURCE_KEY, source);
+    }
     json.put(MATCH_KEY_KEY, matchKey);
     json.put(SOURCE_URI_KEY, sourceUri);
     json.put(TITLE_KEY, title);
@@ -220,7 +217,9 @@ public class Instance {
     json.put(PUBLICATION_FREQUENCY_KEY, publicationFrequency);
     json.put(PUBLICATION_RANGE_KEY, publicationRange);
     json.put(ELECTRONIC_ACCESS_KEY, electronicAccess);
-    if (instanceTypeId != null) { json.put(INSTANCE_TYPE_ID_KEY, instanceTypeId); }
+    if (instanceTypeId != null) {
+      json.put(INSTANCE_TYPE_ID_KEY, instanceTypeId);
+    }
     json.put(INSTANCE_FORMAT_IDS_KEY, instanceFormatIds);
     json.put(PHYSICAL_DESCRIPTIONS_KEY, physicalDescriptions);
     json.put(LANGUAGES_KEY, languages);
@@ -232,7 +231,9 @@ public class Instance {
     json.put(DISCOVERY_SUPPRESS_KEY, discoverySuppress);
     json.put(DELETED_KEY, deleted);
     json.put(STATISTICAL_CODE_IDS_KEY, statisticalCodeIds);
-    if (sourceRecordFormat != null) { json.put(SOURCE_RECORD_FORMAT_KEY, sourceRecordFormat); }
+    if (sourceRecordFormat != null) {
+      json.put(SOURCE_RECORD_FORMAT_KEY, sourceRecordFormat);
+    }
     json.put(STATUS_ID_KEY, statusId);
     json.put(STATUS_UPDATED_DATE_KEY, statusUpdatedDate);
     json.put(TAGS_KEY,
@@ -244,10 +245,9 @@ public class Instance {
   }
 
   /**
-   *
-   * @return JSON representation of the Instance, compatible with Inventory's
-   *   Instance schema
+   * Return JSON representation of the Instance, compatible with Inventory's Instance schema.
    */
+  @SuppressWarnings("checkstyle:MethodLength")
   @JsonIgnore
   public JsonObject getJsonForResponse() {
     JsonObject json = new JsonObject();
@@ -369,7 +369,7 @@ public class Instance {
   }
 
   public Instance setParentInstances(List<InstanceRelationshipToParent> parentInstances) {
-    this.parentInstances = (parentInstances != null ? parentInstances : this.parentInstances);
+    this.parentInstances = parentInstances != null ? parentInstances : this.parentInstances;
     return this;
   }
 
@@ -383,7 +383,7 @@ public class Instance {
   }
 
   public Instance setChildInstances(List<InstanceRelationshipToChild> childInstances) {
-    this.childInstances = (childInstances != null ? childInstances : this.childInstances);
+    this.childInstances = childInstances != null ? childInstances : this.childInstances;
     return this;
   }
 
@@ -397,7 +397,7 @@ public class Instance {
   }
 
   public Instance setPrecedingTitles(List<PrecedingSucceedingTitle> precedingTitles) {
-    this.precedingTitles = (precedingTitles != null ? precedingTitles : this.precedingTitles);
+    this.precedingTitles = precedingTitles != null ? precedingTitles : this.precedingTitles;
     return this;
   }
 
@@ -852,12 +852,18 @@ public class Instance {
     return String.format("Instance ID: %s, HRID: %s, Title: %s", id, hrid, title);
   }
 
-  private static List<String> getTags(JsonObject instanceRequest) {
+  private String getOrGenerateId() {
+    return getId() != null
+           ? getId()
+           : UUID.randomUUID().toString();
+  }
+
+  private static List<String> getTagsFromJson(JsonObject instanceRequest) {
     if (instanceRequest.containsKey(TAGS_KEY)) {
       try {
         final JsonObject tags = instanceRequest.getJsonObject(TAGS_KEY);
-        return tags != null && tags.containsKey(TAG_LIST_KEY) ?
-               JsonArrayHelper.toListOfStrings(tags.getJsonArray(TAG_LIST_KEY)) : new ArrayList<>();
+        return tags != null && tags.containsKey(TAG_LIST_KEY)
+               ? JsonArrayHelper.toListOfStrings(tags.getJsonArray(TAG_LIST_KEY)) : new ArrayList<>();
       } catch (ClassCastException e) {
         return JsonArrayHelper.toListOfStrings(instanceRequest.getJsonArray(TAGS_KEY));
       }

@@ -4,7 +4,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
 
-public class ClientErrorResponse {
+public final class ClientErrorResponse {
   private ClientErrorResponse() { }
 
   public static void notFound(HttpServerResponse response) {

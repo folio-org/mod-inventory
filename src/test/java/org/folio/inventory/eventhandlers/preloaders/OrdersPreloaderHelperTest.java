@@ -46,7 +46,7 @@ class OrdersPreloaderHelperTest {
 
   @Test
   @SneakyThrows
-  void shouldPreloadByPOL() {
+  void shouldPreloadByOrderLine() {
     List<String> instanceIdsMock = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
     JsonArray poLineCollectionMock = new JsonArray(instanceIdsMock.stream()
       .map(instanceId -> new JsonObject(Map.of(INSTANCE_ID_FIELD, instanceId)))
@@ -71,7 +71,7 @@ class OrdersPreloaderHelperTest {
 
   @Test
   @SneakyThrows
-  void shouldPreloadByVRN() {
+  void shouldPreloadByVrn() {
     List<String> instanceIdsMock = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
     JsonArray poLineCollectionMock = new JsonArray(instanceIdsMock.stream()
       .map(instanceId -> new JsonObject(Map.of(INSTANCE_ID_FIELD, instanceId)))

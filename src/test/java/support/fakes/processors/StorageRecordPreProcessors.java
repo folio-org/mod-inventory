@@ -19,7 +19,7 @@ import org.joda.time.DateTimeZone;
 import support.http.StorageInterfaceUrls;
 
 public final class StorageRecordPreProcessors {
-  private static final AtomicLong hridSequence = new AtomicLong(1L);
+  private static final AtomicLong HRID_SEQUENCE = new AtomicLong(1L);
 
   // Holdings record property name, item property name, effective property name
   private static final List<Triple<String, String, String>> CALL_NUMBER_PROPERTIES = Arrays.asList(
@@ -134,7 +134,7 @@ public final class StorageRecordPreProcessors {
 
     return (tenant, oldEntity, newEntity) -> {
       if (StringUtils.isBlank(newEntity.getString("hrid"))) {
-        String hridToSet = hridPrefix + hridSequence.getAndIncrement();
+        String hridToSet = hridPrefix + HRID_SEQUENCE.getAndIncrement();
 
         newEntity.put("hrid", hridToSet);
       }

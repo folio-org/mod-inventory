@@ -57,10 +57,11 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
     LOGGER.info("Instance ingress event has been received with event type: {}", event.getEventType());
     return Future.succeededFuture(event.getEventPayload())
       .compose(eventPayload -> processEvent(event, context)
-        .map(ar -> consumerRecord.key()), th -> {
-        LOGGER.error("Update record state was failed while handle event, {}", th.getMessage());
-        return Future.failedFuture(th.getMessage());
-      });
+          .map(ar -> consumerRecord.key()),
+        th -> {
+          LOGGER.error("Update record state was failed while handle event, {}", th.getMessage());
+          return Future.failedFuture(th.getMessage());
+        });
   }
 
   private static String getTenantId(InstanceIngressEvent event,

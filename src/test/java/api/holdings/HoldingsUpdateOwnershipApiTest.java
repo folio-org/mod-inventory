@@ -103,7 +103,8 @@ public class HoldingsUpdateOwnershipApiTest extends ConsortiumApiTests {
       collegeHoldingsStorageClient.getMany(String.format("instanceId=%s", instanceId), 100);
     assertEquals(2, targetTenantHoldings.size());
 
-    var targetTenantHoldingIds = targetTenantHoldings.stream().map(object -> object.getString(ID))
+    final var targetTenantHoldingIds = targetTenantHoldings.stream()
+      .map(object -> object.getString(ID))
       .toList();
 
     JsonObject targetTenantHoldingsRecord1 = targetTenantHoldings.getFirst();
@@ -123,6 +124,7 @@ public class HoldingsUpdateOwnershipApiTest extends ConsortiumApiTests {
     assertTrue(targetTenantHoldingIds.contains(createHoldingsRecord2.toString()));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   @SneakyThrows
   void canUpdateHoldingsOwnershipWithRelatedItemsToDifferentTenant() {
@@ -376,6 +378,7 @@ public class HoldingsUpdateOwnershipApiTest extends ConsortiumApiTests {
     assertEquals(HttpStatus.SC_NOT_FOUND, sourceTenantHoldingsRecord2.statusCode());
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   @SneakyThrows
   void shouldReportErrorWhenOnlySomeRequestedHoldingsRecordHasRelatedBoundWithParts() {
@@ -874,6 +877,7 @@ public class HoldingsUpdateOwnershipApiTest extends ConsortiumApiTests {
     assertNotEquals("OLD_LOCATION_CODE", field852bValues.getFirst());
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   @SneakyThrows
   void shouldFailMarcHoldingsAndMoveFolioHoldingWhenSnapshotCreationFails() {
@@ -948,6 +952,7 @@ public class HoldingsUpdateOwnershipApiTest extends ConsortiumApiTests {
     assertThat("No SRS records should be created in target tenant", targetSrsRecords.size(), is(0));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   @SneakyThrows
   void shouldFailOneMarcAndMoveOtherHoldingsWhenSingleSrsRecordMoveFails() {
@@ -1173,14 +1178,14 @@ public class HoldingsUpdateOwnershipApiTest extends ConsortiumApiTests {
 
     // Check errors for MARC holding without SRS record
     assertTrue(errors.stream().anyMatch(error ->
-      error.getString("entityId").equals(marcHoldingId.toString()) &&
-      error.getString("errorMessage").contains("Failed to fetch MARC source record")
+      error.getString("entityId").equals(marcHoldingId.toString())
+      && error.getString("errorMessage").contains("Failed to fetch MARC source record")
     ), "Should contain error for MARC holding without SRS");
 
     // Check errors for bound-with holding
     assertTrue(errors.stream().anyMatch(error ->
-      error.getString("entityId").equals(boundWithHoldingId.toString()) &&
-      error.getString("errorMessage").equals(String.format(HOLDING_BOUND_WITH_PARTS_ERROR, boundWithHoldingId))
+      error.getString("entityId").equals(boundWithHoldingId.toString())
+      && error.getString("errorMessage").equals(String.format(HOLDING_BOUND_WITH_PARTS_ERROR, boundWithHoldingId))
     ), "Should contain error for bound-with holding");
 
     // Check that no holdings were moved to target tenant

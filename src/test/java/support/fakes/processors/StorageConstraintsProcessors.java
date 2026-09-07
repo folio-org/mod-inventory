@@ -32,26 +32,26 @@ public final class StorageConstraintsProcessors {
 
     return getInstanceByIds(relationship.subInstanceId(), relationship.superInstanceId())
       .thenCombine(get(instanceRelationshipTypeUrl(
-        "/" + relationship.instanceRelationshipTypeId())), (relationships, relationshipType) -> {
+          "/" + relationship.instanceRelationshipTypeId())),
+        (relationships, relationshipType) -> {
+          if (relationshipType.statusCode() != 200) {
+            throw new UnprocessableEntityException(new ValidationError(
+              "Relationship type does not exist", "instanceRelationshipTypeId",
+              relationship.instanceRelationshipTypeId()));
+          }
 
-        if (relationshipType.statusCode() != 200) {
-          throw new UnprocessableEntityException(new ValidationError(
-            "Relationship type does not exist", "instanceRelationshipTypeId",
-            relationship.instanceRelationshipTypeId()));
-        }
+          if (!relationships.containsKey(relationship.subInstanceId())) {
+            throw new UnprocessableEntityException(new ValidationError(
+              "Sub instance does not exist", "subInstanceId", relationship.subInstanceId()));
+          }
 
-        if (!relationships.containsKey(relationship.subInstanceId())) {
-          throw new UnprocessableEntityException(new ValidationError(
-            "Sub instance does not exist", "subInstanceId", relationship.subInstanceId()));
-        }
+          if (!relationships.containsKey(relationship.superInstanceId())) {
+            throw new UnprocessableEntityException(new ValidationError(
+              "Super instance does not exist", "superInstanceId", relationship.superInstanceId()));
+          }
 
-        if (!relationships.containsKey(relationship.superInstanceId())) {
-          throw new UnprocessableEntityException(new ValidationError(
-            "Super instance does not exist", "superInstanceId", relationship.superInstanceId()));
-        }
-
-        return newRelationship;
-      });
+          return newRelationship;
+        });
   }
 
   public static CompletableFuture<JsonObject> instancePrecedingSucceedingTitleConstraints(

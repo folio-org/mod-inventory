@@ -58,7 +58,7 @@ class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
     sendJobIdsToKafka(ids);
 
     await().atMost(ofSeconds(3))
-      .untilAsserted(() -> ids.forEach(id -> assertTrue(cancelledJobsIdsCache.contains((id)))));
+      .untilAsserted(() -> ids.forEach(id -> assertTrue(cancelledJobsIdsCache.contains(id))));
   }
 
   @Test
@@ -81,9 +81,9 @@ class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
     // verify that the verticle has read all events
     // including previously consumed events and newly produced events
     await().atMost(ofSeconds(3))
-      .untilAsserted(() -> idsBatch1.forEach(id -> assertTrue(cancelledJobsIdsCache.contains((id)))));
+      .untilAsserted(() -> idsBatch1.forEach(id -> assertTrue(cancelledJobsIdsCache.contains(id))));
     await().atMost(ofSeconds(3))
-      .untilAsserted(() -> idsBatch2.forEach(id -> assertTrue(cancelledJobsIdsCache.contains((id)))));
+      .untilAsserted(() -> idsBatch2.forEach(id -> assertTrue(cancelledJobsIdsCache.contains(id))));
 
     testContext.completeNow();
   }

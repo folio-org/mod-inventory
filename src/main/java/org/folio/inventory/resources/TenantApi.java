@@ -52,12 +52,11 @@ public class TenantApi {
 
     initializeSchemaForTenant(context.getTenantId())
       .onSuccess(result -> {
-          Vertx vertx = routingContext.vertx();
-          new KafkaAdminClientService(vertx)
-            .createKafkaTopics(inventoryKafkaTopicService.createTopicObjects(), context.getTenantId());
-          routingContext.response().setStatusCode(HttpStatus.SC_NO_CONTENT).end();
-        }
-      )
+        Vertx vertx = routingContext.vertx();
+        new KafkaAdminClientService(vertx)
+          .createKafkaTopics(inventoryKafkaTopicService.createTopicObjects(), context.getTenantId());
+        routingContext.response().setStatusCode(HttpStatus.SC_NO_CONTENT).end();
+      })
       .onFailure(fail -> routingContext.response().setStatusCode(HttpStatus.SC_SERVER_ERROR)
         .end(fail.toString()));
   }

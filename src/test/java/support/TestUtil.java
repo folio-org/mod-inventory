@@ -8,7 +8,7 @@ import lombok.SneakyThrows;
 import org.folio.HttpStatus;
 
 /**
- * Util class contains helper methods for unit testing needs
+ * Util class contains helper methods for unit testing needs.
  */
 public final class TestUtil {
 

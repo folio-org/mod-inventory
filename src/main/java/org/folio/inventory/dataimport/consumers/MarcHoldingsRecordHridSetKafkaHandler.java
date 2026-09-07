@@ -21,8 +21,8 @@ import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
 import org.folio.okapi.common.XOkapiHeaders;
@@ -66,23 +66,21 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> kafkaRecord) {
     try {
-      Promise<String> promise = Promise.promise();
       Event event = OBJECT_MAPPER.readValue(kafkaRecord.value(), Event.class);
       @SuppressWarnings("unchecked")
-      Map<String, String> eventPayload =
-        OBJECT_MAPPER.readValue(event.getEventPayload(), HashMap.class);
+      Map<String, String> eventPayload = OBJECT_MAPPER.readValue(event.getEventPayload(), HashMap.class);
       Map<String, String> headersMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
       headersMap.putAll(KafkaHeaderUtils.kafkaHeadersToMap(kafkaRecord.headers()));
       String recordId = headersMap.get(DataImportHeaders.RECORD_ID);
       String chunkId = headersMap.get(DataImportHeaders.CHUNK_ID);
       String jobExecutionId = eventPayload.get(JOB_EXECUTION_ID_HEADER);
-      LOGGER.info(
-        "Event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}",
-        event.getEventType(), recordId, jobExecutionId, chunkId);
+      LOGGER.info("Event payload has been received with event type: {}, recordId: {} "
+                  + "by jobExecution: {} and chunkId: {}", event.getEventType(), recordId, jobExecutionId, chunkId);
 
       if (isEmpty(eventPayload.get(MARC_KEY))) {
-        String message = String.format(
-          "Event payload does not contain required data to update Holdings with event type: '%s', recordId: '%s' by jobExecution: '%s' and chunkId: '%s'",
+        String message = String.format("Event payload does not contain required data to update Holdings "
+                                       + "with event type: '%s', recordId: '%s' "
+                                       + "by jobExecution: '%s' and chunkId: '%s'",
           event.getEventType(), recordId, jobExecutionId, chunkId);
         LOGGER.error(message);
         return Future.failedFuture(message);
@@ -92,6 +90,8 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
         headersMap.get(XOkapiHeaders.URL), headersMap.get(XOkapiHeaders.USER_ID),
         headersMap.get(XOkapiHeaders.REQUEST_ID));
       Record marcRecord = Json.decodeValue(eventPayload.get(MARC_KEY), Record.class);
+
+      Promise<String> promise = Promise.promise();
 
       mappingMetadataCache.get(jobExecutionId, context)
         .map(metadataOptional -> metadataOptional.orElseThrow(() ->
@@ -104,7 +104,7 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
             promise.complete(kafkaRecord.key());
           } else {
             if (ar.cause() instanceof OptimisticLockingException) {
-              processOLError(kafkaRecord, promise, eventPayload, ar);
+              processOlError(kafkaRecord, promise, eventPayload, ar);
             } else {
               eventPayload.remove(CURRENT_RETRY_NUMBER);
               LOGGER.error("Failed to process data import event payload ", ar.cause());
@@ -125,7 +125,7 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
     eventPayload.put(MAPPING_PARAMS_KEY, mappingMetadataDto.getMappingParams());
   }
 
-  private void processOLError(KafkaConsumerRecord<String, String> value, Promise<String> promise,
+  private void processOlError(KafkaConsumerRecord<String, String> value, Promise<String> promise,
                               Map<String, String> eventPayload, AsyncResult<HoldingsRecord> ar) {
     int currentRetryNumber = eventPayload.get(CURRENT_RETRY_NUMBER) == null
                              ? 0 : Integer.parseInt(eventPayload.get(CURRENT_RETRY_NUMBER));

@@ -15,42 +15,42 @@ class ValidationUtilTest {
   private static final String INVALID_STATISTICAL_CODE_MSG = "Provided Statistical code(s) are not a valid values: ";
 
   @Test
-  void shouldHaveNoErrorIfNatureAreAsUUID() {
+  void shouldHaveNoErrorIfNatureAreAsUuid() {
     Instance instance =
       new Instance(UUID.randomUUID().toString(), 1, "001", "MARC", "Title", UUID.randomUUID().toString());
     instance.setNatureOfContentTermIds(Arrays.asList(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
-    List<String> errors = ValidationUtil.validateUUIDs(instance);
+    List<String> errors = ValidationUtil.validateUuids(instance);
     assertEquals(0, errors.size());
   }
 
   @Test
-  void shouldHaveSeveralErrorsIfSomeNatureAreNotAsUUID() {
+  void shouldHaveSeveralErrorsIfSomeNatureAreNotAsUuid() {
     Instance instance =
       new Instance(UUID.randomUUID().toString(), 1, "001", "MARC", "Title", UUID.randomUUID().toString());
     instance.setNatureOfContentTermIds(
       Arrays.asList(UUID.randomUUID().toString(), "not uuid value", UUID.randomUUID().toString(),
         UUID.randomUUID().toString(), "second not UUID value"));
-    List<String> errors = ValidationUtil.validateUUIDs(instance);
+    List<String> errors = ValidationUtil.validateUuids(instance);
     assertEquals(2, errors.size());
     assertEquals("Value 'not uuid value' is not a UUID for natureOfContentTermIds field", errors.get(0));
     assertEquals("Value 'second not UUID value' is not a UUID for natureOfContentTermIds field", errors.get(1));
   }
 
   @Test
-  void shouldHaveNoErrorIfStatisticalCodeIdsAreAllUUIDs() {
+  void shouldHaveNoErrorIfStatisticalCodeIdsAreAllUuids() {
     Instance instance =
       new Instance(UUID.randomUUID().toString(), 1, "in001", "MARC", "Title", UUID.randomUUID().toString());
     instance.setStatisticalCodeIds(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
-    List<String> errors = ValidationUtil.validateUUIDs(instance);
+    List<String> errors = ValidationUtil.validateUuids(instance);
     assertEquals(0, errors.size());
   }
 
   @Test
-  void shouldHaveErrorIfAllStatisticalCodeIdsInInstanceAreNotUUIDs() {
+  void shouldHaveErrorIfAllStatisticalCodeIdsInInstanceAreNotUuids() {
     Instance instance =
       new Instance(UUID.randomUUID().toString(), 1, "in001", "MARC", "Title", UUID.randomUUID().toString());
     instance.setStatisticalCodeIds(Arrays.asList("ebookss", UUID.randomUUID().toString(), "another-invalid"));
-    List<String> errors = ValidationUtil.validateUUIDs(instance);
+    List<String> errors = ValidationUtil.validateUuids(instance);
     assertEquals(1, errors.size());
     assertTrue(errors.getFirst().startsWith(INVALID_STATISTICAL_CODE_MSG));
     assertTrue(errors.getFirst().contains("'ebookss'"));
@@ -74,7 +74,7 @@ class ValidationUtilTest {
   }
 
   @Test
-  void shouldReturnNoErrorWhenAllStatisticalCodeIdsAreValidUUIDs() {
+  void shouldReturnNoErrorWhenAllStatisticalCodeIdsAreValidUuid() {
     List<String> errors =
       ValidationUtil.validateStatisticalCodeIds(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
     assertTrue(errors.isEmpty());

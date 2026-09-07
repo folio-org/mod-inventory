@@ -49,9 +49,9 @@ import org.folio.MappingMetadataDto;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.HoldingsItemMatcherFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
@@ -93,10 +93,89 @@ class MatchHoldingEventHandlerUnitTest {
   private static final String MAPPING_PARAMS = "MAPPING_PARAMS";
   private static final String RELATIONS = "MATCHING_PARAMETERS_RELATIONS";
   private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
-  private static final String MATCHING_RELATIONS =
-    "{\"item.statisticalCodeIds[]\":\"statisticalCode\",\"instance.classifications[].classificationTypeId\":\"classificationTypes\",\"instance.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"item.permanentLoanTypeId\":\"loantypes\",\"holdingsrecord.temporaryLocationId\":\"locations\",\"holdingsrecord.statisticalCodeIds[]\":\"statisticalCode\",\"instance.statusId\":\"instanceStatuses\",\"instance.natureOfContentTermIds\":\"natureOfContentTerms\",\"item.notes[].itemNoteTypeId\":\"itemNoteTypes\",\"holdingsrecord.permanentLocationId\":\"locations\",\"instance.alternativeTitles[].alternativeTitleTypeId\":\"alternativeTitleTypes\",\"holdingsrecord.illPolicyId\":\"illPolicies\",\"item.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.identifiers[].identifierTypeId\":\"identifierTypes\",\"holdingsrecord.holdingsTypeId\":\"holdingsTypes\",\"item.permanentLocationId\":\"locations\",\"instance.modeOfIssuanceId\":\"issuanceModes\",\"item.itemLevelCallNumberTypeId\":\"callNumberTypes\",\"instance.notes[].instanceNoteTypeId\":\"instanceNoteTypes\",\"instance.instanceFormatIds\":\"instanceFormats\",\"holdingsrecord.callNumberTypeId\":\"callNumberTypes\",\"holdingsrecord.electronicAccess[].relationshipId\":\"electronicAccessRelationships\",\"instance.instanceTypeId\":\"instanceTypes\",\"instance.statisticalCodeIds[]\":\"statisticalCode\",\"instancerelationship.instanceRelationshipTypeId\":\"instanceRelationshipTypes\",\"item.temporaryLoanTypeId\":\"loantypes\",\"item.temporaryLocationId\":\"locations\",\"item.materialTypeId\":\"materialTypes\",\"holdingsrecord.notes[].holdingsNoteTypeId\":\"holdingsNoteTypes\",\"instance.contributors[].contributorNameTypeId\":\"contributorNameTypes\",\"item.itemDamagedStatusId\":\"itemDamageStatuses\",\"instance.contributors[].contributorTypeId\":\"contributorTypes\"}";
-  private static final String LOCATIONS_PARAMS =
-    "{\"initialized\":true,\"locations\":[{\"id\":\"53cf956f-c1df-410b-8bea-27f712cca7c0\",\"name\":\"Annex\",\"code\":\"KU/CC/DI/A\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257690,\"updatedDate\":1592219257690}},{\"id\":\"b241764c-1466-4e1d-a028-1a3684a5da87\",\"name\":\"Popular Reading Collection\",\"code\":\"KU/CC/DI/P\",\"isActive\":true,\"institutionId\":\"40ee00ca-a518-4b49-be01-0638d0a4ac57\",\"campusId\":\"62cf76b7-cca5-4d33-9217-edf42ce1a848\",\"libraryId\":\"5d78803e-ca04-4b4a-aeae-2c63b924518b\",\"primaryServicePoint\":\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\",\"servicePointIds\":[\"3a40852d-49fd-4df2-a1f9-6e2641a6e91f\"],\"servicePoints\":[],\"metadata\":{\"createdDate\":1592219257711,\"updatedDate\":1592219257711}}]}";
+  private static final String MATCHING_RELATIONS = """
+    {
+      "item.statisticalCodeIds[]": "statisticalCode",
+      "instance.classifications[].classificationTypeId": "classificationTypes",
+      "instance.electronicAccess[].relationshipId": "electronicAccessRelationships",
+      "item.permanentLoanTypeId": "loantypes",
+      "holdingsrecord.temporaryLocationId": "locations",
+      "holdingsrecord.statisticalCodeIds[]": "statisticalCode",
+      "instance.statusId": "instanceStatuses",
+      "instance.natureOfContentTermIds": "natureOfContentTerms",
+      "item.notes[].itemNoteTypeId": "itemNoteTypes",
+      "holdingsrecord.permanentLocationId": "locations",
+      "instance.alternativeTitles[].alternativeTitleTypeId": "alternativeTitleTypes",
+      "holdingsrecord.illPolicyId": "illPolicies",
+      "item.electronicAccess[].relationshipId": "electronicAccessRelationships",
+      "instance.identifiers[].identifierTypeId": "identifierTypes",
+      "holdingsrecord.holdingsTypeId": "holdingsTypes",
+      "item.permanentLocationId": "locations",
+      "instance.modeOfIssuanceId": "issuanceModes",
+      "item.itemLevelCallNumberTypeId": "callNumberTypes",
+      "instance.notes[].instanceNoteTypeId": "instanceNoteTypes",
+      "instance.instanceFormatIds": "instanceFormats",
+      "holdingsrecord.callNumberTypeId": "callNumberTypes",
+      "holdingsrecord.electronicAccess[].relationshipId": "electronicAccessRelationships",
+      "instance.instanceTypeId": "instanceTypes",
+      "instance.statisticalCodeIds[]": "statisticalCode",
+      "instancerelationship.instanceRelationshipTypeId": "instanceRelationshipTypes",
+      "item.temporaryLoanTypeId": "loantypes",
+      "item.temporaryLocationId": "locations",
+      "item.materialTypeId": "materialTypes",
+      "holdingsrecord.notes[].holdingsNoteTypeId": "holdingsNoteTypes",
+      "instance.contributors[].contributorNameTypeId": "contributorNameTypes",
+      "item.itemDamagedStatusId": "itemDamageStatuses",
+      "instance.contributors[].contributorTypeId": "contributorTypes"
+    }
+    """;
+  private static final String LOCATIONS_PARAMS = """
+    {
+      "initialized": true,
+      "locations": [
+        {
+          "id": "53cf956f-c1df-410b-8bea-27f712cca7c0",
+          "name": "Annex",
+          "code": "KU/CC/DI/A",
+          "isActive": true,
+          "institutionId": "40ee00ca-a518-4b49-be01-0638d0a4ac57",
+          "campusId": "62cf76b7-cca5-4d33-9217-edf42ce1a848",
+          "libraryId": "5d78803e-ca04-4b4a-aeae-2c63b924518b",
+          "primaryServicePoint": "3a40852d-49fd-4df2-a1f9-6e2641a6e91f",
+          "servicePointIds": [
+            "3a40852d-49fd-4df2-a1f9-6e2641a6e91f"
+          ],
+          "servicePoints": [
+    
+          ],
+          "metadata": {
+            "createdDate": 1592219257690,
+            "updatedDate": 1592219257690
+          }
+        },
+        {
+          "id": "b241764c-1466-4e1d-a028-1a3684a5da87",
+          "name": "Popular Reading Collection",
+          "code": "KU/CC/DI/P",
+          "isActive": true,
+          "institutionId": "40ee00ca-a518-4b49-be01-0638d0a4ac57",
+          "campusId": "62cf76b7-cca5-4d33-9217-edf42ce1a848",
+          "libraryId": "5d78803e-ca04-4b4a-aeae-2c63b924518b",
+          "primaryServicePoint": "3a40852d-49fd-4df2-a1f9-6e2641a6e91f",
+          "servicePointIds": [
+            "3a40852d-49fd-4df2-a1f9-6e2641a6e91f"
+          ],
+          "servicePoints": [
+    
+          ],
+          "metadata": {
+            "createdDate": 1592219257711,
+            "updatedDate": 1592219257711
+          }
+        }
+      ]
+    }
+    """;
 
   @Mock
   private Storage storage;
@@ -142,8 +221,7 @@ class MatchHoldingEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(holdingCollection)
-      .findByCql(eq(format("hrid == \"%s\"", HOLDING_HRID)), any(PagingParameters.class), any(Consumer.class),
-        any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\"", HOLDING_HRID)), any(PagingParameters.class), any(), any());
 
     when(mappingMetadataCache.get(anyString(), any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
@@ -172,7 +250,7 @@ class MatchHoldingEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(holdingCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
     DataImportEventPayload eventPayload = createEventPayload();
@@ -197,7 +275,7 @@ class MatchHoldingEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(holdingCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
     DataImportEventPayload eventPayload = createEventPayload();
@@ -218,7 +296,7 @@ class MatchHoldingEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(holdingCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
     DataImportEventPayload eventPayload = createEventPayload();
@@ -233,7 +311,7 @@ class MatchHoldingEventHandlerUnitTest {
   void shouldFailOnHandleEventPayloadIfExceptionThrown(VertxTestContext testContext)
     throws UnsupportedEncodingException {
     doThrow(new UnsupportedEncodingException()).when(holdingCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
     DataImportEventPayload eventPayload = createEventPayload();
@@ -310,16 +388,16 @@ class MatchHoldingEventHandlerUnitTest {
       callback.accept(result);
       return null;
     }).when(holdingCollection)
-      .findByCql(eq(format("hrid == \"%s\" AND id == \"%s\"", HOLDING_HRID, HOLDING_ID)), any(PagingParameters.class),
-        any(Consumer.class), any(Consumer.class));
+      .findByCql(eq(format("hrid == \"%s\" AND id == \"%s\"", HOLDING_HRID, HOLDING_ID)),
+        any(PagingParameters.class), any(), any());
 
-    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
     HashMap<String, String> context = new HashMap<>();
     context.put(EntityType.HOLDINGS.value(), JsonObject.mapFrom(new HoldingsRecord().withId(HOLDING_ID)).encode());
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
     context.put(RELATIONS, MATCHING_RELATIONS);
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
 
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
       assertNull(throwable);
       assertEquals(1, updatedEventPayload.getEventsChain().size());
@@ -341,23 +419,24 @@ class MatchHoldingEventHandlerUnitTest {
       return null;
     }).when(holdingCollection)
       .findByCql(eq(format("hrid == \"%s\" AND instanceId == \"%s\"", HOLDING_HRID, INSTANCE_ID)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
-    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
     HashMap<String, String> context = new HashMap<>();
     context.put(EntityType.INSTANCE.value(), JsonObject.mapFrom(new Instance().withId(INSTANCE_ID)).encode());
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
     context.put(RELATIONS, MATCHING_RELATIONS);
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
 
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
-      assertNull(throwable);
-      assertEquals(1, updatedEventPayload.getEventsChain().size());
-      assertEquals(updatedEventPayload.getEventsChain(),
-        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value()));
-      assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), updatedEventPayload.getEventType());
-      testContext.completeNow();
-    }));
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
+    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) ->
+      testContext.verify(() -> {
+        assertNull(throwable);
+        assertEquals(1, updatedEventPayload.getEventsChain().size());
+        assertEquals(updatedEventPayload.getEventsChain(),
+          singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value()));
+        assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), updatedEventPayload.getEventType());
+        testContext.completeNow();
+      }));
   }
 
   @Test
@@ -374,27 +453,28 @@ class MatchHoldingEventHandlerUnitTest {
       return null;
     }).when(holdingCollection).findByCql(eq(
         format("hrid == \"%s\" AND id == (%s OR %s)", HOLDING_HRID, multiMatchResult.get(0), multiMatchResult.get(1))),
-      any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+      any(PagingParameters.class), any(), any());
 
-    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
     HashMap<String, String> context = new HashMap<>();
     context.put(MULTI_MATCH_IDS, Json.encode(multiMatchResult));
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
     context.put(RELATIONS, MATCHING_RELATIONS);
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
 
-    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(() -> {
-      assertNull(throwable);
-      assertEquals(1, processedPayload.getEventsChain().size());
-      assertEquals(processedPayload.getEventsChain(),
-        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value()));
-      assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(),
-        processedPayload.getEventType());
-      assertEquals(
-        Json.decodeValue(new JsonArray(processedPayload.getContext().get(HOLDINGS.value())).getJsonObject(0).encode(),
-          HoldingsRecord.class).getId(), expectedHolding.getId());
-      testContext.completeNow();
-    }));
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) ->
+      testContext.verify(() -> {
+        assertNull(throwable);
+        assertEquals(1, processedPayload.getEventsChain().size());
+        assertEquals(processedPayload.getEventsChain(),
+          singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value()));
+        assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(),
+          processedPayload.getEventType());
+        assertEquals(
+          Json.decodeValue(new JsonArray(processedPayload.getContext().get(HOLDINGS.value())).getJsonObject(0).encode(),
+            HoldingsRecord.class).getId(), expectedHolding.getId());
+        testContext.completeNow();
+      }));
   }
 
   @Test
@@ -411,9 +491,8 @@ class MatchHoldingEventHandlerUnitTest {
       return null;
     }).when(holdingCollection)
       .findByCql(eq(format("hrid == \"%s\"", HOLDING_HRID)),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
-    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
     HashMap<String, String> context = new HashMap<>();
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
     context.put(RELATIONS, MATCHING_RELATIONS);
@@ -423,14 +502,16 @@ class MatchHoldingEventHandlerUnitTest {
       .withContentType(MATCH_PROFILE)
       .withReactTo(MATCH)));
 
-    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(() -> {
-      assertNull(throwable);
-      assertEquals(1, processedPayload.getEventsChain().size());
-      assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), processedPayload.getEventType());
-      assertThat(new JsonArray(processedPayload.getContext().get(MULTI_MATCH_IDS)),
-        hasItems(matchedHoldings.get(0).getId(), matchedHoldings.get(1).getId()));
-      testContext.completeNow();
-    }));
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) ->
+      testContext.verify(() -> {
+        assertNull(throwable);
+        assertEquals(1, processedPayload.getEventsChain().size());
+        assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), processedPayload.getEventType());
+        assertThat(new JsonArray(processedPayload.getContext().get(MULTI_MATCH_IDS)),
+          hasItems(matchedHoldings.get(0).getId(), matchedHoldings.get(1).getId()));
+        testContext.completeNow();
+      }));
   }
 
   @Test
@@ -448,27 +529,28 @@ class MatchHoldingEventHandlerUnitTest {
     }).when(holdingCollection)
       .findByCql(eq(format("hrid == \"%s\" AND instanceId == (%s OR %s)", HOLDING_HRID, marcBibMultiMatchResult.get(0),
           marcBibMultiMatchResult.get(1))),
-        any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+        any(PagingParameters.class), any(), any());
 
-    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
     HashMap<String, String> context = new HashMap<>();
     context.put(INSTANCES_IDS_KEY, Json.encode(marcBibMultiMatchResult));
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
     context.put(RELATIONS, MATCHING_RELATIONS);
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
 
-    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(() -> {
-      assertNull(throwable);
-      assertEquals(1, processedPayload.getEventsChain().size());
-      assertEquals(processedPayload.getEventsChain(),
-        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value()));
-      assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), processedPayload.getEventType());
-      assertNull(processedPayload.getContext().get(INSTANCES_IDS_KEY));
-      assertEquals(expectedHolding.getId(),
-        Json.decodeValue(new JsonArray(processedPayload.getContext().get(HOLDINGS.value())).getJsonObject(0).encode(),
-          HoldingsRecord.class).getId());
-      testContext.completeNow();
-    }));
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) ->
+      testContext.verify(() -> {
+        assertNull(throwable);
+        assertEquals(1, processedPayload.getEventsChain().size());
+        assertEquals(processedPayload.getEventsChain(),
+          singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value()));
+        assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), processedPayload.getEventType());
+        assertNull(processedPayload.getContext().get(INSTANCES_IDS_KEY));
+        assertEquals(expectedHolding.getId(),
+          Json.decodeValue(new JsonArray(processedPayload.getContext().get(HOLDINGS.value())).getJsonObject(0).encode(),
+            HoldingsRecord.class).getId());
+        testContext.completeNow();
+      }));
   }
 
   private DataImportEventPayload createEventPayload() {

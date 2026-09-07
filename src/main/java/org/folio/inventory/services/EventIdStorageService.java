@@ -3,7 +3,7 @@ package org.folio.inventory.services;
 import io.vertx.core.Future;
 
 /**
- * Service for event storage
+ * Service for event storage.
  */
 public interface EventIdStorageService {
 

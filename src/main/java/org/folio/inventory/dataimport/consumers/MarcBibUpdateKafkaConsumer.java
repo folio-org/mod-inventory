@@ -137,7 +137,7 @@ public class MarcBibUpdateKafkaConsumer implements AsyncRecordHandler<String, St
     if (result.failed() && result.cause() instanceof OptimisticLockingException) {
       Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
       headers.putAll(KafkaHeaderUtils.kafkaHeadersToMap(consumerRecord.headers()));
-      processOLError(consumerRecord, instanceEvent, promise, eventPayload, headers);
+      processOlError(consumerRecord, instanceEvent, promise, eventPayload, headers);
       return;
     }
 
@@ -153,7 +153,7 @@ public class MarcBibUpdateKafkaConsumer implements AsyncRecordHandler<String, St
     }
   }
 
-  private void processOLError(KafkaConsumerRecord<String, String> consumerRecord,
+  private void processOlError(KafkaConsumerRecord<String, String> consumerRecord,
                               MarcBibUpdate instanceEvent,
                               Promise<String> promise,
                               Map<String, String> eventPayload,
@@ -172,9 +172,8 @@ public class MarcBibUpdateKafkaConsumer implements AsyncRecordHandler<String, St
     }
 
     eventPayload.remove(CURRENT_RETRY_NUMBER);
-    String errMessage = format(
-      "Optimistic Locking Error, current retry number: %s exceeded the given max retry attempt of %s for Instance update",
-      retryNumber, MAX_RETRIES_COUNT);
+    String errMessage = format("Optimistic Locking Error, current retry number: %s exceeded the given max "
+                               + "retry attempt of %s for Instance update", retryNumber, MAX_RETRIES_COUNT);
     LOGGER.error(errMessage);
     promise.fail(errMessage);
 

@@ -2,10 +2,6 @@ package org.folio.inventory.domain.instances;
 
 import io.vertx.core.json.JsonObject;
 
-/**
- *
- * @author ne
- */
 public record Classification(String classificationTypeId, String classificationNumber) {
   // JSON property names
   public static final String CLASSIFICATION_NUMBER_KEY = "classificationNumber";

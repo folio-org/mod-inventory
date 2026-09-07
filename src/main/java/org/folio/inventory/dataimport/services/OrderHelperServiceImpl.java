@@ -45,9 +45,9 @@ public class OrderHelperServiceImpl implements OrderHelperService {
       .thenCompose(snapshotOptional -> snapshotOptional
         .map(profileSnapshot -> checkIfOrderLogicExistsAndFillPayloadIfNeeded(eventPayload, targetEventType,
           profileSnapshot))
-        .orElse(CompletableFuture.failedFuture((new EventProcessingException(
+        .orElse(CompletableFuture.failedFuture(new EventProcessingException(
           format("Job profile snapshot with id '%s' does not exist",
-            eventPayload.getContext().get("JOB_PROFILE_SNAPSHOT_ID")))))))
+            eventPayload.getContext().get("JOB_PROFILE_SNAPSHOT_ID"))))))
       .whenComplete((processed, throwable) -> {
         if (throwable != null) {
           promise.fail(throwable);
@@ -60,9 +60,10 @@ public class OrderHelperServiceImpl implements OrderHelperService {
     return promise.future();
   }
 
-  private CompletableFuture<Void> checkIfOrderLogicExistsAndFillPayloadIfNeeded(DataImportEventPayload eventPayload,
-                                                                                DataImportEventTypes targetEventType,
-                                                                                ProfileSnapshotWrapper profileSnapshotWrapper) {
+  private CompletableFuture<Void> checkIfOrderLogicExistsAndFillPayloadIfNeeded(
+    DataImportEventPayload eventPayload,
+    DataImportEventTypes targetEventType,
+    ProfileSnapshotWrapper profileSnapshotWrapper) {
     List<ProfileSnapshotWrapper> actionProfiles = profileSnapshotWrapper
       .getChildSnapshotWrappers()
       .stream()

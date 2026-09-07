@@ -127,69 +127,82 @@ public class DataImportKafkaConsumer implements AsyncRecordHandler<String, Strin
   public Future<String> handle(KafkaConsumerRecord<String, String> kafkaRecord) {
     var kafkaTopic = kafkaRecord.topic();
     try {
-      Promise<String> promise = Promise.promise();
       DataImportEventPayload eventPayload = Json.decodeValue(
         Json.decodeValue(kafkaRecord.value(), Event.class).getEventPayload(), DataImportEventPayload.class);
-      Map<String, String> headersMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-      headersMap.putAll(KafkaHeaderUtils.kafkaHeadersToMap(kafkaRecord.headers()));
+      Map<String, String> headersMap = extractHeaders(kafkaRecord);
       String recordId = headersMap.get(DataImportHeaders.RECORD_ID);
       String chunkId = headersMap.get(DataImportHeaders.CHUNK_ID);
-      String userId = extractUserId(eventPayload, headersMap);
-      String requestId = headersMap.get(XOkapiHeaders.REQUEST_ID.toLowerCase());
-
       String jobExecutionId = eventPayload.getJobExecutionId();
       var eventType = eventPayload.getEventType();
-      LOGGER.info(
-        "Data import event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}",
-        eventType, recordId, jobExecutionId, chunkId);
-
       var tenant = eventPayload.getTenant();
+
+      LOGGER.info("Data import event payload has been received with event type: {}, recordId: {} "
+                  + "by jobExecution: {} and chunkId: {}", eventType, recordId, jobExecutionId, chunkId);
+
       if (shouldSkipEventProcessing(eventPayload)) {
-        LOGGER.info(
-          "Skip processing of event, topic: '{}', tenantId: '{}', jobExecutionId: '{}' recordId: '{}' because the job has been cancelled",
-          kafkaTopic, tenant, jobExecutionId, recordId);
+        LOGGER.info("Skip processing of event, topic: '{}', tenantId: '{}', jobExecutionId: '{}' recordId: '{}'"
+                    + " because the job has been cancelled", kafkaTopic, tenant, jobExecutionId, recordId);
         return Future.succeededFuture(kafkaRecord.key());
       }
 
+      String userId = extractUserId(eventPayload, headersMap);
+      String requestId = headersMap.get(XOkapiHeaders.REQUEST_ID.toLowerCase());
       if (isNull(userId)) {
-        LOGGER.error(
-          "Data import event payload has been received with userId is null jobExecutionId: '{}' recordId: '{}'",
-          jobExecutionId, recordId);
+        LOGGER.error("Data import event payload has been received with userId is null "
+                     + "jobExecutionId: '{}' recordId: '{}'", jobExecutionId, recordId);
       }
-      eventPayload.getContext().put(DataImportHeaders.RECORD_ID, recordId);
-      eventPayload.getContext().put(DataImportHeaders.CHUNK_ID, chunkId);
-      eventPayload.getContext().put(DataImportHeaders.USER_ID, userId);
-      eventPayload.getContext().put(XOkapiHeaders.REQUEST_ID.toLowerCase(), requestId);
-      populateWithPermissionsHeader(eventPayload, headersMap);
+
+      populatePayloadContext(eventPayload, headersMap, recordId, chunkId, userId, requestId);
 
       Context context = EventHandlingUtil.constructContext(tenant, eventPayload.getToken(),
-        eventPayload.getOkapiUrl(),
-        userId, requestId);
-      String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
-      profileSnapshotCache.get(jobProfileSnapshotId, context)
-        .onFailure(e -> sendPayloadWithDiError(eventPayload))
-        .toCompletionStage()
-        .thenCompose(snapshotOptional -> snapshotOptional
-          .map(profileSnapshot -> EventManager.handleEvent(eventPayload, profileSnapshot))
-          .orElse(CompletableFuture.failedFuture(new EventProcessingException(
-            format("Job profile snapshot with id '%s' does not exist", jobProfileSnapshotId)))))
-        .whenComplete((processedPayload, throwable) -> {
-          if (throwable != null) {
-            LOGGER.error("jobExecutionId: {} recordId: {} {}", jobExecutionId, recordId, throwable.getMessage());
-            promise.fail(throwable);
-          } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
-            LOGGER.warn("Failed to process data import e60Lvent payload: {} jobExecutionId: {} recordId: {}",
-              processedPayload.getEventType(), jobExecutionId, recordId);
-            promise.fail("Failed to process data import event payload");
-          } else {
-            promise.complete(kafkaRecord.key());
-          }
-        });
+        eventPayload.getOkapiUrl(), userId, requestId);
+
+      Promise<String> promise = Promise.promise();
+      processEvent(eventPayload, context, jobExecutionId, recordId, kafkaRecord.key(), promise);
       return promise.future();
     } catch (Exception e) {
       LOGGER.error("Failed to process data import kafka record from topic: {}", kafkaTopic, e);
       return Future.failedFuture(e);
     }
+  }
+
+  private Map<String, String> extractHeaders(KafkaConsumerRecord<String, String> kafkaRecord) {
+    Map<String, String> headersMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    headersMap.putAll(KafkaHeaderUtils.kafkaHeadersToMap(kafkaRecord.headers()));
+    return headersMap;
+  }
+
+  private void populatePayloadContext(DataImportEventPayload eventPayload, Map<String, String> headersMap,
+                                      String recordId, String chunkId, String userId, String requestId) {
+    eventPayload.getContext().put(DataImportHeaders.RECORD_ID, recordId);
+    eventPayload.getContext().put(DataImportHeaders.CHUNK_ID, chunkId);
+    eventPayload.getContext().put(DataImportHeaders.USER_ID, userId);
+    eventPayload.getContext().put(XOkapiHeaders.REQUEST_ID.toLowerCase(), requestId);
+    populateWithPermissionsHeader(eventPayload, headersMap);
+  }
+
+  private void processEvent(DataImportEventPayload eventPayload, Context context,
+                            String jobExecutionId, String recordId, String recordKey, Promise<String> promise) {
+    String jobProfileSnapshotId = eventPayload.getContext().get(PROFILE_SNAPSHOT_ID_KEY);
+    profileSnapshotCache.get(jobProfileSnapshotId, context)
+      .onFailure(e -> sendPayloadWithDiError(eventPayload))
+      .toCompletionStage()
+      .thenCompose(snapshotOptional -> snapshotOptional
+        .map(profileSnapshot -> EventManager.handleEvent(eventPayload, profileSnapshot))
+        .orElse(CompletableFuture.failedFuture(new EventProcessingException(
+          format("Job profile snapshot with id '%s' does not exist", jobProfileSnapshotId)))))
+      .whenComplete((processedPayload, throwable) -> {
+        if (throwable != null) {
+          LOGGER.error("jobExecutionId: {} recordId: {} {}", jobExecutionId, recordId, throwable.getMessage());
+          promise.fail(throwable);
+        } else if (DI_ERROR.value().equals(processedPayload.getEventType())) {
+          LOGGER.warn("Failed to process data import event payload: {} jobExecutionId: {} recordId: {}",
+            processedPayload.getEventType(), jobExecutionId, recordId);
+          promise.fail("Failed to process data import event payload");
+        } else {
+          promise.complete(recordKey);
+        }
+      });
   }
 
   private String extractUserId(DataImportEventPayload eventPayload, Map<String, String> headersMap) {
@@ -220,31 +233,17 @@ public class DataImportKafkaConsumer implements AsyncRecordHandler<String, Strin
   }
 
   private void registerDataImportProcessingHandlers(Storage storage, HttpClient client) {
-    OrdersClient ordersClient = new OrdersClient(WebClient.wrap(client));
+    registerPreloaders(storage, client);
+    registerMatchValueReaders();
+    registerMappingManager();
+    MatchingManager.registerMatcherFactory(new HoldingsItemMatcherFactory());
+    registerEventHandlers(storage, client);
+  }
+
+  private void registerEventHandlers(Storage storage, HttpClient client) {
     InstanceLinkClient instanceLinkClient = new InstanceLinkClient(WebClient.wrap(client));
-    OrdersPreloaderHelper ordersPreloaderHelper = new OrdersPreloaderHelper(ordersClient);
-    InstancePreloader instancePreloader = new InstancePreloader(ordersPreloaderHelper);
-    HoldingsPreloader holdingsPreloader = new HoldingsPreloader(ordersPreloaderHelper);
-    ItemPreloader itemPreloader = new ItemPreloader(ordersPreloaderHelper);
     SnapshotService snapshotService = new SnapshotService(client);
     PostgresClientFactory postgresClientFactory = new PostgresClientFactory(vertx);
-
-    MatchValueLoaderFactory.register(new InstanceLoader(storage, instancePreloader));
-    MatchValueLoaderFactory.register(new ItemLoader(storage, itemPreloader));
-    MatchValueLoaderFactory.register(new HoldingLoader(storage, holdingsPreloader));
-
-    MatchValueReaderFactory.register(new MarcValueReaderImpl());
-    MatchValueReaderFactory.register(new StaticValueReaderImpl());
-
-    MappingManager.registerReaderFactory(new MarcBibReaderFactory());
-    MappingManager.registerReaderFactory(new MarcHoldingsReaderFactory());
-    MappingManager.registerWriterFactory(new ItemWriterFactory());
-    MappingManager.registerWriterFactory(new HoldingWriterFactory());
-    MappingManager.registerWriterFactory(new InstanceWriterFactory());
-    MappingManager.registerMapperFactory(new HoldingsMapperFactory());
-    MappingManager.registerMapperFactory(new ItemsMapperFactory());
-    MatchingManager.registerMatcherFactory(new HoldingsItemMatcherFactory());
-
     PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper =
       new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
     EventManager.registerEventHandler(new CommonMatchEventHandler(List.of(
@@ -278,6 +277,34 @@ public class DataImportKafkaConsumer implements AsyncRecordHandler<String, Strin
       precedingSucceedingTitlesHelper, mappingMetadataCache));
     EventManager.registerEventHandler(new MarcBibModifyEventHandler(mappingMetadataCache, deleteRuleFor999FieldCache,
       new InstanceUpdateDelegate(storage), precedingSucceedingTitlesHelper, client));
+  }
+
+  private void registerMappingManager() {
+    MappingManager.registerReaderFactory(new MarcBibReaderFactory());
+    MappingManager.registerReaderFactory(new MarcHoldingsReaderFactory());
+    MappingManager.registerWriterFactory(new ItemWriterFactory());
+    MappingManager.registerWriterFactory(new HoldingWriterFactory());
+    MappingManager.registerWriterFactory(new InstanceWriterFactory());
+    MappingManager.registerMapperFactory(new HoldingsMapperFactory());
+    MappingManager.registerMapperFactory(new ItemsMapperFactory());
+  }
+
+  private void registerMatchValueReaders() {
+    MatchValueReaderFactory.register(new MarcValueReaderImpl());
+    MatchValueReaderFactory.register(new StaticValueReaderImpl());
+  }
+
+  private void registerPreloaders(Storage storage, HttpClient client) {
+    OrdersClient ordersClient = new OrdersClient(WebClient.wrap(client));
+
+    OrdersPreloaderHelper ordersPreloaderHelper = new OrdersPreloaderHelper(ordersClient);
+    InstancePreloader instancePreloader = new InstancePreloader(ordersPreloaderHelper);
+    HoldingsPreloader holdingsPreloader = new HoldingsPreloader(ordersPreloaderHelper);
+    ItemPreloader itemPreloader = new ItemPreloader(ordersPreloaderHelper);
+
+    MatchValueLoaderFactory.register(new InstanceLoader(storage, instancePreloader));
+    MatchValueLoaderFactory.register(new ItemLoader(storage, itemPreloader));
+    MatchValueLoaderFactory.register(new HoldingLoader(storage, holdingsPreloader));
   }
 
   private boolean shouldSkipEventProcessing(DataImportEventPayload eventPayload) {

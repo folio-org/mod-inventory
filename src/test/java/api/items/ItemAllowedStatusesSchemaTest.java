@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * This test verifies that ramls/item.json and {@link ItemStatusName} is consistent.
+ *
  * <p>
  * If you're introducing a new status for an item you have to update both item.json
  * and the {@link ItemStatusName} enum, otherwise item won't pass validation

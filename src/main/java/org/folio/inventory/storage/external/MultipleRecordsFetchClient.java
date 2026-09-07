@@ -12,7 +12,7 @@ import org.folio.inventory.exceptions.ExternalResourceFetchException;
 import org.folio.inventory.support.CompletableFutures;
 import org.folio.inventory.support.http.client.Response;
 
-public class MultipleRecordsFetchClient {
+public final class MultipleRecordsFetchClient {
   private static final int DEFAULT_PARTITION_SIZE = 30;
 
   private final CollectionResourceClient resourceClient;

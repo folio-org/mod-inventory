@@ -16,11 +16,11 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpHeaders;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.domain.items.CQLQueryRequestDto;
+import org.folio.inventory.domain.items.CqlQueryRequestDto;
 import org.folio.inventory.support.JsonArrayHelper;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.util.PercentCodec;
@@ -147,7 +147,7 @@ abstract class ExternalStorageModuleCollection<T> {
     find(location, resultCallback, failureCallback);
   }
 
-  public void retrieveByCqlBody(CQLQueryRequestDto cqlQueryRequestDto,
+  public void retrieveByCqlBody(CqlQueryRequestDto cqlQueryRequestDto,
                                 Consumer<Success<MultipleRecords<T>>> resultCallback,
                                 Consumer<Failure> failureCallback) {
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.postAbs(storageAddress + "/retrieve"));

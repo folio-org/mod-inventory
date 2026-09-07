@@ -1,8 +1,8 @@
 package org.folio.inventory.consortium.handlers;
 
+import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
 import static org.folio.inventory.domain.instances.InstanceSource.CONSORTIUM_FOLIO;
-import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;

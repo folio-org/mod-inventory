@@ -4,7 +4,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import org.folio.HttpStatus;
 
 /**
- * Exception for invalid data at request, 400 status code
+ * Exception for invalid data at request, 400 status code.
  */
 public class BadRequestException extends AbstractInventoryException {
   public BadRequestException(String message) {

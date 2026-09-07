@@ -17,8 +17,8 @@ import java.util.concurrent.CompletableFuture;
 import lombok.SneakyThrows;
 import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.inventory.common.VertxAssistant;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.ItemStatusName;
@@ -31,16 +31,16 @@ import org.junit.jupiter.api.Test;
 
 class ExternalItemCollectionTest extends BaseWireMockTest {
 
-  private static final VertxAssistant vertxAssistant = new VertxAssistant();
+  private static final VertxAssistant VERTX_ASSISTANT = new VertxAssistant();
 
   @BeforeAll
   static void beforeAll() {
-    vertxAssistant.start();
+    VERTX_ASSISTANT.start();
   }
 
   @AfterAll
   static void afterAll() {
-    vertxAssistant.stop();
+    VERTX_ASSISTANT.stop();
   }
 
   @Test
@@ -324,7 +324,7 @@ class ExternalItemCollectionTest extends BaseWireMockTest {
   }
 
   private ItemCollection createCollection() {
-    return vertxAssistant.createUsingVertx(
+    return VERTX_ASSISTANT.createUsingVertx(
         it -> new ExternalStorageCollections(
           WIRE_MOCK.baseUrl(),
           it.createHttpClient()))

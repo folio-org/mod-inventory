@@ -9,11 +9,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.inventory.common.domain.PagingParameters;
-import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.exceptions.NotFoundException;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.HoldingsRecord;
 
@@ -50,15 +50,15 @@ public class HoldingsCollectionService {
   public Future<HoldingsRecord> getById(String holdingsId,
                                         HoldingsRecordCollection holdingsRecordCollection) {
     Promise<HoldingsRecord> promise = Promise.promise();
-    holdingsRecordCollection.findById(holdingsId, success -> {
+    holdingsRecordCollection
+      .findById(holdingsId, success -> {
         if (success.result() == null) {
           LOGGER.error("Can't find Holdings by id: {} ", holdingsId);
           promise.fail(new NotFoundException(format("Can't find Holdings by id: %s ", holdingsId)));
         } else {
           promise.complete(success.result());
         }
-      },
-      failure -> {
+      }, failure -> {
         var reason = failure.reason();
         var message = format("Error retrieving Holdings by id %s - %s, status code %s", holdingsId, reason,
           failure.statusCode());

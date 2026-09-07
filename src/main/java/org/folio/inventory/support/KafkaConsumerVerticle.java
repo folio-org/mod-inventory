@@ -21,7 +21,6 @@ import io.vertx.core.json.JsonObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.GlobalLoadSensor;

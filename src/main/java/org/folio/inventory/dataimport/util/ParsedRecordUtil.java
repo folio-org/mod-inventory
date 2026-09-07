@@ -30,8 +30,8 @@ public final class ParsedRecordUtil {
     return fields.stream()
       .map(o -> (JsonObject) o)
       .filter(field -> field.containsKey(FIELD_999)
-                       && INDICATOR_F == (field.getJsonObject(FIELD_999).getString("ind1")).charAt(0)
-                       && INDICATOR_F == (field.getJsonObject(FIELD_999).getString("ind2")).charAt(0))
+                       && INDICATOR_F == field.getJsonObject(FIELD_999).getString("ind1").charAt(0)
+                       && INDICATOR_F == field.getJsonObject(FIELD_999).getString("ind2").charAt(0))
       .flatMap(targetField -> targetField.getJsonObject(FIELD_999).getJsonArray("subfields").stream())
       .map(JsonObject.class::cast)
       .filter(subfield -> subfield.containsKey(String.valueOf(subfieldValue)))
@@ -44,7 +44,8 @@ public final class ParsedRecordUtil {
    * Retrieves the leader status from the given ParsedRecord.
    *
    * @param parsedRecord the ParsedRecord object containing MARC data
-   * @return an Optional containing the leader status character at the specified position, or an empty Optional if not found
+   * @return an Optional containing the leader status character at the
+   *   specified position, or an empty Optional if not found
    */
   public static Optional<Character> getLeaderStatus(ParsedRecord parsedRecord) {
     if (Objects.nonNull(parsedRecord)) {
@@ -58,7 +59,7 @@ public final class ParsedRecordUtil {
   }
 
   /**
-   * Update MARC Leader status 05 for the given {@link ParsedRecord} content
+   * Update MARC Leader status 05 for the given {@link ParsedRecord} content.
    *
    * @param parsedRecord parsedRecord parsed record
    * @param status       new MARC Leader status

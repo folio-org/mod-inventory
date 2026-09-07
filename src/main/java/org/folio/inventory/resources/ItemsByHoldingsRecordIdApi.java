@@ -24,8 +24,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebContext;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
@@ -201,13 +201,13 @@ public class ItemsByHoldingsRecordIdApi extends ItemsApi {
 
     if (relationsParam != null
         && !Arrays.asList(RELATION_PARAM_ONLY_BOUND_WITHS, RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM)
-        .contains(relationsParam)) {
-        ClientErrorResponse.badRequest(routingContext.response(),
-          "The only valid values of the request parameter 'relations' are: '"
-          + RELATION_PARAM_ONLY_BOUND_WITHS + "' and '" +
-          RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM + "'");
-        return "";
-      }
+      .contains(relationsParam)) {
+      ClientErrorResponse.badRequest(routingContext.response(),
+        "The only valid values of the request parameter 'relations' are: '"
+        + RELATION_PARAM_ONLY_BOUND_WITHS + "' and '"
+        + RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM + "'");
+      return "";
+    }
 
     String[] keyVal = queryByHoldingsRecordId.replaceAll("[()]", "").split("={1,2}");
 
@@ -222,10 +222,9 @@ public class ItemsByHoldingsRecordIdApi extends ItemsApi {
 
   private static boolean onlyBoundWithsRequested(WebContext webContext) {
     String relationsParam = webContext.getStringParameter(RELATIONS_PARAMETER, null);
-    return relationsParam != null &&
-           (relationsParam.equals(RELATION_PARAM_ONLY_BOUND_WITHS) ||
-            relationsParam.equals(
-              RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM));
+    return relationsParam != null
+           && (relationsParam.equals(RELATION_PARAM_ONLY_BOUND_WITHS)
+               || relationsParam.equals(RELATION_PARAM_ONLY_BOUND_WITHS_SKIP_DIRECTLY_LINKED_ITEM));
   }
 
   private static boolean skippingDirectlyLinkedItemRequested(WebContext webContext) {
@@ -298,9 +297,7 @@ public class ItemsByHoldingsRecordIdApi extends ItemsApi {
     CollectionResourceClient collectionResourceClient = null;
     try {
       OkapiHttpClient okapiClient = initializeHttpClient(routingContext, context);
-      collectionResourceClient
-        = new CollectionResourceClient(
-        okapiClient,
+      collectionResourceClient = new CollectionResourceClient(okapiClient,
         new URI(context.getOkapiLocation() + path).toURL());
     } catch (MalformedURLException | URISyntaxException mfue) {
       log.error(mfue);

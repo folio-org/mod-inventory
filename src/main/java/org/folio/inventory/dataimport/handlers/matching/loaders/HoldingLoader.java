@@ -87,7 +87,9 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
   }
 
   private static boolean isNotNullOrEmpty(String value) {
-    if (value == null || value.equals(EMPTY_ARRAY)) { return false; }
+    if (value == null || value.equals(EMPTY_ARRAY)) {
+      return false;
+    }
     return isNotEmpty(value);
   }
 

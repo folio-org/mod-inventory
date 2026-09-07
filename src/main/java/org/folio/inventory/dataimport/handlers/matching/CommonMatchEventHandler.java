@@ -61,8 +61,8 @@ public class CommonMatchEventHandler implements EventHandler {
         return CompletableFuture.failedFuture(new EventProcessingException(msg));
       }
     } catch (Exception e) {
-      LOG.warn(
-        "handle:: Error while processing event: '{}' for match profile processing, incomingRecordId: '{}', jobExecutionId: '{}'",
+      LOG.warn("handle:: Error while processing event: '{}' for match profile processing, "
+               + "incomingRecordId: '{}', jobExecutionId: '{}'",
         eventPayload.getEventType(), extractIncomingRecordId(eventPayload), eventPayload.getJobExecutionId(), e);
       return CompletableFuture.failedFuture(new EventProcessingException(e));
     }

@@ -2,10 +2,6 @@ package org.folio.inventory.domain.instances;
 
 import io.vertx.core.json.JsonObject;
 
-/**
- *
- * @author ne
- */
 public record InstanceRelationshipToChild(String id, String subInstanceId, String instanceRelationshipTypeId) {
   // JSON property names
   public static final String SUB_INSTANCE_ID_KEY = "subInstanceId";

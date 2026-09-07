@@ -2,15 +2,15 @@ package org.folio.inventory.storage.external;
 
 import static api.ApiTestSuite.REQUEST_ID;
 import static api.ApiTestSuite.USER_ID;
-import static support.FutureAssistance.fail;
-import static support.FutureAssistance.getOnCompletion;
-import static support.FutureAssistance.succeed;
-import static support.FutureAssistance.waitForCompletion;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static support.FutureAssistance.fail;
+import static support.FutureAssistance.getOnCompletion;
+import static support.FutureAssistance.succeed;
+import static support.FutureAssistance.waitForCompletion;
 
 import io.vertx.core.json.JsonObject;
 import java.util.List;
@@ -18,12 +18,12 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import lombok.SneakyThrows;
 import org.folio.Authority;
-import support.WaitForAllFutures;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
 import org.junit.jupiter.api.Test;
+import support.WaitForAllFutures;
 
 class ExternalStorageModuleAuthorityRecordCollectionTest extends AbstractExternalStorageTest {
 

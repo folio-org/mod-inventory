@@ -28,7 +28,6 @@ import static org.mockito.Mockito.when;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -155,7 +154,6 @@ class MarcBibModifyEventHandlerTest {
     marcRecord.getParsedRecord().withContent(JsonObject.mapFrom(marcRecord.getParsedRecord().getContent()).encode());
 
     Vertx vertx = Vertx.vertx();
-    HttpClient httpClient = vertx.createHttpClient();
 
     when(mockedStorage.getInstanceCollection(any(Context.class))).thenReturn(mockedInstanceCollection);
 
@@ -169,14 +167,14 @@ class MarcBibModifyEventHandlerTest {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(existingInstance));
       return null;
-    }).when(mockedInstanceCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedInstanceCollection).findById(anyString(), any(), any());
 
     doAnswer(invocationOnMock -> {
       Instance instance = invocationOnMock.getArgument(0);
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(instance));
       return null;
-    }).when(mockedInstanceCollection).update(any(Instance.class), any(Consumer.class), any(Consumer.class));
+    }).when(mockedInstanceCollection).update(any(Instance.class), any(), any());
 
     when(mappingMetadataCache.get(anyString(), any(Context.class)))
       .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
@@ -192,7 +190,7 @@ class MarcBibModifyEventHandlerTest {
       new PrecedingSucceedingTitlesHelper(ctxt -> mockedOkapiHttpClient);
     DeleteRuleFor999FieldCache deleteRuleFor999FieldCache = DeleteRuleFor999FieldCache.getInstance(vertx, true);
     marcBibModifyEventHandler = spy(new MarcBibModifyEventHandler(mappingMetadataCache, deleteRuleFor999FieldCache,
-      new InstanceUpdateDelegate(mockedStorage), precedingSucceedingTitlesHelper, httpClient));
+      new InstanceUpdateDelegate(mockedStorage), precedingSucceedingTitlesHelper, vertx.createHttpClient()));
 
     doReturn(sourceStorageClient).when(marcBibModifyEventHandler).getSourceStorageRecordsClient(any());
   }
@@ -203,7 +201,7 @@ class MarcBibModifyEventHandlerTest {
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
     payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
-    String expectedAddedField =
+    final String expectedAddedField =
       "{\"856\":{\"subfields\":[{\"u\":\"http://libproxy.smith.edu?url=\"}],\"ind1\":\" \",\"ind2\":\" \"}}";
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -217,14 +215,14 @@ class MarcBibModifyEventHandlerTest {
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifyEventHandler.handle(dataImportEventPayload);
 
-    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
-    JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
-    Instance updatedInstance = Instance.fromJson(instanceJson);
-    Record actualRecord =
-      Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
+    final DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    final JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
+    final Instance updatedInstance = Instance.fromJson(instanceJson);
+    final Record actualRecord = Json.decodeValue(dataImportEventPayload.getContext()
+      .get(MARC_BIBLIOGRAPHIC.value()), Record.class);
 
     // then
-    Optional<JsonObject> addedField =
+    final Optional<JsonObject> addedField =
       getFieldFromParsedRecord(actualRecord.getParsedRecord().getContent().toString(), "856");
     assertFalse(dataImportEventPayload.getContext().containsKey(CURRENT_RETRY_NUMBER));
     assertEquals(DI_SRS_MARC_BIB_RECORD_MODIFIED.value(), dataImportEventPayload.getEventType());
@@ -233,11 +231,10 @@ class MarcBibModifyEventHandlerTest {
     assertEquals(expectedAddedField, addedField.get().encode());
     assertEquals(existingInstance.getId(), instanceJson.getString("id"));
     assertEquals("Victorian environmental nightmares and something else/", updatedInstance.getIndexTitle());
-    assertNotNull(
-      updatedInstance.getIdentifiers().stream().filter(i -> "(OCoLC)1060180367".equals(i.value())).findFirst().get());
-    assertNotNull(
-      updatedInstance.getContributors().stream().filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst()
-        .get());
+    assertNotNull(updatedInstance.getIdentifiers().stream()
+      .filter(i -> "(OCoLC)1060180367".equals(i.value())).findFirst().get());
+    assertNotNull(updatedInstance.getContributors().stream()
+      .filter(c -> "Mazzeno, Laurence W., 1234566".equals(c.name)).findFirst().get());
     assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0dd", updatedInstance.getStatisticalCodeIds().getFirst());
     assertEquals("b5968c9e-cddc-4576-99e3-8e60aed8b0cf", updatedInstance.getNatureOfContentTermIds().getFirst());
     assertNotNull(updatedInstance.getSubjects());
@@ -258,7 +255,7 @@ class MarcBibModifyEventHandlerTest {
     // given
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
-    String expectedAddedField =
+    final String expectedAddedField =
       "{\"856\":{\"subfields\":[{\"u\":\"http://libproxy.smith.edu?url=\"}],\"ind1\":\" \",\"ind2\":\" \"}}";
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -272,12 +269,12 @@ class MarcBibModifyEventHandlerTest {
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifyEventHandler.handle(dataImportEventPayload);
 
-    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
-    Record actualRecord =
+    final DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    final Record actualRecord =
       Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
 
     // then
-    Optional<JsonObject> addedField =
+    final Optional<JsonObject> addedField =
       getFieldFromParsedRecord(actualRecord.getParsedRecord().getContent().toString(), "856");
     assertFalse(dataImportEventPayload.getContext().containsKey(CURRENT_RETRY_NUMBER));
     assertEquals(DI_SRS_MARC_BIB_RECORD_MODIFIED.value(), dataImportEventPayload.getEventType());
@@ -290,6 +287,7 @@ class MarcBibModifyEventHandlerTest {
     verify(sourceStorageClient, never()).putSourceStorageRecordsById(any(), any());
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldModifyMarcBibAndUpdateInstanceAtCentralTenantIfCentralTenantIdExistsInContext()
     throws InterruptedException, ExecutionException, TimeoutException {
@@ -298,7 +296,7 @@ class MarcBibModifyEventHandlerTest {
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
     payloadContext.put("CENTRAL_TENANT_ID", CENTRAL_TENANT_ID);
     payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
-    String expectedAddedField =
+    final String expectedAddedField =
       "{\"856\":{\"subfields\":[{\"u\":\"http://libproxy.smith.edu?url=\"}],\"ind1\":\" \",\"ind2\":\" \"}}";
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -312,15 +310,15 @@ class MarcBibModifyEventHandlerTest {
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifyEventHandler.handle(dataImportEventPayload);
 
-    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
-    JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
-    Instance updatedInstance = Instance.fromJson(instanceJson);
+    final DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    final JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
+    final Instance updatedInstance = Instance.fromJson(instanceJson);
 
-    Record actualRecord =
+    final Record actualRecord =
       Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
 
     // then
-    Optional<JsonObject> addedField =
+    final Optional<JsonObject> addedField =
       getFieldFromParsedRecord(actualRecord.getParsedRecord().getContent().toString(), "856");
     assertTrue(addedField.isPresent());
     assertEquals(expectedAddedField, addedField.get().encode());
@@ -353,6 +351,7 @@ class MarcBibModifyEventHandlerTest {
         .equals(actualRecord.getParsedRecord().getContent().toString())));
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldModifyRecordAndUpdateInstanceAfterOptimisticLockingProcessing()
     throws InterruptedException, ExecutionException, TimeoutException {
@@ -360,7 +359,7 @@ class MarcBibModifyEventHandlerTest {
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
     payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
-    String expectedAddedField =
+    final String expectedAddedField =
       "{\"856\":{\"subfields\":[{\"u\":\"http://libproxy.smith.edu?url=\"}],\"ind1\":\" \",\"ind2\":\" \"}}";
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -374,7 +373,8 @@ class MarcBibModifyEventHandlerTest {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(
-        "Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
+        "Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed "
+        + "(optimistic locking): Stored _version is 2, _version of request is 1",
         409));
       return null;
     }).doAnswer(invocationOnMock -> {
@@ -387,14 +387,14 @@ class MarcBibModifyEventHandlerTest {
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifyEventHandler.handle(dataImportEventPayload);
 
-    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
-    JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
-    Instance updatedInstance = Instance.fromJson(instanceJson);
-    Record actualRecord =
+    final DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    final JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
+    final Instance updatedInstance = Instance.fromJson(instanceJson);
+    final Record actualRecord =
       Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
 
     // then
-    Optional<JsonObject> addedField =
+    final Optional<JsonObject> addedField =
       getFieldFromParsedRecord(actualRecord.getParsedRecord().getContent().toString(), "856");
     assertTrue(addedField.isPresent());
     assertFalse(dataImportEventPayload.getContext().containsKey(CURRENT_RETRY_NUMBER));
@@ -443,7 +443,7 @@ class MarcBibModifyEventHandlerTest {
       Consumer<Success<Instance>> successHandler = invocationOnMock.getArgument(1);
       successHandler.accept(new Success<>(initialInstance));
       return null;
-    }).when(mockedInstanceCollection).findById(anyString(), any(Consumer.class), any(Consumer.class));
+    }).when(mockedInstanceCollection).findById(anyString(), any(), any());
 
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
@@ -462,7 +462,7 @@ class MarcBibModifyEventHandlerTest {
     // then
     DataImportEventPayload eventPayload = future.get();
     assertNotNull(eventPayload);
-    Instance updatedInstance = Instance.fromJson(new JsonObject(eventPayload.getContext().get(INSTANCE.value())));
+    final Instance updatedInstance = Instance.fromJson(new JsonObject(eventPayload.getContext().get(INSTANCE.value())));
     assertFalse(dataImportEventPayload.getContext().containsKey(CURRENT_RETRY_NUMBER));
     assertEquals(DI_SRS_MARC_BIB_RECORD_MODIFIED.value(), dataImportEventPayload.getEventType());
     assertEquals(MAPPING_PROFILE, dataImportEventPayload.getCurrentNode().getContentType());
@@ -472,7 +472,7 @@ class MarcBibModifyEventHandlerTest {
   }
 
   @Test
-  void shouldNotUpdateInstanceIf999ff$iFieldIsBlanks()
+  void shouldNotUpdateInstanceIf999ffiFieldIsBlanks()
     throws InterruptedException, ExecutionException, TimeoutException {
     // given
     HashMap<String, String> payloadContext = new HashMap<>();
@@ -481,7 +481,7 @@ class MarcBibModifyEventHandlerTest {
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(),
       Json.encode(marcRecord.withParsedRecord(new ParsedRecord().withContent(incomingParsedContent))));
     payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
-    String expectedAddedField =
+    final String expectedAddedField =
       "{\"856\":{\"subfields\":[{\"u\":\"http://libproxy.smith.edu?url=\"}],\"ind1\":\" \",\"ind2\":\" \"}}";
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
@@ -495,13 +495,13 @@ class MarcBibModifyEventHandlerTest {
     // when
     CompletableFuture<DataImportEventPayload> future = marcBibModifyEventHandler.handle(dataImportEventPayload);
 
-    DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
-    JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
-    Record actualRecord =
+    final DataImportEventPayload eventPayload = future.get(5, TimeUnit.SECONDS);
+    final JsonObject instanceJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
+    final Record actualRecord =
       Json.decodeValue(dataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value()), Record.class);
 
     // then
-    Optional<JsonObject> addedField =
+    final Optional<JsonObject> addedField =
       getFieldFromParsedRecord(actualRecord.getParsedRecord().getContent().toString(), "856");
     assertFalse(dataImportEventPayload.getContext().containsKey(CURRENT_RETRY_NUMBER));
     assertEquals(DI_SRS_MARC_BIB_RECORD_MODIFIED.value(), dataImportEventPayload.getEventType());
@@ -514,7 +514,7 @@ class MarcBibModifyEventHandlerTest {
   }
 
   @Test
-  void shouldNotUpdateInstanceIfOLErrorExist() {
+  void shouldNotUpdateInstanceIfOlErrorExist() {
     HashMap<String, String> payloadContext = new HashMap<>();
     payloadContext.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
     payloadContext.put(INSTANCE.value(), Json.encode(existingInstance));
@@ -529,7 +529,8 @@ class MarcBibModifyEventHandlerTest {
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
       failureHandler.accept(new Failure(
-        "Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
+        "Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed "
+        + "(optimistic locking): Stored _version is 2, _version of request is 1",
         409));
       return null;
     }).when(mockedInstanceCollection).update(any(), any(), any());

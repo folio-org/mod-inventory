@@ -206,14 +206,13 @@ public class ConsortiumInstanceSharingConsumer implements AsyncRecordHandler<Str
         .orElseGet(() -> Future.failedFuture(new ConsortiumException(
           format(UNSUPPORTED_SOURCE_TYPE_MSG, instanceId, targetTenant, instance.getSource())))))
       .compose(handlerResult -> {
-          String completeMessage = format(INSTANCE_SHARED_MSG, instanceId, targetTenant);
-          sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, completeMessage, kafkaHeaders);
-          return Future.succeededFuture(instanceId);
-        },
-        cause -> {
-          sendErrorResponseAndPrintLogMessage(cause.getMessage(), sharingInstanceMetadata, kafkaHeaders);
-          return Future.failedFuture(cause);
-        });
+        String completeMessage = format(INSTANCE_SHARED_MSG, instanceId, targetTenant);
+        sendCompleteEventToKafka(sharingInstanceMetadata, COMPLETE, completeMessage, kafkaHeaders);
+        return Future.succeededFuture(instanceId);
+      }, cause -> {
+        sendErrorResponseAndPrintLogMessage(cause.getMessage(), sharingInstanceMetadata, kafkaHeaders);
+        return Future.failedFuture(cause);
+      });
   }
 
   private static Optional<InstanceSharingHandlerFactory> checkSourceType(String source) {

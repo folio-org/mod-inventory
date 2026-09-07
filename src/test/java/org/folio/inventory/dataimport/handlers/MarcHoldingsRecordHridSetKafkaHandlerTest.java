@@ -2,7 +2,8 @@ package org.folio.inventory.dataimport.handlers;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler.JOB_EXECUTION_ID_KEY;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -28,10 +29,10 @@ import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.consumers.MarcHoldingsRecordHridSetKafkaHandler;
-import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.storage.Storage;
 import org.folio.okapi.common.XOkapiHeaders;
@@ -142,7 +143,7 @@ class MarcHoldingsRecordHridSetKafkaHandlerTest extends BaseWireMockTest {
   }
 
   @Test
-  void shouldReturnFailedFutureWhenOLErrorExist(VertxTestContext testContext) {
+  void shouldReturnFailedFutureWhenOlErrorExist(VertxTestContext testContext) {
     // given
     Map<String, String> payload = new HashMap<>();
     payload.put(JOB_EXECUTION_ID_KEY, UUID.randomUUID().toString());
@@ -157,7 +158,8 @@ class MarcHoldingsRecordHridSetKafkaHandlerTest extends BaseWireMockTest {
 
     when(holdingsCollectionService.update(any(), any()))
       .thenReturn(Future.failedFuture(new OptimisticLockingException(
-        "Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1")));
+        "Cannot update record 601a8dc4-dee7-48eb-b03f-d02fdf0debd0 because it "
+        + "has been changed (optimistic locking): Stored _version is 2, _version of request is 1")));
 
     // when
     Future<String> future = marcHoldingsHandler.handle(kafkaRecord);

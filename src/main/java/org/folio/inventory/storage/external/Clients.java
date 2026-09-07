@@ -16,6 +16,8 @@ public final class Clients {
   private final CollectionResourceRepository requestStorageRepository;
 
   /**
+   * Creates clients for external storage modules.
+   *
    * @param routingContext - Routing context.
    * @param client         - Http client.
    * @throws InternalServerErrorException - in case a URL parse exception occurred.

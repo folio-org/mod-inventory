@@ -20,8 +20,7 @@ import support.fakes.FakeOkapi;
 public abstract class AbstractExternalStorageTest {
 
   static final String TENANT_ID = "test_tenant";
-  static final String TENANT_TOKEN =
-    "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ";
+  static final String TENANT_TOKEN = "stub_token";
 
   private static final Logger LOGGER = LogManager.getLogger(AbstractExternalStorageTest.class);
 

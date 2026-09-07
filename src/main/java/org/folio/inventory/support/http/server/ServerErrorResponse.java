@@ -5,7 +5,7 @@ import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpServerResponse;
 import org.apache.commons.lang3.StringUtils;
 
-public class ServerErrorResponse {
+public final class ServerErrorResponse {
   private ServerErrorResponse() { }
 
   public static void internalError(HttpServerResponse response, String reason) {

@@ -5,7 +5,6 @@ import static org.folio.inventory.support.CompletableFutures.failedFuture;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.domain.instances.Instance;

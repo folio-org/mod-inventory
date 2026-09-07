@@ -45,9 +45,9 @@ public class OrdersPreloaderHelper {
     };
   }
 
-  private CompletableFuture<Optional<List<String>>> getPoLineCollection(String cql,
-                                                                        DataImportEventPayload eventPayload,
-                                                                        Function<JsonArray, List<String>> convertPreloadResult) {
+  private CompletableFuture<Optional<List<String>>> getPoLineCollection(
+    String cql, DataImportEventPayload eventPayload,
+    Function<JsonArray, List<String>> convertPreloadResult) {
     Context context = constructContext(eventPayload.getTenant(), eventPayload.getToken(), eventPayload.getOkapiUrl(),
       eventPayload.getContext().get(DataImportHeaders.USER_ID), eventPayload.getContext().get(
         XOkapiHeaders.REQUEST_ID.toLowerCase()));

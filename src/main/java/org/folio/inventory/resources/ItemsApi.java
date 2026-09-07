@@ -48,11 +48,11 @@ import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebContext;
-import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.domain.items.CQLQueryRequestDto;
 import org.folio.inventory.domain.items.CirculationNote;
+import org.folio.inventory.domain.items.CqlQueryRequestDto;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.items.ItemStatusName;
@@ -107,7 +107,7 @@ public class ItemsApi extends AbstractInventoryResource {
     router.patch(RELATIVE_ITEMS_PATH + "*").handler(BodyHandler.create());
 
     router.get(RELATIVE_ITEMS_PATH).handler(this::getAll);
-    router.post(RELATIVE_ITEMS_PATH + "/retrieve").handler(this::retrieveAllByCQLBody);
+    router.post(RELATIVE_ITEMS_PATH + "/retrieve").handler(this::retrieveAllByCqlBody);
     router.post(RELATIVE_ITEMS_PATH).handler(this::create);
     router.delete(RELATIVE_ITEMS_PATH).handler(this::deleteAll);
 
@@ -122,10 +122,10 @@ public class ItemsApi extends AbstractInventoryResource {
       .forEach(itemStatusUrl -> registerMarkItemAsHandler(itemStatusUrl.get(), router));
   }
 
-  protected void respondWithManyItems(
-    RoutingContext routingContext,
-    WebContext context,
-    MultipleRecords<Item> wrappedItems) {
+  @SuppressWarnings("checkstyle:MethodLength")
+  protected void respondWithManyItems(RoutingContext routingContext,
+                                      WebContext context,
+                                      MultipleRecords<Item> wrappedItems) {
     List<String> itemIds = wrappedItems.records().stream().map(Item::getId).collect(Collectors.toList());
     if (itemIds.isEmpty()) {
       JsonResponse.success(routingContext.response(),
@@ -282,7 +282,8 @@ public class ItemsApi extends AbstractInventoryResource {
 
         allFutures.add(boundWithPartsFuture);
 
-        CompletableFuture<Void> allDoneFuture = CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }));
+        CompletableFuture<Void> allDoneFuture =
+          CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }));
 
         allDoneFuture.thenAccept(v -> {
           log.info("GET all items: all futures completed");
@@ -389,10 +390,10 @@ public class ItemsApi extends AbstractInventoryResource {
     }
   }
 
-  private void retrieveAllByCQLBody(RoutingContext routingContext) {
+  private void retrieveAllByCqlBody(RoutingContext routingContext) {
     WebContext context = new WebContext(routingContext);
 
-    CQLQueryRequestDto cqlQueryRequestDto = routingContext.body().asPojo(CQLQueryRequestDto.class);
+    CqlQueryRequestDto cqlQueryRequestDto = routingContext.body().asPojo(CqlQueryRequestDto.class);
     String search = cqlQueryRequestDto.getQuery();
 
     PagingParameters pagingParameters = PagingParameters.from(cqlQueryRequestDto);
@@ -727,8 +728,9 @@ public class ItemsApi extends AbstractInventoryResource {
     }, FailureResponseConsumer.serverError(routingContext.response()));
   }
 
-  private void respondWithItemRepresentation(
-    Item item, int responseStatus, RoutingContext routingContext, WebContext webContext) {
+  @SuppressWarnings("checkstyle:MethodLength")
+  private void respondWithItemRepresentation(Item item, int responseStatus, RoutingContext routingContext,
+                                             WebContext webContext) {
     CollectionResourceClient holdingsClient;
     CollectionResourceClient instancesClient;
     CollectionResourceClient materialTypesClient;
@@ -786,7 +788,8 @@ public class ItemsApi extends AbstractInventoryResource {
           setBoundWithTitlesOnItem(item,
             boundWithPartsClient, routingContext));
 
-        CompletableFuture<Void> allDoneFuture = CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }));
+        CompletableFuture<Void> allDoneFuture =
+          CompletableFuture.allOf(allFutures.toArray(new CompletableFuture<?>[] { }));
 
         allDoneFuture.thenAccept(v -> {
           try {
@@ -1085,7 +1088,7 @@ public class ItemsApi extends AbstractInventoryResource {
 
   /**
    * Constructs a JSON array of boundWithTitles containing Instance and
-   * holdingsRecord information
+   * holdingsRecord information.
    *
    * @param boundWithParts  The sort order to be used for the array
    * @param holdingsRecords The holdings records that should populate the array
@@ -1106,9 +1109,9 @@ public class ItemsApi extends AbstractInventoryResource {
       holdingsRecordsByIdMap.put(holdingsRecord.getString("id"), holdingsRecord));
 
     boundWithParts.forEach(boundWithPart -> {
-      JsonObject boundWithTitle = new JsonObject();
-      JsonObject briefHoldingsRecord = new JsonObject();
-      JsonObject briefInstance = new JsonObject();
+      final JsonObject boundWithTitle = new JsonObject();
+      final JsonObject briefHoldingsRecord = new JsonObject();
+      final JsonObject briefInstance = new JsonObject();
       var holdingsRecordId = ((JsonObject) boundWithPart).getString(HOLDINGS_RECORD_ID);
       var holdingsRecord = holdingsRecordsByIdMap.get(holdingsRecordId);
       String instanceId = holdingsRecord.getString(INSTANCE_ID_PROPERTY);

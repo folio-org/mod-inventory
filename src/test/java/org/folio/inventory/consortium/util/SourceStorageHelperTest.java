@@ -74,8 +74,6 @@ class SourceStorageHelperTest {
 
   @Test
   void getSourceMarcByInstanceIdSuccessTest() {
-    var sourceTenant = "consortium";
-
     var mockRecord = new Record();
     mockRecord.setId(INSTANCE_ID_2);
 
@@ -86,10 +84,12 @@ class SourceStorageHelperTest {
     when(httpResponse.bodyAsString()).thenReturn("{\"id\":\"" + INSTANCE_ID_2 + "\"}");
     when(httpResponse.bodyAsJson(Record.class)).thenReturn(mockRecord);
 
-    client.getSourceRecordByInstanceId(INSTANCE_ID_2, sourceTenant, kafkaHeaders).onComplete(result -> {
-      var resultRecord = result.result();
-      assertEquals(INSTANCE_ID_2, resultRecord.getId());
-    });
+    var sourceTenant = "consortium";
+    client.getSourceRecordByInstanceId(INSTANCE_ID_2, sourceTenant, kafkaHeaders)
+      .onComplete(result -> {
+        var resultRecord = result.result();
+        assertEquals(INSTANCE_ID_2, resultRecord.getId());
+      });
   }
 
   @Test

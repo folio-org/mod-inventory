@@ -11,9 +11,9 @@ import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.inventory.consortium.exceptions.StorageOperationException;
 import org.folio.inventory.consortium.handlers.TenantProvider;
-import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.exceptions.NotFoundException;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.kafka.exception.DuplicateEventException;
 
 public class InstanceOperationsHelper {
@@ -46,7 +46,8 @@ public class InstanceOperationsHelper {
     var tenantId = tenantProvider.tenantId();
     LOGGER.info("getInstanceById :: Get instance by InstanceId={} from tenant={}", instanceId, tenantId);
     Promise<Instance> promise = Promise.promise();
-    tenantProvider.instanceCollection().findById(instanceId, success -> {
+    tenantProvider.instanceCollection()
+      .findById(instanceId, success -> {
         if (success.result() == null) {
           String errorMessage =
             format("Can't find instance by InstanceId=%s on tenant=%s.", instanceId, tenantId);
@@ -57,8 +58,7 @@ public class InstanceOperationsHelper {
             tenantId);
           promise.complete(success.result());
         }
-      },
-      failure -> {
+      }, failure -> {
         LOGGER.error(
           format("getInstanceById :: Error retrieving instance by InstanceId=%s from tenant=%s - %s, status code %s",
             instanceId, tenantId, failure.reason(), failure.statusCode()));

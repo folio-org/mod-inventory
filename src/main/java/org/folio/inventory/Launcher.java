@@ -38,7 +38,7 @@ public class Launcher {
   private static final String INSTANCE_INGRESS_VERTICLE_NUMBER_CONFIG =
     "inventory.kafka.InstanceIngressConsumerVerticle.instancesNumber";
   private static final int CANCELLED_JOBS_CONSUMER_VERTICLE_INSTANCES_NUMBER = 1;
-  private static final VertxAssistant vertxAssistant = new VertxAssistant();
+  private static final VertxAssistant VERTX_ASSISTANT = new VertxAssistant();
 
   private static String inventoryModuleDeploymentId;
   private static String consumerVerticleDeploymentId;
@@ -48,6 +48,7 @@ public class Launcher {
   private static String instanceIngressConsumerVerticleDeploymentId;
   private static String cancelledJobsConsumerVerticleDeploymentId;
 
+  @SuppressWarnings("checkstyle:UncommentedMain")
   public static void main(String[] args) throws InterruptedException, ExecutionException, TimeoutException {
     Logging.initialiseFormat();
 
@@ -70,11 +71,11 @@ public class Launcher {
 
   private static void start(Map<String, Object> config) {
     final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
-    vertxAssistant.start();
+    VERTX_ASSISTANT.start();
     log.info("Server Starting");
 
     CompletableFuture<String> deployed = new CompletableFuture<>();
-    vertxAssistant.deployVerticle(InventoryVerticle.class.getName(), config, deployed);
+    VERTX_ASSISTANT.deployVerticle(InventoryVerticle.class.getName(), config, deployed);
     deployed.thenAccept(v -> log.info("Server Started"));
 
     try {
@@ -126,17 +127,17 @@ public class Launcher {
     CompletableFuture<String> future6 = new CompletableFuture<>();
     CompletableFuture<String> future7 = new CompletableFuture<>();
 
-    vertxAssistant.deployVerticle(DataImportConsumerVerticle.class.getName(),
+    VERTX_ASSISTANT.deployVerticle(DataImportConsumerVerticle.class.getName(),
       consumerConfig, dataImportConsumerVerticleNumber, future1);
-    vertxAssistant.deployVerticle(MarcHridSetConsumerVerticle.class.getName(),
+    VERTX_ASSISTANT.deployVerticle(MarcHridSetConsumerVerticle.class.getName(),
       consumerConfig, instanceHridSetConsumerVerticleNumber, future2);
-    vertxAssistant.deployVerticle(MarcBibUpdateConsumerVerticle.class.getName(),
+    VERTX_ASSISTANT.deployVerticle(MarcBibUpdateConsumerVerticle.class.getName(),
       consumerConfig, marcBibUpdateConsumerVerticleNumber, future4);
-    vertxAssistant.deployVerticle(ConsortiumInstanceSharingConsumerVerticle.class.getName(),
+    VERTX_ASSISTANT.deployVerticle(ConsortiumInstanceSharingConsumerVerticle.class.getName(),
       consumerConfig, consortiumInstanceSharingVerticleNumber, future5);
-    vertxAssistant.deployVerticle(InstanceIngressConsumerVerticle.class.getName(),
+    VERTX_ASSISTANT.deployVerticle(InstanceIngressConsumerVerticle.class.getName(),
       consumerConfig, instanceIngressConsumerVerticleNumber, future6);
-    vertxAssistant.deployVerticle(CancelledJobExecutionConsumerVerticle.class.getName(),
+    VERTX_ASSISTANT.deployVerticle(CancelledJobExecutionConsumerVerticle.class.getName(),
       consumerConfig, CANCELLED_JOBS_CONSUMER_VERTICLE_INSTANCES_NUMBER, future7);
 
     consumerVerticleDeploymentId = future1.get(20, TimeUnit.SECONDS);
@@ -153,14 +154,14 @@ public class Launcher {
     CompletableFuture<Void> stopped = new CompletableFuture<>();
     log.info("Server Stopping");
 
-    vertxAssistant.undeployVerticle(inventoryModuleDeploymentId)
-      .thenCompose(v -> vertxAssistant.undeployVerticle(consumerVerticleDeploymentId))
-      .thenCompose(v -> vertxAssistant.undeployVerticle(marcInstHridSetConsumerVerticleDeploymentId))
-      .thenCompose(v -> vertxAssistant.undeployVerticle(marcBibUpdateConsumerVerticleDeploymentId))
-      .thenCompose(v -> vertxAssistant.undeployVerticle(consortiumInstanceSharingVerticleDeploymentId))
-      .thenCompose(v -> vertxAssistant.undeployVerticle(instanceIngressConsumerVerticleDeploymentId))
-      .thenCompose(v -> vertxAssistant.undeployVerticle(cancelledJobsConsumerVerticleDeploymentId))
-      .thenAccept(v -> vertxAssistant.stop(stopped));
+    VERTX_ASSISTANT.undeployVerticle(inventoryModuleDeploymentId)
+      .thenCompose(v -> VERTX_ASSISTANT.undeployVerticle(consumerVerticleDeploymentId))
+      .thenCompose(v -> VERTX_ASSISTANT.undeployVerticle(marcInstHridSetConsumerVerticleDeploymentId))
+      .thenCompose(v -> VERTX_ASSISTANT.undeployVerticle(marcBibUpdateConsumerVerticleDeploymentId))
+      .thenCompose(v -> VERTX_ASSISTANT.undeployVerticle(consortiumInstanceSharingVerticleDeploymentId))
+      .thenCompose(v -> VERTX_ASSISTANT.undeployVerticle(instanceIngressConsumerVerticleDeploymentId))
+      .thenCompose(v -> VERTX_ASSISTANT.undeployVerticle(cancelledJobsConsumerVerticleDeploymentId))
+      .thenAccept(v -> VERTX_ASSISTANT.stop(stopped));
 
     stopped.thenAccept(v -> log.info("Server Stopped"));
   }

@@ -27,7 +27,8 @@ public class ConsortiumServiceImpl implements ConsortiumService {
   private static final Logger LOGGER = LogManager.getLogger(ConsortiumServiceImpl.class);
   private static final String SHARE_INSTANCE_ENDPOINT = "/consortia/%s/sharing/instances";
   private static final String SHARING_INSTANCE_ERROR =
-    "Error during sharing Instance for sourceTenantId: %s, targetTenantId: %s, instanceIdentifier: %s, status code: %s, response message: %s";
+    "Error during sharing Instance for sourceTenantId: "
+    + "%s, targetTenantId: %s, instanceIdentifier: %s, status code: %s, response message: %s";
   private final HttpClient httpClient;
   private final ConsortiumDataCache consortiumDataCache;
 
@@ -41,13 +42,14 @@ public class ConsortiumServiceImpl implements ConsortiumService {
                                                       ConsortiumConfiguration consortiumConfiguration) {
     LOGGER.info("createShadowInstance:: Creating shadow instance for instanceId: {} in tenantId: {}",
       instanceId, context.getTenantId());
-    Context centralTenantContext =
-      constructContext(consortiumConfiguration.centralTenantId(), context.getToken(), context.getOkapiLocation(),
-        context.getUserId(), context.getRequestId());
     SharingInstance sharingInstance = new SharingInstance();
     sharingInstance.setSourceTenantId(consortiumConfiguration.centralTenantId());
     sharingInstance.setInstanceIdentifier(UUID.fromString(instanceId));
     sharingInstance.setTargetTenantId(context.getTenantId());
+
+    Context centralTenantContext =
+      constructContext(consortiumConfiguration.centralTenantId(), context.getToken(), context.getOkapiLocation(),
+        context.getUserId(), context.getRequestId());
     return shareInstance(centralTenantContext, consortiumConfiguration.consortiumId(), sharingInstance);
   }
 

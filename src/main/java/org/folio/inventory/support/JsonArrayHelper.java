@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.NonNull;
 
-public class JsonArrayHelper {
+public final class JsonArrayHelper {
   private JsonArrayHelper() { }
 
   public static List<JsonObject> toList(@NonNull JsonObject json, String propertyName) {
@@ -35,6 +35,12 @@ public class JsonArrayHelper {
       .collect(Collectors.toList());
   }
 
+  public static <T> List<T> toList(JsonArray array, Function<JsonObject, T> mapper) {
+    return toList(array).stream()
+      .map(mapper)
+      .collect(Collectors.toList());
+  }
+
   public static List<String> toListOfStrings(@NonNull JsonObject json, String propertyName) {
     return toListOfStrings(json.getJsonArray(propertyName));
   }
@@ -46,12 +52,6 @@ public class JsonArrayHelper {
 
     return IntStream.range(0, array.size())
       .mapToObj(array::getString)
-      .collect(Collectors.toList());
-  }
-
-  public static <T> List<T> toList(JsonArray array, Function<JsonObject, T> mapper) {
-    return toList(array).stream()
-      .map(mapper)
       .collect(Collectors.toList());
   }
 }
