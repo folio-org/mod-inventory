@@ -423,7 +423,7 @@ class AdditionalFieldsUtilTest {
     boolean added = addDataFieldToMarcRecord(marcRecord, "999", 'f', 'f', 'i', instanceId);
     // then
     assertTrue(added);
-    assertEquals(expectedParsedContent, parsedRecord.getContent());
+    assertJsonEquals(expectedParsedContent, parsedRecord);
   }
 
   @Test
@@ -501,7 +501,7 @@ class AdditionalFieldsUtilTest {
     // when
     AdditionalFieldsUtil.move001To035(marcRecord);
     // then
-    assertEquals(expectedParsedContent, parsedRecord.getContent());
+    assertJsonEquals(expectedParsedContent, parsedRecord);
   }
 
   @Test
@@ -596,7 +596,7 @@ class AdditionalFieldsUtilTest {
     // when
     AdditionalFieldsUtil.move001To035(marcRecord);
     // then
-    assertEquals(expectedParsedContent, parsedRecord.getContent());
+    assertJsonEquals(expectedParsedContent, parsedRecord);
   }
 
   @Test
@@ -677,7 +677,7 @@ class AdditionalFieldsUtilTest {
       .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
     // when
     AdditionalFieldsUtil.normalize035(marcRecord);
-    assertEquals(expectedParsedContent, parsedRecord.getContent());
+    assertJsonEquals(expectedParsedContent, parsedRecord);
   }
 
   @Test
@@ -974,7 +974,7 @@ class AdditionalFieldsUtilTest {
       .withExternalIdsHolder(new ExternalIdsHolder().withInstanceId("001").withInstanceHrid("in001"));
     // when
     AdditionalFieldsUtil.normalize035(marcRecord);
-    assertEquals(expectedParsedContent, parsedRecord.getContent());
+    assertJsonEquals(expectedParsedContent, parsedRecord);
   }
 
   @Test
@@ -1052,7 +1052,7 @@ class AdditionalFieldsUtilTest {
     // when
     AdditionalFieldsUtil.move001To035(marcRecord);
     // then
-    assertEquals(expectedParsedContent, parsedRecord.getContent());
+    assertJsonEquals(expectedParsedContent, parsedRecord);
   }
 
   @Test
@@ -1222,7 +1222,7 @@ class AdditionalFieldsUtilTest {
     // when
     AdditionalFieldsUtil.fill001FieldInMarcRecord(marcRecord, null);
     // then
-    assertEquals(expectedParsedContent, parsedRecord.getContent());
+    assertJsonEquals(expectedParsedContent, parsedRecord);
   }
 
   @Test
@@ -1808,7 +1808,7 @@ class AdditionalFieldsUtilTest {
     // when
     AdditionalFieldsUtil.fillHrIdFieldInMarcRecord(marcRecord, "in001");
     // then
-    assertEquals(expectedParsedContent, parsedRecord.getContent());
+    assertJsonEquals(expectedParsedContent, parsedRecord);
   }
 
   @Test
@@ -1977,7 +1977,7 @@ class AdditionalFieldsUtilTest {
     // when
     AdditionalFieldsUtil.fillHrIdFieldInMarcRecord(marcRecord, "in001");
     // then
-    assertEquals(expectedParsedContent, parsedRecord.getContent());
+    assertJsonEquals(expectedParsedContent, parsedRecord);
   }
 
   @Test
@@ -2072,7 +2072,7 @@ class AdditionalFieldsUtilTest {
     // when
     AdditionalFieldsUtil.remove035FieldWhenRecordContainsHrId(marcRecord);
     // then
-    assertEquals(expectedParsedContent, parsedRecord.getContent());
+    assertJsonEquals(expectedParsedContent, parsedRecord);
   }
 
   @Test
@@ -2456,6 +2456,10 @@ class AdditionalFieldsUtilTest {
 
     // then
     assertThat(exception.getMessage()).contains(recordWithNoParsedRecord.getId());
+  }
+
+  private void assertJsonEquals(String expectedParsedContent, ParsedRecord parsedRecord) {
+    assertEquals(new JsonObject(expectedParsedContent), new JsonObject(parsedRecord.getContent().toString()));
   }
 
   private void shouldReturnEmptyOptional(String parsedContent) {

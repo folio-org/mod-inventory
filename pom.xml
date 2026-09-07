@@ -474,14 +474,6 @@
                   <sourceFile>${project.build.directory}/DeploymentDescriptor-template.json</sourceFile>
                   <destinationFile>${project.build.directory}/DeploymentDescriptor.json</destinationFile>
                 </fileSet>
-                <fileSet>
-                  <sourceFile>${project.build.directory}/Activate-template.json</sourceFile>
-                  <destinationFile>${project.build.directory}/Activate.json</destinationFile>
-                </fileSet>
-                <fileSet>
-                  <sourceFile>${project.build.directory}/Discovery-template.json</sourceFile>
-                  <destinationFile>${project.build.directory}/Discovery.json</destinationFile>
-                </fileSet>
               </fileSets>
             </configuration>
           </execution>

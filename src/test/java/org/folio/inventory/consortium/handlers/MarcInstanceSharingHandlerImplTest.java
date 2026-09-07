@@ -49,10 +49,12 @@ import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.services.EntitiesLinksServiceImpl;
 import org.folio.inventory.storage.Storage;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -2774,10 +2776,7 @@ class MarcInstanceSharingHandlerImplTest {
     verifySharedLinksCreation(1);
 
     verify(restDataImportHelper, times(1))
-      .importMarcRecord(Mockito.argThat(marcRecord ->
-          MarcContentCodec.canonicalizeJson(marcRecord.getParsedRecord().getContent()).getJsonArray("fields").encode()
-            .equals(PARSED_RECORD_FIELDS_AFTER_UNLINK)),
-        any(), any());
+      .importMarcRecord(Mockito.argThat(hasExpectedFields(PARSED_RECORD_FIELDS_AFTER_UNLINK)), any(), any());
 
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
       assertEquals(INSTANCE_ID_1, result);
@@ -2834,9 +2833,7 @@ class MarcInstanceSharingHandlerImplTest {
       assertEquals(INSTANCE_ID_1, result);
 
       verify(restDataImportHelper, times(1))
-        .importMarcRecord(Mockito.argThat(marcRecord ->
-            MarcContentCodec.canonicalizeJson(marcRecord.getParsedRecord().getContent())
-              .getJsonArray("fields").encode().equals(PARSED_RECORD_FIELDS_AFTER_UNLINK_LOCAL_LINKS)),
+        .importMarcRecord(Mockito.argThat(hasExpectedFields(PARSED_RECORD_FIELDS_AFTER_UNLINK_LOCAL_LINKS)),
           any(), any());
 
       var updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
@@ -3117,6 +3114,13 @@ class MarcInstanceSharingHandlerImplTest {
         targetInstanceWithNonMarcData.getNatureOfContentTermIds());
       testContext.completeNow();
     })));
+  }
+
+  private @NonNull ArgumentMatcher<Record> hasExpectedFields(
+    String parsedRecordFieldsAfterUnlinkLocalLinks) {
+    return marcRecord ->
+      MarcContentCodec.canonicalizeJson(marcRecord.getParsedRecord().getContent()).getJsonArray("fields")
+        .equals(new JsonArray(parsedRecordFieldsAfterUnlinkLocalLinks));
   }
 
   private void setupMarcHandler() {

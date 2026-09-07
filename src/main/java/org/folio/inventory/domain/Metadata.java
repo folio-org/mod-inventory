@@ -2,12 +2,25 @@ package org.folio.inventory.domain;
 
 import io.vertx.core.json.JsonObject;
 
-public record Metadata(String createdDate, String createdByUserId, String updatedDate, String updatedByUserId) {
+public class Metadata {
   // JSON property names
   public static final String CREATED_DATE_KEY = "createdDate";
   public static final String CREATED_BY_USER_ID_KEY = "createdByUserId";
   public static final String UPDATED_DATE_KEY = "updatedDate";
   public static final String UPDATED_BY_USER_ID_KEY = "updatedByUserId";
+
+  public final String createdDate;
+  public final String createdByUserId;
+  public final String updatedDate;
+  public final String updatedByUserId;
+
+  public Metadata(String createdDate, String createdByUserId,
+                  String updatedDate, String updatedByUserId) {
+    this.createdDate = createdDate;
+    this.createdByUserId = createdByUserId;
+    this.updatedDate = updatedDate;
+    this.updatedByUserId = updatedByUserId;
+  }
 
   public Metadata(JsonObject json) {
     if (json != null) {

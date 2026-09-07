@@ -1,5 +1,0 @@
-{
-  "srvcId": "${artifactId}-${version}",
-  "instId": "instanceidhere",
-  "url": "directaddresshere"
-}

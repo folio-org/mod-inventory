@@ -414,7 +414,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
        "generation": %d,
        "parsedRecord": {
          "content": {
-           "leader": "00574nam22001211a4500",
+           "leader": "00574nam  22001211a 4500",
            "fields": [
              {
                "035": {
@@ -3169,7 +3169,7 @@ class ReplaceInstanceEventHandlerTest extends BaseWireMockTest {
     assertThat(createdInstance.getString("_version"), is(INSTANCE_VERSION_AS_STRING));
     var updatedBib = actualDataImportEventPayload.getContext().get(MARC_BIBLIOGRAPHIC.value());
     var updatedBibContent = new JsonObject(updatedBib).getJsonObject("parsedRecord").getString("content");
-    assertThat(updatedBibContent, is(expectedParsedContent));
+    assertThat(new JsonObject(updatedBibContent), is(new JsonObject(expectedParsedContent)));
     verify(sourceStorageClient).getSourceStorageRecordsFormattedById(anyString(), eq(INSTANCE.value()));
     WIRE_MOCK.verify(1, getRequestedFor(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true)));
 
