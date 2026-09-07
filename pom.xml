@@ -558,7 +558,7 @@
           <useSystemClassLoader>false</useSystemClassLoader>
           <includes>
             <include>org/folio/inventory/**</include>
-            <include>**/api/ApiTestSuite.class</include>
+            <include>**/api/ApiTestSuite.java</include>
           </includes>
         </configuration>
       </plugin>
