@@ -1,10 +1,13 @@
 package org.folio.inventory.support.http.client;
 
 import io.vertx.core.buffer.Buffer;
+import lombok.experimental.UtilityClass;
 
+@UtilityClass
 public class BufferHelper {
+
   public static String stringFromBuffer(Buffer buffer) {
-    if(buffer.length() == 0) {
+    if (buffer.length() == 0) {
       return "";
     }
 

@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import org.folio.DataImportEventPayload;
-import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.AbstractPreloader;
 import org.folio.inventory.domain.SearchableCollection;
@@ -18,6 +17,7 @@ import org.folio.inventory.storage.Storage;
 import org.folio.processing.matching.loader.LoadResult;
 import org.folio.processing.matching.loader.query.LoadQuery;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 
 public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
 
@@ -26,8 +26,8 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
   private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
   private static final String EMPTY_ARRAY = "[]";
 
-  private Storage storage;
-  private AbstractPreloader preloader;
+  private final Storage storage;
+  private final AbstractPreloader preloader;
 
   public HoldingLoader(Storage storage, AbstractPreloader preloader) {
     this.storage = storage;
@@ -37,7 +37,7 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
   @Override
   public CompletableFuture<LoadResult> loadEntity(LoadQuery loadQuery, DataImportEventPayload eventPayload) {
     return preloader.preload(loadQuery, eventPayload)
-            .thenCompose(query -> super.loadEntity(query, eventPayload));
+      .thenCompose(query -> super.loadEntity(query, eventPayload));
   }
 
   @Override
@@ -72,16 +72,6 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
     return cqlSubMatch;
   }
 
-  private static boolean isNotNullOrEmpty(String value) {
-    if (value == null || value.equals(EMPTY_ARRAY))
-      return false;
-    return isNotEmpty(value);
-  }
-
-  private String getConditionByMultipleMarcBibMatchResult(DataImportEventPayload eventPayload) {
-    return getConditionByMultipleValues(INSTANCE_ID_FIELD, eventPayload, INSTANCES_IDS_KEY);
-  }
-
   @Override
   protected String mapEntityToJsonString(HoldingsRecord holdingsRecord) {
     return Json.encode(holdingsRecord);
@@ -94,5 +84,16 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
       .collect(Collectors.toList());
 
     return Json.encode(idList);
+  }
+
+  private static boolean isNotNullOrEmpty(String value) {
+    if (value == null || value.equals(EMPTY_ARRAY)) {
+      return false;
+    }
+    return isNotEmpty(value);
+  }
+
+  private String getConditionByMultipleMarcBibMatchResult(DataImportEventPayload eventPayload) {
+    return getConditionByMultipleValues(INSTANCE_ID_FIELD, eventPayload, INSTANCES_IDS_KEY);
   }
 }

@@ -1,24 +1,24 @@
 package org.folio.inventory.consortium.consumers;
 
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.folio.inventory.ConsortiumInstanceSharingConsumerVerticle;
-import org.folio.inventory.KafkaTest;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@RunWith(VertxUnitRunner.class)
-public class ConsortiumInstanceSharingConsumerVerticleTest extends KafkaTest {
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+import org.folio.inventory.verticle.ConsortiumInstanceSharingConsumerVerticle;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import support.KafkaTest;
+
+@ExtendWith(VertxExtension.class)
+class ConsortiumInstanceSharingConsumerVerticleTest extends KafkaTest {
+
   @Test
-  public void shouldDeployVerticle(TestContext context) {
-
-    Async async = context.async();
+  void shouldDeployVerticle(VertxTestContext testContext) {
     vertxAssistant.getVertx()
       .deployVerticle(ConsortiumInstanceSharingConsumerVerticle.class.getName(), deploymentOptions)
-      .onComplete(ar -> {
-        context.assertTrue(ar.succeeded());
-        async.complete();
-      });
+      .onComplete(testContext.succeeding(id -> testContext.verify(() -> {
+        assertNotNull(id);
+        testContext.completeNow();
+      })));
   }
 }

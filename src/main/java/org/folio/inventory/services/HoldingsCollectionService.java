@@ -1,22 +1,21 @@
 package org.folio.inventory.services;
 
+import static java.lang.String.format;
+
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import java.io.UnsupportedEncodingException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
-import org.folio.rest.jaxrs.model.HoldingsRecord;
-import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.domain.HoldingsRecordCollection;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.exceptions.NotFoundException;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.processing.exceptions.EventProcessingException;
-
-import java.io.UnsupportedEncodingException;
-
-import static java.lang.String.format;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 
 public class HoldingsCollectionService {
   private static final Logger LOGGER = LogManager.getLogger(HoldingsCollectionService.class);
@@ -28,16 +27,17 @@ public class HoldingsCollectionService {
     try {
       sourceCollection.findByCql(format("name=%s", name), PagingParameters.defaults(),
         findResult -> {
-          if (findResult.getResult() != null && findResult.getResult().totalRecords == 1) {
-            var sourceId = findResult.getResult().records.getFirst().getId();
+          if (findResult.result() != null && findResult.result().totalRecords() == 1) {
+            var sourceId = findResult.result().records().getFirst().getId();
             promise.complete(sourceId);
           } else {
             promise.fail(new EventProcessingException("No source id found for holdings with name MARC"));
           }
         },
         failure -> {
-          LOGGER.error(format(ERROR_HOLDING_MSG + ". StatusCode: %s. Message: %s", failure.getStatusCode(), failure.getReason()));
-          promise.fail(new EventProcessingException(failure.getReason()));
+          LOGGER.error(
+            format(ERROR_HOLDING_MSG + ". StatusCode: %s. Message: %s", failure.statusCode(), failure.reason()));
+          promise.fail(new EventProcessingException(failure.reason()));
         });
     } catch (UnsupportedEncodingException e) {
       LOGGER.error(ERROR_HOLDING_MSG, e);
@@ -50,18 +50,18 @@ public class HoldingsCollectionService {
   public Future<HoldingsRecord> getById(String holdingsId,
                                         HoldingsRecordCollection holdingsRecordCollection) {
     Promise<HoldingsRecord> promise = Promise.promise();
-    holdingsRecordCollection.findById(holdingsId, success -> {
-        if (success.getResult() == null) {
+    holdingsRecordCollection
+      .findById(holdingsId, success -> {
+        if (success.result() == null) {
           LOGGER.error("Can't find Holdings by id: {} ", holdingsId);
           promise.fail(new NotFoundException(format("Can't find Holdings by id: %s ", holdingsId)));
         } else {
-          promise.complete(success.getResult());
+          promise.complete(success.result());
         }
-      },
-      failure -> {
-        var reason = failure.getReason();
+      }, failure -> {
+        var reason = failure.reason();
         var message = format("Error retrieving Holdings by id %s - %s, status code %s", holdingsId, reason,
-          failure.getStatusCode());
+          failure.statusCode());
         LOGGER.error(message);
         promise.fail(reason);
       });
@@ -73,11 +73,11 @@ public class HoldingsCollectionService {
     Promise<HoldingsRecord> promise = Promise.promise();
     holdingsRecordCollection.update(holdingsRecord, success -> promise.complete(holdingsRecord),
       failure -> {
-        if (failure.getStatusCode() == HttpStatus.SC_CONFLICT) {
-          promise.fail(new OptimisticLockingException(failure.getReason()));
+        if (failure.statusCode() == HttpStatus.SC_CONFLICT) {
+          promise.fail(new OptimisticLockingException(failure.reason()));
         } else {
-          var reason = failure.getReason();
-          var message = format("Error updating Holdings - %s, status code %s", reason, failure.getStatusCode());
+          var reason = failure.reason();
+          var message = format("Error updating Holdings - %s, status code %s", reason, failure.statusCode());
           LOGGER.error(message);
           promise.fail(reason);
         }
@@ -90,16 +90,18 @@ public class HoldingsCollectionService {
     try {
       instanceCollection.findByCql(format("hrid==%s", instanceHrid), PagingParameters.defaults(),
         findResult -> {
-          if (findResult.getResult() != null && findResult.getResult().totalRecords == 1) {
-            var instanceId = findResult.getResult().records.getFirst().getId();
+          if (findResult.result() != null && findResult.result().totalRecords() == 1) {
+            var instanceId = findResult.result().records().getFirst().getId();
             promise.complete(instanceId);
-          }else{
-            promise.fail(new EventProcessingException("No instance id found for marc holdings with hrid: " + instanceHrid));
+          } else {
+            promise.fail(
+              new EventProcessingException("No instance id found for marc holdings with hrid: " + instanceHrid));
           }
         },
         failure -> {
-          LOGGER.error(format(ERROR_HOLDING_MSG + ". StatusCode: %s. Message: %s", failure.getStatusCode(), failure.getReason()));
-          promise.fail(new EventProcessingException(failure.getReason()));
+          LOGGER.error(
+            format(ERROR_HOLDING_MSG + ". StatusCode: %s. Message: %s", failure.statusCode(), failure.reason()));
+          promise.fail(new EventProcessingException(failure.reason()));
         });
     } catch (UnsupportedEncodingException e) {
       LOGGER.error(ERROR_HOLDING_MSG, e);
@@ -107,5 +109,4 @@ public class HoldingsCollectionService {
     }
     return promise.future();
   }
-
 }

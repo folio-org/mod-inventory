@@ -5,16 +5,18 @@ import io.vertx.core.ThreadingModel;
 import io.vertx.core.Verticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.lang.invoke.MethodHandles;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import lombok.Getter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
+@Getter
 public class VertxAssistant {
+
   private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
   private Vertx vertx;
@@ -27,10 +29,6 @@ public class VertxAssistant {
     if (this.vertx == null) {
       this.vertx = Vertx.vertx();
     }
-  }
-
-  public Vertx getVertx() {
-    return vertx;
   }
 
   public void stop() {
@@ -59,7 +57,7 @@ public class VertxAssistant {
                              Map<String, Object> config,
                              int verticleInstancesNumber,
                              CompletableFuture<String> deployed) {
-    long startTime = System.currentTimeMillis();
+    final long startTime = System.currentTimeMillis();
 
     DeploymentOptions options = new DeploymentOptions();
     options.setConfig(new JsonObject(config));
@@ -88,11 +86,11 @@ public class VertxAssistant {
       .setInstances(verticleInstancesNumber);
 
     vertx.deployVerticle(verticleSupplier, options)
-        .onSuccess(result -> {
-          long elapsedTime = System.currentTimeMillis() - startTime;
-          log.info("{} deployed in {} milliseconds", verticleClass, elapsedTime);
-          deployed.complete(result);
-        }).onFailure(deployed::completeExceptionally);
+      .onSuccess(result -> {
+        long elapsedTime = System.currentTimeMillis() - startTime;
+        log.info("{} deployed in {} milliseconds", verticleClass, elapsedTime);
+        deployed.complete(result);
+      }).onFailure(deployed::completeExceptionally);
   }
 
   public void undeployVerticle(String deploymentId,

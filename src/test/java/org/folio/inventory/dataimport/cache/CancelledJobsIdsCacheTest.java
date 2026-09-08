@@ -1,39 +1,37 @@
 package org.folio.inventory.dataimport.cache;
 
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-
-public class CancelledJobsIdsCacheTest {
+class CancelledJobsIdsCacheTest {
 
   private CancelledJobsIdsCache cache;
 
-  @Before
-  public void setUp() {
-    cache = new CancelledJobsIdsCache();
+  @BeforeEach
+  void setUp() {
+    cache = CancelledJobsIdsCache.getInstance(true);
   }
 
   @Test
-  public void shouldIdAddToCache() {
-    String jobId = UUID.randomUUID().toString();
+  void shouldIdAddToCache() {
+    var jobId = UUID.randomUUID().toString();
     cache.put(jobId);
     assertTrue(cache.contains(jobId));
   }
 
   @Test
-  public void shouldReturnFalseForNonExistentId() {
-    String jobId = UUID.randomUUID().toString();
+  void shouldReturnFalseForNonExistentId() {
+    var jobId = UUID.randomUUID().toString();
     assertFalse(cache.contains(jobId));
   }
 
   @Test
-  public void shouldThrowExceptionIfJobIdIsNull() {
+  void shouldThrowExceptionIfJobIdIsNull() {
     assertThrows(NullPointerException.class, () -> cache.contains(null));
   }
-
 }

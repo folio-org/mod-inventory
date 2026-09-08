@@ -1,10 +1,28 @@
 package org.folio.inventory.dataimport.handlers.actions.modify;
 
+import static java.lang.String.format;
+import static java.util.Objects.isNull;
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.folio.ActionProfile.Action.MODIFY;
+import static org.folio.ActionProfile.FolioRecord.INSTANCE;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_I;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
+import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.getTenant;
+import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
+import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
+
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.ActionProfile;
@@ -12,15 +30,18 @@ import org.folio.DataImportEventPayload;
 import org.folio.HttpStatus;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
+import org.folio.dataimport.util.DataImportHeaders;
+import org.folio.dataimport.util.FolioHeaders;
 import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.DeleteRuleFor999FieldCache;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
 import org.folio.inventory.dataimport.util.ParsedRecordUtil;
 import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.exceptions.OptimisticLockingException;
+import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.events.services.handler.EventHandler;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
@@ -31,44 +52,30 @@ import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static java.lang.String.format;
-import static java.util.Objects.isNull;
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.folio.ActionProfile.Action.MODIFY;
-import static org.folio.ActionProfile.FolioRecord.INSTANCE;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.OKAPI_REQUEST_ID;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.PAYLOAD_USER_ID;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
-import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.getTenant;
-import static org.folio.inventory.dataimport.util.LoggerUtil.logParametersEventHandler;
-import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
-
 public abstract class AbstractModifyEventHandler implements EventHandler {
   private static final Logger LOGGER = LogManager.getLogger(AbstractModifyEventHandler.class);
   private static final String PAYLOAD_HAS_NO_DATA_MSG =
     "Failed to handle event payload, cause event payload context does not contain required data to modify MARC record";
-  private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG = "MappingParameters snapshot was not found by jobExecutionId '%s'";
+  private static final String MAPPING_PARAMETERS_NOT_FOUND_MSG =
+    "MappingParameters snapshot was not found by jobExecutionId '%s'";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
   private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
-  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
-  private static final String FAILED_TO_UPDATE_RECORD_ERROR_MESSAGE = "Failed to update MARC record with id: %s during modify for tenant %s. ";
+  private static final int MAX_RETRIES_COUNT =
+    Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
+  private static final String FAILED_TO_UPDATE_RECORD_ERROR_MESSAGE =
+    "Failed to update MARC record with id: %s during modify for tenant %s. ";
   private final MappingMetadataCache mappingMetadataCache;
   private final DeleteRuleFor999FieldCache deleteRuleFor999FieldCache;
   private final InstanceUpdateDelegate instanceUpdateDelegate;
   private final PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper;
   private final HttpClient client;
 
-  protected AbstractModifyEventHandler(MappingMetadataCache mappingMetadataCache, DeleteRuleFor999FieldCache deleteRuleFor999FieldCache,
-                                       InstanceUpdateDelegate instanceUpdateDelegate, PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper, HttpClient client) {
+  protected AbstractModifyEventHandler(MappingMetadataCache mappingMetadataCache,
+                                       DeleteRuleFor999FieldCache deleteRuleFor999FieldCache,
+                                       InstanceUpdateDelegate instanceUpdateDelegate,
+                                       PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
+                                       HttpClient client) {
     this.mappingMetadataCache = mappingMetadataCache;
     this.deleteRuleFor999FieldCache = deleteRuleFor999FieldCache;
     this.instanceUpdateDelegate = instanceUpdateDelegate;
@@ -86,17 +93,21 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
         LOGGER.warn(PAYLOAD_HAS_NO_DATA_MSG);
         return CompletableFuture.failedFuture(new EventProcessingException(PAYLOAD_HAS_NO_DATA_MSG));
       }
-      LOGGER.info("handle:: Processing {} modifying starting with jobExecutionId: {}.", modifiedEntityType(), payload.getJobExecutionId());
+      LOGGER.info("handle:: Processing {} modifying starting with jobExecutionId: {}.", modifiedEntityType(),
+        payload.getJobExecutionId());
       Context localTenantContext = constructContext(payload.getTenant(), payload.getToken(), payload.getOkapiUrl(),
-        payloadContext.get(PAYLOAD_USER_ID), payloadContext.get(OKAPI_REQUEST_ID));
+        payloadContext.get(DataImportHeaders.USER_ID), payloadContext.get(XOkapiHeaders.REQUEST_ID.toLowerCase()));
 
       mappingMetadataCache.get(payload.getJobExecutionId(), localTenantContext)
         .map(mapMappingMetaDataOrFail(format(MAPPING_PARAMETERS_NOT_FOUND_MSG, payload.getJobExecutionId())))
-        .compose(mappingMetadataDto -> modifyRecord(payload, getMappingParameters(mappingMetadataDto)).map(mappingMetadataDto))
+        .compose(
+          mappingMetadataDto -> modifyRecord(payload, getMappingParameters(mappingMetadataDto)).map(mappingMetadataDto))
         .compose(mappingMetadataDto -> {
           if (payloadContext.containsKey(relatedEntityType().value())) {
-            Context targetInstanceContext = constructContext(getTenant(payload), payload.getToken(), payload.getOkapiUrl(),
-              payloadContext.get(PAYLOAD_USER_ID), payloadContext.get(OKAPI_REQUEST_ID));
+            Context targetInstanceContext =
+              constructContext(getTenant(payload), payload.getToken(), payload.getOkapiUrl(),
+                payloadContext.get(DataImportHeaders.USER_ID),
+                payloadContext.get(XOkapiHeaders.REQUEST_ID.toLowerCase()));
             return updateRelatedEntity(payload, mappingMetadataDto, targetInstanceContext)
               .compose(v -> updateRecord(getRecord(payload.getContext()), targetInstanceContext));
           }
@@ -124,9 +135,19 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
     return false;
   }
 
+  public SourceStorageRecordsClient getSourceStorageRecordsClient(Context context) {
+    var folioHeaders = FolioHeaders.builder()
+      .connectionUrl(context.getOkapiLocation())
+      .userId(context.getUserId())
+      .token(context.getToken())
+      .requestId(context.getRequestId())
+      .tenant(context.getTenantId());
+    return new SourceStorageRecordsClientWrapper(folioHeaders, client);
+  }
+
   protected boolean isEligibleActionProfile(ActionProfile actionProfile) {
     return actionProfile.getFolioRecord() == ActionProfile.FolioRecord.valueOf(modifiedEntityType().value())
-      && actionProfile.getAction() == MODIFY;
+           && actionProfile.getAction() == MODIFY;
   }
 
   protected abstract EntityType modifiedEntityType();
@@ -152,8 +173,90 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
     return Future.succeededFuture();
   }
 
+  protected Future<Void> updateRelatedEntity(DataImportEventPayload payload, MappingMetadataDto mappingMetadataDto,
+                                             Context context) {
+    Promise<Void> promise = Promise.promise();
+    Map<String, String> payloadForInstanceUpdate = buildPayloadForInstanceUpdate(payload, mappingMetadataDto);
+
+    Record dataRecord = getRecord(payloadForInstanceUpdate);
+    String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(dataRecord.getParsedRecord(), SUBFIELD_I);
+    if (isBlank(instanceId)) {
+      LOGGER.warn(
+        "updateRelatedEntity:: Cannot update Instance during modify, 999ff$i is blank, tenant: {}, jobExecutionId: {}",
+        context.getTenantId(), payload.getJobExecutionId());
+      return Future.succeededFuture();
+    }
+
+    dataRecord.setExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
+
+    Promise<Instance> instanceUpdatePromise = Promise.promise();
+
+    instanceUpdateDelegate.handle(payloadForInstanceUpdate, dataRecord, context)
+      .onSuccess(instanceUpdatePromise::complete)
+      .compose(updatedInstance -> precedingSucceedingTitlesHelper
+        .getExistingPrecedingSucceedingTitles(updatedInstance, context))
+      .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
+        .map(titleJson -> titleJson.getString("id"))
+        .collect(Collectors.toSet()))
+      .compose(precedingSucceedingTitles -> precedingSucceedingTitlesHelper
+        .deletePrecedingSucceedingTitles(precedingSucceedingTitles, context))
+      .compose(ar -> precedingSucceedingTitlesHelper
+        .createPrecedingSucceedingTitles(instanceUpdatePromise.future().result(), context))
+      .onSuccess(updateAr -> {
+        LOGGER.debug("updateRelatedEntity:: Instance with id: '{}' successfully updated by jobExecutionId: '{}'",
+          instanceId, payload.getJobExecutionId());
+        payload.getContext().remove(CURRENT_RETRY_NUMBER);
+        Instance resultedInstance = instanceUpdatePromise.future().result();
+        if (resultedInstance.getVersion() != null) {
+          int currentVersion = resultedInstance.getVersion();
+          resultedInstance.setVersion(++currentVersion);
+        }
+        payload.getContext().put(INSTANCE.value(), Json.encode(resultedInstance));
+        promise.complete();
+      })
+      .onFailure(cause -> {
+        if (cause instanceof OptimisticLockingException) {
+          processOlError(payload, mappingMetadataDto, promise, cause, context);
+        } else {
+          payload.getContext().remove(CURRENT_RETRY_NUMBER);
+          LOGGER.warn("updateRelatedEntity:: Error updating inventory instance by id: '{}' by jobExecutionId: '{}'",
+            instanceId, payload.getJobExecutionId(), cause);
+          promise.fail(cause);
+        }
+      });
+    return promise.future();
+  }
+
+  protected Future<Void> updateRecord(Record targetRecord, Context context) {
+    Promise<Void> promise = Promise.promise();
+    getSourceStorageRecordsClient(context).putSourceStorageRecordsById(targetRecord.getId(), targetRecord)
+      .onComplete(response -> {
+        if (response.succeeded()) {
+          int statusCode = response.result().statusCode();
+          if (statusCode == HttpStatus.SC_OK) {
+            LOGGER.debug("updateRecord:: MARC record with id {} was successfully updated during modify for tenant {}",
+              targetRecord.getId(), context.getTenantId());
+            promise.complete();
+          } else {
+            String updateRecordErrorMessage =
+              String.format(FAILED_TO_UPDATE_RECORD_ERROR_MESSAGE + "Error message: %s. Status code: %s",
+                targetRecord.getId(), context.getTenantId(), response.result().statusMessage(), statusCode);
+            LOGGER.warn(updateRecordErrorMessage);
+            promise.fail(updateRecordErrorMessage);
+          }
+        } else {
+          String updateRecordErrorMessage = String.format(FAILED_TO_UPDATE_RECORD_ERROR_MESSAGE + "Error message: %s.",
+            targetRecord.getId(), context.getTenantId(), response.cause());
+          LOGGER.warn(updateRecordErrorMessage);
+          promise.fail(updateRecordErrorMessage);
+        }
+      });
+
+    return promise.future();
+  }
+
   /**
-   * Keeps {@link Record#externalIdsHolder} in sync with the modified MARC parsed content.
+   * Keeps {@code Record#externalIdsHolder} in sync with the modified MARC parsed content.
    * When the MODIFY profile removes 999ff$i from parsed content, the previously inherited
    * {@code externalIdsHolder.instanceId} becomes stale and must be cleared so that downstream
    * handlers (e.g. CreateInstance) can re-populate it with a freshly generated instance UUID
@@ -167,70 +270,23 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
       if (isBlank(recordAsString)) {
         return;
       }
-      Record record = Json.decodeValue(recordAsString, Record.class);
-      String subfield999ffI = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(),
-        ParsedRecordUtil.AdditionalSubfields.I);
-      ExternalIdsHolder holder = record.getExternalIdsHolder();
+      Record parsedRecord = Json.decodeValue(recordAsString, Record.class);
+      var subfield999ffI = ParsedRecordUtil.getAdditionalSubfieldValue(parsedRecord.getParsedRecord(), SUBFIELD_I);
+      ExternalIdsHolder holder = parsedRecord.getExternalIdsHolder();
       if (isBlank(subfield999ffI) && holder != null
           && (!isBlank(holder.getInstanceId()) || !isBlank(holder.getInstanceHrid()))) {
-        LOGGER.info("syncExternalIdsHolderWithParsedRecord:: Clearing stale externalIdsHolder (instanceId='{}', instanceHrid='{}') " +
-            "because 999ff$i was removed from parsed record by MODIFY profile, jobExecutionId: {}, recordId: {}",
-          holder.getInstanceId(), holder.getInstanceHrid(), payload.getJobExecutionId(), record.getId());
+        LOGGER.info("syncExternalIdsHolderWithParsedRecord:: Clearing stale externalIdsHolder "
+                    + "(instanceId='{}', instanceHrid='{}') because 999ff$i was removed from parsed record "
+                    + "by MODIFY profile, jobExecutionId: {}, recordId: {}",
+          holder.getInstanceId(), holder.getInstanceHrid(), payload.getJobExecutionId(), parsedRecord.getId());
         holder.setInstanceId(null);
         holder.setInstanceHrid(null);
-        payload.getContext().put(modifiedEntityKey, Json.encode(record));
+        payload.getContext().put(modifiedEntityKey, Json.encode(parsedRecord));
       }
     } catch (Exception e) {
       LOGGER.warn("syncExternalIdsHolderWithParsedRecord:: Failed to sync externalIdsHolder, jobExecutionId: {}",
         payload.getJobExecutionId(), e);
     }
-  }
-
-  protected Future<Void> updateRelatedEntity(DataImportEventPayload payload, MappingMetadataDto mappingMetadataDto, Context context) {
-    Promise<Void> promise = Promise.promise();
-    Map<String, String> payloadForInstanceUpdate = buildPayloadForInstanceUpdate(payload, mappingMetadataDto);
-
-    Record record = getRecord(payloadForInstanceUpdate);
-    String instanceId = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
-    if (isBlank(instanceId)) {
-      LOGGER.warn("updateRelatedEntity:: Cannot update Instance during modify, 999ff$i is blank, tenant: {}, jobExecutionId: {}",
-        context.getTenantId(), payload.getJobExecutionId());
-      return Future.succeededFuture();
-    }
-
-    record.setExternalIdsHolder(new ExternalIdsHolder().withInstanceId(instanceId));
-
-    Promise<Instance> instanceUpdatePromise = Promise.promise();
-
-    instanceUpdateDelegate.handle(payloadForInstanceUpdate, record, context)
-      .onSuccess(instanceUpdatePromise::complete)
-      .compose(updatedInstance -> precedingSucceedingTitlesHelper.getExistingPrecedingSucceedingTitles(updatedInstance, context))
-      .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
-        .map(titleJson -> titleJson.getString("id"))
-        .collect(Collectors.toSet()))
-      .compose(precedingSucceedingTitles -> precedingSucceedingTitlesHelper.deletePrecedingSucceedingTitles(precedingSucceedingTitles, context))
-      .compose(ar -> precedingSucceedingTitlesHelper.createPrecedingSucceedingTitles(instanceUpdatePromise.future().result(), context))
-      .onSuccess(updateAr -> {
-        LOGGER.debug("updateRelatedEntity:: Instance with id: '{}' successfully updated by jobExecutionId: '{}'", instanceId, payload.getJobExecutionId());
-        payload.getContext().remove(CURRENT_RETRY_NUMBER);
-        Instance resultedInstance = instanceUpdatePromise.future().result();
-        if (resultedInstance.getVersion() != null) {
-          int currentVersion = resultedInstance.getVersion();
-          resultedInstance.setVersion(++currentVersion);
-        }
-        payload.getContext().put(INSTANCE.value(), Json.encode(resultedInstance));
-        promise.complete();
-      })
-      .onFailure(cause -> {
-        if (cause instanceof OptimisticLockingException) {
-          processOLError(payload, mappingMetadataDto, promise, cause, context);
-        } else {
-          payload.getContext().remove(CURRENT_RETRY_NUMBER);
-          LOGGER.warn("updateRelatedEntity:: Error updating inventory instance by id: '{}' by jobExecutionId: '{}'", instanceId, payload.getJobExecutionId(), cause);
-          promise.fail(cause);
-        }
-      });
-    return promise.future();
   }
 
   private Record getRecord(Map<String, String> payloadForInstanceUpdate) {
@@ -245,7 +301,8 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
     return Json.decodeValue(mappingMetadataDto.getMappingParams(), MappingParameters.class);
   }
 
-  private void submitSuccessfulEventType(DataImportEventPayload payload, CompletableFuture<DataImportEventPayload> future) {
+  private void submitSuccessfulEventType(DataImportEventPayload payload,
+                                         CompletableFuture<DataImportEventPayload> future) {
     payload.setEventType(modifyEventType());
     future.complete(payload);
   }
@@ -255,20 +312,22 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
     return new JsonObject((Map) mappingProfileWrapper.getContent()).mapTo(MappingProfile.class);
   }
 
-  private Map<String, String> buildPayloadForInstanceUpdate(DataImportEventPayload dataImportEventPayload, MappingMetadataDto mappingMetadataDto) {
+  private Map<String, String> buildPayloadForInstanceUpdate(DataImportEventPayload dataImportEventPayload,
+                                                            MappingMetadataDto mappingMetadataDto) {
     HashMap<String, String> preparedPayload = new HashMap<>(dataImportEventPayload.getContext());
     preparedPayload.put(MAPPING_RULES_KEY, mappingMetadataDto.getMappingRules());
     preparedPayload.put(MAPPING_PARAMS_KEY, mappingMetadataDto.getMappingParams());
     return preparedPayload;
   }
 
-  private void processOLError(DataImportEventPayload payload, MappingMetadataDto mappingMetadataDto,
+  private void processOlError(DataImportEventPayload payload, MappingMetadataDto mappingMetadataDto,
                               Promise<Void> promise, Throwable cause, Context context) {
     int currentRetryNumber = payload.getContext().get(CURRENT_RETRY_NUMBER) == null
-      ? 0 : Integer.parseInt(payload.getContext().get(CURRENT_RETRY_NUMBER));
+                             ? 0 : Integer.parseInt(payload.getContext().get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       payload.getContext().put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn("processOLError:: Error updating Instance - {}. Retry MarcBibModifiedPostProcessingEventHandler handler...", cause.getMessage());
+      LOGGER.warn("processOLError:: Error updating Instance - {}. "
+                  + "Retry MarcBibModifiedPostProcessingEventHandler handler...", cause.getMessage());
       updateRelatedEntity(payload, mappingMetadataDto, context).onComplete(res -> {
         if (res.failed()) {
           promise.fail(res.cause());
@@ -278,45 +337,17 @@ public abstract class AbstractModifyEventHandler implements EventHandler {
       });
     } else {
       payload.getContext().remove(CURRENT_RETRY_NUMBER);
-      String errMessage = format("processOLError:: Current retry number %s exceeded given number %s for the Instance update", MAX_RETRIES_COUNT, currentRetryNumber);
+      String errMessage =
+        format("processOLError:: Current retry number %s exceeded given number %s for the Instance update",
+          MAX_RETRIES_COUNT, currentRetryNumber);
       LOGGER.warn(errMessage);
       promise.fail(new OptimisticLockingException(errMessage));
     }
   }
 
-  protected Future<Void> updateRecord(Record record, Context context) {
-    Promise<Void> promise = Promise.promise();
-    getSourceStorageRecordsClient(context).putSourceStorageRecordsById(record.getId(), record).onComplete(response -> {
-      if (response.succeeded()) {
-        int statusCode = response.result().statusCode();
-        if (statusCode == HttpStatus.SC_OK) {
-          LOGGER.debug("updateRecord:: MARC record with id {} was successfully updated during modify for tenant {}",
-            record.getId(), context.getTenantId());
-          promise.complete();
-        } else {
-          String updateRecordErrorMessage = String.format(FAILED_TO_UPDATE_RECORD_ERROR_MESSAGE + "Error message: %s. Status code: %s",
-            record.getId(), context.getTenantId(), response.result().statusMessage(), statusCode);
-          LOGGER.warn(updateRecordErrorMessage);
-          promise.fail(updateRecordErrorMessage);
-        }
-      } else {
-        String updateRecordErrorMessage = String.format(FAILED_TO_UPDATE_RECORD_ERROR_MESSAGE + "Error message: %s.",
-          record.getId(), context.getTenantId(), response.cause());
-        LOGGER.warn(updateRecordErrorMessage);
-        promise.fail(updateRecordErrorMessage);
-      }
-    });
-
-    return promise.future();
-  }
-
-  public SourceStorageRecordsClient getSourceStorageRecordsClient(Context context) {
-    return new SourceStorageRecordsClientWrapper(context.getOkapiLocation(), context.getTenantId(),
-      context.getToken(), context.getUserId(), context.getRequestId(), client);
-  }
-
   private void preparePayload(DataImportEventPayload dataImportEventPayload) {
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
+    dataImportEventPayload.setCurrentNode(
+      dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
   }
 }

@@ -8,31 +8,26 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.folio.HttpHeaders;
-import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.common.domain.Failure;
-import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.domain.items.CQLQueryRequestDto;
-import org.folio.inventory.support.JsonArrayHelper;
-import org.folio.util.PercentCodec;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.folio.HttpHeaders;
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
+import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.domain.items.CqlQueryRequestDto;
+import org.folio.inventory.support.JsonArrayHelper;
+import org.folio.okapi.common.XOkapiHeaders;
+import org.folio.util.PercentCodec;
 
 abstract class ExternalStorageModuleCollection<T> {
-  private static final String TENANT_HEADER = "X-Okapi-Tenant";
-  private static final String TOKEN_HEADER = "X-Okapi-Token";
-  private static final String USER_ID_HEADER = "X-Okapi-User-Id";
-  private static final String REQUEST_ID_HEADER = "X-Okapi-Request-Id";
 
   private static final Logger LOGGER = LogManager.getLogger(ExternalStorageModuleCollection.class);
-
 
   protected final String storageAddress;
   protected final String tenant;
@@ -59,12 +54,6 @@ abstract class ExternalStorageModuleCollection<T> {
     this.collectionWrapperPropertyName = collectionWrapperPropertyName;
     this.webClient = WebClient.wrap(client);
   }
-
-  protected abstract JsonObject mapToRequest(T record);
-
-  protected abstract T mapFromJson(JsonObject fromServer);
-
-  protected abstract String getId(T record);
 
   public void add(T item, Consumer<Success<T>> resultCallback,
                   Consumer<Failure> failureCallback) {
@@ -129,7 +118,7 @@ abstract class ExternalStorageModuleCollection<T> {
     Consumer<Failure> failureCallback) {
 
     String location = format("%s?limit=%s&offset=%s", storageAddress,
-      pagingParameters.limit, pagingParameters.offset);
+      pagingParameters.limit(), pagingParameters.offset());
 
     find(location, resultCallback, failureCallback);
   }
@@ -154,11 +143,11 @@ abstract class ExternalStorageModuleCollection<T> {
     String encodedQuery = URLEncoder.encode(cqlQuery, StandardCharsets.UTF_8);
 
     String location = format("%s?query=%s&limit=%s&offset=%s",
-      storageAddress, encodedQuery, pagingParameters.limit, pagingParameters.offset);
+      storageAddress, encodedQuery, pagingParameters.limit(), pagingParameters.offset());
     find(location, resultCallback, failureCallback);
   }
 
-  public void retrieveByCqlBody(CQLQueryRequestDto cqlQueryRequestDto,
+  public void retrieveByCqlBody(CqlQueryRequestDto cqlQueryRequestDto,
                                 Consumer<Success<MultipleRecords<T>>> resultCallback,
                                 Consumer<Failure> failureCallback) {
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.postAbs(storageAddress + "/retrieve"));
@@ -186,8 +175,8 @@ abstract class ExternalStorageModuleCollection<T> {
   }
 
   public void putJson(String id, JsonObject bodyJson,
-    Consumer<Success<Void>> completionCallback,
-    Consumer<Failure> failureCallback) {
+                      Consumer<Success<Void>> completionCallback,
+                      Consumer<Failure> failureCallback) {
 
     String location = individualRecordLocation(id);
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.putAbs(location));
@@ -200,8 +189,8 @@ abstract class ExternalStorageModuleCollection<T> {
   }
 
   public void patch(String id, JsonObject patchJson,
-    Consumer<Success<Void>> completionCallback,
-    Consumer<Failure> failureCallback) {
+                    Consumer<Success<Void>> completionCallback,
+                    Consumer<Failure> failureCallback) {
 
     String location = individualRecordLocation(id);
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.patchAbs(location));
@@ -213,11 +202,17 @@ abstract class ExternalStorageModuleCollection<T> {
       });
   }
 
-    public void delete(String id, Consumer<Success<Void>> completionCallback,
+  public void delete(String id, Consumer<Success<Void>> completionCallback,
                      Consumer<Failure> failureCallback) {
 
     deleteLocation(individualRecordLocation(id), completionCallback, failureCallback);
   }
+
+  protected abstract JsonObject mapToRequest(T entity);
+
+  protected abstract T mapFromJson(JsonObject fromServer);
+
+  protected abstract String getId(T entity);
 
   protected String individualRecordLocation(String id) {
     return format("%s/%s", storageAddress, id);
@@ -225,12 +220,12 @@ abstract class ExternalStorageModuleCollection<T> {
 
   protected HttpRequest<Buffer> withStandardHeaders(HttpRequest<Buffer> request) {
     request.putHeader(HttpHeaders.ACCEPT, "application/json, text/plain")
-      .putHeader(TENANT_HEADER, tenant)
-      .putHeader(TOKEN_HEADER, token)
-      .putHeader(REQUEST_ID_HEADER, requestId);
+      .putHeader(XOkapiHeaders.TENANT, tenant)
+      .putHeader(XOkapiHeaders.TOKEN, token)
+      .putHeader(XOkapiHeaders.REQUEST_ID, requestId);
 
     if (!userId.isBlank()) {
-      request.putHeader(USER_ID_HEADER, userId);
+      request.putHeader(XOkapiHeaders.USER_ID, userId);
     }
     return request;
   }
@@ -287,13 +282,12 @@ abstract class ExternalStorageModuleCollection<T> {
   }
 
   private void interpretNoContentResponse(HttpResponse<Buffer> response,
-    Consumer<Success<Void>> completionCallback,
-    Consumer<Failure> failureCallback) {
+                                          Consumer<Success<Void>> completionCallback,
+                                          Consumer<Failure> failureCallback) {
     if (response.statusCode() == 204) {
       completionCallback.accept(new Success<>(null));
     } else {
       failureCallback.accept(new Failure(response.bodyAsString(), response.statusCode()));
     }
   }
-
 }

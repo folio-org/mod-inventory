@@ -1,95 +1,96 @@
 package org.folio.inventory;
 
+import static java.time.Duration.ofSeconds;
+import static org.folio.DataImportEventTypes.DI_JOB_CANCELLED;
+import static org.folio.dataimport.testsupport.vertx.VertxTestUtil.await;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
+import static support.KafkaUtility.sendEvent;
+
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
-import org.folio.kafka.headers.FolioKafkaHeaders;
-import org.folio.rest.jaxrs.model.Event;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
+import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
+import org.folio.inventory.verticle.CancelledJobExecutionConsumerVerticle;
+import org.folio.kafka.headers.FolioKafkaHeaders;
+import org.folio.rest.jaxrs.model.Event;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import support.KafkaTest;
 
-import static java.time.Duration.ofSeconds;
-import static org.folio.DataImportEventTypes.DI_JOB_CANCELLED;
-import static org.folio.inventory.KafkaUtility.sendEvent;
-import static org.junit.Assert.assertTrue;
-import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
-
-@RunWith(VertxUnitRunner.class)
-public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
+@ExtendWith(VertxExtension.class)
+class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
 
   private static final String TENANT_ID = "diku";
 
   private CancelledJobsIdsCache cancelledJobsIdsCache;
   private String verticleDeploymentId;
 
-  @Before
-  public void setUp(TestContext context) {
-    cancelledJobsIdsCache = new CancelledJobsIdsCache();
-    deployVerticle(cancelledJobsIdsCache).onComplete(context.asyncAssertSuccess());
+  @BeforeEach
+  void setUp(VertxTestContext testContext) {
+    cancelledJobsIdsCache = CancelledJobsIdsCache.getInstance(true);
+    deployVerticle().onComplete(ar -> testContext.verify(() -> {
+      assertTrue(ar.succeeded());
+      testContext.completeNow();
+    }));
   }
 
-  @After
-  public void tearDown(TestContext context) {
-    undeployVerticle().onComplete(context.asyncAssertSuccess());
+  @AfterEach
+  void tearDown(VertxTestContext testContext) {
+    undeployVerticle().onComplete(ar -> testContext.verify(() -> {
+      assertTrue(ar.succeeded());
+      testContext.completeNow();
+    }));
   }
 
   @Test
-  public void shouldReadAndPutMultipleJobIdsToCache() throws ExecutionException, InterruptedException {
+  void shouldReadAndPutMultipleJobIdsToCache() {
     List<String> ids = generateJobIds(100);
 
     sendJobIdsToKafka(ids);
 
     await().atMost(ofSeconds(3))
-      .untilAsserted(() -> ids.forEach(id -> assertTrue(cancelledJobsIdsCache.contains((id)))));
+      .untilAsserted(() -> ids.forEach(id -> assertTrue(cancelledJobsIdsCache.contains(id))));
   }
 
   @Test
-  public void shouldReadAllEventsFromTopicIfVerticleWasRestarted(TestContext context)
-    throws ExecutionException, InterruptedException {
-
+  void shouldReadAllEventsFromTopicIfVerticleWasRestarted(VertxTestContext testContext) {
     List<String> idsBatch1 = generateJobIds(100);
     sendJobIdsToKafka(idsBatch1);
     await().atMost(ofSeconds(3)).until(() -> idsBatch1.stream()
       .allMatch(id -> cancelledJobsIdsCache.contains(id)));
 
     // stop currently deployed verticle
-    Async async = context.async();
-    undeployVerticle().onComplete(context.asyncAssertSuccess(v -> async.complete()));
+    await(undeployVerticle());
 
-    async.await(3000);
     List<String> idsBatch2 = generateJobIds(200);
     sendJobIdsToKafka(idsBatch2);
 
     // redeploy the verticle
-    Async async2 = context.async();
-    cancelledJobsIdsCache = new CancelledJobsIdsCache();
-    deployVerticle(cancelledJobsIdsCache).onComplete(context.asyncAssertSuccess(v -> async2.complete()));
+    cancelledJobsIdsCache = CancelledJobsIdsCache.getInstance(true);
+    await(deployVerticle());
 
-    async2.await(3000);
     // verify that the verticle has read all events
     // including previously consumed events and newly produced events
     await().atMost(ofSeconds(3))
-    .untilAsserted(() -> idsBatch1.forEach(id -> assertTrue(cancelledJobsIdsCache.contains((id)))));
+      .untilAsserted(() -> idsBatch1.forEach(id -> assertTrue(cancelledJobsIdsCache.contains(id))));
     await().atMost(ofSeconds(3))
-      .untilAsserted(() -> idsBatch2.forEach(id -> assertTrue(cancelledJobsIdsCache.contains((id)))));
+      .untilAsserted(() -> idsBatch2.forEach(id -> assertTrue(cancelledJobsIdsCache.contains(id))));
+
+    testContext.completeNow();
   }
 
-  private Future<String> deployVerticle(CancelledJobsIdsCache cancelledJobsIdsCache) {
+  private Future<String> deployVerticle() {
     CompletableFuture<String> future = new CompletableFuture<>();
     vertxAssistant.deployVerticle(
-      () -> new CancelledJobExecutionConsumerVerticle(cancelledJobsIdsCache),
       CancelledJobExecutionConsumerVerticle.class.getName(),
       deploymentOptions.getConfig().getMap(),
       1,
@@ -110,7 +111,7 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
       .toList();
   }
 
-  private void sendJobIdsToKafka(List<String> ids) throws ExecutionException, InterruptedException {
+  private void sendJobIdsToKafka(List<String> ids) {
     for (String id : ids) {
       Event event = new Event().withEventPayload(id);
       Map<String, String> kafkaHeaders = Map.of(
@@ -119,5 +120,4 @@ public class CancelledJobExecutionConsumerVerticleTest extends KafkaTest {
       sendEvent(kafkaHeaders, TENANT_ID, DI_JOB_CANCELLED.value(), "1", Json.encode(event));
     }
   }
-
 }

@@ -1,6 +1,28 @@
 package api;
 
-import java.net.MalformedURLException;
+import api.holdings.HoldingsApiMoveTest;
+import api.holdings.HoldingsApiTest;
+import api.holdings.HoldingsUpdateOwnershipApiTest;
+import api.instance.InstanceRelationshipsTest;
+import api.instance.InstancesApiTest;
+import api.instance.PrecedingSucceedingTitlesApiTest;
+import api.isbns.IsbnUtilsApiTest;
+import api.items.ItemAllowedStatusesSchemaTest;
+import api.items.ItemsApiMoveTest;
+import api.items.ItemsApiTest;
+import api.items.ItemsUpdateOwnershipApiTest;
+import api.items.MarkItemInProcessApiTest;
+import api.items.MarkItemInProcessNonRequestableApiTest;
+import api.items.MarkItemIntellectualItemApiTest;
+import api.items.MarkItemLongMissingApiTest;
+import api.items.MarkItemMissingApiTest;
+import api.items.MarkItemRestrictedApiTest;
+import api.items.MarkItemUnavailableApiTest;
+import api.items.MarkItemUnknownApiTest;
+import api.items.MarkItemWithdrawnApiTest;
+import api.items.TenantItemApiTest;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import java.net.URI;
 import java.net.URL;
 import java.util.HashMap;
@@ -11,132 +33,95 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import api.holdings.HoldingsUpdateOwnershipApiTest;
-import api.items.ItemUpdateOwnershipApiTest;
-import org.folio.inventory.InventoryVerticle;
+import lombok.SneakyThrows;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.inventory.consortium.util.ConsortiumUtil;
-import org.folio.inventory.rest.impl.PgPoolContainer;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
-
-import api.holdings.HoldingApiExample;
-import api.holdings.HoldingsApiMoveExamples;
-import api.isbns.IsbnUtilsApiExamples;
-import api.items.ItemAllowedStatusesSchemaTest;
-import api.items.ItemApiExamples;
-import api.items.ItemApiMoveExamples;
-import api.items.ItemApiTitleExamples;
-import api.items.MarkItemInProcessApiTests;
-import api.items.MarkItemInProcessNonRequestableApiTests;
-import api.items.MarkItemIntellectualItemApiTests;
-import api.items.MarkItemLongMissingApiTests;
-import api.items.MarkItemMissingApiTests;
-import api.items.MarkItemRestrictedApiTests;
-import api.items.MarkItemUnavailableApiTests;
-import api.items.MarkItemUnknownApiTests;
-import api.items.MarkItemWithdrawnApiTests;
-import api.items.TenantItemApiTests;
-import api.support.ControlledVocabularyPreparation;
-import api.support.http.ResourceClient;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
+import org.folio.inventory.verticle.InventoryVerticle;
+import org.junit.platform.suite.api.AfterSuite;
+import org.junit.platform.suite.api.BeforeSuite;
+import org.junit.platform.suite.api.SelectClasses;
+import org.junit.platform.suite.api.Suite;
+import support.ControlledVocabularyPreparation;
+import support.PgPoolContainer;
 import support.fakes.FakeOkapi;
+import support.http.ResourceClient;
 
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-  InstancesApiExamples.class,
-  HoldingsApiExamples.class,
-  ItemApiExamples.class,
-  ItemApiTitleExamples.class,
-  IsbnUtilsApiExamples.class,
-  ItemAllowedStatusesSchemaTest.class,
-  PrecedingSucceedingTitlesApiExamples.class,
-  InstanceRelationshipsTest.class,
-  HoldingApiExample.class,
-  MarkItemWithdrawnApiTests.class,
-  ItemApiMoveExamples.class,
-  MarkItemInProcessApiTests.class,
-  MarkItemInProcessNonRequestableApiTests.class,
-  MarkItemIntellectualItemApiTests.class,
-  MarkItemLongMissingApiTests.class,
-  MarkItemMissingApiTests.class,
-  MarkItemRestrictedApiTests.class,
-  MarkItemUnavailableApiTests.class,
-  MarkItemUnknownApiTests.class,
-  HoldingsApiMoveExamples.class,
-  BoundWithTests.class,
-  TenantApiTest.class,
+@Suite
+@SelectClasses({
   AdminApiTest.class,
-  InventoryConfigApiTest.class,
+  BoundWithTest.class,
+  HoldingsApiMoveTest.class,
+  HoldingsApiTest.class,
   HoldingsUpdateOwnershipApiTest.class,
-  ItemUpdateOwnershipApiTest.class,
-  TenantItemApiTests.class
+  InstanceRelationshipsTest.class,
+  InstancesApiTest.class,
+  InventoryConfigApiTest.class,
+  IsbnUtilsApiTest.class,
+  ItemAllowedStatusesSchemaTest.class,
+  ItemsApiMoveTest.class,
+  ItemsApiTest.class,
+  ItemsUpdateOwnershipApiTest.class,
+  MarkItemInProcessApiTest.class,
+  MarkItemInProcessNonRequestableApiTest.class,
+  MarkItemIntellectualItemApiTest.class,
+  MarkItemLongMissingApiTest.class,
+  MarkItemMissingApiTest.class,
+  MarkItemRestrictedApiTest.class,
+  MarkItemUnavailableApiTest.class,
+  MarkItemUnknownApiTest.class,
+  MarkItemWithdrawnApiTest.class,
+  PrecedingSucceedingTitlesApiTest.class,
+  TenantApiTest.class,
+  TenantItemApiTest.class
 })
 public class ApiTestSuite {
-  public static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
+
   public static final String TENANT_ID = "test_tenant";
   public static final String CONSORTIA_TENANT_ID = "consortium";
   public static final String COLLEGE_TENANT_ID = "college";
   public static final UUID ID_FOR_FAILURE = UUID.fromString("fa45a95b-38a3-430b-8f34-548ca005a176");
   public static final UUID ID_FOR_OPTIMISTIC_LOCKING_FAILURE = UUID.fromString("40900409-0409-4444-8888-409000000409");
-
-  public static final String TOKEN = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJhZG1pbiIsInRlbmFudCI6ImRlbW9fdGVuYW50In0.29VPjLI6fLJzxQW0UhQ0jsvAn8xHz501zyXAxRflXfJ9wuDzT8TDf-V75PjzD7fe2kHjSV2dzRXbstt3BTtXIQ";
   public static final String USER_ID = "7e115dfb-d1d6-46ac-b2dc-2b3e74cda694";
-  public static final String CENTRAL_TENANT_ID_FIELD = "centralTenantId";
-  public static final String CONSORTIUM_ID_FIELD = "consortiumId";
   public static final String REQUEST_ID = "test_request_1234";
+
+  private static final Logger log = LogManager.getLogger(ApiTestSuite.class);
+
+  private static final VertxAssistant VERTX_ASSISTANT = new VertxAssistant();
+  private static final Boolean USE_OKAPI_FOR_API_REQUESTS =
+    Boolean.parseBoolean(System.getProperty("use.okapi.initial.requests", ""));
+  private static final Boolean USE_OKAPI_FOR_STORAGE_REQUESTS =
+    Boolean.parseBoolean(System.getProperty("use.okapi.storage.requests", ""));
+  private static final String OKAPI_ADDRESS = System.getProperty("okapi.address", "");
+
+  private static final int INVENTORY_VERTICLE_TEST_PORT = 9603;
+  private static final String CENTRAL_TENANT_ID_FIELD = "centralTenantId";
+  private static final String CONSORTIUM_ID_FIELD = "consortiumId";
 
   private static String bookMaterialTypeId;
   private static String dvdMaterialTypeId;
-
   private static String canCirculateLoanTypeId;
   private static String courseReserveLoanTypeId;
-
-  private static UUID nottinghamUniversityInstitution;
-  private static UUID jubileeCampus;
-  private static UUID djanoglyLibrary;
-  private static UUID businessLibrary;
   private static UUID thirdFloorLocationId;
   private static UUID mezzanineDisplayCaseLocationId;
   private static UUID readingRoomLocationId;
   private static UUID mainLibraryLocationId;
   private static UUID audiobookNatureOfContentTermId;
   private static UUID bibliographyNatureOfContentTermId;
-
   private static String isbnIdentifierTypeId;
   private static String asinIdentifierTypeId;
   private static String textInstanceTypeId;
   private static String personalContributorNameTypeId;
-
-  private static VertxAssistant vertxAssistant = new VertxAssistant();
   private static String inventoryModuleDeploymentId;
   private static String fakeModulesDeploymentId;
-
-  private static Boolean useOkapiForApiRequests =
-    Boolean.parseBoolean(System.getProperty("use.okapi.initial.requests", ""));
-  private static Boolean useOkapiForStorageRequests =
-    Boolean.parseBoolean(System.getProperty("use.okapi.storage.requests", ""));
-  private static String okapiAddress = System.getProperty("okapi.address", "");
-
   private static boolean initialised;
 
-  @BeforeClass
-  public static void before()
-    throws InterruptedException,
-    ExecutionException,
-    TimeoutException,
-    MalformedURLException {
-
-    System.out.println(String.format("Use Okapi For Initial Requests:%s",
-      System.getProperty("use.okapi.initial.requests")));
-
-    System.out.println(String.format("Use Okapi For Storage Requests:%s",
-      System.getProperty("use.okapi.storage.requests")));
+  @BeforeSuite
+  public static void before() {
+    log.info("Use Okapi For Initial Requests:{}", System.getProperty("use.okapi.initial.requests"));
+    log.info("Use Okapi For Storage Requests:{}", System.getProperty("use.okapi.storage.requests"));
 
     startVertx();
     stopPostgresqlContainer();
@@ -154,10 +139,9 @@ public class ApiTestSuite {
     initialised = true;
   }
 
-  @AfterClass
-  public static void after()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
+  @AfterSuite
+  @SneakyThrows
+  public static void after() {
     stopInventoryVerticle();
     stopFakeModules();
     stopPostgresqlContainer();
@@ -226,36 +210,31 @@ public class ApiTestSuite {
     return bibliographyNatureOfContentTermId.toString();
   }
 
-  public static OkapiHttpClient createOkapiHttpClient()
-    throws MalformedURLException {
-
+  public static OkapiHttpClient createOkapiHttpClient() {
     return createOkapiHttpClient(TENANT_ID);
   }
 
-  public static OkapiHttpClient createOkapiHttpClient(String tenantId)
-    throws MalformedURLException {
-
+  @SneakyThrows
+  public static OkapiHttpClient createOkapiHttpClient(String tenantId) {
     return new OkapiHttpClient(
-      vertxAssistant.getVertx(),
-      URI.create(storageOkapiUrl()).toURL(), tenantId, TOKEN, USER_ID, null,
-      it -> System.out.printf("Request failed: %s%n", it.toString()));
+      VERTX_ASSISTANT.getVertx(),
+      URI.create(storageOkapiUrl()).toURL(), tenantId, "token", USER_ID, null,
+      it -> log.error("Request failed.", it));
   }
 
-  public static OkapiHttpClient createOkapiHttpClient(String tenantId, String token, String userId)
-    throws MalformedURLException {
-
+  @SneakyThrows
+  public static OkapiHttpClient createOkapiHttpClient(String tenantId, String token, String userId) {
     return new OkapiHttpClient(
-      vertxAssistant.getVertx(),
+      VERTX_ASSISTANT.getVertx(),
       URI.create(storageOkapiUrl()).toURL(), tenantId, token, userId, null,
-      it -> System.out.printf("Request failed: %s%n", it.toString()));
+      it -> log.error("Request failed.", it));
   }
 
   public static String storageOkapiUrl() {
-    if(useOkapiForStorageRequests) {
-      return okapiAddress;
-    }
-    else {
-      return FakeOkapi.getAddress();
+    if (USE_OKAPI_FOR_STORAGE_REQUESTS) {
+      return OKAPI_ADDRESS;
+    } else {
+      return FakeOkapi.getADDRESS();
     }
   }
 
@@ -263,37 +242,49 @@ public class ApiTestSuite {
     String directRoot = String.format("http://localhost:%s",
       ApiTestSuite.INVENTORY_VERTICLE_TEST_PORT);
 
-    return useOkapiForApiRequests ? okapiAddress : directRoot;
+    return USE_OKAPI_FOR_API_REQUESTS ? OKAPI_ADDRESS : directRoot;
+  }
+
+  public static void createConsortiumTenant() {
+    String expectedConsortiumId = UUID.randomUUID().toString();
+
+    JsonObject userTenantsCollection = new JsonObject()
+      .put(ApiTestSuite.CENTRAL_TENANT_ID_FIELD, ApiTestSuite.CONSORTIA_TENANT_ID)
+      .put(ApiTestSuite.CONSORTIUM_ID_FIELD, expectedConsortiumId);
+
+    ResourceClient client = ResourceClient.forUserTenants(createOkapiHttpClient());
+
+    client.create(userTenantsCollection);
   }
 
   private static void stopVertx() {
-    vertxAssistant.stop();
+    VERTX_ASSISTANT.stop();
   }
 
   private static void startVertx() {
-    vertxAssistant.start();
+    VERTX_ASSISTANT.start();
   }
 
-  private static void startInventoryVerticle()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
-    CompletableFuture<String> deployed = new CompletableFuture<>();
+  @SneakyThrows
+  private static void startInventoryVerticle() {
 
     String storageType = "okapi";
     String storageLocation = "";
 
-    System.out.println(String.format("Storage Type: %s", storageType));
-    System.out.println(String.format("Storage Location: %s", storageLocation));
+    log.info("Storage Type: {}", storageType);
+    log.info("Storage Location: {}", storageLocation);
 
     Map<String, Object> config = new HashMap<>();
 
     config.put("port", INVENTORY_VERTICLE_TEST_PORT);
     config.put("storage.type", storageType);
     config.put("storage.location", storageLocation);
+    config.putAll(PgPoolContainer.getConnectionEnv());
 
     System.setProperty(ConsortiumUtil.EXPIRATION_TIME_PARAM, "0");
 
-    vertxAssistant.deployVerticle(
+    CompletableFuture<String> deployed = new CompletableFuture<>();
+    VERTX_ASSISTANT.deployVerticle(
       InventoryVerticle.class.getName(), config, deployed);
 
     inventoryModuleDeploymentId = deployed.get(20000, TimeUnit.MILLISECONDS);
@@ -304,47 +295,40 @@ public class ApiTestSuite {
 
     CompletableFuture<Void> undeployed = new CompletableFuture<>();
 
-    if(inventoryModuleDeploymentId != null) {
-      vertxAssistant.undeployVerticle(inventoryModuleDeploymentId, undeployed);
+    if (inventoryModuleDeploymentId != null) {
+      VERTX_ASSISTANT.undeployVerticle(inventoryModuleDeploymentId, undeployed);
 
       undeployed.get(20000, TimeUnit.MILLISECONDS);
     }
   }
 
-  private static void startFakeModules()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
-    if(!useOkapiForStorageRequests) {
+  @SneakyThrows
+  private static void startFakeModules() {
+    if (!USE_OKAPI_FOR_STORAGE_REQUESTS) {
       CompletableFuture<String> fakeModulesDeployed = new CompletableFuture<>();
 
-        vertxAssistant.deployVerticle(FakeOkapi.class.getName(),
-          new HashMap<>(), fakeModulesDeployed);
+      VERTX_ASSISTANT.deployVerticle(FakeOkapi.class.getName(),
+        new HashMap<>(), fakeModulesDeployed);
 
       fakeModulesDeploymentId = fakeModulesDeployed.get(10, TimeUnit.SECONDS);
     }
   }
 
-  private static void stopFakeModules()
-    throws InterruptedException, ExecutionException, TimeoutException {
-
-    if(!useOkapiForStorageRequests && fakeModulesDeploymentId != null) {
+  @SneakyThrows
+  private static void stopFakeModules() {
+    if (!USE_OKAPI_FOR_STORAGE_REQUESTS && fakeModulesDeploymentId != null) {
       CompletableFuture<Void> undeployed = new CompletableFuture<>();
 
-      vertxAssistant.undeployVerticle(fakeModulesDeploymentId, undeployed);
+      VERTX_ASSISTANT.undeployVerticle(fakeModulesDeploymentId, undeployed);
 
       undeployed.get(20000, TimeUnit.MILLISECONDS);
     }
   }
 
-  private static void createMaterialTypes()
-    throws MalformedURLException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
+  @SneakyThrows
+  private static void createMaterialTypes() {
     OkapiHttpClient client = createOkapiHttpClient();
-
-    URL materialTypesUrl = new URL(String.format("%s/material-types", storageOkapiUrl()));
+    URL materialTypesUrl = new URI(String.format("%s/material-types", storageOkapiUrl())).toURL();
 
     ControlledVocabularyPreparation materialTypePreparation =
       new ControlledVocabularyPreparation(client, materialTypesUrl, "mtypes");
@@ -353,15 +337,10 @@ public class ApiTestSuite {
     dvdMaterialTypeId = materialTypePreparation.createOrReferenceTerm("DVD");
   }
 
-  private static void createLoanTypes()
-    throws MalformedURLException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
+  @SneakyThrows
+  private static void createLoanTypes() {
     OkapiHttpClient client = createOkapiHttpClient();
-
-    URL loanTypes = new URL(String.format("%s/loan-types", storageOkapiUrl()));
+    URL loanTypes = new URI(String.format("%s/loan-types", storageOkapiUrl())).toURL();
 
     ControlledVocabularyPreparation loanTypePreparation =
       new ControlledVocabularyPreparation(client, loanTypes, "loantypes");
@@ -370,22 +349,20 @@ public class ApiTestSuite {
     courseReserveLoanTypeId = loanTypePreparation.createOrReferenceTerm("Course Reserves");
   }
 
-  private static void createLocations()
-    throws MalformedURLException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
+  @SuppressWarnings("checkstyle:MethodLength")
+  @SneakyThrows
+  private static void createLocations() {
     final OkapiHttpClient client = createOkapiHttpClient();
-
     ResourceClient institutionsClient = ResourceClient.forInstitutions(client);
 
-    nottinghamUniversityInstitution = createReferenceRecord(institutionsClient,
-      "Nottingham University", "NOTT");
+    UUID nottinghamUniversityInstitution = createReferenceRecord(institutionsClient,
+      new JsonObject()
+        .put("name", "Nottingham University")
+        .put("code", "NOTT"));
 
     ResourceClient campusesClient = ResourceClient.forCampuses(client);
 
-    jubileeCampus = createReferenceRecord(campusesClient,
+    UUID jubileeCampus = createReferenceRecord(campusesClient,
       new JsonObject()
         .put("name", "Jubilee Campus")
         .put("institutionId", nottinghamUniversityInstitution.toString())
@@ -393,13 +370,13 @@ public class ApiTestSuite {
 
     ResourceClient librariesClient = ResourceClient.forLibraries(client);
 
-    djanoglyLibrary = createReferenceRecord(librariesClient,
+    UUID djanoglyLibrary = createReferenceRecord(librariesClient,
       new JsonObject()
         .put("name", "Djanogly Learning Resource Centre")
         .put("campusId", jubileeCampus.toString())
         .put("code", "DJANOGLY"));
 
-    businessLibrary = createReferenceRecord(librariesClient,
+    UUID businessLibrary = createReferenceRecord(librariesClient,
       new JsonObject()
         .put("name", "Business Library")
         .put("campusId", jubileeCampus.toString())
@@ -416,7 +393,6 @@ public class ApiTestSuite {
         .put("institutionId", nottinghamUniversityInstitution.toString())
         .put("campusId", jubileeCampus.toString())
         .put("libraryId", djanoglyLibrary.toString())
-        //TODO: Replace with created service point
         .put("primaryServicePoint", fakeServicePointId.toString())
         .put("servicePointIds", new JsonArray().add(fakeServicePointId.toString())));
 
@@ -427,18 +403,16 @@ public class ApiTestSuite {
         .put("institutionId", nottinghamUniversityInstitution.toString())
         .put("campusId", jubileeCampus.toString())
         .put("libraryId", businessLibrary.toString())
-        //TODO: Replace with created service point
         .put("primaryServicePoint", fakeServicePointId.toString())
         .put("servicePointIds", new JsonArray().add(fakeServicePointId.toString())));
 
     readingRoomLocationId = createReferenceRecord(locationsClient,
       new JsonObject()
         .put("name", "Reading Room")
-        .put("code","NU/JC/BL/PR")
+        .put("code", "NU/JC/BL/PR")
         .put("institutionId", nottinghamUniversityInstitution.toString())
         .put("campusId", jubileeCampus.toString())
         .put("libraryId", businessLibrary.toString())
-        //TODO: Replace with created service point
         .put("primaryServicePoint", fakeServicePointId.toString())
         .put("servicePointIds", new JsonArray().add(fakeServicePointId.toString())));
 
@@ -449,17 +423,12 @@ public class ApiTestSuite {
         .put("institutionId", nottinghamUniversityInstitution.toString())
         .put("campusId", jubileeCampus.toString())
         .put("libraryId", djanoglyLibrary.toString())
-        //TODO: Replace with created service point
         .put("primaryServicePoint", fakeServicePointId.toString())
         .put("servicePointIds", new JsonArray().add(fakeServicePointId.toString())));
   }
 
-  private static void createNatureOfContentTerms()
-    throws MalformedURLException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
+  @SneakyThrows
+  private static void createNatureOfContentTerms() {
     ResourceClient client = ResourceClient.forNatureOfContentTerms(createOkapiHttpClient());
 
     audiobookNatureOfContentTermId = createReferenceRecord(client,
@@ -475,27 +444,10 @@ public class ApiTestSuite {
     );
   }
 
-  public static void createConsortiumTenant() throws MalformedURLException {
-    String expectedConsortiumId = UUID.randomUUID().toString();
-
-    JsonObject userTenantsCollection = new JsonObject()
-      .put(ApiTestSuite.CENTRAL_TENANT_ID_FIELD, ApiTestSuite.CONSORTIA_TENANT_ID)
-      .put(ApiTestSuite.CONSORTIUM_ID_FIELD, expectedConsortiumId);
-
-    ResourceClient client = ResourceClient.forUserTenants(createOkapiHttpClient());
-
-    client.create(userTenantsCollection);
-  }
-
-  private static void createIdentifierTypes()
-    throws MalformedURLException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
+  @SneakyThrows
+  private static void createIdentifierTypes() {
     OkapiHttpClient client = createOkapiHttpClient();
-
-    URL identifierTypesUrl = new URL(String.format("%s/identifier-types", storageOkapiUrl()));
+    URL identifierTypesUrl = new URI(String.format("%s/identifier-types", storageOkapiUrl())).toURL();
 
     ControlledVocabularyPreparation identifierTypesPreparation =
       new ControlledVocabularyPreparation(client, identifierTypesUrl, "identifierTypes");
@@ -504,32 +456,21 @@ public class ApiTestSuite {
     asinIdentifierTypeId = identifierTypesPreparation.createOrReferenceTerm("ASIN");
   }
 
-  private static void createInstanceTypes()
-    throws MalformedURLException,
-      InterruptedException,
-      ExecutionException,
-      TimeoutException {
-
+  @SneakyThrows
+  private static void createInstanceTypes() {
     OkapiHttpClient client = createOkapiHttpClient();
-
-    URL instanceTypes = new URL(String.format("%s/instance-types", storageOkapiUrl()));
+    URL instanceTypes = new URI(String.format("%s/instance-types", storageOkapiUrl())).toURL();
 
     ControlledVocabularyPreparation instanceTypesPreparation =
       new ControlledVocabularyPreparation(client, instanceTypes, "instanceTypes");
 
-    textInstanceTypeId = instanceTypesPreparation.createOrReferenceTerm("text",
-      "txt", "rdacontent");
+    textInstanceTypeId = instanceTypesPreparation.createOrReferenceTerm("text", "txt", "rdacontent");
   }
 
-  private static void createContributorNameTypes()
-    throws MalformedURLException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
+  @SneakyThrows
+  private static void createContributorNameTypes() {
     OkapiHttpClient client = createOkapiHttpClient();
-
-    URL contributorNameTypes = new URL(String.format("%s/contributor-name-types", storageOkapiUrl()));
+    URL contributorNameTypes = new URI(String.format("%s/contributor-name-types", storageOkapiUrl())).toURL();
 
     ControlledVocabularyPreparation contributorNameTypesPreparation =
       new ControlledVocabularyPreparation(client, contributorNameTypes, "contributorNameTypes");
@@ -537,47 +478,25 @@ public class ApiTestSuite {
     personalContributorNameTypeId = contributorNameTypesPreparation.createOrReferenceTerm("Personal name");
   }
 
-  private static UUID createReferenceRecord(
-    ResourceClient client,
-    JsonObject record)
-    throws MalformedURLException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
+  @SneakyThrows
+  private static UUID createReferenceRecord(ResourceClient client, JsonObject jsonRecord) {
     List<JsonObject> existingRecords = client.getAll();
+    String name = jsonRecord.getString("name");
 
-    String name = record.getString("name");
-
-    if(name == null) {
+    if (name == null) {
       throw new IllegalArgumentException("Reference records must have a name");
     }
 
-    if(existsInList(existingRecords, name)) {
-      return client.create(record).getId();
-    }
-    else {
+    if (existsInList(existingRecords, name)) {
+      return client.create(jsonRecord).getId();
+    } else {
       return findFirstByName(existingRecords, name);
     }
   }
 
-  private static UUID createReferenceRecord(
-    ResourceClient client,
-    String name,
-    String code)
-    throws MalformedURLException,
-    InterruptedException,
-    ExecutionException,
-    TimeoutException {
-
-    return createReferenceRecord(client, new JsonObject()
-      .put("name", name)
-      .put("code", code));
-  }
-
   private static UUID findFirstByName(List<JsonObject> existingRecords, String name) {
     return UUID.fromString(existingRecords.stream()
-      .filter(record -> record.getString("name").equals(name))
+      .filter(jsonRecord -> jsonRecord.getString("name").equals(name))
       .findFirst()
       .orElseThrow(() -> new IllegalArgumentException("No record with name: " + name))
       .getString("id"));
@@ -598,3 +517,4 @@ public class ApiTestSuite {
     }
   }
 }
+

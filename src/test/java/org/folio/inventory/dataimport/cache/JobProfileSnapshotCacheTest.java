@@ -1,125 +1,99 @@
 package org.folio.inventory.dataimport.cache;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static org.folio.HttpStatus.SC_INTERNAL_SERVER_ERROR;
+import static org.folio.HttpStatus.SC_NOT_FOUND;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
-import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
-import com.github.tomakehurst.wiremock.matching.RegexPattern;
-import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
-
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+import java.util.List;
+import java.util.UUID;
+import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
+import org.folio.inventory.common.Context;
+import org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil;
+import org.folio.inventory.exceptions.CacheLoadingException;
+import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-@RunWith(VertxUnitRunner.class)
-public class JobProfileSnapshotCacheTest {
+@ExtendWith(VertxExtension.class)
+class JobProfileSnapshotCacheTest extends BaseWireMockTest {
 
   private static final String TENANT_ID = "diku";
-  private static final String PROFILE_SNAPSHOT_URL = "/data-import-profiles/jobProfileSnapshots";
+  private static final String PROFILE_SNAPSHOT_URL = "/data-import-profiles/jobProfileSnapshots/.*";
 
-  private final Vertx vertx = Vertx.vertx();
-  private final ProfileSnapshotCache profileSnapshotCache = new ProfileSnapshotCache(vertx,
-    vertx.createHttpClient(), 3600);
-
-  @Rule
-  public WireMockRule mockServer = new WireMockRule(
-    WireMockConfiguration.wireMockConfig()
-      .dynamicPort()
-      .notifier(new Slf4jNotifier(true)));
-
-  ProfileSnapshotWrapper jobProfileSnapshot = new ProfileSnapshotWrapper()
+  private final ProfileSnapshotWrapper jobProfileSnapshot = new ProfileSnapshotWrapper()
     .withId(UUID.randomUUID().toString())
     .withContentType(JOB_PROFILE)
     .withChildSnapshotWrappers(List.of(new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
       .withContentType(ACTION_PROFILE)));
 
+  private ProfileSnapshotCache profileSnapshotCache;
   private Context context;
 
-  @Before
-  public void setUp() {
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(PROFILE_SNAPSHOT_URL + "/.*"), true))
-      .willReturn(WireMock.ok().withBody(Json.encode(jobProfileSnapshot))));
+  @BeforeEach
+  void setUp(Vertx vertx) {
+    stubGetJson(PROFILE_SNAPSHOT_URL, Json.encode(jobProfileSnapshot));
 
-    context = EventHandlingUtil.constructContext(TENANT_ID, "token", mockServer.baseUrl());
+    profileSnapshotCache = ProfileSnapshotCache.getInstance(vertx, vertx.createHttpClient());
+    context = EventHandlingUtil.constructContext(TENANT_ID, "token", mockServerUrl());
   }
 
   @Test
-  public void shouldReturnProfileSnapshot(TestContext context) {
-    Async async = context.async();
+  void shouldReturnProfileSnapshot(VertxTestContext testContext) {
+    var optionalFuture = profileSnapshotCache.get(jobProfileSnapshot.getId(), this.context);
 
-    Future<Optional<ProfileSnapshotWrapper>> optionalFuture = profileSnapshotCache.get(jobProfileSnapshot.getId(), this.context);
-
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertTrue(ar.result().isPresent());
-      ProfileSnapshotWrapper actualProfileSnapshot = ar.result().get();
-      context.assertEquals(jobProfileSnapshot.getId(), actualProfileSnapshot.getId());
-      context.assertFalse(actualProfileSnapshot.getChildSnapshotWrappers().isEmpty());
-      context.assertEquals(jobProfileSnapshot.getChildSnapshotWrappers().get(0).getId(),
-        actualProfileSnapshot.getChildSnapshotWrappers().get(0).getId());
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+      assertTrue(result.isPresent());
+      ProfileSnapshotWrapper actualProfileSnapshot = result.get();
+      assertEquals(jobProfileSnapshot.getId(), actualProfileSnapshot.getId());
+      assertFalse(actualProfileSnapshot.getChildSnapshotWrappers().isEmpty());
+      assertEquals(jobProfileSnapshot.getChildSnapshotWrappers().getFirst().getId(),
+        actualProfileSnapshot.getChildSnapshotWrappers().getFirst().getId());
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldReturnEmptyOptionalWhenGetNotFoundOnSnapshotLoading(TestContext context) {
-    Async async = context.async();
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(PROFILE_SNAPSHOT_URL + "/.*"), true))
-      .willReturn(WireMock.notFound()));
+  void shouldReturnEmptyOptionalWhenGetNotFoundOnSnapshotLoading(VertxTestContext testContext) {
+    stubGetJson(PROFILE_SNAPSHOT_URL, SC_NOT_FOUND, "");
 
-    Future<Optional<ProfileSnapshotWrapper>> optionalFuture = profileSnapshotCache.get(jobProfileSnapshot.getId(), this.context);
+    var optionalFuture = profileSnapshotCache.get(jobProfileSnapshot.getId(), this.context);
 
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.succeeded());
-      context.assertTrue(ar.result().isEmpty());
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
+      assertTrue(result.isEmpty());
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldReturnFailedFutureWhenGetServerErrorOnSnapshotLoading(TestContext context) {
-    Async async = context.async();
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(PROFILE_SNAPSHOT_URL + "/.*"), true))
-      .willReturn(WireMock.serverError()));
+  void shouldReturnFailedFutureWhenGetServerErrorOnSnapshotLoading(VertxTestContext testContext) {
+    stubGetJson(PROFILE_SNAPSHOT_URL, SC_INTERNAL_SERVER_ERROR, "");
 
-    Future<Optional<ProfileSnapshotWrapper>> optionalFuture = profileSnapshotCache.get(jobProfileSnapshot.getId(), this.context);
+    var optionalFuture = profileSnapshotCache.get(jobProfileSnapshot.getId(), this.context);
 
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.failing(err -> testContext.verify(() -> {
+      assertInstanceOf(CacheLoadingException.class, err.getCause());
+      testContext.completeNow();
+    })));
   }
 
   @Test
-  public void shouldReturnFailedFutureWhenSpecifiedProfileSnapshotIdIsNull(TestContext context) {
-    Async async = context.async();
+  void shouldReturnFailedFutureWhenSpecifiedProfileSnapshotIdIsNull(VertxTestContext testContext) {
+    var optionalFuture = profileSnapshotCache.get(null, this.context);
 
-    Future<Optional<ProfileSnapshotWrapper>> optionalFuture = profileSnapshotCache.get(null, this.context);
-
-    optionalFuture.onComplete(ar -> {
-      context.assertTrue(ar.failed());
-      async.complete();
-    });
+    optionalFuture.onComplete(testContext.failing(err -> testContext.verify(() -> {
+      assertInstanceOf(NullPointerException.class, err);
+      testContext.completeNow();
+    })));
   }
-
 }

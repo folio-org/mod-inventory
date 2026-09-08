@@ -1,49 +1,42 @@
 package api.items;
 
-import static java.nio.file.Files.readAllBytes;
 import static java.nio.file.Paths.get;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.folio.inventory.domain.items.ItemStatusName;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import api.support.ApiTests;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import junitparams.JUnitParamsRunner;
+import org.junit.jupiter.api.Test;
 
 /**
  * This test verifies that ramls/item.json and {@link ItemStatusName} is consistent.
+ *
  * <p>
  * If you're introducing a new status for an item you have to update both item.json
  * and the {@link ItemStatusName} enum, otherwise item won't pass validation
  * and will be rejected.
  */
-@RunWith(JUnitParamsRunner.class)
-public class ItemAllowedStatusesSchemaTest extends ApiTests {
+@SuppressWarnings("java:S5786")
+public class ItemAllowedStatusesSchemaTest {
 
   @Test
-  public void schemaAndEnumIsConsistent() throws IOException {
+  void schemaAndEnumIsConsistent() throws IOException {
     final Set<String> enumAllowedItemStatuses = getItemStatusNameEnumAllowedItemStatuses();
     final Set<String> schemaAllowedItemStatuses = getSchemaAllowedItemStatuses();
 
-    assertTrue(enumAllowedItemStatuses.size() > 0);
-    assertTrue(schemaAllowedItemStatuses.size() > 0);
-    assertEquals("Schema enum does not match ItemStatusName values"+System.lineSeparator()
-        +getDifferencesBetweenCollectionsMessage(enumAllowedItemStatuses,schemaAllowedItemStatuses),
-      enumAllowedItemStatuses,
-      schemaAllowedItemStatuses);
-
+    assertFalse(enumAllowedItemStatuses.isEmpty());
+    assertFalse(schemaAllowedItemStatuses.isEmpty());
+    assertEquals(enumAllowedItemStatuses, schemaAllowedItemStatuses,
+      "Schema enum does not match ItemStatusName values" + System.lineSeparator()
+      + getDifferencesBetweenCollectionsMessage(enumAllowedItemStatuses, schemaAllowedItemStatuses));
   }
 
   private String getDifferencesBetweenCollectionsMessage(Set<String> coll1, Set<String> coll2) {
@@ -62,8 +55,7 @@ public class ItemAllowedStatusesSchemaTest extends ApiTests {
   }
 
   private Set<String> getSchemaAllowedItemStatuses() throws IOException {
-    final String itemJson = new String(readAllBytes(get("ramls/item.json")),
-      StandardCharsets.UTF_8);
+    final String itemJson = Files.readString(get("ramls/item.json"));
 
     final JsonObject itemSchema = new JsonObject(itemJson);
 
@@ -72,7 +64,7 @@ public class ItemAllowedStatusesSchemaTest extends ApiTests {
       .getJsonObject("name").getJsonArray("enum");
 
     return allowedStatuses.stream()
-      .map(element -> (String) element)
+      .map(String.class::cast)
       .collect(Collectors.toSet());
   }
 

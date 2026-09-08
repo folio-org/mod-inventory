@@ -1,21 +1,15 @@
 package org.folio.inventory.domain.items;
 
-import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 
-public class StatusTest {
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+class StatusTest {
 
   @Test
-  public void cannotCreateStatusIfStatusNameIsNull() {
-    expectedException.expect(instanceOf(NullPointerException.class));
-    expectedException.expectMessage("Status name is required");
-
-    new Status(null, "date");
+  void cannotCreateStatusIfStatusNameIsNull() {
+    var ex = assertThrows(NullPointerException.class, () -> new Status(null, "date"));
+    assertTrue(ex.getMessage().contains("Status name is required"));
   }
 }

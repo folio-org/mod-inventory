@@ -13,6 +13,6 @@ public class ExternalResourceFetchException extends AbstractInventoryException {
   }
 
   public ExternalResourceFetchException(Response response) {
-    this(response.getBody(), response.getStatusCode(), response.getContentType());
+    this(response.body(), response.statusCode(), response.contentType());
   }
 }

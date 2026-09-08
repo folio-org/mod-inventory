@@ -12,11 +12,10 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
-import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.dao.EntityIdStorageDaoImpl;
+import org.folio.inventory.common.dao.EntityIdStorageDao;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.actions.PrecedingSucceedingTitlesHelper;
@@ -32,7 +31,6 @@ import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.InstanceIngressEvent;
 
-@RequiredArgsConstructor
 public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, String> {
 
   private static final Logger LOGGER = LogManager.getLogger(InstanceIngressEventConsumer.class);
@@ -40,6 +38,13 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
   private final Storage storage;
   private final HttpClient client;
   private final MappingMetadataCache mappingMetadataCache;
+
+  public InstanceIngressEventConsumer(Vertx vertx, Storage storage, HttpClient client) {
+    this.vertx = vertx;
+    this.storage = storage;
+    this.client = client;
+    this.mappingMetadataCache = MappingMetadataCache.getInstance(vertx);
+  }
 
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> consumerRecord) {
@@ -52,10 +57,11 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
     LOGGER.info("Instance ingress event has been received with event type: {}", event.getEventType());
     return Future.succeededFuture(event.getEventPayload())
       .compose(eventPayload -> processEvent(event, context)
-        .map(ar -> consumerRecord.key()), th -> {
-        LOGGER.error("Update record state was failed while handle event, {}", th.getMessage());
-        return Future.failedFuture(th.getMessage());
-      });
+          .map(ar -> consumerRecord.key()),
+        th -> {
+          LOGGER.error("Update record state was failed while handle event, {}", th.getMessage());
+          return Future.failedFuture(th.getMessage());
+        });
   }
 
   private static String getTenantId(InstanceIngressEvent event,
@@ -82,13 +88,14 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
     }
   }
 
-  private InstanceIngressEventHandler getInstanceIngressEventHandler(InstanceIngressEvent.EventType eventType, Context context) {
+  private InstanceIngressEventHandler getInstanceIngressEventHandler(InstanceIngressEvent.EventType eventType,
+                                                                     Context context) {
     var precedingSucceedingTitlesHelper = new PrecedingSucceedingTitlesHelper(WebClient.wrap(client));
     SnapshotService snapshotService = new SnapshotService(client);
     switch (eventType) {
       case CREATE_INSTANCE -> {
-        var idStorageService =
-          new InstanceIdStorageService(new EntityIdStorageDaoImpl(new PostgresClientFactory(vertx)));
+        var entityIdStorageDao = new EntityIdStorageDao(new PostgresClientFactory(vertx));
+        var idStorageService = new InstanceIdStorageService(entityIdStorageDao);
         return new CreateInstanceIngressEventHandler(precedingSucceedingTitlesHelper, mappingMetadataCache,
           idStorageService, client, context, storage, snapshotService);
       }
@@ -102,5 +109,4 @@ public class InstanceIngressEventConsumer implements AsyncRecordHandler<String, 
       }
     }
   }
-
 }

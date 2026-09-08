@@ -5,38 +5,34 @@ import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.inventory.support.http.server.ClientErrorResponse.badRequest;
 
+import com.github.ladutsko.isbn.ISBNException;
+import io.vertx.core.MultiMap;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
 import java.lang.invoke.MethodHandles;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.support.http.server.JsonResponse;
 import org.folio.isbn.IsbnUtil;
 
-import com.github.ladutsko.isbn.ISBNException;
-
-import io.vertx.core.MultiMap;
-import io.vertx.core.json.JsonObject;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
-
 public class IsbnUtilsApi {
 
-  private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
-
-  private static final String ISBN_VALIDATOR_PATH = "/isbn/validator";
-  private static final String ISBN_CONVERT_TO_ISBN10_PATH = "/isbn/convertTo10";
-  private static final String ISBN_CONVERT_TO_ISBN13_PATH = "/isbn/convertTo13";
   public static final String HYPHENS_PARAM = "hyphens";
   public static final String ISBN_PARAM = "isbn";
   public static final String IS_VALID = "isValid";
   public static final String CONVERTER_MISSING_REQUIRED_PARAM_MSG = "Isbn must be specified";
   public static final String INVALID_HYPHENS_VALUE_MSG = "Hyphens must be true or false";
   public static final String INVALID_ISBN_MESSAGE = "ISBN value %s is invalid";
-  public static final String VALIDATOR_MISSING_REQUIRED_PARAMS_MSG = "Only one of following query params must be specified: isbn, isbn10, isbn13";
-  public static final String QUERY = "query";
-
+  public static final String VALIDATOR_MISSING_REQUIRED_PARAMS_MSG =
+    "Only one of following query params must be specified: isbn, isbn10, isbn13";
+  private static final Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
+  private static final String ISBN_VALIDATOR_PATH = "/isbn/validator";
+  private static final String ISBN_CONVERT_TO_ISBN10_PATH = "/isbn/convertTo10";
+  private static final String ISBN_CONVERT_TO_ISBN13_PATH = "/isbn/convertTo13";
 
   public void register(Router router) {
     router.get(ISBN_VALIDATOR_PATH).handler(this::validate);
@@ -47,8 +43,8 @@ public class IsbnUtilsApi {
   private void convertToIsbn13(RoutingContext routingContext) {
     UnaryOperator<String> toIsbn13Converter = isbnCode ->
       IsbnUtil.isValid13DigitNumber(isbnCode)
-        ? isbnCode
-        : IsbnUtil.convertTo13DigitNumber(isbnCode);
+      ? isbnCode
+      : IsbnUtil.convertTo13DigitNumber(isbnCode);
 
     convert(routingContext, toIsbn13Converter);
   }
@@ -56,8 +52,8 @@ public class IsbnUtilsApi {
   private void convertToIsbn10(RoutingContext routingContext) {
     UnaryOperator<String> toIsbn10Converter = isbnCode ->
       IsbnUtil.isValid10DigitNumber(isbnCode)
-        ? isbnCode
-        : IsbnUtil.convertTo10DigitNumber(isbnCode);
+      ? isbnCode
+      : IsbnUtil.convertTo10DigitNumber(isbnCode);
 
     convert(routingContext, toIsbn10Converter);
   }
@@ -79,7 +75,6 @@ public class IsbnUtilsApi {
       JsonObject result = new JsonObject();
       result.put(ISBN_PARAM, isbnCode);
       JsonResponse.success(routingContext.response(), result);
-
     } catch (ISBNException e) {
       log.error(e);
       badRequest(routingContext.response(), String.format(e.getMessage(), isbnCode));
@@ -95,13 +90,13 @@ public class IsbnUtilsApi {
       throw new IllegalArgumentException(CONVERTER_MISSING_REQUIRED_PARAM_MSG);
     }
 
-    isbnCode = routingContext.queryParam(ISBN_PARAM).get(0);
+    isbnCode = routingContext.queryParam(ISBN_PARAM).getFirst();
     return isbnCode;
   }
 
   private boolean getHyphensParamValue(RoutingContext routingContext) {
     if (isNotEmpty(routingContext.queryParam(HYPHENS_PARAM))) {
-      String hyphensValue = routingContext.queryParam(HYPHENS_PARAM).get(0);
+      String hyphensValue = routingContext.queryParam(HYPHENS_PARAM).getFirst();
 
       if ("true".equalsIgnoreCase(hyphensValue) || "false".equalsIgnoreCase(hyphensValue)) {
         return Boolean.parseBoolean(hyphensValue);
@@ -128,7 +123,7 @@ public class IsbnUtilsApi {
     MultiMap params = routingContext.queryParams();
 
     if (params.entries().size() == 1) {
-      Map.Entry<String, String> param = params.entries().get(0);
+      Map.Entry<String, String> param = params.entries().getFirst();
       paramName = param.getKey();
       isbnCode = param.getValue();
     }
@@ -151,5 +146,4 @@ public class IsbnUtilsApi {
     result.put(IS_VALID, isValid);
     JsonResponse.success(routingContext.response(), result);
   }
-
 }

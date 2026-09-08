@@ -4,14 +4,12 @@ import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.AbstractPreloader;
@@ -27,8 +25,8 @@ public class ItemLoader extends AbstractLoader<Item> {
 
   private static final String HOLDINGS_FIELD = "holdings";
 
-  private Storage storage;
-  private AbstractPreloader preloader;
+  private final Storage storage;
+  private final AbstractPreloader preloader;
 
   public ItemLoader(Storage storage, AbstractPreloader preloader) {
     this.storage = storage;
@@ -38,7 +36,7 @@ public class ItemLoader extends AbstractLoader<Item> {
   @Override
   public CompletableFuture<LoadResult> loadEntity(LoadQuery loadQuery, DataImportEventPayload eventPayload) {
     return preloader.preload(loadQuery, eventPayload)
-            .thenCompose(query -> super.loadEntity(query, eventPayload));
+      .thenCompose(query -> super.loadEntity(query, eventPayload));
   }
 
   @Override

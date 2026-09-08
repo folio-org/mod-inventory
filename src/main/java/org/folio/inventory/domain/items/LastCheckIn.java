@@ -1,4 +1,3 @@
-
 package org.folio.inventory.domain.items;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -20,13 +19,13 @@ public class LastCheckIn {
   }
 
   public static LastCheckIn from(JsonObject representation) {
-    if (representation==null) {
+    if (representation == null) {
       return null;
     }
 
     String dateTime = representation.getString("dateTime");
     return new LastCheckIn(
-      dateTime != null ? DateTime.parse(dateTime): null,
+      dateTime != null ? DateTime.parse(dateTime) : null,
       representation.getString("servicePointId"),
       representation.getString("staffMemberId")
     );

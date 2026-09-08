@@ -1,7 +1,7 @@
 package org.folio.inventory.exceptions;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import org.folio.HttpStatus;
-import org.folio.inventory.support.http.ContentType;
 
 public abstract class AbstractInventoryException extends RuntimeException {
   protected final String body;
@@ -12,7 +12,7 @@ public abstract class AbstractInventoryException extends RuntimeException {
     super(message);
     this.body = message;
     this.statusCode = HttpStatus.SC_INTERNAL_SERVER_ERROR;
-    this.contentType = ContentType.TEXT_PLAIN;
+    this.contentType = HttpHeaderValues.TEXT_PLAIN.toString();
   }
 
   protected AbstractInventoryException(String message, String body, int statusCode, String contentType) {

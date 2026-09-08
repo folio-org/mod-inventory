@@ -12,13 +12,14 @@ public class ItemIdStorageService implements IdStorageService {
 
   private final EntityIdStorageDao entityIdStorageDao;
 
-  public ItemIdStorageService(EntityIdStorageDao entityIdStorageDao){
+  public ItemIdStorageService(EntityIdStorageDao entityIdStorageDao) {
     this.entityIdStorageDao = entityIdStorageDao;
   }
 
   @Override
   public Future<RecordToEntity> store(String recordId, String itemId, String tenantId) {
-    RecordToEntity recordToItem = RecordToEntity.builder().table(EntityTable.ITEM).recordId(recordId).entityId(itemId).build();
+    RecordToEntity recordToItem =
+      RecordToEntity.builder().table(EntityTable.ITEM).recordId(recordId).entityId(itemId).build();
     LOGGER.info("Saving RecordToItem relationship: {}", recordToItem);
     return entityIdStorageDao.saveRecordToEntityRelationship(recordToItem, tenantId);
   }

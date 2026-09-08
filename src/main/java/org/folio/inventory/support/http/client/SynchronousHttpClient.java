@@ -1,9 +1,6 @@
 package org.folio.inventory.support.http.client;
 
 import io.vertx.core.json.JsonObject;
-import org.folio.HttpHeaders;
-import org.folio.inventory.common.Context;
-
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -12,7 +9,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.function.Consumer;
-
+import org.folio.HttpHeaders;
+import org.folio.inventory.common.Context;
 
 public class SynchronousHttpClient extends AbstractOkapiHttpClient {
 

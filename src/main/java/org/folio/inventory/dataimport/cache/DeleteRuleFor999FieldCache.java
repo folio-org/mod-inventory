@@ -1,5 +1,7 @@
 package org.folio.inventory.dataimport.cache;
 
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.vertx.core.Vertx;
@@ -16,10 +18,12 @@ import org.folio.rest.jaxrs.model.MarcSubfield;
  * Cache that memoizes, per {@link MappingProfile} id, whether the profile contains at least one
  * MARC-modification rule with action {@link MarcMappingDetail.Action#DELETE} targeting field "999"
  * and at least one of subfields $i, $s or wildcard {@code *} (all other subfields are ignored).
+ *
  * <p>
  * Keyed by MappingProfile id (stable UUID). Value is {@link Boolean}. Used by
  * {@code AbstractModifyEventHandler} to skip the {@code externalIdsHolder} synchronization step
  * when the profile does not delete 999 (i.e., typical case), avoiding the JSON decode/encode cost.
+ *
  * <p>
  * Uses synchronous {@link Cache} because the computation is purely in-memory (no IO). The Vertx
  * instance is passed only to bind Caffeine's maintenance executor to the Vertx event loop, so
@@ -32,7 +36,6 @@ public final class DeleteRuleFor999FieldCache {
   private static final Logger LOGGER = LogManager.getLogger(DeleteRuleFor999FieldCache.class);
   private static final String CACHE_EXPIRATION_TIME_ENV = "inventory.delete-999-rule-cache.expiration.time.seconds";
   private static final String DEFAULT_EXPIRATION_TIME_SECONDS = "3600";
-  private static final String TAG_999 = "999";
   /**
    * Subfield codes that make the DELETE-999 rule relevant to {@code externalIdsHolder} sync:
    * {@code i} (instance id backlink), {@code s} (matched id / SRS record id), and {@code *}
@@ -46,7 +49,7 @@ public final class DeleteRuleFor999FieldCache {
 
   private final Cache<String, Boolean> cache;
 
-  public DeleteRuleFor999FieldCache(Vertx vertx, long cacheExpirationTimeSeconds) {
+  private DeleteRuleFor999FieldCache(Vertx vertx, long cacheExpirationTimeSeconds) {
     this.cache = Caffeine.newBuilder()
       .expireAfterAccess(cacheExpirationTimeSeconds, TimeUnit.SECONDS)
       .executor(task -> vertx.runOnContext(v -> task.run()))
@@ -94,7 +97,7 @@ public final class DeleteRuleFor999FieldCache {
       if (detail == null || detail.getAction() != MarcMappingDetail.Action.DELETE || detail.getField() == null) {
         continue;
       }
-      if (!TAG_999.equals(detail.getField().getField())) {
+      if (!FIELD_999.equals(detail.getField().getField())) {
         continue;
       }
       if (ruleTargetsRelevantSubfield(detail)) {

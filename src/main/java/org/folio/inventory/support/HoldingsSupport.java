@@ -1,19 +1,15 @@
 package org.folio.inventory.support;
 
+import io.vertx.core.json.JsonObject;
 import java.util.Collection;
 import java.util.Optional;
-
 import org.folio.inventory.domain.items.Item;
 
-import io.vertx.core.json.JsonObject;
+public final class HoldingsSupport {
 
-public class HoldingsSupport {
   private HoldingsSupport() { }
 
-  public static Optional<JsonObject> holdingForItem(
-    Item item,
-    Collection<JsonObject> holdings) {
-
+  public static Optional<JsonObject> holdingForItem(Item item, Collection<JsonObject> holdings) {
     String holdingsRecordId = item.getHoldingId();
 
     return holdings.stream()
@@ -21,11 +17,8 @@ public class HoldingsSupport {
       .findFirst();
   }
 
-  public static Optional<JsonObject> instanceForHolding(
-    JsonObject holding,
-    Collection<JsonObject> instances) {
-
-    if(holding == null || !holding.containsKey("instanceId")) {
+  public static Optional<JsonObject> instanceForHolding(JsonObject holding, Collection<JsonObject> instances) {
+    if (holding == null || !holding.containsKey("instanceId")) {
       return Optional.empty();
     }
 

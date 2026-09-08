@@ -1,39 +1,44 @@
 package org.folio.inventory.dataimport.cache;
 
-import java.net.URL;
+import com.github.benmanes.caffeine.cache.AsyncCache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.WebClient;
+import java.net.URI;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-
-import io.vertx.core.json.Json;
-import io.vertx.ext.web.client.WebClient;
 import lombok.SneakyThrows;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.dataimport.exceptions.CacheLoadingException;
+import org.folio.inventory.exceptions.CacheLoadingException;
 import org.folio.inventory.support.http.client.OkapiHttpClient;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 
-import com.github.benmanes.caffeine.cache.AsyncCache;
-import com.github.benmanes.caffeine.cache.Caffeine;
-
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpClient;
-
 /**
- * Cache for storing ProfileSnapshotWrapper entities by jobProfileSnapshotId
+ * Cache for storing ProfileSnapshotWrapper entities by jobProfileSnapshotId.
  */
-public class ProfileSnapshotCache {
+public final class ProfileSnapshotCache {
 
   private static final Logger LOGGER = LogManager.getLogger();
+
+  private static final String PROFILE_SNAPSHOT_CACHE_EXPIRATION_TIME =
+    "inventory.profile-snapshot-cache.expiration.time.seconds";
+  private static final String CACHE_EXPIRATION_DEFAULT = "3600";
+
+  private static ProfileSnapshotCache instance = null;
 
   private final AsyncCache<String, Optional<ProfileSnapshotWrapper>> cache;
   private final HttpClient httpClient;
 
-  public ProfileSnapshotCache(Vertx vertx, HttpClient httpClient, long cacheExpirationTime) {
+  private ProfileSnapshotCache(Vertx vertx, HttpClient httpClient, long cacheExpirationTime) {
     this.httpClient = httpClient;
     cache = Caffeine.newBuilder()
       .expireAfterAccess(cacheExpirationTime, TimeUnit.SECONDS)
@@ -41,9 +46,22 @@ public class ProfileSnapshotCache {
       .buildAsync();
   }
 
+  public static ProfileSnapshotCache getInstance(Vertx vertx, HttpClient httpClient) {
+    return getInstance(vertx, httpClient, false);
+  }
+
+  public static synchronized ProfileSnapshotCache getInstance(Vertx vertx, HttpClient httpClient, boolean returnNew) {
+    if (instance == null || returnNew) {
+      instance = new ProfileSnapshotCache(vertx, httpClient,
+        Long.parseLong(getCacheEnvVariable(vertx.getOrCreateContext().config())));
+    }
+    return instance;
+  }
+
   public Future<Optional<ProfileSnapshotWrapper>> get(String profileSnapshotId, Context context) {
     try {
-      return Future.fromCompletionStage(cache.get(profileSnapshotId, (key, executor) -> loadJobProfileSnapshot(key, context)));
+      return Future.fromCompletionStage(
+        cache.get(profileSnapshotId, (key, executor) -> loadJobProfileSnapshot(key, context)));
     } catch (Exception e) {
       LOGGER.warn("Error loading ProfileSnapshotWrapper by id: '{}'", profileSnapshotId, e);
       return Future.failedFuture(e);
@@ -51,28 +69,40 @@ public class ProfileSnapshotCache {
   }
 
   @SneakyThrows
-  private CompletableFuture<Optional<ProfileSnapshotWrapper>> loadJobProfileSnapshot(String profileSnapshotId, Context context) {
-    LOGGER.debug("Trying to load jobProfileSnapshot by id  '{}' for cache, okapi url: {}, tenantId: {}", profileSnapshotId, context.getOkapiLocation(), context.getTenantId());
+  private CompletableFuture<Optional<ProfileSnapshotWrapper>> loadJobProfileSnapshot(String profileSnapshotId,
+                                                                                     Context context) {
+    LOGGER.debug("Trying to load jobProfileSnapshot by id  '{}' for cache, okapi url: {}, tenantId: {}",
+      profileSnapshotId, context.getOkapiLocation(), context.getTenantId());
 
-    OkapiHttpClient client = new OkapiHttpClient(WebClient.wrap(httpClient), new URL(context.getOkapiLocation()), context.getTenantId(), context.getToken(), null, null, null);
+    OkapiHttpClient client = new OkapiHttpClient(WebClient.wrap(httpClient),
+      new URI(context.getOkapiLocation()).toURL(), context.getTenantId(), context.getToken(), null, null, null);
 
     return client.get(context.getOkapiLocation() + "/data-import-profiles/jobProfileSnapshots/" + profileSnapshotId)
       .toCompletableFuture()
       .thenCompose(httpResponse -> {
-        if (httpResponse.getStatusCode() == HttpStatus.SC_OK) {
+        if (httpResponse.statusCode() == HttpStatus.SC_OK) {
           LOGGER.info("JobProfileSnapshot was loaded by id '{}'", profileSnapshotId);
-          return CompletableFuture.completedFuture(Optional.of(Json.decodeValue(httpResponse.getBody(), (ProfileSnapshotWrapper.class))));
-        } else if (httpResponse.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+          return CompletableFuture.completedFuture(
+            Optional.of(Json.decodeValue(httpResponse.body(), ProfileSnapshotWrapper.class)));
+        } else if (httpResponse.statusCode() == HttpStatus.SC_NOT_FOUND) {
           LOGGER.warn("JobProfileSnapshot was not found by id '{}'", profileSnapshotId);
           return CompletableFuture.completedFuture(Optional.empty());
         } else {
-          String message = String.format("Error loading jobProfileSnapshot by id: '%s', status code: %s, response message: %s",
-            profileSnapshotId, httpResponse.getStatusCode(), httpResponse.getBody());
+          String message =
+            String.format("Error loading jobProfileSnapshot by id: '%s', status code: %s, response message: %s",
+              profileSnapshotId, httpResponse.statusCode(), httpResponse.body());
           LOGGER.warn(message);
           return CompletableFuture.failedFuture(new CacheLoadingException(message));
         }
       });
   }
 
+  private static String getCacheEnvVariable(JsonObject config) {
+    String cacheExpirationTime = config.getString(PROFILE_SNAPSHOT_CACHE_EXPIRATION_TIME);
+    if (StringUtils.isBlank(cacheExpirationTime)) {
+      return CACHE_EXPIRATION_DEFAULT;
+    }
+    return cacheExpirationTime;
+  }
 }
 

@@ -1,67 +1,66 @@
 package org.folio.inventory.support;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+class CqlHelperTest {
 
-@RunWith(JUnitParamsRunner.class)
-public class CqlHelperTest {
-  private String multi(String ...strings) {
+  @Test
+  void multipleRecordIdsCqlQuery() {
+    assertThat(urlDecode(multi("a", "b", "c"))).isEqualTo("id==(a or b or c)");
+  }
+
+  @Test
+  void oneRecordIdCqlQuery() {
+    assertThat(urlDecode(multi("a"))).isEqualTo("id==(a)");
+  }
+
+  @Test
+  void oneRecordCustomPrefixCqlQuery() {
+    assertThat(CqlHelper.buildMultipleValuesCqlQuery("parameter=", List.of("a")))
+      .isEqualTo("parameter=(a)");
+  }
+
+  @Test
+  void multipleRecordCustomPrefixCqlQuery() {
+    assertThat(CqlHelper.buildMultipleValuesCqlQuery("parameter=", List.of("a", "b", "c")))
+      .isEqualTo("parameter=(a or b or c)");
+  }
+
+  @ParameterizedTest
+  @MethodSource("barcodeParams")
+  void barcodeQuery(String barcode, String cql) {
+    assertThat(CqlHelper.barcodeIs(barcode)).isEqualTo(cql);
+  }
+
+  private String multi(String... strings) {
     return CqlHelper.multipleRecordsCqlQuery(Arrays.asList(strings));
   }
 
   private String urlDecode(String s) {
-    try {
-      return URLDecoder.decode(s, "UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      throw new RuntimeException(e);
-    }
+    return URLDecoder.decode(s, StandardCharsets.UTF_8);
   }
 
-  @Test
-  public void multipleRecordIdsCqlQuery() {
-    Assertions.assertThat(urlDecode(multi("a", "b", "c"))).isEqualTo("id==(a or b or c)");
-  }
-
-  @Test
-  public void oneRecordIdCqlQuery() {
-    Assertions.assertThat(urlDecode(multi("a"))).isEqualTo("id==(a)");
-  }
-
-  @Test
-  public void oneRecordCustomPrefixCqlQuery() {
-    Assertions.assertThat(CqlHelper.buildMultipleValuesCqlQuery("parameter=", List.of("a")))
-            .isEqualTo("parameter=(a)");
-  }
-
-  @Test
-  public void multipleRecordCustomPrefixCqlQuery() {
-    Assertions.assertThat(CqlHelper.buildMultipleValuesCqlQuery("parameter=", List.of("a", "b", "c")))
-            .isEqualTo("parameter=(a or b or c)");
-  }
-
-  @Test
-  @Parameters({
-          "    | barcode==\"\"",      // barcode==""
-          "abc | barcode==\"abc\"",   // barcode=="abc"
-          "*   | barcode==\"\\*\"",   // barcode=="\*"
-          "?   | barcode==\"\\?\"",   // barcode=="\?"
-          "^   | barcode==\"\\^\"",   // barcode=="\^"
-          "\"  | barcode==\"\\\"\"",  // barcode=="\""
-          "\\  | barcode==\"\\\\\"",  // barcode=="\\"
-          "*?^\"\\*?^\"\\ | barcode==\"\\*\\?\\^\\\"\\\\\\*\\?\\^\\\"\\\\\"", // barcode=="\*\?\^\"\\\*\?\^\"\\"
-  })
-  public void barcode(String barcode, String cql) {
-    assertThat(CqlHelper.barcodeIs(barcode), is(cql));
+  private static Stream<Arguments> barcodeParams() {
+    return Stream.of(
+      Arguments.of("", "barcode==\"\""),                                  // barcode==""
+      Arguments.of("abc", "barcode==\"abc\""),                            // barcode=="abc"
+      Arguments.of("*", "barcode==\"\\*\""),                              // barcode=="\*"
+      Arguments.of("?", "barcode==\"\\?\""),                              // barcode=="\?"
+      Arguments.of("^", "barcode==\"\\^\""),                              // barcode=="\^"
+      Arguments.of("\"", "barcode==\"\\\"\""),                            // barcode=="\""
+      Arguments.of("\\", "barcode==\"\\\\\""),                            // barcode=="\\"
+      Arguments.of("*?^\"\\*?^\"\\",
+        "barcode==\"\\*\\?\\^\\\"\\\\\\*\\?\\^\\\"\\\\\"") // barcode=="\*\?\^\"\\\*\?\^\"\\"
+    );
   }
 }

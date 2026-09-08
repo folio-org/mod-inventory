@@ -1,0 +1,115 @@
+package org.folio.inventory.storage.external;
+
+import static api.ApiTestSuite.REQUEST_ID;
+import static api.ApiTestSuite.USER_ID;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static support.FutureAssistance.fail;
+import static support.FutureAssistance.getOnCompletion;
+import static support.FutureAssistance.succeed;
+import static support.FutureAssistance.waitForCompletion;
+
+import io.vertx.core.json.JsonObject;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import lombok.SneakyThrows;
+import org.folio.Authority;
+import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
+import org.folio.inventory.domain.AuthorityRecordCollection;
+import org.folio.inventory.validation.exceptions.JsonMappingException;
+import org.junit.jupiter.api.Test;
+import support.WaitForAllFutures;
+
+class ExternalStorageModuleAuthorityRecordCollectionTest extends AbstractExternalStorageTest {
+
+  private static final String AUTHORITY_ID = UUID.randomUUID().toString();
+  private static final String CORPORATE_NAME = UUID.randomUUID().toString();
+  private static final Integer VERSION = 3;
+
+  private final ExternalStorageModuleAuthorityRecordCollection storage =
+    useHttpClient(client -> new ExternalStorageModuleAuthorityRecordCollection(
+      getStorageAddress(), TENANT_ID, TENANT_TOKEN, USER_ID, REQUEST_ID, client));
+
+  @Test
+  void shouldMapFromJson() {
+    JsonObject authorityRecord = new JsonObject()
+      .put("id", AUTHORITY_ID)
+      .put("_version", VERSION)
+      .put("corporateName", CORPORATE_NAME);
+
+    Authority authority = storage.mapFromJson(authorityRecord);
+    assertNotNull(authority);
+    assertEquals(AUTHORITY_ID, authority.getId());
+    assertEquals(VERSION, authority.getVersion());
+    assertEquals(CORPORATE_NAME, authority.getCorporateName());
+  }
+
+  @Test
+  void shouldRetrieveId() {
+    String authorityId = UUID.randomUUID().toString();
+    Authority authority = new Authority()
+      .withId(authorityId);
+    assertEquals(authorityId, storage.getId(authority));
+  }
+
+  @Test
+  void shouldNotMapFromJsonAndThrowException() {
+    JsonObject holdingsRecord = new JsonObject()
+      .put("_version", "wrongFormat");
+
+    assertThrows(JsonMappingException.class, () -> storage.mapFromJson(holdingsRecord));
+  }
+
+  @Test
+  void shouldMapToRequest() {
+    Authority authority = new Authority()
+      .withId(AUTHORITY_ID)
+      .withVersion(VERSION)
+      .withCorporateName(CORPORATE_NAME);
+
+    JsonObject jsonObject = storage.mapToRequest(authority);
+    assertNotNull(jsonObject);
+    assertEquals(AUTHORITY_ID, jsonObject.getString("id"));
+    assertEquals(VERSION.toString(), jsonObject.getString("_version"));
+    assertEquals(CORPORATE_NAME, jsonObject.getString("corporateName"));
+  }
+
+  @Test
+  @SneakyThrows
+  void canBeEmptied() {
+    addSomeExamples(storage);
+
+    CompletableFuture<Void> emptied = new CompletableFuture<>();
+    storage.empty(succeed(emptied), fail(emptied));
+    waitForCompletion(emptied);
+    CompletableFuture<MultipleRecords<Authority>> findFuture = new CompletableFuture<>();
+
+    storage.findAll(PagingParameters.defaults(),
+      succeed(findFuture), fail(findFuture));
+
+    MultipleRecords<Authority> allInstancesWrapped = getOnCompletion(findFuture);
+
+    List<Authority> allInstances = allInstancesWrapped.records();
+
+    assertThat(allInstances.size(), is(0));
+    assertThat(allInstancesWrapped.totalRecords(), is(0));
+  }
+
+  @SneakyThrows
+  private static void addSomeExamples(AuthorityRecordCollection authorityCollection) {
+    WaitForAllFutures<Authority> allAdded = new WaitForAllFutures<>();
+    authorityCollection.add(createAuthority(), allAdded.notifySuccess(), v -> { });
+    authorityCollection.add(createAuthority(), allAdded.notifySuccess(), v -> { });
+    allAdded.waitForCompletion();
+  }
+
+  private static Authority createAuthority() {
+    return new Authority()
+      .withId(UUID.randomUUID().toString());
+  }
+}

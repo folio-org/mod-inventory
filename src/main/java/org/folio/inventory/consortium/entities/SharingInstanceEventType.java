@@ -3,8 +3,10 @@ package org.folio.inventory.consortium.entities;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum SharingInstanceEventType {
-  CONSORTIUM_INSTANCE_SHARING_INIT("CONSORTIUM_INSTANCE_SHARING_INIT"),
-  CONSORTIUM_INSTANCE_SHARING_COMPLETE("CONSORTIUM_INSTANCE_SHARING_COMPLETE");
+
+  SHARING_INIT("CONSORTIUM_INSTANCE_SHARING_INIT"),
+  SHARING_COMPLETE("CONSORTIUM_INSTANCE_SHARING_COMPLETE");
+
   private final String value;
 
   SharingInstanceEventType(String value) {
@@ -20,5 +22,4 @@ public enum SharingInstanceEventType {
   public String value() {
     return this.value;
   }
-
 }

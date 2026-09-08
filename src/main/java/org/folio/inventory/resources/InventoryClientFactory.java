@@ -22,7 +22,8 @@ public interface InventoryClientFactory {
    * @param client         The shared HttpClient instance.
    * @return A configured MultipleRecordsFetchClient for holdings records.
    */
-  MultipleRecordsFetchClient createHoldingsRecordsFetchClient(RoutingContext routingContext, WebContext context, HttpClient client);
+  MultipleRecordsFetchClient createHoldingsRecordsFetchClient(RoutingContext routingContext, WebContext context,
+                                                              HttpClient client);
 
   /**
    * Creates a client for interacting with the Source Record Storage (SRS) API.
@@ -41,5 +42,4 @@ public interface InventoryClientFactory {
    * @return A configured CollectionResourceClient for the locations API.
    */
   CollectionResourceClient createLocationClient(Context context, HttpClient client);
-
 }

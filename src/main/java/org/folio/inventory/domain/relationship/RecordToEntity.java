@@ -12,6 +12,7 @@ public class RecordToEntity {
 
   @Override
   public String toString() {
-    return "RecordToEntity(table=" + this.getTable().getTableName() + ", recordId=" + this.getRecordId() + ", entityId=" + this.getEntityId() + ")";
+    return "RecordToEntity(table=" + this.getTable().getTableName() + ", recordId=" + this.getRecordId() + ", entityId="
+           + this.getEntityId() + ")";
   }
 }

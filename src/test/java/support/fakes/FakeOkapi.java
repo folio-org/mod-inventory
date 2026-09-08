@@ -1,28 +1,30 @@
 package support.fakes;
 
-import java.time.Instant;
-
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
+import java.time.Instant;
 import lombok.Getter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import support.fakes.processors.StorageConstraintsProcessors;
 import support.fakes.processors.StorageRecordPreProcessors;
 
 public class FakeOkapi extends AbstractVerticle {
+
+  private static final Logger LOGGER = LogManager.getLogger(FakeOkapi.class);
   private static final int PORT_TO_USE = 9493;
 
   @Getter
-  private static final String address =
-    String.format("http://localhost:%s", PORT_TO_USE);
+  private static final String ADDRESS = String.format("http://localhost:%s", PORT_TO_USE);
 
   private HttpServer server;
 
   @Override
   public void start(Promise<Void> startFuture) {
-    System.out.println("Starting fake modules");
+    LOGGER.info("Starting fake modules");
 
     Router router = Router.router(vertx);
 
@@ -50,7 +52,7 @@ public class FakeOkapi extends AbstractVerticle {
     server.requestHandler(router)
       .listen(PORT_TO_USE)
       .onSuccess(httpServer -> {
-        System.out.printf("Fake Okapi listening on %s%n", server.actualPort());
+        LOGGER.info("Fake Okapi listening on {}", server.actualPort());
         startFuture.complete();
       })
       .onFailure(startFuture::fail);
@@ -58,12 +60,12 @@ public class FakeOkapi extends AbstractVerticle {
 
   @Override
   public void stop(Promise<Void> stopFuture) {
-    System.out.println("Stopping fake modules");
+    LOGGER.info("Stopping fake modules");
 
     if (server != null) {
       server.close()
         .onSuccess(v -> {
-          System.out.printf("Stopped listening on %s%n", server.actualPort());
+          LOGGER.info("Stopped listening on {}", server.actualPort());
           stopFuture.complete();
         })
         .onFailure(stopFuture::fail);
@@ -143,19 +145,19 @@ public class FakeOkapi extends AbstractVerticle {
   }
 
   private void registerFakeHoldingSourcesModule(Router router) {
-      new FakeStorageModuleBuilder()
-        .withRecordName("Holding record sources")
-        .withRootPath("/holdings-sources")
-        .withCollectionPropertyName("holdingsRecordsSources")
-        .create().register(router);
+    new FakeStorageModuleBuilder()
+      .withRecordName("Holding record sources")
+      .withRootPath("/holdings-sources")
+      .withCollectionPropertyName("holdingsRecordsSources")
+      .create().register(router);
   }
 
   private void registerFakeAuthorityStorageModule(Router router) {
     new FakeStorageModuleBuilder()
-        .withRecordName("authority")
-        .withRootPath("/authority-storage/authorities")
-        .withCollectionPropertyName("authorities")
-        .create().register(router);
+      .withRecordName("authority")
+      .withRootPath("/authority-storage/authorities")
+      .withCollectionPropertyName("authorities")
+      .create().register(router);
   }
 
   private void registerFakeItemsStorageModule(Router router) {

@@ -27,7 +27,8 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.InstanceIngressEvent;
 import org.folio.rest.jaxrs.model.Record;
 
-public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandler implements InstanceIngressEventHandler {
+public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandler
+  implements InstanceIngressEventHandler {
   private static final Logger LOGGER = getLogger(CreateInstanceIngressEventHandler.class);
   private final InstanceCollection instanceCollection;
   private final Context context;
@@ -39,7 +40,8 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
                                            Context context,
                                            Storage storage,
                                            SnapshotService snapshotService) {
-    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, idStorageService, null, snapshotService, httpClient);
+    super(storage, precedingSucceedingTitlesHelper, mappingMetadataCache, idStorageService, null, snapshotService,
+      httpClient);
     this.instanceCollection = storage.getInstanceCollection(context);
     this.context = context;
   }
@@ -50,7 +52,9 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
       LOGGER.info("Processing InstanceIngressEvent with id '{}' for instance creation", event.getId());
       var future = new CompletableFuture<Instance>();
       if (eventContainsNoData(event)) {
-        var message = format("InstanceIngressEvent message does not contain required data to create Instance for eventId: '%s'", event.getId());
+        var message =
+          format("InstanceIngressEvent message does not contain required data to create Instance for eventId: '%s'",
+            event.getId());
         LOGGER.error(message);
         return CompletableFuture.failedFuture(new EventProcessingException(message));
       }
@@ -61,7 +65,8 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
       var instanceId = getInstanceId(event).orElseGet(() -> super.getInstanceId(targetRecord));
       idStorageService.store(targetRecord.getId(), instanceId, context.getTenantId())
         .compose(res -> getMappingMetadata(context, super::getMappingMetadataCache))
-        .compose(metadataOptional -> metadataOptional.map(metadata -> prepareAndExecuteMapping(metadata, targetRecord, event, instanceId, LOGGER))
+        .compose(metadataOptional -> metadataOptional.map(
+            metadata -> prepareAndExecuteMapping(metadata, targetRecord, event, instanceId, LOGGER))
           .orElseGet(() -> Future.failedFuture("MappingMetadata was not found for marc-bib record type")))
         .compose(instance -> validateInstance(instance, event, LOGGER))
         .compose(instance -> saveInstance(instance, event))
@@ -84,36 +89,40 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
     var targetRecord = (Record) event.getEventPayload().getAdditionalProperties().get(MARC_BIBLIOGRAPHIC.value());
     var sourceContent = targetRecord.getParsedRecord().getContent().toString();
     return super.addInstance(instance, instanceCollection)
-      .compose(createdInstance -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(instance, context).map(createdInstance))
+      .compose(
+        createdInstance -> getPrecedingSucceedingTitlesHelper().createPrecedingSucceedingTitles(instance, context)
+          .map(createdInstance))
       .compose(createdInstance -> executeFieldsManipulation(createdInstance, targetRecord,
         event.getEventPayload().getAdditionalProperties(), super::executeFieldsManipulation))
       .compose(createdInstance -> {
         var targetContent = targetRecord.getParsedRecord().getContent().toString();
-        var content = reorderMarcRecordFields(sourceContent, targetContent);
+        var content = reorderMarcRecordFields(sourceContent, targetContent, targetRecord.getId());
         targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(content));
         return saveRecordInSrsAndHandleResponse(event, targetRecord, createdInstance);
       });
   }
 
-  private Future<Instance> saveRecordInSrsAndHandleResponse(InstanceIngressEvent event, Record srcRecord, Instance instance) {
+  private Future<Instance> saveRecordInSrsAndHandleResponse(InstanceIngressEvent event, Record srcRecord,
+                                                            Instance instance) {
     LOGGER.info("Saving record in SRS and handling a response for an Instance with id '{}':", instance.getId());
     Promise<Instance> promise = Promise.promise();
     postSnapshotInSrsAndHandleResponse(srcRecord.getSnapshotId(), context, super::postSnapshotInSrsAndHandleResponse)
       .onFailure(promise::fail)
       .compose(snapshot -> {
-        getSourceStorageRecordsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId(), context.getUserId(), context.getRequestId())
+        getSourceStorageClient(context.getOkapiLocation(), context.getToken(), context.getTenantId(),
+          context.getUserId(), context.getRequestId())
           .postSourceStorageRecords(srcRecord)
           .onComplete(ar -> {
             var result = ar.result();
-            if (ar.succeeded() &&
-              result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
+            if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
               LOGGER.info("Created MARC record in SRS with id: '{}', instanceId: '{}', from tenant: {}",
                 srcRecord.getId(), instance.getId(), context.getTenantId());
               promise.complete(instance);
             } else {
               String msg = format(
                 "Failed to create MARC record in SRS, instanceId: '%s', status code: %s, Record: %s",
-                instance.getId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
+                instance.getId(), result != null ? result.statusCode() : "",
+                result != null ? result.bodyAsString() : "");
               LOGGER.warn(msg);
               super.deleteInstance(instance.getId(), event.getId(),
                 instanceCollection);
@@ -124,5 +133,4 @@ public class CreateInstanceIngressEventHandler extends CreateInstanceEventHandle
       });
     return promise.future();
   }
-
 }

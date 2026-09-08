@@ -2,14 +2,14 @@ package org.folio.inventory.instanceingress.handler;
 
 import static java.lang.String.format;
 import static java.util.Objects.nonNull;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_S;
 import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.reorderMarcRecordFields;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
-
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -31,7 +31,8 @@ import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.InstanceIngressEvent;
 import org.folio.rest.jaxrs.model.Record;
 
-public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandler implements InstanceIngressEventHandler {
+public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandler
+  implements InstanceIngressEventHandler {
 
   private static final Logger LOGGER = LogManager.getLogger(UpdateInstanceIngressEventHandler.class);
   private final InstanceCollection instanceCollection;
@@ -56,7 +57,9 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
       LOGGER.info("Processing InstanceIngressEvent with id '{}' for instance update", event.getId());
       var future = new CompletableFuture<Instance>();
       if (eventContainsNoData(event)) {
-        var message = format("InstanceIngressEvent message does not contain required data to update Instance for eventId: '%s'", event.getId());
+        var message =
+          format("InstanceIngressEvent message does not contain required data to update Instance for eventId: '%s'",
+            event.getId());
         LOGGER.error(message);
         return CompletableFuture.failedFuture(new EventProcessingException(message));
       }
@@ -65,7 +68,8 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
       var targetRecord = constructMarcBibRecord(event.getEventPayload(), recordId);
       var instanceId = getInstanceId(event).orElseGet(() -> super.getInstanceId(targetRecord));
       getMappingMetadata(context, super::getMappingMetadataCache)
-        .compose(metadataOptional -> metadataOptional.map(metadata -> prepareAndExecuteMapping(metadata, targetRecord, event, instanceId, LOGGER))
+        .compose(metadataOptional -> metadataOptional.map(
+            metadata -> prepareAndExecuteMapping(metadata, targetRecord, event, instanceId, LOGGER))
           .orElseGet(() -> Future.failedFuture("MappingMetadata was not found for marc-bib record type")))
         .compose(newInstance -> fillPreviousInstanceData(newInstance, instanceId))
         .compose(newInstance -> validateInstance(newInstance, event, LOGGER))
@@ -101,14 +105,15 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
     Promise<Instance> promise = Promise.promise();
     instanceCollection.update(instance, success -> promise.complete(instance),
       failure -> {
-      LOGGER.error("Error updating Instance - {}}, status code {}, eventId - {}",
-        failure.getReason(), failure.getStatusCode(), event.getId());
-      promise.fail(failure.getReason());
+        LOGGER.error("Error updating Instance - {}}, status code {}, eventId - {}",
+          failure.reason(), failure.statusCode(), event.getId());
+        promise.fail(failure.reason());
       });
     var targetRecord = (Record) event.getEventPayload().getAdditionalProperties().get(MARC_BIBLIOGRAPHIC.value());
     var sourceContent = targetRecord.getParsedRecord().getContent().toString();
     return promise.future()
-      .compose(updatedInstance -> getPrecedingSucceedingTitlesHelper().getExistingPrecedingSucceedingTitles(instance, context))
+      .compose(
+        updatedInstance -> getPrecedingSucceedingTitlesHelper().getExistingPrecedingSucceedingTitles(instance, context))
       .map(precedingSucceedingTitles -> precedingSucceedingTitles.stream()
         .map(titleJson -> titleJson.getString("id"))
         .collect(Collectors.toSet()))
@@ -118,7 +123,7 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
         event.getEventPayload().getAdditionalProperties(), super::executeFieldsManipulation))
       .compose(updatedInstance -> {
         var targetContent = targetRecord.getParsedRecord().getContent().toString();
-        var content = reorderMarcRecordFields(sourceContent, targetContent);
+        var content = reorderMarcRecordFields(sourceContent, targetContent, targetRecord.getId());
         targetRecord.setParsedRecord(targetRecord.getParsedRecord().withContent(content));
         return putRecordInSrsAndHandleResponse(targetRecord, updatedInstance);
       })
@@ -128,9 +133,11 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
 
   private Future<Instance> putRecordInSrsAndHandleResponse(Record targetRecord, Instance instance) {
     Promise<Instance> promise = Promise.promise();
-    var sourceStorageRecordsClient = getSourceStorageRecordsClient(context.getOkapiLocation(), context.getToken(), context.getTenantId(),
-      context.getUserId(), context.getRequestId());
-    postSnapshotInSrsAndHandleResponse(targetRecord.getSnapshotId(), context, snapshotService::postSnapshotInSrsAndHandleResponse)
+    var sourceStorageRecordsClient =
+      getSourceStorageClient(context.getOkapiLocation(), context.getToken(), context.getTenantId(),
+        context.getUserId(), context.getRequestId());
+    postSnapshotInSrsAndHandleResponse(targetRecord.getSnapshotId(), context,
+      snapshotService::postSnapshotInSrsAndHandleResponse)
       .onFailure(promise::fail)
       .compose(snapshot -> super.getRecordByInstanceId(sourceStorageRecordsClient, instance.getId()))
       .compose(existingRecord -> {
@@ -139,21 +146,21 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
           int incrementedGeneration = existingRecord.getGeneration();
           targetRecord.setGeneration(++incrementedGeneration);
         }
-        AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, TAG_999, 's', targetRecord.getMatchedId());
+        AdditionalFieldsUtil.addFieldToMarcRecord(targetRecord, FIELD_999, SUBFIELD_S, targetRecord.getMatchedId());
         return Future.succeededFuture(targetRecord.getMatchedId());
       })
       .compose(matchedId ->
         sourceStorageRecordsClient.putSourceStorageRecordsGenerationById(matchedId, targetRecord)
           .onComplete(ar -> {
             var result = ar.result();
-            if (ar.succeeded() &&
-              result.statusCode() == HttpStatus.HTTP_OK.toInt()) {
+            if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_OK.toInt()) {
               LOGGER.info("Update MARC record in SRS with id: '{}', instanceId: '{}', from tenant: {}",
                 targetRecord.getId(), instance.getId(), context.getTenantId());
               promise.complete(instance);
             } else {
               String msg = format("Failed to update MARC record in SRS, instanceId: '%s', status code: %s, result: %s",
-                instance.getId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
+                instance.getId(), result != null ? result.statusCode() : "",
+                result != null ? result.bodyAsString() : "");
               LOGGER.warn(msg);
               promise.fail(msg);
             }
@@ -161,5 +168,4 @@ public class UpdateInstanceIngressEventHandler extends ReplaceInstanceEventHandl
       );
     return promise.future();
   }
-
 }

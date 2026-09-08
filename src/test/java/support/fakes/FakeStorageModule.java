@@ -1,5 +1,9 @@
 package support.fakes;
 
+import static api.ApiTestSuite.ID_FOR_FAILURE;
+import static api.ApiTestSuite.ID_FOR_OPTIMISTIC_LOCKING_FAILURE;
+import static java.util.concurrent.CompletableFuture.completedFuture;
+
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonArray;
@@ -7,7 +11,18 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.support.EndpointFailureHandler;
 import org.folio.inventory.support.http.server.ClientErrorResponse;
@@ -18,22 +33,10 @@ import org.folio.inventory.support.http.server.ValidationError;
 import org.joda.time.DateTime;
 import support.fakes.processors.RecordPreProcessor;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
-import static api.ApiTestSuite.ID_FOR_FAILURE;
-import static api.ApiTestSuite.ID_FOR_OPTIMISTIC_LOCKING_FAILURE;
-import static java.util.concurrent.CompletableFuture.completedFuture;
-
 class FakeStorageModule extends AbstractVerticle {
+
+  private static final Logger LOGGER = LogManager.getLogger(FakeStorageModule.class);
+
   private final String rootPath;
   private final String collectionPropertyName;
   private final boolean hasCollectionDelete;
@@ -45,16 +48,15 @@ class FakeStorageModule extends AbstractVerticle {
   private final List<RecordPreProcessor> recordPreProcessors;
   private EndpointFailureDescriptor endpointFailureDescriptor = null;
 
-  FakeStorageModule(
-    String rootPath,
-    String collectionPropertyName,
-    List<String> tenants,
-    Collection<String> requiredProperties,
-    boolean hasCollectionDelete,
-    String recordTypeName,
-    Collection<String> uniqueProperties,
-    Map<String, Supplier<Object>> defaultProperties,
-    List<RecordPreProcessor> recordPreProcessors) {
+  FakeStorageModule(String rootPath,
+                    String collectionPropertyName,
+                    List<String> tenants,
+                    Collection<String> requiredProperties,
+                    boolean hasCollectionDelete,
+                    String recordTypeName,
+                    Collection<String> uniqueProperties,
+                    Map<String, Supplier<Object>> defaultProperties,
+                    List<RecordPreProcessor> recordPreProcessors) {
 
     this.rootPath = rootPath;
     this.collectionPropertyName = collectionPropertyName;
@@ -63,8 +65,7 @@ class FakeStorageModule extends AbstractVerticle {
     this.recordTypeName = recordTypeName;
     this.uniqueProperties = uniqueProperties;
 
-    HashMap<String, Supplier<Object>> defaultPropertiesWithId = new HashMap<>(defaultProperties);
-
+    Map<String, Supplier<Object>> defaultPropertiesWithId = new HashMap<>(defaultProperties);
     defaultPropertiesWithId.put("id", () -> UUID.randomUUID().toString());
 
     this.defaultProperties = defaultPropertiesWithId;
@@ -105,6 +106,15 @@ class FakeStorageModule extends AbstractVerticle {
 
     router.get(rootPath + "/:id/formatted").handler(this::getByExternalId);
     router.post("/source-storage/snapshots").handler(this::createSnapshot);
+  }
+
+  void registerBatch(Router router, String batchPath) {
+    String pathTree = batchPath + "/*";
+
+    router.post(pathTree).handler(BodyHandler.create());
+    router.post(batchPath).handler(BodyHandler.create());
+    router.route(batchPath).handler(this::checkTokenHeader);
+    router.post(batchPath).handler(this::createBatch);
   }
 
   private void emulateFailureIfNeeded(RoutingContext routingContext) {
@@ -148,17 +158,8 @@ class FakeStorageModule extends AbstractVerticle {
 
     return endpointFailureDescriptor != null && DateTime.now().toDate()
       .before(endpointFailureDescriptor.getFailureExpireDate())
-      && endpointFailureDescriptor.getMethod().equals(routingContext.request()
+           && endpointFailureDescriptor.getMethod().equals(routingContext.request()
       .method().name());
-  }
-
-  void registerBatch(Router router, String batchPath) {
-    String pathTree = batchPath + "/*";
-
-    router.post(pathTree).handler(BodyHandler.create());
-    router.post(batchPath).handler(BodyHandler.create());
-    router.route(batchPath).handler(this::checkTokenHeader);
-    router.post(batchPath).handler(this::createBatch);
   }
 
   private void createBatch(RoutingContext routingContext) {
@@ -175,7 +176,7 @@ class FakeStorageModule extends AbstractVerticle {
 
       lastCreate = lastCreate.thenCompose(prev -> createElement(context, element));
 
-      System.out.printf("Created %s resource: %s%n", recordTypeName, id);
+      LOGGER.info("Created {} resource: {}", recordTypeName, id);
     }
 
     lastCreate.thenAccept(notUsed -> {
@@ -188,7 +189,6 @@ class FakeStorageModule extends AbstractVerticle {
   }
 
   private void create(RoutingContext routingContext) {
-
     WebContext context = new WebContext(routingContext);
 
     JsonObject body = getJsonFromBody(routingContext);
@@ -198,7 +198,7 @@ class FakeStorageModule extends AbstractVerticle {
     String id = body.getString("id");
 
     createElement(context, body).thenAccept(notUsed -> {
-      System.out.printf("Created %s resource: %s%n", recordTypeName, id);
+      LOGGER.info("Created {} resource: {}", recordTypeName, id);
 
       JsonResponse.created(routingContext.response(), body);
     }).exceptionally(error -> {
@@ -212,7 +212,8 @@ class FakeStorageModule extends AbstractVerticle {
   private CompletableFuture<Void> createElement(WebContext context, JsonObject rawBody) {
     String id = rawBody.getString("id");
 
-    return preProcessRecords(context.getTenantId(), null, rawBody).thenAccept(body -> getResourcesForTenant(context).put(id, body));
+    return preProcessRecords(context.getTenantId(), null, rawBody).thenAccept(
+      body -> getResourcesForTenant(context).put(id, body));
   }
 
   private void replace(RoutingContext routingContext) {
@@ -231,12 +232,12 @@ class FakeStorageModule extends AbstractVerticle {
       } else if (ID_FOR_OPTIMISTIC_LOCKING_FAILURE.toString().equals(id)) {
         ClientErrorResponse.optimisticLocking(routingContext.response(), "Optimistic Locking");
       } else if (resourcesForTenant.containsKey(id)) {
-        System.out.printf("Replaced %s resource: %s%n", recordTypeName, id);
+        LOGGER.info("Replaced {} resource: {}", recordTypeName, id);
 
         resourcesForTenant.replace(id, body);
         SuccessResponse.noContent(routingContext.response());
       } else {
-        System.out.printf("Created %s resource: %s%n", recordTypeName, id);
+        LOGGER.info("Created {} resource: {}", recordTypeName, id);
 
         resourcesForTenant.put(id, body);
         SuccessResponse.noContent(routingContext.response());
@@ -254,12 +255,12 @@ class FakeStorageModule extends AbstractVerticle {
     if (resourcesForTenant.containsKey(id)) {
       final JsonObject resourceRepresentation = resourcesForTenant.get(id);
 
-      System.out.printf("Found %s resource: %s%n", recordTypeName,
+      LOGGER.info("Found {} resource: {}", recordTypeName,
         resourceRepresentation.encodePrettily());
 
       JsonResponse.success(routingContext.response(), resourceRepresentation);
     } else {
-      System.out.printf("Failed to find %s resource: %s%n", recordTypeName, id);
+      LOGGER.info("Failed to find {} resource: {}", recordTypeName, id);
 
       ClientErrorResponse.notFound(routingContext.response());
     }
@@ -272,24 +273,24 @@ class FakeStorageModule extends AbstractVerticle {
     Integer offset = context.getIntegerParameter("offset", 0);
     String query = context.getStringParameter("query", null);
 
-    System.out.printf("Handling %s%n", routingContext.request().uri());
+    LOGGER.info("Handling {}", routingContext.request().uri());
 
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
-    List<JsonObject> filteredItems = new FakeCQLToJSONInterpreter(false)
+    List<JsonObject> filteredItems = new FakeCqlToJsonInterpreter(false)
       .execute(resourcesForTenant.values(), query);
 
     List<JsonObject> pagedItems = filteredItems.stream()
       .skip(offset)
       .limit(limit)
-      .collect(Collectors.toList());
+      .toList();
 
     JsonObject result = new JsonObject();
 
     result.put(collectionPropertyName, new JsonArray(pagedItems));
     result.put("totalRecords", filteredItems.size());
 
-    System.out.printf("Found %s resources: %s%n", recordTypeName,
+    LOGGER.info("Found {} resources: {}", recordTypeName,
       result.encodePrettily());
 
     JsonResponse.success(routingContext.response(), result);
@@ -303,24 +304,24 @@ class FakeStorageModule extends AbstractVerticle {
     var offset = requestBody.getInteger("offset");
     var query = requestBody.getString("query");
 
-    System.out.printf("Handling %s%n", routingContext.request().uri());
+    LOGGER.info("Handling {}", routingContext.request().uri());
 
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
-    List<JsonObject> filteredItems = new FakeCQLToJSONInterpreter(false)
+    List<JsonObject> filteredItems = new FakeCqlToJsonInterpreter(false)
       .execute(resourcesForTenant.values(), query);
 
     List<JsonObject> pagedItems = filteredItems.stream()
       .skip(offset)
       .limit(limit)
-      .collect(Collectors.toList());
+      .toList();
 
     JsonObject result = new JsonObject();
 
     result.put(collectionPropertyName, new JsonArray(pagedItems));
     result.put("totalRecords", filteredItems.size());
 
-    System.out.printf("Found %s resources: %s%n", recordTypeName,
+    LOGGER.info("Found {} resources: {}", recordTypeName,
       result.encodePrettily());
 
     JsonResponse.success(routingContext.response(), result);
@@ -366,12 +367,12 @@ class FakeStorageModule extends AbstractVerticle {
     Map<String, JsonObject> resourcesForTenant = getResourcesForTenant(context);
 
     if (resourcesForTenant.containsKey(id)) {
-      System.out.printf("Deleted %s resource: %s%n", recordTypeName, id);
+      LOGGER.info("Deleted {} resource: {}", recordTypeName, id);
       resourcesForTenant.remove(id);
 
       SuccessResponse.noContent(routingContext.response());
     } else {
-      System.out.printf("%s resource: %s%n for deletion is not found", recordTypeName, id);
+      LOGGER.info("{} resource: {} for deletion is not found", recordTypeName, id);
       ClientErrorResponse.notFound(routingContext.response());
     }
   }
@@ -429,8 +430,8 @@ class FakeStorageModule extends AbstractVerticle {
     }
 
     return lastObject != null
-      ? lastObject.getValue(pathElements[pathElements.length - 1])
-      : null;
+           ? lastObject.getValue(pathElements[pathElements.length - 1])
+           : null;
   }
 
   private void checkUniqueProperties(RoutingContext routingContext) {
@@ -449,7 +450,7 @@ class FakeStorageModule extends AbstractVerticle {
       Map<String, JsonObject> records = getResourcesForTenant(new WebContext(routingContext));
 
       if (records.values().stream()
-        .map(record -> record.getString(uniqueProperty))
+        .map(jsonObject -> jsonObject.getString(uniqueProperty))
         .anyMatch(usedValue -> usedValue.equals(proposedValue))) {
 
         errors.add(new ValidationError(
@@ -478,18 +479,17 @@ class FakeStorageModule extends AbstractVerticle {
     CompletableFuture<JsonObject> lastPreProcess = completedFuture(newBody);
 
     for (RecordPreProcessor preProcessor : recordPreProcessors) {
-      lastPreProcess = lastPreProcess
-        .thenCompose(prev -> {
-            try {
-              return preProcessor.process(tenant, oldBody, newBody);
-            } catch (Exception ex) {
-              CompletableFuture<JsonObject> future = new CompletableFuture<>();
-              future.completeExceptionally(ex);
+      lastPreProcess = lastPreProcess.thenCompose(prev -> {
+          try {
+            return preProcessor.process(tenant, oldBody, newBody);
+          } catch (Exception ex) {
+            CompletableFuture<JsonObject> future = new CompletableFuture<>();
+            future.completeExceptionally(ex);
 
-              return future;
-            }
+            return future;
           }
-        );
+        }
+      );
     }
 
     return lastPreProcess;
@@ -571,7 +571,9 @@ class FakeStorageModule extends AbstractVerticle {
   }
 
   private static void deepMergeInto(JsonObject target, JsonObject patch) {
-    if (patch == null) return;
+    if (patch == null) {
+      return;
+    }
 
     for (String key : patch.fieldNames()) {
       Object patchVal = patch.getValue(key);

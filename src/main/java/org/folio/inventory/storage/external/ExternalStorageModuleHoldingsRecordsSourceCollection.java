@@ -1,16 +1,14 @@
 package org.folio.inventory.storage.external;
 
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonObject;
 import java.io.IOException;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.rest.jaxrs.model.HoldingsRecordsSource;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.domain.HoldingsRecordsSourceCollection;
 import org.folio.inventory.validation.exceptions.JsonMappingException;
-
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonObject;
+import org.folio.rest.jaxrs.model.HoldingsRecordsSource;
 
 public class ExternalStorageModuleHoldingsRecordsSourceCollection
   extends ExternalStorageModuleCollection<HoldingsRecordsSource>
@@ -31,8 +29,8 @@ public class ExternalStorageModuleHoldingsRecordsSourceCollection
   }
 
   @Override
-  protected JsonObject mapToRequest(HoldingsRecordsSource record) {
-      return JsonObject.mapFrom(record);
+  protected JsonObject mapToRequest(HoldingsRecordsSource entity) {
+    return JsonObject.mapFrom(entity);
   }
 
   @Override
@@ -46,7 +44,7 @@ public class ExternalStorageModuleHoldingsRecordsSourceCollection
   }
 
   @Override
-  protected String getId(HoldingsRecordsSource record) {
-    return record.getId();
+  protected String getId(HoldingsRecordsSource entity) {
+    return entity.getId();
   }
 }

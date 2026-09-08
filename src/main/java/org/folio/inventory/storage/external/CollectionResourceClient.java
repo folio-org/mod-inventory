@@ -3,12 +3,11 @@ package org.folio.inventory.storage.external;
 import static org.folio.util.PercentCodec.encode;
 
 import io.vertx.core.json.JsonObject;
-import org.folio.inventory.support.http.client.OkapiHttpClient;
-import org.folio.inventory.support.http.client.Response;
-
 import java.net.URL;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import org.folio.inventory.support.http.client.OkapiHttpClient;
+import org.folio.inventory.support.http.client.Response;
 
 public class CollectionResourceClient {
 
@@ -63,7 +62,7 @@ public class CollectionResourceClient {
     Consumer<Response> responseHandler) {
 
     getMany(cqlQuery, pageLimit, pageOffset)
-    .thenAccept(responseHandler);
+      .thenAccept(responseHandler);
   }
 
   /**
@@ -77,8 +76,8 @@ public class CollectionResourceClient {
     Integer pageOffset) {
 
     String url = collectionRoot + "?"
-        + (isProvided(cqlQuery) ? ("query=" + encode(cqlQuery) + "&") : "")
-        + "limit=" + pageLimit + "&offset=" + pageOffset;
+                 + (isProvided(cqlQuery) ? ("query=" + encode(cqlQuery) + "&") : "")
+                 + "limit=" + pageLimit + "&offset=" + pageOffset;
     return client.get(url).toCompletableFuture();
   }
 
@@ -111,10 +110,10 @@ public class CollectionResourceClient {
   }
 
   private boolean isProvided(String query) {
-    return query != null && !query.trim().equals("");
+    return query != null && !query.trim().isEmpty();
   }
 
   private String recordUrl(String id) {
-    return String.format(collectionRoot + "/%s", id);
+    return collectionRoot + "/" + id;
   }
 }

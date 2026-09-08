@@ -1,31 +1,22 @@
 package org.folio.inventory.eventhandlers.preloaders;
 
 import static java.util.Collections.singletonList;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
-
 import static org.folio.MatchDetail.MatchCriterion.EXACTLY_MATCHES;
 import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
 import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-
 import lombok.SneakyThrows;
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
-
 import org.folio.DataImportEventPayload;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
@@ -40,129 +31,138 @@ import org.folio.processing.value.ListValue;
 import org.folio.rest.jaxrs.model.Field;
 import org.folio.rest.jaxrs.model.MatchExpression;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
-@RunWith(MockitoJUnitRunner.class)
-public class HoldingsPreloaderTest {
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
+class HoldingsPreloaderTest {
 
-    private static final List<String> POLS = List.of("10001-1", "10001-2");
+  private static final List<String> POLS = List.of("10001-1", "10001-2");
 
-    @Mock
-    private MarcValueReaderImpl marcValueReader;
-    @Mock
-    private OrdersPreloaderHelper ordersPreloaderHelper;
-    @InjectMocks
-    private final HoldingsPreloader preloader = new HoldingsPreloader(ordersPreloaderHelper);
+  @Mock
+  private MarcValueReaderImpl marcValueReader;
+  @Mock
+  private OrdersPreloaderHelper ordersPreloaderHelper;
+  @InjectMocks
+  private HoldingsPreloader preloader;
 
-    @Before
-    @SneakyThrows
-    public void setUp() {
-        MatchValueReaderFactory.clearReaderFactory();
-        when(marcValueReader.isEligibleForEntityType(MARC_BIBLIOGRAPHIC)).thenReturn(true);
-        when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
-                .thenReturn(ListValue.of(POLS));
-        MatchValueReaderFactory.register(marcValueReader);
-    }
+  @BeforeEach
+  @SneakyThrows
+  void setUp() {
+    MatchValueReaderFactory.clearReaderFactory();
+    when(marcValueReader.isEligibleForEntityType(MARC_BIBLIOGRAPHIC)).thenReturn(true);
+    when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
+      .thenReturn(ListValue.of(POLS));
+    MatchValueReaderFactory.register(marcValueReader);
+  }
 
-    @Test
-    @SneakyThrows
-    public void shouldPreloadByPOL() {
-        MatchExpression incomingMatchExpression = new MatchExpression()
-                .withDataValueType(VALUE_FROM_RECORD)
-                .withFields(List.of(
-                        new Field().withLabel("field").withValue("935"),
-                        new Field().withLabel("indicator1").withValue(""),
-                        new Field().withLabel("indicator2").withValue(""),
-                        new Field().withLabel("recordSubfield").withValue("a")
-                ));
-        DataImportEventPayload eventPayload = createEventPayload();
-        MatchDetail matchDetail =((MatchProfile) eventPayload.getCurrentNode().getContent()).getMatchDetails().get(0);
-        matchDetail.setIncomingMatchExpression(incomingMatchExpression);
+  @Test
+  @SneakyThrows
+  void shouldPreloadByOrderLine() {
+    MatchExpression incomingMatchExpression = new MatchExpression()
+      .withDataValueType(VALUE_FROM_RECORD)
+      .withFields(List.of(
+        new Field().withLabel("field").withValue("935"),
+        new Field().withLabel("indicator1").withValue(""),
+        new Field().withLabel("indicator2").withValue(""),
+        new Field().withLabel("recordSubfield").withValue("a")
+      ));
+    DataImportEventPayload eventPayload = createEventPayload();
+    MatchDetail matchDetail = ((MatchProfile) eventPayload.getCurrentNode().getContent()).getMatchDetails().getFirst();
+    matchDetail.setIncomingMatchExpression(incomingMatchExpression);
 
-        List<String> holdingsIdsMock = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+    List<String> holdingsIdsMock = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
 
-        when(ordersPreloaderHelper.preload(eq(eventPayload), eq(PreloadingFields.POL), any(), any()))
-                .thenReturn(CompletableFuture.completedFuture(Optional.of(holdingsIdsMock)));
+    when(ordersPreloaderHelper.preload(eq(eventPayload), eq(PreloadingFields.POL), any(), any()))
+      .thenReturn(CompletableFuture.completedFuture(Optional.of(holdingsIdsMock)));
 
-        LoadQuery initialLoadQuery = LoadQueryBuilder.build(ListValue.of(POLS), matchDetail);
-        LoadQuery loadQuery = preloader.preload(initialLoadQuery, eventPayload)
-                .get(20, TimeUnit.SECONDS);
+    LoadQuery initialLoadQuery = LoadQueryBuilder.build(ListValue.of(POLS), matchDetail);
+    LoadQuery loadQuery = preloader.preload(initialLoadQuery, eventPayload)
+      .get(20, TimeUnit.SECONDS);
 
-        Assertions.assertThat(loadQuery.getCql()).isNotEqualTo(initialLoadQuery.getCql());
-        Assertions.assertThat(loadQuery.getCql())
-                .isEqualTo(String.format("(id == \"%s\" OR id == \"%s\")",
-                        holdingsIdsMock.get(0), holdingsIdsMock.get(1)));
-    }
+    Assertions.assertThat(loadQuery.getCql()).isNotEqualTo(initialLoadQuery.getCql());
+    Assertions.assertThat(loadQuery.getCql())
+      .isEqualTo(String.format("(id == \"%s\" OR id == \"%s\")",
+        holdingsIdsMock.get(0), holdingsIdsMock.get(1)));
+  }
 
-    @Test
-    @SneakyThrows
-    public void shouldReturnNullLoadQueryWhenLoadedNoPol() {
-        MatchExpression incomingMatchExpression = new MatchExpression()
-          .withDataValueType(VALUE_FROM_RECORD)
-          .withFields(List.of(
-            new Field().withLabel("field").withValue("935"),
-            new Field().withLabel("indicator1").withValue(""),
-            new Field().withLabel("indicator2").withValue(""),
-            new Field().withLabel("recordSubfield").withValue("a")
-          ));
-        DataImportEventPayload eventPayload = createEventPayload();
-        MatchDetail matchDetail =((MatchProfile) eventPayload.getCurrentNode().getContent()).getMatchDetails().get(0);
-        matchDetail.setIncomingMatchExpression(incomingMatchExpression);
+  @Test
+  @SneakyThrows
+  void shouldReturnNullLoadQueryWhenLoadedNoPol() {
+    MatchExpression incomingMatchExpression = new MatchExpression()
+      .withDataValueType(VALUE_FROM_RECORD)
+      .withFields(List.of(
+        new Field().withLabel("field").withValue("935"),
+        new Field().withLabel("indicator1").withValue(""),
+        new Field().withLabel("indicator2").withValue(""),
+        new Field().withLabel("recordSubfield").withValue("a")
+      ));
+    DataImportEventPayload eventPayload = createEventPayload();
+    MatchDetail matchDetail = ((MatchProfile) eventPayload.getCurrentNode().getContent()).getMatchDetails().getFirst();
+    matchDetail.setIncomingMatchExpression(incomingMatchExpression);
 
-        when(ordersPreloaderHelper.preload(eq(eventPayload), eq(PreloadingFields.POL), any(), any()))
-          .thenReturn(CompletableFuture.completedFuture(Optional.empty()));
+    when(ordersPreloaderHelper.preload(eq(eventPayload), eq(PreloadingFields.POL), any(), any()))
+      .thenReturn(CompletableFuture.completedFuture(Optional.empty()));
 
-        LoadQuery initialLoadQuery = LoadQueryBuilder.build(ListValue.of(POLS), matchDetail);
-        LoadQuery loadQuery = preloader.preload(initialLoadQuery, eventPayload)
-          .get(20, TimeUnit.SECONDS);
+    LoadQuery initialLoadQuery = LoadQueryBuilder.build(ListValue.of(POLS), matchDetail);
+    LoadQuery loadQuery = preloader.preload(initialLoadQuery, eventPayload)
+      .get(20, TimeUnit.SECONDS);
 
-        Assertions.assertThat(loadQuery).isNull();
-    }
+    Assertions.assertThat(loadQuery).isNull();
+  }
 
-    @Test
-    @SneakyThrows
-    public void shouldReturnNullForNullLoadQuery() {
-        LoadQuery loadQuery = preloader.preload(null, createEventPayload())
-                .get(20, TimeUnit.SECONDS);
+  @Test
+  @SneakyThrows
+  void shouldReturnNullForNullLoadQuery() {
+    LoadQuery loadQuery = preloader.preload(null, createEventPayload())
+      .get(20, TimeUnit.SECONDS);
 
-        Assertions.assertThat(loadQuery).isNull();
-    }
+    Assertions.assertThat(loadQuery).isNull();
+  }
 
-    @Test
-    @SneakyThrows
-    public void shouldReturnInitialQueryIfPreloadingFieldDoesNotExistInMatchExpression() {
-        MatchExpression existingMatchExpression = new MatchExpression()
-                .withDataValueType(VALUE_FROM_RECORD)
-                .withFields(singletonList(
-                        new Field().withLabel("field").withValue("holdings.id"))
-                );
-        DataImportEventPayload eventPayload = createEventPayload();
-        MatchDetail matchDetail =((MatchProfile) eventPayload.getCurrentNode().getContent()).getMatchDetails().get(0);
-        matchDetail.setExistingMatchExpression(existingMatchExpression);
+  @Test
+  @SneakyThrows
+  void shouldReturnInitialQueryIfPreloadingFieldDoesNotExistInMatchExpression() {
+    MatchExpression existingMatchExpression = new MatchExpression()
+      .withDataValueType(VALUE_FROM_RECORD)
+      .withFields(singletonList(
+        new Field().withLabel("field").withValue("holdings.id"))
+      );
+    DataImportEventPayload eventPayload = createEventPayload();
+    MatchDetail matchDetail = ((MatchProfile) eventPayload.getCurrentNode().getContent()).getMatchDetails().getFirst();
+    matchDetail.setExistingMatchExpression(existingMatchExpression);
 
-        LoadQuery initialLoadQuery = LoadQueryBuilder.build(ListValue.of(POLS), matchDetail);
-        LoadQuery loadQuery = preloader.preload(initialLoadQuery, eventPayload)
-                .get(20, TimeUnit.SECONDS);
+    LoadQuery initialLoadQuery = LoadQueryBuilder.build(ListValue.of(POLS), matchDetail);
+    LoadQuery loadQuery = preloader.preload(initialLoadQuery, eventPayload)
+      .get(20, TimeUnit.SECONDS);
 
-        Assertions.assertThat(loadQuery.getCql()).isEqualTo(initialLoadQuery.getCql());
-    }
+    Assertions.assertThat(loadQuery.getCql()).isEqualTo(initialLoadQuery.getCql());
+  }
 
-    private DataImportEventPayload createEventPayload() {
-        return new DataImportEventPayload()
-                .withOkapiUrl("http://localhost:9493")
-                .withTenant("diku")
-                .withToken("token")
-                .withCurrentNode(new ProfileSnapshotWrapper()
-                        .withId(UUID.randomUUID().toString())
-                        .withContentType(MATCH_PROFILE)
-                        .withContent(new MatchProfile()
-                                .withExistingRecordType(HOLDINGS)
-                                .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
-                                .withMatchDetails(singletonList(new MatchDetail()
-                                        .withMatchCriterion(EXACTLY_MATCHES)
-                                        .withExistingMatchExpression(new MatchExpression()
-                                                .withDataValueType(VALUE_FROM_RECORD)
-                                                .withFields(singletonList(
-                                                        new Field().withLabel("field").withValue("holdingsrecord.purchaseOrderLineNumber"))
-                                                ))))));
-    }
+  private DataImportEventPayload createEventPayload() {
+    return new DataImportEventPayload()
+      .withOkapiUrl("http://localhost:9493")
+      .withTenant("diku")
+      .withToken("token")
+      .withCurrentNode(new ProfileSnapshotWrapper()
+        .withId(UUID.randomUUID().toString())
+        .withContentType(MATCH_PROFILE)
+        .withContent(new MatchProfile()
+          .withExistingRecordType(HOLDINGS)
+          .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
+          .withMatchDetails(singletonList(new MatchDetail()
+            .withMatchCriterion(EXACTLY_MATCHES)
+            .withExistingMatchExpression(new MatchExpression()
+              .withDataValueType(VALUE_FROM_RECORD)
+              .withFields(singletonList(
+                new Field().withLabel("field").withValue("holdingsrecord.purchaseOrderLineNumber"))
+              ))))));
+  }
 }

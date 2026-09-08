@@ -8,7 +8,7 @@ public class UnprocessableEntityException extends AbstractInventoryException {
   private final String propertyValue;
 
   public UnprocessableEntityException(ValidationError validationError) {
-    this(validationError.message, validationError.propertyName, validationError.value);
+    this(validationError.message(), validationError.propertyName(), validationError.value());
   }
 
   public UnprocessableEntityException(String message, String propertyName, String propertyValue) {

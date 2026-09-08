@@ -4,7 +4,7 @@ import java.util.concurrent.CompletableFuture;
 
 public final class CompletableFutures {
 
-  private CompletableFutures() {}
+  private CompletableFutures() { }
 
   /**
    * Have to be deprecated after migration to java 11.

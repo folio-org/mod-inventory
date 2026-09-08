@@ -3,11 +3,10 @@ package org.folio.inventory.domain.converters.impl;
 import static org.folio.inventory.support.JsonHelper.getString;
 import static org.folio.inventory.support.JsonHelper.includeIfPresent;
 
+import io.vertx.core.json.JsonObject;
 import org.folio.inventory.domain.converters.EntityConverter;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.domain.items.Status;
-
-import io.vertx.core.json.JsonObject;
 
 public class StatusConverter implements EntityConverter<Status> {
   private static final String NAME_KEY = "name";
@@ -23,10 +22,10 @@ public class StatusConverter implements EntityConverter<Status> {
   public JsonObject toJson(Status entity) {
     JsonObject status = new JsonObject();
 
-    if (entity.getName() != null) {
-      status.put(NAME_KEY, entity.getName().value());
+    if (entity.name() != null) {
+      status.put(NAME_KEY, entity.name().value());
     }
-    includeIfPresent(status, DATE_KEY, entity.getDate());
+    includeIfPresent(status, DATE_KEY, entity.date());
 
     return status;
   }

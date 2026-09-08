@@ -4,10 +4,9 @@ import io.vertx.core.json.JsonObject;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
-
-import org.folio.inventory.common.api.request.PagingParameters;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.exceptions.InternalServerErrorException;
 
@@ -28,7 +27,7 @@ public interface AsynchronousCollection<T> {
   default CompletableFuture<T> add(T item) {
     final CompletableFuture<T> future = new CompletableFuture<>();
 
-    add(item, success -> future.complete(success.getResult()),
+    add(item, success -> future.complete(success.result()),
       failure -> future.completeExceptionally(
         new InternalServerErrorException(failure)));
 
@@ -42,8 +41,8 @@ public interface AsynchronousCollection<T> {
   default CompletableFuture<T> findById(String id) {
     final CompletableFuture<T> future = new CompletableFuture<>();
 
-    findById(id, success -> future.complete(success.getResult()),
-      failure -> future.completeExceptionally(new InternalServerErrorException(failure.getReason())));
+    findById(id, success -> future.complete(success.result()),
+      failure -> future.completeExceptionally(new InternalServerErrorException(failure.reason())));
 
     return future;
   }
@@ -76,12 +75,12 @@ public interface AsynchronousCollection<T> {
   }
 
   void patch(String id,
-    JsonObject patchJson,
-    Consumer<Success<Void>> completionCallback,
-    Consumer<Failure> failureCallback);
+             JsonObject patchJson,
+             Consumer<Success<Void>> completionCallback,
+             Consumer<Failure> failureCallback);
 
   void putJson(String id,
-    JsonObject bodyJson,
-    Consumer<Success<Void>> completionCallback,
-    Consumer<Failure> failureCallback);
+               JsonObject bodyJson,
+               Consumer<Success<Void>> completionCallback,
+               Consumer<Failure> failureCallback);
 }

@@ -1,40 +1,33 @@
 package org.folio.inventory.domain.items;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.MatcherAssert.assertThat;
-
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.vertx.core.json.JsonObject;
+import org.junit.jupiter.api.Test;
 
-public class ItemTest {
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+class ItemTest {
 
   @Test
-  public void cannotCreateItemIfStatusIsNull() {
-    expectedException.expect(instanceOf(NullPointerException.class));
-    expectedException.expectMessage("Status is required");
-
-    new Item("id", "holding-id", "6", null, "material-type-id",
-      "permanent-loan-type-id", new JsonObject());
+  void cannotCreateItemIfStatusIsNull() {
+    var ex = assertThrows(NullPointerException.class, () ->
+      new Item("id", "holding-id", "6", null, "material-type-id",
+        "permanent-loan-type-id", null));
+    assertTrue(ex.getMessage().contains("Status is required"));
   }
 
   @Test
-  public void versionIsPreserved() {
+  void versionIsPreserved() {
     var item = new Item("id", "5", "holding-id", new Status(ItemStatusName.AVAILABLE), "material-type-id",
-        "permanent-loan-type-id", new JsonObject());
-    assertThat(item.getVersion(), is("5"));
+      "permanent-loan-type-id", new JsonObject());
+    assertEquals("5", item.getVersion());
     item.changeStatus(ItemStatusName.AGED_TO_LOST);
-    assertThat(item.getVersion(), is("5"));
+    assertEquals("5", item.getVersion());
     item = item.withBarcode("789");
-    assertThat(item.getVersion(), is("5"));
+    assertEquals("5", item.getVersion());
     item = item.copyWithNewId("foo");  // the copy is a new item without version
-    assertThat(item.getVersion(), is(nullValue()));
+    assertNull(item.getVersion());
   }
 }

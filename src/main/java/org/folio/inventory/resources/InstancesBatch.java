@@ -17,6 +17,11 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.folio.inventory.common.WebContext;
@@ -27,18 +32,12 @@ import org.folio.inventory.domain.instances.titles.PrecedingSucceedingTitle;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.support.http.server.RedirectResponse;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
 public class InstancesBatch extends AbstractInstances {
 
-  private static final String INSTANCES_BATCH_PATH = INSTANCES_PATH + "/batch";
   public static final String BATCH_RESPONSE_FIELD_INSTANCES = "instances";
   public static final String BATCH_RESPONSE_FIELD_ERROR_MESSAGES = "errorMessages";
   public static final String BATCH_RESPONSE_FIELD_TOTAL_RECORDS = "totalRecords";
+  private static final String INSTANCES_BATCH_PATH = INSTANCES_PATH + "/batch";
 
   public InstancesBatch(final Storage storage, final HttpClient client, final ConsortiumService consortiumService) {
     super(storage, client, consortiumService);
@@ -60,7 +59,7 @@ public class InstancesBatch extends AbstractInstances {
     WebContext webContext = new WebContext(routingContext);
     JsonObject requestBody = routingContext.body().asJsonObject();
     JsonArray instanceCollection = requestBody.getJsonArray(BATCH_RESPONSE_FIELD_INSTANCES, new JsonArray());
-    log.info("Received batch of Instances, size:" + instanceCollection.size());
+    log.info("Received batch of Instances, size: {}", instanceCollection.size());
 
     Pair<List<JsonObject>, List<String>> validationResult = validateInstances(instanceCollection);
     List<JsonObject> validInstances = validationResult.getLeft();
@@ -74,8 +73,9 @@ public class InstancesBatch extends AbstractInstances {
         .map(Instance::fromJson)
         .collect(Collectors.toList());
 
-      storage.getInstanceCollection(webContext).addBatch(instancesToCreate, success -> {
-          BatchResult<Instance> batchResult = success.getResult();
+      storage.getInstanceCollection(webContext).addBatch(instancesToCreate,
+        success -> {
+          BatchResult<Instance> batchResult = success.result();
           List<Instance> createdInstances = batchResult.getBatchItems();
           errorMessages.addAll(batchResult.getErrorMessages());
 
@@ -83,19 +83,19 @@ public class InstancesBatch extends AbstractInstances {
             requestBody.getInteger(BATCH_RESPONSE_FIELD_TOTAL_RECORDS)));
 
           if (!createdInstances.isEmpty()) {
-            updateRelatedRecords(validInstances, createdInstances, routingContext, webContext).
-              onComplete(ar -> {
-                JsonObject responseBody = getBatchResponse(createdInstances, errorMessages, webContext);
+            updateRelatedRecords(validInstances, createdInstances, routingContext, webContext)
+              .onComplete(ar -> {
+                JsonObject responseBody = getBatchResponse(createdInstances, errorMessages);
                 RedirectResponse.created(routingContext.response(), Buffer.buffer(responseBody.encodePrettily()));
               });
           } else {
-            JsonObject responseBody = getBatchResponse(createdInstances, errorMessages, webContext);
+            JsonObject responseBody = getBatchResponse(createdInstances, errorMessages);
             RedirectResponse.serverError(routingContext.response(), Buffer.buffer(responseBody.encodePrettily()));
           }
         },
         failure -> {
-          RedirectResponse.serverError(routingContext.response(), Buffer.buffer(failure.getReason()));
-          log.error("All the Instances from batch were not created, cause:" + failure.getReason());
+          RedirectResponse.serverError(routingContext.response(), Buffer.buffer(failure.reason()));
+          log.error("All the Instances from batch were not created, cause: {}", failure.reason());
         });
     }
   }
@@ -123,7 +123,7 @@ public class InstancesBatch extends AbstractInstances {
   }
 
   /**
-   * Performs validation for incoming Instance json object
+   * Performs validation for incoming Instance json object.
    *
    * @param jsonInstance Instance json object
    * @return error message
@@ -166,9 +166,9 @@ public class InstancesBatch extends AbstractInstances {
     RedirectResponse.serverError(routingContext.response(), Buffer.buffer(responseBody.encodePrettily()));
   }
 
-  private JsonObject getBatchResponse(List<Instance> createdInstances, List<String> errorMessages, WebContext webContext) {
+  private JsonObject getBatchResponse(List<Instance> createdInstances, List<String> errorMessages) {
     List<JsonObject> jsonInstances = createdInstances.stream()
-      .map(instance -> instance.getJsonForResponse(webContext))
+      .map(Instance::getJsonForResponse)
       .collect(Collectors.toList());
 
     return new JsonObject()
@@ -227,7 +227,7 @@ public class InstancesBatch extends AbstractInstances {
       }
       return Future.join(updateRelationshipsFutures);
     } catch (IllegalStateException e) {
-      log.error("Can not update instances relationships cause: " + e);
+      log.error("Can not update instances relationships cause", e);
       return Future.failedFuture(e);
     }
   }

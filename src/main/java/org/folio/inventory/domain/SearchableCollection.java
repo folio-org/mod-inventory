@@ -1,13 +1,12 @@
 package org.folio.inventory.domain;
 
-import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.common.domain.Failure;
-import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.common.domain.Success;
-import org.folio.inventory.domain.items.CQLQueryRequestDto;
-
 import java.io.UnsupportedEncodingException;
 import java.util.function.Consumer;
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
+import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.domain.items.CqlQueryRequestDto;
 
 public interface SearchableCollection<T> {
   void findByCql(
@@ -16,7 +15,7 @@ public interface SearchableCollection<T> {
     Consumer<Failure> failureCallback) throws UnsupportedEncodingException;
 
   void retrieveByCqlBody(
-          CQLQueryRequestDto cqlQueryRequestDto,
-          Consumer<Success<MultipleRecords<T>>> resultCallback,
-          Consumer<Failure> failureCallback);
+    CqlQueryRequestDto cqlQueryRequestDto,
+    Consumer<Success<MultipleRecords<T>>> resultCallback,
+    Consumer<Failure> failureCallback);
 }

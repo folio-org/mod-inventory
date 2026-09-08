@@ -1,5 +1,6 @@
 package support.fakes;
 
+import api.ApiTestSuite;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -8,8 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
-
-import api.ApiTestSuite;
 import support.fakes.processors.RecordPreProcessor;
 
 public class FakeStorageModuleBuilder {
@@ -24,7 +23,8 @@ public class FakeStorageModuleBuilder {
   private final List<RecordPreProcessor> recordPreProcessors;
 
   FakeStorageModuleBuilder() {
-    this(null, null, List.of(ApiTestSuite.TENANT_ID, ApiTestSuite.CONSORTIA_TENANT_ID, ApiTestSuite.COLLEGE_TENANT_ID), new ArrayList<>(), true, "",
+    this(null, null, List.of(ApiTestSuite.TENANT_ID, ApiTestSuite.CONSORTIA_TENANT_ID, ApiTestSuite.COLLEGE_TENANT_ID),
+      new ArrayList<>(), true, "",
       new ArrayList<>(), new HashMap<>(), Collections.emptyList());
   }
 
@@ -58,8 +58,8 @@ public class FakeStorageModuleBuilder {
 
   FakeStorageModuleBuilder withRootPath(String rootPath) {
     String newCollectionPropertyName = collectionPropertyName == null
-      ? rootPath.substring(rootPath.lastIndexOf("/") + 1)
-      : collectionPropertyName;
+                                       ? rootPath.substring(rootPath.lastIndexOf("/") + 1)
+                                       : collectionPropertyName;
 
     return new FakeStorageModuleBuilder(
       rootPath,
@@ -99,23 +99,8 @@ public class FakeStorageModuleBuilder {
       this.recordPreProcessors);
   }
 
-  private FakeStorageModuleBuilder withRequiredProperties(
-    Collection<String> requiredProperties) {
-
-    return new FakeStorageModuleBuilder(
-      this.rootPath,
-      this.collectionPropertyName,
-      this.tenants,
-      requiredProperties,
-      this.hasCollectionDelete,
-      this.recordName,
-      this.uniqueProperties,
-      this.defaultProperties,
-      this.recordPreProcessors);
-  }
-
   FakeStorageModuleBuilder withRequiredProperties(String... requiredProperties) {
-    return withRequiredProperties(Arrays.asList(requiredProperties));
+    return withRequiredPropertiesCollection(Arrays.asList(requiredProperties));
   }
 
   FakeStorageModuleBuilder withDefault(String property, Supplier<Object> supplier) {
@@ -146,6 +131,19 @@ public class FakeStorageModuleBuilder {
       this.uniqueProperties,
       this.defaultProperties,
       Arrays.asList(preProcessors));
+  }
+
+  private FakeStorageModuleBuilder withRequiredPropertiesCollection(Collection<String> requiredProperties) {
+    return new FakeStorageModuleBuilder(
+      this.rootPath,
+      this.collectionPropertyName,
+      this.tenants,
+      requiredProperties,
+      this.hasCollectionDelete,
+      this.recordName,
+      this.uniqueProperties,
+      this.defaultProperties,
+      this.recordPreProcessors);
   }
 }
 

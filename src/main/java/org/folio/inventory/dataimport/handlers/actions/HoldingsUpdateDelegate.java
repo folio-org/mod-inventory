@@ -9,13 +9,13 @@ import io.vertx.core.json.JsonObject;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.support.HoldingsRecordUtil;
 import org.folio.inventory.services.HoldingsCollectionService;
 import org.folio.inventory.storage.Storage;
+import org.folio.inventory.support.HoldingsRecordUtil;
 import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 
@@ -32,7 +32,7 @@ public class HoldingsUpdateDelegate {
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   static {
-    MAPPER.setSerializationInclusion(JsonInclude.Include.ALWAYS);
+    MAPPER.setDefaultPropertyInclusion(JsonInclude.Include.ALWAYS);
     MAPPER.configOverride(HoldingsRecord.class)
       .setInclude(JsonInclude.Value.construct(JsonInclude.Include.ALWAYS, JsonInclude.Include.ALWAYS));
     MAPPER.configOverride(HoldingsRecord.class)
@@ -45,6 +45,24 @@ public class HoldingsUpdateDelegate {
   public HoldingsUpdateDelegate(Storage storage, HoldingsCollectionService holdingsCollectionService) {
     this.storage = storage;
     this.holdingsCollectionService = holdingsCollectionService;
+  }
+
+  public static HoldingsRecord mergeRecords(HoldingsRecord existingRecord, HoldingsRecord mappedRecord,
+                                            String sourceId) {
+    try {
+      mappedRecord.setId(existingRecord.getId());
+      mappedRecord.setVersion(existingRecord.getVersion());
+      mappedRecord.setSourceId(sourceId);
+      if (mappedRecord.getInstanceId() == null) {
+        mappedRecord.setInstanceId(existingRecord.getInstanceId());
+      }
+      var existing = new JsonObject(MAPPER.writeValueAsString(existingRecord));
+      var mapped = new JsonObject(MAPPER.writeValueAsString(mappedRecord));
+      var merged = HoldingsRecordUtil.mergeHoldingsRecords(existing, mapped);
+      return merged.mapTo(HoldingsRecord.class);
+    } catch (Exception e) {
+      throw new IllegalStateException("Error updating holdings", e);
+    }
   }
 
   public Future<HoldingsRecord> handle(Map<String, String> eventPayload, Record marcRecord, Context context) {
@@ -74,23 +92,6 @@ public class HoldingsUpdateDelegate {
     return parsedRecord.getContent() instanceof String
            ? new JsonObject(parsedRecord.getContent().toString())
            : JsonObject.mapFrom(parsedRecord.getContent());
-  }
-
-  public static HoldingsRecord mergeRecords(HoldingsRecord existingRecord, HoldingsRecord mappedRecord, String sourceId) {
-    try {
-      mappedRecord.setId(existingRecord.getId());
-      mappedRecord.setVersion(existingRecord.getVersion());
-      mappedRecord.setSourceId(sourceId);
-      if (mappedRecord.getInstanceId() == null) {
-        mappedRecord.setInstanceId(existingRecord.getInstanceId());
-      }
-      var existing = new JsonObject(MAPPER.writeValueAsString(existingRecord));
-      var mapped = new JsonObject(MAPPER.writeValueAsString(mappedRecord));
-      var merged = HoldingsRecordUtil.mergeHoldingsRecords(existing, mapped);
-      return merged.mapTo(HoldingsRecord.class);
-    } catch (Exception e) {
-      throw new IllegalStateException("Error updating holdings", e);
-    }
   }
 
   private Future<String> findSourceId(Context context) {

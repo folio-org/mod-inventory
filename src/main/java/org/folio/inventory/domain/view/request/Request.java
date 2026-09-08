@@ -1,10 +1,8 @@
 package org.folio.inventory.domain.view.request;
 
-import java.util.Optional;
-
-import org.joda.time.DateTime;
-
 import io.vertx.core.json.JsonObject;
+import java.util.Optional;
+import org.joda.time.DateTime;
 
 public class Request {
   private final JsonObject representation;

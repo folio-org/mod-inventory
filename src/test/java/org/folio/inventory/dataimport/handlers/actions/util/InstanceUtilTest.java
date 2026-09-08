@@ -1,9 +1,9 @@
 package org.folio.inventory.dataimport.handlers.actions.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
@@ -16,12 +16,13 @@ import org.folio.Instance;
 import org.folio.inventory.domain.instances.InstanceRelationshipToChild;
 import org.folio.inventory.domain.instances.InstanceRelationshipToParent;
 import org.folio.inventory.support.InstanceUtil;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class InstanceUtilTest {
+class InstanceUtilTest {
 
+  @SuppressWarnings("checkstyle:MethodLength")
   @Test
-  public void shouldMergeInstances() {
+  void shouldMergeInstances() {
     Set<AlternativeTitle> alternativeTitles = new HashSet<>();
     alternativeTitles.add(new AlternativeTitle()
       .withAlternativeTitle("alt1")
@@ -35,7 +36,7 @@ public class InstanceUtilTest {
       .withContributorTypeText("text")
       .withPrimary(true));
 
-    Instance mapped = new Instance()
+    final Instance mapped = new Instance()
       .withId("30773a27-b485-4dab-aeb6-b8c04fa3cb17")
       .withHrid("in000000001")
       .withModeOfIssuanceId("30773a27-b485-4dab-aeb6-b8c04fa3cb18")
@@ -54,10 +55,14 @@ public class InstanceUtilTest {
     natureOfContentTermIds.add("30773a27-b485-4dab-aeb6-b8c04fa3cb22");
 
     List<InstanceRelationshipToParent> parents = new ArrayList<>();
-    parents.add(new InstanceRelationshipToParent("30773a27-b485-4dab-aeb6-b8c04fa3cb19", "30773a27-b485-4dab-aeb6-b8c04fa3cb23", "30773a27-b485-4dab-aeb6-b8c04fa3cb24"));
+    parents.add(
+      new InstanceRelationshipToParent("30773a27-b485-4dab-aeb6-b8c04fa3cb19", "30773a27-b485-4dab-aeb6-b8c04fa3cb23",
+        "30773a27-b485-4dab-aeb6-b8c04fa3cb24"));
 
     List<InstanceRelationshipToChild> children = new ArrayList<>();
-    children.add(new InstanceRelationshipToChild("30773a27-b485-4dab-aeb6-b8c04fa3cb19", "30773a27-b485-4dab-aeb6-b8c04fa3cb23", "30773a27-b485-4dab-aeb6-b8c04fa3cb24"));
+    children.add(
+      new InstanceRelationshipToChild("30773a27-b485-4dab-aeb6-b8c04fa3cb19", "30773a27-b485-4dab-aeb6-b8c04fa3cb23",
+        "30773a27-b485-4dab-aeb6-b8c04fa3cb24"));
 
     List<String> tagList = new ArrayList<>();
     tagList.add("Tag1");
@@ -65,7 +70,7 @@ public class InstanceUtilTest {
 
     org.folio.inventory.domain.instances.Instance existing =
       new org.folio.inventory.domain.instances.Instance("30773a27-b485-4dab-aeb6-b8c04fa3cb17", 7, "in000000001",
-          "source", "title", "30773a27-b485-4dab-aeb6-b8c04fa3cb19");
+        "source", "title", "30773a27-b485-4dab-aeb6-b8c04fa3cb19");
     existing.setStatisticalCodeIds(statisticalCodeIds);
     existing.setDiscoverySuppress(true);
     existing.setStaffSuppress(true);
@@ -80,12 +85,12 @@ public class InstanceUtilTest {
     existing.setTags(tagList);
     existing.setAdministrativeNotes(Lists.newArrayList("Adm note1", "Adm note2"));
 
-    org.folio.inventory.domain.instances.Instance instance = InstanceUtil.mergeFieldsWhichAreNotControlled(existing, mapped);
+    org.folio.inventory.domain.instances.Instance instance =
+      InstanceUtil.mergeFieldsWhichAreNotControlled(existing, mapped);
     assertEquals("30773a27-b485-4dab-aeb6-b8c04fa3cb17", instance.getId());
     assertEquals("in000000001", instance.getHrid());
     assertEquals("30773a27-b485-4dab-aeb6-b8c04fa3cb18", instance.getModeOfIssuanceId());
-    assertEquals(contributors.get(0).getName(), instance.getContributors().get(0).name);
-
+    assertEquals(contributors.getFirst().getName(), instance.getContributors().getFirst().name);
 
     assertEquals(statisticalCodeIds, instance.getStatisticalCodeIds());
     assertTrue(instance.getDiscoverySuppress());
@@ -98,25 +103,26 @@ public class InstanceUtilTest {
     assertEquals(natureOfContentTermIds, instance.getNatureOfContentTermIds());
     assertNotNull(instance.getTags());
     assertEquals(tagList, instance.getTags());
-    assertEquals("30773a27-b485-4dab-aeb6-b8c04fa3cb19", instance.getParentInstances().get(0).getId());
-    assertEquals("30773a27-b485-4dab-aeb6-b8c04fa3cb19", instance.getChildInstances().get(0).getId());
+    assertEquals("30773a27-b485-4dab-aeb6-b8c04fa3cb19", instance.getParentInstances().getFirst().id());
+    assertEquals("30773a27-b485-4dab-aeb6-b8c04fa3cb19", instance.getChildInstances().getFirst().id());
     assertEquals("Adm note1", instance.getAdministrativeNotes().get(0));
     assertEquals("Adm note2", instance.getAdministrativeNotes().get(1));
   }
 
   @Test
-  public void mergeFieldsWithNullVersion() {
+  void mergeFieldsWithNullVersion() {
     org.folio.inventory.domain.instances.Instance existing =
       new org.folio.inventory.domain.instances.Instance("id", null, "IN00001", "source", "title", "instanceTypeId");
 
     org.folio.Instance mapped = new org.folio.Instance().withVersion(3);
-    org.folio.inventory.domain.instances.Instance merged = InstanceUtil.mergeFieldsWhichAreNotControlled(existing, mapped);
+    org.folio.inventory.domain.instances.Instance merged =
+      InstanceUtil.mergeFieldsWhichAreNotControlled(existing, mapped);
     assertEquals("id", merged.getId());
     assertEquals(3, (int) merged.getVersion());
   }
 
   @Test
-  public void mergeInstanceWithSourceUri() {
+  void mergeInstanceWithSourceUri() {
     org.folio.inventory.domain.instances.Instance existing =
       new org.folio.inventory.domain.instances.Instance("30773a27-b485-4dab-aeb6-b8c04fa3cb17", 1, "in000000001",
         "source", "title", "30773a27-b485-4dab-aeb6-b8c04fa3cb19");
@@ -126,7 +132,8 @@ public class InstanceUtilTest {
       .withHrid("in000000001")
       .withVersion(2);
 
-    org.folio.inventory.domain.instances.Instance merged = InstanceUtil.mergeFieldsWhichAreNotControlled(existing, mapped);
+    org.folio.inventory.domain.instances.Instance merged =
+      InstanceUtil.mergeFieldsWhichAreNotControlled(existing, mapped);
     assertEquals(existing.getId(), merged.getId());
     assertEquals(mapped.getVersion(), merged.getVersion());
     assertEquals(existing.getSourceUri(), merged.getSourceUri());

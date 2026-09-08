@@ -1,13 +1,13 @@
 package org.folio.inventory.exceptions;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import org.folio.HttpStatus;
-import org.folio.inventory.support.http.ContentType;
 
 /**
- * Exception for invalid data at request, 400 status code
+ * Exception for invalid data at request, 400 status code.
  */
 public class BadRequestException extends AbstractInventoryException {
   public BadRequestException(String message) {
-    super("Bad request:", message, HttpStatus.SC_BAD_REQUEST, ContentType.TEXT_PLAIN);
+    super("Bad request:", message, HttpStatus.SC_BAD_REQUEST, HttpHeaderValues.TEXT_PLAIN.toString());
   }
 }

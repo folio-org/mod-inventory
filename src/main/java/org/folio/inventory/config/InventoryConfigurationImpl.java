@@ -1,12 +1,11 @@
 package org.folio.inventory.config;
 
 import com.google.common.collect.Sets;
+import java.util.Set;
 import org.folio.inventory.domain.instances.Instance;
 
-import java.util.Set;
-
 /**
- * Stores configuration properties for Inventory entities: Instances, Items, Holdings
+ * Stores configuration properties for Inventory entities: Instances, Items, Holdings.
  */
 public class InventoryConfigurationImpl implements InventoryConfiguration {
   private static final Set<String> INSTANCE_BLOCKED_FIELDS = Sets.newHashSet(
@@ -34,7 +33,7 @@ public class InventoryConfigurationImpl implements InventoryConfiguration {
     Instance.PRECEDING_TITLES_KEY,
     Instance.SUCCEEDING_TITLES_KEY,
     Instance.DATES_KEY
-    );
+  );
 
   private static final Set<String> HOLDINGS_BLOCKED_FIELDS = Sets.newHashSet(
     "formerIds",
@@ -52,9 +51,6 @@ public class InventoryConfigurationImpl implements InventoryConfiguration {
     "notes",
     "electronicAccess"
   );
-
-  public InventoryConfigurationImpl() {
-  }
 
   public Set<String> getInstanceBlockedFields() {
     return INSTANCE_BLOCKED_FIELDS;

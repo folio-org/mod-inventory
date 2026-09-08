@@ -1,8 +1,8 @@
 package org.folio.inventory.exceptions;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import org.folio.HttpStatus;
 import org.folio.inventory.common.domain.Failure;
-import org.folio.inventory.support.http.ContentType;
 
 public class InternalServerErrorException extends AbstractInventoryException {
   public InternalServerErrorException(Throwable ex) {
@@ -10,9 +10,11 @@ public class InternalServerErrorException extends AbstractInventoryException {
   }
 
   public InternalServerErrorException(String reason) {
-    super("Internal server exception:", reason, HttpStatus.SC_INTERNAL_SERVER_ERROR, ContentType.TEXT_PLAIN);
+    super("Internal server exception:", reason, HttpStatus.SC_INTERNAL_SERVER_ERROR,
+      HttpHeaderValues.TEXT_PLAIN.toString());
   }
-  public InternalServerErrorException(Failure failure){
-    super("Internal server exception:", failure.getReason(), failure.getStatusCode(), ContentType.TEXT_PLAIN);
+
+  public InternalServerErrorException(Failure failure) {
+    super("Internal server exception:", failure.reason(), failure.statusCode(), HttpHeaderValues.TEXT_PLAIN.toString());
   }
 }

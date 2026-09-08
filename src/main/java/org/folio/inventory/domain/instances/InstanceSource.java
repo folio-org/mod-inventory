@@ -5,30 +5,19 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum InstanceSource {
 
+
   FOLIO("FOLIO"),
-
   MARC("MARC"),
-
   LINKED_DATA("LINKED_DATA"),
+  CONSORTIUM_FOLIO(InstanceSource.CONSORTIUM_PREFIX + FOLIO),
+  CONSORTIUM_MARC(InstanceSource.CONSORTIUM_PREFIX + MARC);
 
-  CONSORTIUM_FOLIO("CONSORTIUM-FOLIO"),
-
-  CONSORTIUM_MARC("CONSORTIUM-MARC");
+  public static final String CONSORTIUM_PREFIX = "CONSORTIUM-";
 
   private final String value;
 
   InstanceSource(String value) {
     this.value = value;
-  }
-
-  @JsonValue
-  public String getValue() {
-    return value;
-  }
-
-  @Override
-  public String toString() {
-    return String.valueOf(value);
   }
 
   @JsonCreator
@@ -41,4 +30,13 @@ public enum InstanceSource {
     throw new IllegalArgumentException("Unexpected value '" + value + "'");
   }
 
+  @JsonValue
+  public String getValue() {
+    return value;
+  }
+
+  @Override
+  public String toString() {
+    return String.valueOf(value);
+  }
 }

@@ -5,9 +5,11 @@ import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.codehaus.plexus.util.StringUtils.isNotEmpty;
 import static org.folio.ActionProfile.FolioRecord.INSTANCE;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
-import static org.folio.inventory.dataimport.util.AdditionalFieldsUtil.TAG_999;
+import static org.folio.dataimport.util.marc.MarcConstants.FIELD_999;
+import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_I;
 import static org.folio.inventory.dataimport.util.MappingConstants.INSTANCE_PATH;
 import static org.folio.inventory.dataimport.util.MappingConstants.MARC_BIB_RECORD_FORMAT;
+import static org.folio.inventory.dataimport.util.ParsedRecordUtil.LEADER_STATUS_DELETED;
 import static org.folio.inventory.domain.instances.Instance.ID;
 
 import io.vertx.core.Future;
@@ -15,18 +17,16 @@ import io.vertx.core.Promise;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import java.util.HashMap;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
 import org.folio.HttpStatus;
+import org.folio.dataimport.util.FolioHeaders;
 import org.folio.inventory.client.wrappers.SourceStorageRecordsClientWrapper;
-import org.folio.inventory.client.wrappers.SourceStorageSnapshotsClientWrapper;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.services.SnapshotService;
@@ -42,15 +42,12 @@ import org.folio.processing.mapping.defaultmapper.RecordMapper;
 import org.folio.processing.mapping.defaultmapper.RecordMapperBuilder;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.client.SourceStorageRecordsClient;
-import org.folio.rest.client.SourceStorageSnapshotsClient;
 import org.folio.rest.jaxrs.model.AdditionalInfo;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ExternalIdsHolder;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.Record;
 import org.folio.rest.jaxrs.model.Snapshot;
-
-import static org.folio.inventory.dataimport.util.ParsedRecordUtil.LEADER_STATUS_DELETED;
 
 public abstract class AbstractInstanceEventHandler implements EventHandler {
   protected static final Logger LOGGER = LogManager.getLogger(AbstractInstanceEventHandler.class);
@@ -68,9 +65,9 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
   private final HttpClient httpClient;
 
   protected AbstractInstanceEventHandler(Storage storage,
-                                      PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
-                                      MappingMetadataCache mappingMetadataCache,
-                                      SnapshotService snapshotService, HttpClient httpClient) {
+                                         PrecedingSucceedingTitlesHelper precedingSucceedingTitlesHelper,
+                                         MappingMetadataCache mappingMetadataCache,
+                                         SnapshotService snapshotService, HttpClient httpClient) {
     this.storage = storage;
     this.mappingMetadataCache = mappingMetadataCache;
     this.precedingSucceedingTitlesHelper = precedingSucceedingTitlesHelper;
@@ -78,24 +75,38 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     this.httpClient = httpClient;
   }
 
+  public SourceStorageRecordsClient getSourceStorageClient(String okapiUrl, String token, String tenantId,
+                                                           String userId, String requestId) {
+    var folioHeaders = FolioHeaders.builder()
+      .connectionUrl(okapiUrl)
+      .userId(userId)
+      .token(token)
+      .requestId(requestId)
+      .tenant(tenantId);
+    return new SourceStorageRecordsClientWrapper(folioHeaders, httpClient);
+  }
+
   protected void prepareEvent(DataImportEventPayload dataImportEventPayload) {
     dataImportEventPayload.getContext().put("CURRENT_EVENT_TYPE", dataImportEventPayload.getEventType());
     dataImportEventPayload.getContext().put("CURRENT_NODE", Json.encode(dataImportEventPayload.getCurrentNode()));
 
     dataImportEventPayload.getEventsChain().add(dataImportEventPayload.getEventType());
-    dataImportEventPayload.setCurrentNode(dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
+    dataImportEventPayload.setCurrentNode(
+      dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().getFirst());
     dataImportEventPayload.getContext().put(INSTANCE.value(), new JsonObject().encode());
   }
 
   protected org.folio.Instance defaultMapRecordToInstance(DataImportEventPayload dataImportEventPayload,
-                                                          JsonObject mappingRules, MappingParameters mappingParameters) {
+                                                          JsonObject mappingRules,
+                                                          MappingParameters mappingParameters) {
     try {
-      HashMap<String, String> context = dataImportEventPayload.getContext();
-      JsonObject parsedRecord = new JsonObject((String) new JsonObject(context.get(MARC_BIBLIOGRAPHIC.value()))
+      var context = dataImportEventPayload.getContext();
+      var parsedRecord = new JsonObject((String) new JsonObject(context.get(MARC_BIBLIOGRAPHIC.value()))
         .mapTo(Record.class).getParsedRecord().getContent());
       RecordMapper<org.folio.Instance> recordMapper = RecordMapperBuilder.buildMapper(MARC_BIB_RECORD_FORMAT);
       var instance = recordMapper.mapRecord(parsedRecord, mappingParameters, mappingRules);
-      dataImportEventPayload.getContext().put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(instance))));
+      dataImportEventPayload.getContext()
+        .put(INSTANCE.value(), Json.encode(new JsonObject().put(INSTANCE_PATH, JsonObject.mapFrom(instance))));
       return instance;
     } catch (Exception e) {
       LOGGER.error("Failed to map Record to Instance", e);
@@ -107,7 +118,8 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
                                                               Instance instance, InstanceCollection instanceCollection,
                                                               String tenantId, String userId, String requestId) {
     Promise<Instance> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId, requestId).postSourceStorageRecords(srcRecord)
+    getSourceStorageClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId,
+      requestId).postSourceStorageRecords(srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
@@ -117,8 +129,10 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
             srcRecord.getId(), instance.getId(), payload.getTenant(), payload.getJobExecutionId());
           promise.complete(instance);
         } else {
-          String msg = format("Failed to create MARC record in SRS, instanceId: '%s', jobExecutionId: '%s', status code: %s, Record: %s",
-            instance.getId(), payload.getJobExecutionId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
+          String msg = format("Failed to create MARC record in SRS, instanceId: '%s', jobExecutionId: '%s',"
+                              + " status code: %s, Record: %s",
+            instance.getId(), payload.getJobExecutionId(), result != null ? result.statusCode() : "",
+            result != null ? result.bodyAsString() : "");
           LOGGER.warn(msg);
           deleteInstance(instance.getId(), payload.getJobExecutionId(), instanceCollection);
           promise.fail(msg);
@@ -132,29 +146,31 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
    * Use this method for UPDATE operations where the instance is managed separately.
    * If SRS creation fails, the operation fails without any instance modifications.
    *
-   * @param payload          data import event payload
-   * @param srcRecord        MARC record to create in SRS
-   * @param tenantId         tenant identifier
-   * @param userId           user identifier
-   * @param requestId        request identifier
+   * @param payload   data import event payload
+   * @param srcRecord MARC record to create in SRS
+   * @param tenantId  tenant identifier
+   * @param userId    user identifier
+   * @param requestId request identifier
    * @return future that completes when SRS operation finishes (success or failure)
    */
   protected Future<Void> saveRecordInSrsOnly(DataImportEventPayload payload, Record srcRecord,
                                              String tenantId, String userId, String requestId) {
     Promise<Void> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId, requestId)
+    getSourceStorageClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId, requestId)
       .postSourceStorageRecords(srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_CREATED.toInt()) {
           payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(),
             Json.encode(encodeParsedRecordContent(result.bodyAsJson(Record.class))));
-          LOGGER.info("saveRecordInSrsOnly:: Created MARC record in SRS with id: '{}', from tenant: {}, jobExecutionId: {}",
+          LOGGER.info(
+            "saveRecordInSrsOnly:: Created MARC record in SRS with id: '{}', from tenant: {}, jobExecutionId: {}",
             srcRecord.getId(), payload.getTenant(), payload.getJobExecutionId());
           promise.complete();
         } else {
           String msg = format("Failed to create MARC record in SRS, jobExecutionId: '%s', status code: %s, Record: %s",
-            payload.getJobExecutionId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
+            payload.getJobExecutionId(), result != null ? result.statusCode() : "",
+            result != null ? result.bodyAsString() : "");
           LOGGER.error("saveRecordInSrsOnly:: {}", msg);
           promise.fail(msg);
         }
@@ -167,31 +183,35 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
    * Use this method for UPDATE operations where the instance is managed separately.
    * If SRS update fails, the operation fails without any instance modifications.
    *
-   * @param payload          data import event payload
-   * @param srcRecord        MARC record to update in SRS
-   * @param matchedId        matched record identifier
-   * @param tenantId         tenant identifier
-   * @param userId           user identifier
-   * @param requestId        request identifier
-   * @param instanceId       instance identifier for logging
+   * @param payload    data import event payload
+   * @param srcRecord  MARC record to update in SRS
+   * @param matchedId  matched record identifier
+   * @param tenantId   tenant identifier
+   * @param userId     user identifier
+   * @param requestId  request identifier
+   * @param instanceId instance identifier for logging
    * @return future that completes when SRS operation finishes (success or failure)
    */
   protected Future<Void> putRecordInSrs(DataImportEventPayload payload, Record srcRecord,
-                                        String matchedId, String tenantId, String userId, String requestId, String instanceId) {
+                                        String matchedId, String tenantId, String userId, String requestId,
+                                        String instanceId) {
     Promise<Void> promise = Promise.promise();
-    getSourceStorageRecordsClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId, requestId)
+    getSourceStorageClient(payload.getOkapiUrl(), payload.getToken(), tenantId, userId, requestId)
       .putSourceStorageRecordsGenerationById(matchedId, srcRecord)
       .onComplete(ar -> {
         var result = ar.result();
         if (ar.succeeded() && result.statusCode() == HttpStatus.HTTP_OK.toInt()) {
           payload.getContext().put(EntityType.MARC_BIBLIOGRAPHIC.value(),
             Json.encode(encodeParsedRecordContent(result.bodyAsJson(Record.class))));
-          LOGGER.info("putRecordInSrsOnly:: Updated MARC record in SRS with id: '{}' for instanceId: '{}', from tenant: {}, jobExecutionId: {}",
+          LOGGER.info("putRecordInSrsOnly:: Updated MARC record in SRS with id: '{}' for instanceId: '{}', "
+                      + "from tenant: {}, jobExecutionId: {}",
             instanceId, srcRecord.getId(), payload.getTenant(), payload.getJobExecutionId());
           promise.complete();
         } else {
-          String msg = format("Failed to update MARC record in SRS for instanceId: '%s', jobExecutionId: '%s', status code: %s, Record: %s",
-            instanceId, payload.getJobExecutionId(), result != null ? result.statusCode() : "", result != null ? result.bodyAsString() : "");
+          String msg = format("Failed to update MARC record in SRS for instanceId: '%s', "
+                              + "jobExecutionId: '%s', status code: %s, Record: %s",
+            instanceId, payload.getJobExecutionId(), result != null ? result.statusCode() : "",
+            result != null ? result.bodyAsString() : "");
           LOGGER.error("putRecordInSrsOnly:: {}", msg);
           promise.fail(msg);
         }
@@ -209,16 +229,17 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
       srcRecord.setMatchedId(srcRecord.getId());
     }
     setExternalIds(srcRecord, instance);
-    return AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, TAG_999, 'i', instance.getId())
-      ? Future.succeededFuture(instance)
-      : Future.failedFuture(format("Failed to add instance id '%s' to record with id '%s'", instance.getId(), srcRecord.getId()));
+    return AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, FIELD_999, SUBFIELD_I, instance.getId())
+           ? Future.succeededFuture(instance)
+           : Future.failedFuture(
+             format("Failed to add instance id '%s' to record with id '%s'", instance.getId(), srcRecord.getId()));
   }
 
   /**
    * Adds specified externalId and externalHrid to record and additional custom field with externalId to parsed record.
    *
-   * @param srcRecord   record to update
-   * @param instance externalEntity in Json
+   * @param srcRecord record to update
+   * @param instance  externalEntity in Json
    */
   protected void setExternalIds(Record srcRecord, Instance instance) {
     if (srcRecord.getExternalIdsHolder() == null) {
@@ -237,38 +258,24 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
 
   protected void deleteInstance(String id, String jobExecutionId, InstanceCollection instanceCollection) {
     Promise<Void> promise = Promise.promise();
-    instanceCollection.delete(id, success -> {
+    instanceCollection.delete(id,
+      success -> {
         LOGGER.info("deleteInstance:: Instance was deleted by id: '{}', jobExecutionId: '{}'", id, jobExecutionId);
-        promise.complete(success.getResult());
+        promise.complete(success.result());
       },
       failure -> {
-        LOGGER.warn("deleteInstance:: Error deleting Instance by id: '{}', jobExecutionId: '{}', cause: {}, status code: {}",
-          id, jobExecutionId, failure.getReason(), failure.getStatusCode());
-        promise.fail(failure.getReason());
+        LOGGER.warn(
+          "deleteInstance:: Error deleting Instance by id: '{}', jobExecutionId: '{}', cause: {}, status code: {}",
+          id, jobExecutionId, failure.reason(), failure.statusCode());
+        promise.fail(failure.reason());
       });
     promise.future();
   }
 
-  public SourceStorageRecordsClient getSourceStorageRecordsClient(String okapiUrl, String token, String tenantId, String userId, String requestId) {
-    return new SourceStorageRecordsClientWrapper(okapiUrl, tenantId, token, userId, requestId, getHttpClient());
-  }
-
-  public SourceStorageSnapshotsClient getSourceStorageSnapshotsClient(String okapiUrl, String token, String tenantId, String userId, String requestId) {
-    return new SourceStorageSnapshotsClientWrapper(okapiUrl, tenantId, token, userId, requestId, getHttpClient());
-  }
-
-  private Record encodeParsedRecordContent(Record srcRecord) {
-    ParsedRecord parsedRecord = srcRecord.getParsedRecord();
-    if (parsedRecord != null) {
-      parsedRecord.setContent(Json.encode(parsedRecord.getContent()));
-      return srcRecord.withParsedRecord(parsedRecord);
-    }
-    return srcRecord;
-  }
-
   protected void markInstanceAndRecordAsDeletedIfNeeded(Instance instance, Record srsRecord) {
     Optional<Character> leaderStatus = ParsedRecordUtil.getLeaderStatus(srsRecord.getParsedRecord());
-    if (Boolean.TRUE.equals(instance.getDeleted()) || (leaderStatus.isPresent() && LEADER_STATUS_DELETED == leaderStatus.get())) {
+    if (Boolean.TRUE.equals(instance.getDeleted()) || leaderStatus.isPresent()
+                                                      && LEADER_STATUS_DELETED == leaderStatus.get()) {
       LOGGER.debug("markInstanceAndRecordAsDeletedIfNeeded:: Mark Instance with id: '{}' as deleted", instance.getId());
       instance.setDeleted(true);
       instance.setDiscoverySuppress(true);
@@ -290,9 +297,18 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     }
   }
 
-  protected String getInstanceId(Record record) {
-    String subfield999ffi = ParsedRecordUtil.getAdditionalSubfieldValue(record.getParsedRecord(), ParsedRecordUtil.AdditionalSubfields.I);
+  protected String getInstanceId(Record inputRecord) {
+    String subfield999ffi = ParsedRecordUtil.getAdditionalSubfieldValue(inputRecord.getParsedRecord(), SUBFIELD_I);
     return isEmpty(subfield999ffi) ? UUID.randomUUID().toString() : subfield999ffi;
+  }
+
+  private Record encodeParsedRecordContent(Record srcRecord) {
+    ParsedRecord parsedRecord = srcRecord.getParsedRecord();
+    if (parsedRecord != null) {
+      parsedRecord.setContent(Json.encode(parsedRecord.getContent()));
+      return srcRecord.withParsedRecord(parsedRecord);
+    }
+    return srcRecord;
   }
 
   private void executeHrIdManipulation(Record srcRecord, JsonObject externalEntity) {
@@ -300,9 +316,9 @@ public abstract class AbstractInstanceEventHandler implements EventHandler {
     var externalHrId = extractHridForInstance(externalEntity);
     var externalIdsHolder = srcRecord.getExternalIdsHolder();
     setExternalIdsForInstance(externalIdsHolder, externalId, externalHrId);
-    boolean isAddedField = AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, TAG_999, 'i', externalId);
+    boolean isAddedField = AdditionalFieldsUtil.addFieldToMarcRecord(srcRecord, FIELD_999, SUBFIELD_I, externalId);
     if (IS_HRID_FILLING_NEEDED_FOR_INSTANCE) {
-      AdditionalFieldsUtil.fillHrIdFieldInMarcRecord(Pair.of(srcRecord, externalEntity));
+      AdditionalFieldsUtil.fillHrIdFieldInMarcRecord(srcRecord, externalHrId);
     }
     if (!isAddedField) {
       throw new EventProcessingException(

@@ -1,20 +1,21 @@
 package org.folio.inventory.validation.status;
 
+import static org.folio.inventory.support.CompletableFutures.failedFuture;
+
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.support.http.server.ValidationError;
 
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-
-import static org.folio.inventory.support.CompletableFutures.failedFuture;
-
 public abstract class AbstractTargetItemStatusValidator {
-  private ItemStatusName itemStatusName;
-  private Set<ItemStatusName> allowedStatusToMark;
 
-  protected AbstractTargetItemStatusValidator(ItemStatusName itemStatusName, Set<ItemStatusName> allowedSourceStatuses) {
+  private final ItemStatusName itemStatusName;
+  private final Set<ItemStatusName> allowedStatusToMark;
+
+  protected AbstractTargetItemStatusValidator(ItemStatusName itemStatusName,
+                                              Set<ItemStatusName> allowedSourceStatuses) {
     this.itemStatusName = itemStatusName;
     this.allowedStatusToMark = allowedSourceStatuses;
   }
@@ -26,11 +27,11 @@ public abstract class AbstractTargetItemStatusValidator {
 
     return failedFuture(new UnprocessableEntityException(
       new ValidationError("Item is not allowed to be marked as " + getItemStatusName(),
-        "status.name", item.getStatus().getName().value())));
+        "status.name", item.getStatus().name().value())));
   }
 
   public boolean isItemAllowedToMark(Item item) {
-    return allowedStatusToMark.contains(item.getStatus().getName());
+    return allowedStatusToMark.contains(item.getStatus().name());
   }
 
   public Set<ItemStatusName> getAllStatusesAllowedToMark() {

@@ -32,7 +32,8 @@ public class SharedInstanceEventIdStorageServiceImpl implements EventIdStorageSe
       .onFailure(error -> {
         if (error instanceof PgException pgException) {
           if (pgException.getErrorCode() == UNIQUE_VIOLATION_SQL_STATE) {
-            promise.fail(new DuplicateEventException("SQL Unique constraint violation prevented repeatedly saving the record"));
+            promise.fail(
+              new DuplicateEventException("SQL Unique constraint violation prevented repeatedly saving the record"));
           } else {
             promise.fail(error);
           }

@@ -3,15 +3,12 @@ package org.folio.inventory.dataimport.handlers.matching.loaders;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-
 import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
-
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.AbstractPreloader;
@@ -27,8 +24,8 @@ public class InstanceLoader extends AbstractLoader<Instance> {
   private static final String INSTANCES_IDS_KEY = AbstractLoader.INSTANCES_IDS;
   private static final String ID_FIELD = "id";
 
-  private Storage storage;
-  private AbstractPreloader preloader;
+  private final Storage storage;
+  private final AbstractPreloader preloader;
 
   public InstanceLoader(Storage storage, AbstractPreloader preloader) {
     this.storage = storage;
@@ -38,7 +35,16 @@ public class InstanceLoader extends AbstractLoader<Instance> {
   @Override
   public CompletableFuture<LoadResult> loadEntity(LoadQuery loadQuery, DataImportEventPayload eventPayload) {
     return preloader.preload(loadQuery, eventPayload)
-            .thenCompose(query -> super.loadEntity(query, eventPayload));
+      .thenCompose(query -> super.loadEntity(query, eventPayload));
+  }
+
+  @Override
+  protected String getConditionByMultiMatchResult(DataImportEventPayload eventPayload) {
+    String multipleValuesKey = eventPayload.getContext().containsKey(AbstractLoader.MULTI_MATCH_IDS)
+                               ? AbstractLoader.MULTI_MATCH_IDS
+                               : INSTANCES_IDS_KEY;
+
+    return getConditionByMultipleValues(ID_FIELD, eventPayload, multipleValuesKey);
   }
 
   @Override
@@ -56,7 +62,7 @@ public class InstanceLoader extends AbstractLoader<Instance> {
     String cqlSubMatch = EMPTY;
     if (eventPayload.getContext() != null) {
       if (isNotEmpty(eventPayload.getContext().get(AbstractLoader.MULTI_MATCH_IDS))
-        || isNotEmpty(eventPayload.getContext().get(INSTANCES_IDS_KEY))) {
+          || isNotEmpty(eventPayload.getContext().get(INSTANCES_IDS_KEY))) {
         cqlSubMatch = getConditionByMultiMatchResult(eventPayload);
       } else if (isNotEmpty(eventPayload.getContext().get(INSTANCE.value()))) {
         JsonObject instanceAsJson = new JsonObject(eventPayload.getContext().get(INSTANCE.value()));
@@ -67,17 +73,8 @@ public class InstanceLoader extends AbstractLoader<Instance> {
   }
 
   @Override
-  protected String getConditionByMultiMatchResult(DataImportEventPayload eventPayload) {
-    String multipleValuesKey = eventPayload.getContext().containsKey(AbstractLoader.MULTI_MATCH_IDS)
-      ? AbstractLoader.MULTI_MATCH_IDS
-      : INSTANCES_IDS_KEY;
-
-    return getConditionByMultipleValues(ID_FIELD, eventPayload, multipleValuesKey);
-  }
-
-  @Override
   protected String mapEntityToJsonString(Instance instance) {
-    return Json.encode(instance);
+    return instance.getJsonForStorage().encode();
   }
 
   @Override

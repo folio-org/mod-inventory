@@ -1,37 +1,34 @@
 package org.folio.inventory.dataimport.consumers;
 
 import static java.lang.String.format;
-
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.Json;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
-
+import java.util.HashMap;
+import java.util.Map;
 import java.util.TreeMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import org.folio.okapi.common.XOkapiHeaders;
-import org.folio.rest.jaxrs.model.HoldingsRecord;
+import org.folio.MappingMetadataDto;
+import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.dbschema.ObjectMapperTool;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
-import org.folio.inventory.dataimport.exceptions.OptimisticLockingException;
 import org.folio.inventory.dataimport.handlers.actions.HoldingsUpdateDelegate;
+import org.folio.inventory.exceptions.OptimisticLockingException;
 import org.folio.kafka.AsyncRecordHandler;
 import org.folio.kafka.KafkaHeaderUtils;
+import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.exceptions.EventProcessingException;
 import org.folio.rest.jaxrs.model.Event;
-import org.folio.MappingMetadataDto;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.rest.jaxrs.model.Record;
 
 /**
@@ -45,90 +42,97 @@ import org.folio.rest.jaxrs.model.Record;
  */
 public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler<String, String> {
 
+  public static final String JOB_EXECUTION_ID_KEY = "JOB_EXECUTION_ID";
   private static final Logger LOGGER = LogManager.getLogger(MarcHoldingsRecordHridSetKafkaHandler.class);
-  private static final String MAPPING_METADATA_NOT_FOUND_MSG = "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'";
-  private static final String RECORD_ID_HEADER = "recordId";
+  private static final String MAPPING_METADATA_NOT_FOUND_MSG =
+    "MappingParameters and mapping rules snapshots were not found by jobExecutionId '%s'";
   private static final String MARC_KEY = "MARC_HOLDINGS";
   private static final String MAPPING_RULES_KEY = "MAPPING_RULES";
   private static final String MAPPING_PARAMS_KEY = "MAPPING_PARAMS";
-  public static final String JOB_EXECUTION_ID_KEY = "JOB_EXECUTION_ID";
-  private static final String CHUNK_ID_HEADER = "chunkId";
   private static final String JOB_EXECUTION_ID_HEADER = "JOB_EXECUTION_ID";
   private static final ObjectMapper OBJECT_MAPPER = ObjectMapperTool.getMapper();
   private static final String CURRENT_RETRY_NUMBER = "CURRENT_RETRY_NUMBER";
-  private static final int MAX_RETRIES_COUNT = Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
+  private static final int MAX_RETRIES_COUNT =
+    Integer.parseInt(System.getenv().getOrDefault("inventory.di.ol.retry.number", "1"));
 
   private final HoldingsUpdateDelegate holdingsRecordUpdateDelegate;
   private final MappingMetadataCache mappingMetadataCache;
 
-  public MarcHoldingsRecordHridSetKafkaHandler(HoldingsUpdateDelegate holdingsRecordUpdateDelegate,
-                                               MappingMetadataCache mappingMetadataCache) {
+  public MarcHoldingsRecordHridSetKafkaHandler(Vertx vertx, HoldingsUpdateDelegate holdingsRecordUpdateDelegate) {
     this.holdingsRecordUpdateDelegate = holdingsRecordUpdateDelegate;
-    this.mappingMetadataCache = mappingMetadataCache;
+    this.mappingMetadataCache = MappingMetadataCache.getInstance(vertx);
   }
 
   @Override
   public Future<String> handle(KafkaConsumerRecord<String, String> kafkaRecord) {
     try {
-      Promise<String> promise = Promise.promise();
       Event event = OBJECT_MAPPER.readValue(kafkaRecord.value(), Event.class);
-        @SuppressWarnings("unchecked")
-        Map<String, String> eventPayload =
-          OBJECT_MAPPER.readValue(event.getEventPayload(), HashMap.class);
-        Map<String, String> headersMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        headersMap.putAll(KafkaHeaderUtils.kafkaHeadersToMap(kafkaRecord.headers()));
-        String recordId = headersMap.get(RECORD_ID_HEADER);
-        String chunkId = headersMap.get(CHUNK_ID_HEADER);
-        String jobExecutionId = eventPayload.get(JOB_EXECUTION_ID_HEADER);
-        LOGGER.info("Event payload has been received with event type: {}, recordId: {} by jobExecution: {} and chunkId: {}", event.getEventType(), recordId, jobExecutionId, chunkId);
+      @SuppressWarnings("unchecked")
+      Map<String, String> eventPayload = OBJECT_MAPPER.readValue(event.getEventPayload(), HashMap.class);
+      Map<String, String> headersMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+      headersMap.putAll(KafkaHeaderUtils.kafkaHeadersToMap(kafkaRecord.headers()));
+      String recordId = headersMap.get(DataImportHeaders.RECORD_ID);
+      String chunkId = headersMap.get(DataImportHeaders.CHUNK_ID);
+      String jobExecutionId = eventPayload.get(JOB_EXECUTION_ID_HEADER);
+      LOGGER.info("Event payload has been received with event type: {}, recordId: {} "
+                  + "by jobExecution: {} and chunkId: {}", event.getEventType(), recordId, jobExecutionId, chunkId);
 
-        if (isEmpty(eventPayload.get(MARC_KEY))) {
-          String message = String.format("Event payload does not contain required data to update Holdings with event type: '%s', recordId: '%s' by jobExecution: '%s' and chunkId: '%s'", event.getEventType(), recordId, jobExecutionId, chunkId);
-          LOGGER.error(message);
-          return Future.failedFuture(message);
-        }
+      if (isEmpty(eventPayload.get(MARC_KEY))) {
+        String message = String.format("Event payload does not contain required data to update Holdings "
+                                       + "with event type: '%s', recordId: '%s' "
+                                       + "by jobExecution: '%s' and chunkId: '%s'",
+          event.getEventType(), recordId, jobExecutionId, chunkId);
+        LOGGER.error(message);
+        return Future.failedFuture(message);
+      }
 
-        Context context = constructContext(headersMap.get(XOkapiHeaders.TENANT), headersMap.get(XOkapiHeaders.TOKEN),
-          headersMap.get(XOkapiHeaders.URL), headersMap.get(XOkapiHeaders.USER_ID), headersMap.get(XOkapiHeaders.REQUEST_ID));
-        Record marcRecord = Json.decodeValue(eventPayload.get(MARC_KEY), Record.class);
+      Context context = constructContext(headersMap.get(XOkapiHeaders.TENANT), headersMap.get(XOkapiHeaders.TOKEN),
+        headersMap.get(XOkapiHeaders.URL), headersMap.get(XOkapiHeaders.USER_ID),
+        headersMap.get(XOkapiHeaders.REQUEST_ID));
+      Record marcRecord = Json.decodeValue(eventPayload.get(MARC_KEY), Record.class);
 
-        mappingMetadataCache.get(jobExecutionId, context)
-          .map(metadataOptional -> metadataOptional.orElseThrow(() ->
-            new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId))))
-          .onSuccess(mappingMetadataDto -> ensureEventPayloadWithMappingMetadata(eventPayload, mappingMetadataDto))
-          .compose(v -> holdingsRecordUpdateDelegate.handle(eventPayload, marcRecord, context))
-          .onComplete(ar -> {
-            if (ar.succeeded()) {
-              eventPayload.remove(CURRENT_RETRY_NUMBER);
-              promise.complete(kafkaRecord.key());
+      Promise<String> promise = Promise.promise();
+
+      mappingMetadataCache.get(jobExecutionId, context)
+        .map(metadataOptional -> metadataOptional.orElseThrow(() ->
+          new EventProcessingException(format(MAPPING_METADATA_NOT_FOUND_MSG, jobExecutionId))))
+        .onSuccess(mappingMetadataDto -> ensureEventPayloadWithMappingMetadata(eventPayload, mappingMetadataDto))
+        .compose(v -> holdingsRecordUpdateDelegate.handle(eventPayload, marcRecord, context))
+        .onComplete(ar -> {
+          if (ar.succeeded()) {
+            eventPayload.remove(CURRENT_RETRY_NUMBER);
+            promise.complete(kafkaRecord.key());
+          } else {
+            if (ar.cause() instanceof OptimisticLockingException) {
+              processOlError(kafkaRecord, promise, eventPayload, ar);
             } else {
-              if (ar.cause() instanceof OptimisticLockingException) {
-                processOLError(kafkaRecord, promise, eventPayload, ar);
-              } else {
-                eventPayload.remove(CURRENT_RETRY_NUMBER);
-                LOGGER.error("Failed to process data import event payload ", ar.cause());
-                promise.fail(ar.cause());
-              }
+              eventPayload.remove(CURRENT_RETRY_NUMBER);
+              LOGGER.error("Failed to process data import event payload ", ar.cause());
+              promise.fail(ar.cause());
             }
-          });
-        return promise.future();
+          }
+        });
+      return promise.future();
     } catch (Exception e) {
       LOGGER.error(format("Failed to process data import kafka record from topic %s ", kafkaRecord.topic()), e);
       return Future.failedFuture(e);
     }
   }
 
-  private void ensureEventPayloadWithMappingMetadata(Map<String, String> eventPayload, MappingMetadataDto mappingMetadataDto) {
+  private void ensureEventPayloadWithMappingMetadata(Map<String, String> eventPayload,
+                                                     MappingMetadataDto mappingMetadataDto) {
     eventPayload.put(MAPPING_RULES_KEY, mappingMetadataDto.getMappingRules());
     eventPayload.put(MAPPING_PARAMS_KEY, mappingMetadataDto.getMappingParams());
   }
 
-  private void processOLError(KafkaConsumerRecord<String, String> value, Promise<String> promise, Map<String, String> eventPayload, AsyncResult<HoldingsRecord> ar) {
+  private void processOlError(KafkaConsumerRecord<String, String> value, Promise<String> promise,
+                              Map<String, String> eventPayload, AsyncResult<HoldingsRecord> ar) {
     int currentRetryNumber = eventPayload.get(CURRENT_RETRY_NUMBER) == null
-      ? 0 : Integer.parseInt(eventPayload.get(CURRENT_RETRY_NUMBER));
+                             ? 0 : Integer.parseInt(eventPayload.get(CURRENT_RETRY_NUMBER));
     if (currentRetryNumber < MAX_RETRIES_COUNT) {
       eventPayload.put(CURRENT_RETRY_NUMBER, String.valueOf(currentRetryNumber + 1));
-      LOGGER.warn("Error updating Holding - {}. Retry MarcHoldingsRecordHridSetKafkaHandler handler...", ar.cause().getMessage());
+      LOGGER.warn("Error updating Holding - {}. Retry MarcHoldingsRecordHridSetKafkaHandler handler...",
+        ar.cause().getMessage());
       handle(value).onComplete(res -> {
         if (res.succeeded()) {
           promise.complete(value.key());
@@ -138,7 +142,9 @@ public class MarcHoldingsRecordHridSetKafkaHandler implements AsyncRecordHandler
       });
     } else {
       eventPayload.remove(CURRENT_RETRY_NUMBER);
-      String errMessage = format("Current retry number %s exceeded given number %s for the Holding update", MAX_RETRIES_COUNT, currentRetryNumber);
+      String errMessage =
+        format("Current retry number %s exceeded given number %s for the Holding update", MAX_RETRIES_COUNT,
+          currentRetryNumber);
       LOGGER.error(errMessage);
       promise.fail(new OptimisticLockingException(errMessage));
     }

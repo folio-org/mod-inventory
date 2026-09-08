@@ -1,22 +1,6 @@
 package org.folio.inventory.dataimport.handlers.actions;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import static org.folio.ActionProfile.Action.MODIFY;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.ITEM;
@@ -27,7 +11,29 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_UPDATED;
 import static org.folio.rest.jaxrs.model.ProfileType.ACTION_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.JOB_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.matching.RegexPattern;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
+import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Collections;
@@ -39,79 +45,73 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.common.Slf4jNotifier;
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
-import com.github.tomakehurst.wiremock.matching.RegexPattern;
-import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.Json;
-import io.vertx.core.json.JsonObject;
 import lombok.SneakyThrows;
-import org.folio.inventory.common.api.request.PagingParameters;
-import org.folio.inventory.common.domain.MultipleRecords;
-import org.folio.inventory.domain.instances.Instance;
-import org.folio.rest.jaxrs.model.ExternalIdsHolder;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
 import org.folio.ActionProfile;
 import org.folio.DataImportEventPayload;
-import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.MappingMetadataDto;
 import org.folio.MappingProfile;
-import org.folio.inventory.TestUtil;
+import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.domain.HoldingsRecordCollection;
+import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.services.publisher.KafkaEventPublisher;
 import org.folio.processing.mapping.MappingManager;
 import org.folio.processing.mapping.defaultmapper.processor.parameters.MappingParameters;
 import org.folio.rest.jaxrs.model.EntityType;
+import org.folio.rest.jaxrs.model.ExternalIdsHolder;
+import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.rest.jaxrs.model.MappingDetail;
 import org.folio.rest.jaxrs.model.ParsedRecord;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.Record;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.invocation.InvocationOnMock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.mockito.stubbing.Answer;
+import support.TestUtil;
+import support.builders.MarcRecordBuilder;
 
-public class UpdateMarcHoldingsEventHandlerTest {
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
+class UpdateMarcHoldingsEventHandlerTest extends BaseWireMockTest {
 
   private static final String MAPPING_RULES_PATH = "src/test/resources/handlers/marc-holdings-rules.json";
   private static final String PARSED_HOLDINGS_RECORD = "src/test/resources/marc/parsed-holdings-record.json";
   private static final String MAPPING_METADATA_URL = "/mapping-metadata";
 
-  private static final String PARSED_CONTENT_WITH_004_FIELD = "{ \"leader\": \"01314nam  22003851a 4500\", \"fields\":[ {\"001\":\"ybp7406411\"}, {\"852\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"b\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] }},   {\"999\": {\"ind1\":\"f\", \"ind2\":\"f\", \"subfields\":[ { \"i\": \"957985c6-97e3-4038-b0e7-343ecd0b8120\"} ] } } ] }";
+  private static final String PARSED_CONTENT_WITH_004_FIELD =
+    MarcRecordBuilder.newRecord()
+      .withDataField("852", "f", "f", "b", "957985c6-97e3-4038-b0e7-343ecd0b8120")
+      .withInstanceId999("957985c6-97e3-4038-b0e7-343ecd0b8120")
+      .build();
   private static final String PERMANENT_LOCATION_ID = "fe19bae4-da28-472b-be90-d442e2428ead";
 
   private final Vertx vertx = Vertx.vertx();
-  @Rule
-  public WireMockRule mockServer = new WireMockRule(
-    WireMockConfiguration.wireMockConfig()
-      .dynamicPort()
-      .notifier(new Slf4jNotifier(true)));
-  private ActionProfile actionProfile = new ActionProfile()
+
+  private final ActionProfile actionProfile = new ActionProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Update item-SR")
     .withAction(MODIFY)
     .withFolioRecord(ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC);
-  private MappingProfile mappingProfile = new MappingProfile()
+
+  private final MappingProfile mappingProfile = new MappingProfile()
     .withId(UUID.randomUUID().toString())
     .withName("Modify MARC bib")
     .withIncomingRecordType(EntityType.MARC_HOLDINGS)
     .withExistingRecordType(EntityType.MARC_HOLDINGS)
     .withMappingDetails(new MappingDetail());
-  private ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+
+  private final ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
     .withProfileId(actionProfile.getId())
     .withContentType(ACTION_PROFILE)
     .withContent(JsonObject.mapFrom(actionProfile).getMap())
@@ -120,12 +120,11 @@ public class UpdateMarcHoldingsEventHandlerTest {
         .withProfileId(mappingProfile.getId())
         .withContentType(MAPPING_PROFILE)
         .withContent(JsonObject.mapFrom(mappingProfile).getMap())));
+
   @Mock
   private HoldingsRecordCollection holdingsCollection;
-
   @Mock
   private InstanceCollection instanceRecordCollection;
-
   @Mock
   private Storage storage;
   @Mock
@@ -134,11 +133,10 @@ public class UpdateMarcHoldingsEventHandlerTest {
   private UpdateMarcHoldingsEventHandler eventHandler;
   private JsonObject mappingRules;
 
-  @Before
-  public void setUp() throws IOException {
-    MockitoAnnotations.openMocks(this);
+  @BeforeEach
+  void setUp() {
     MappingManager.clearReaderFactories();
-    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, vertx.createHttpClient(), true);
+    MappingMetadataCache mappingMetadataCache = MappingMetadataCache.getInstance(vertx, true);
     eventHandler = new UpdateMarcHoldingsEventHandler(storage, mappingMetadataCache, publisher);
     mappingRules = new JsonObject(TestUtil.readFileFromPath(MAPPING_RULES_PATH));
 
@@ -148,14 +146,14 @@ public class UpdateMarcHoldingsEventHandlerTest {
       return null;
     }).when(holdingsCollection).update(any(), any(), any());
 
-    WireMock.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
+    WIRE_MOCK.stubFor(get(new UrlPathPattern(new RegexPattern(MAPPING_METADATA_URL + "/.*"), true))
       .willReturn(WireMock.ok().withBody(Json.encode(new MappingMetadataDto()
         .withMappingParams(Json.encode(new MappingParameters()))
         .withMappingRules(mappingRules.encode())))));
   }
 
   @Test
-  public void shouldProcessEvent() throws IOException, InterruptedException, ExecutionException, TimeoutException {
+  void shouldProcessEvent() throws InterruptedException, ExecutionException, TimeoutException {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     var holdingsId = UUID.randomUUID();
@@ -164,15 +162,15 @@ public class UpdateMarcHoldingsEventHandlerTest {
     var instanceId = String.valueOf(UUID.randomUUID());
     mockSuccessFindByCql(instanceId, instanceRecordCollection);
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
-    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    marcRecord.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+    context.put(MARC_HOLDINGS.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
-      .withOkapiUrl(mockServer.baseUrl())
+      .withOkapiUrl(WIRE_MOCK.baseUrl())
       .withContext(context)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
@@ -195,7 +193,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
   }
 
   @Test
-  public void shouldNotProcessEventIfMarcHoldingDoesNotHave004Field() throws IOException {
+  void shouldNotProcessEventIfMarcHoldingDoesNotHave004Field() throws IOException {
 
     HoldingsRecord holdings = new HoldingsRecord()
       .withId(String.valueOf(UUID.randomUUID()))
@@ -205,89 +203,94 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withHoldingsTypeId(String.valueOf(UUID.randomUUID()))
       .withPermanentLocationId(PERMANENT_LOCATION_ID);
 
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_004_FIELD));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT_WITH_004_FIELD));
     var holdingsId = UUID.randomUUID();
-    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
+    marcRecord.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
     HashMap<String, String> context = new HashMap<>();
-    context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
-    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+    context.put("HOLDINGS",
+      new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
+    context.put(MARC_HOLDINGS.value(), Json.encode(marcRecord));
     context.put("MAPPING_RULES", mappingRules.encode());
     context.put("MAPPING_PARAMS", new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
-      .withOkapiUrl(mockServer.baseUrl())
+      .withOkapiUrl(WIRE_MOCK.baseUrl())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
 
-    ExecutionException exception = Assert.assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
-    Assert.assertEquals("The field 004 for marc holdings must be not null", exception.getCause().getMessage());
-  }
-
-  @Test(expected = ExecutionException.class)
-  public void shouldThrowExceptionIfContextIsNull() throws ExecutionException, InterruptedException, TimeoutException {
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
-      .withContext(null)
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
-
-    CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
-  }
-
-  @Test(expected = ExecutionException.class)
-  public void shouldThrowExceptionIfContextIsEmpty() throws ExecutionException, InterruptedException, TimeoutException {
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
-      .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
-
-    CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
-  }
-
-  @Test(expected = ExecutionException.class)
-  public void shouldThrowExceptionIfMarcHoldingsIsEmptyInContext()
-    throws ExecutionException, InterruptedException, TimeoutException {
-
-    HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_HOLDINGS.value(), "");
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
-      .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
-
-    CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
-  }
-
-  @Test(expected = ExecutionException.class)
-  public void shouldThrowExceptionIfMarcHoldingsIsNotInContext()
-    throws ExecutionException, InterruptedException, TimeoutException {
-
-    HashMap<String, String> context = new HashMap<>();
-    context.put("Test_Value", "");
-
-    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
-      .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
-      .withContext(context)
-      .withProfileSnapshot(profileSnapshotWrapper)
-      .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
-
-    CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
-    future.get(5, TimeUnit.MILLISECONDS);
+    ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    assertEquals("The field 004 for marc holdings must be not null", exception.getCause().getMessage());
   }
 
   @Test
-  public void shouldReturnFailedFutureIfCurrentActionProfileHasNoMappingProfile() throws IOException {
+  void shouldThrowExceptionIfContextIsNull() {
+    assertThrows(ExecutionException.class, () -> {
+      DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+        .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
+        .withContext(null)
+        .withProfileSnapshot(profileSnapshotWrapper)
+        .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
+
+      CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
+      future.get(5, TimeUnit.MILLISECONDS);
+    });
+  }
+
+  @Test
+  void shouldThrowExceptionIfContextIsEmpty() {
+    assertThrows(ExecutionException.class, () -> {
+      DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+        .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
+        .withContext(new HashMap<>())
+        .withProfileSnapshot(profileSnapshotWrapper)
+        .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
+
+      CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
+      future.get(5, TimeUnit.MILLISECONDS);
+    });
+  }
+
+  @Test
+  void shouldThrowExceptionIfMarcHoldingsIsEmptyInContext() {
+    assertThrows(ExecutionException.class, () -> {
+      HashMap<String, String> context = new HashMap<>();
+      context.put(MARC_HOLDINGS.value(), "");
+
+      DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+        .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
+        .withContext(context)
+        .withProfileSnapshot(profileSnapshotWrapper)
+        .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
+
+      CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
+      future.get(5, TimeUnit.MILLISECONDS);
+    });
+  }
+
+  @Test
+  void shouldThrowExceptionIfMarcHoldingsIsNotInContext() {
+    assertThrows(ExecutionException.class, () -> {
+      HashMap<String, String> context = new HashMap<>();
+      context.put("Test_Value", "");
+
+      DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+        .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
+        .withContext(context)
+        .withProfileSnapshot(profileSnapshotWrapper)
+        .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
+
+      CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
+      future.get(5, TimeUnit.MILLISECONDS);
+    });
+  }
+
+  @Test
+  void shouldReturnFailedFutureIfCurrentActionProfileHasNoMappingProfile() {
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
 
     HashMap<String, String> context = new HashMap<>();
@@ -309,7 +312,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
   }
 
   @Test
-  public void isEligibleShouldReturnTrue() throws IOException {
+  void isEligibleShouldReturnTrue() {
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
 
     HashMap<String, String> context = new HashMap<>();
@@ -324,7 +327,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
   }
 
   @Test
-  public void isEligibleShouldReturnFalseIfCurrentNodeIsEmpty() {
+  void isEligibleShouldReturnFalseIfCurrentNodeIsEmpty() {
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withContext(new HashMap<>());
@@ -332,78 +335,83 @@ public class UpdateMarcHoldingsEventHandlerTest {
   }
 
   @Test
-  public void isEligibleShouldReturnFalseIfActionIsNotCreate() {
-    ActionProfile actionProfile = new ActionProfile()
+  void isEligibleShouldReturnFalseIfActionIsNotCreate() {
+    ActionProfile holdingsProfile = new ActionProfile()
       .withId(UUID.randomUUID().toString())
       .withName("Create preliminary Item")
       .withAction(ActionProfile.Action.UPDATE)
       .withFolioRecord(HOLDINGS);
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+    ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
-      .withProfileId(actionProfile.getId())
+      .withProfileId(holdingsProfile.getId())
       .withContentType(JOB_PROFILE)
-      .withContent(actionProfile);
+      .withContent(holdingsProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withProfileSnapshot(snapshotWrapper);
     assertFalse(eventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
-  public void isEligibleShouldReturnFalseIfRecordIsNotHoldings() {
-    ActionProfile actionProfile = new ActionProfile()
+  void isEligibleShouldReturnFalseIfRecordIsNotHoldings() {
+    ActionProfile itemProfile = new ActionProfile()
       .withId(UUID.randomUUID().toString())
       .withName("Create preliminary Item")
       .withAction(ActionProfile.Action.CREATE)
       .withFolioRecord(ITEM);
-    ProfileSnapshotWrapper profileSnapshotWrapper = new ProfileSnapshotWrapper()
+    ProfileSnapshotWrapper snapshotWrapper = new ProfileSnapshotWrapper()
       .withId(UUID.randomUUID().toString())
-      .withProfileId(actionProfile.getId())
+      .withProfileId(itemProfile.getId())
       .withContentType(JOB_PROFILE)
-      .withContent(actionProfile);
+      .withContent(itemProfile);
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withContext(new HashMap<>())
-      .withProfileSnapshot(profileSnapshotWrapper);
+      .withProfileSnapshot(snapshotWrapper);
     assertFalse(eventHandler.isEligible(dataImportEventPayload));
   }
 
   @Test
-  public void isPostProcessingNeededShouldReturnTrue() {
+  void isPostProcessingNeededShouldReturnTrue() {
     assertFalse(eventHandler.isPostProcessingNeeded());
   }
 
   @Test
-  public void shouldReturnPostProcessingInitializationEventType() {
-    assertEquals("DI_INVENTORY_HOLDINGS_UPDATED_READY_FOR_POST_PROCESSING", eventHandler.getPostProcessingInitializationEventType());
+  void shouldReturnPostProcessingInitializationEventType() {
+    assertEquals("DI_INVENTORY_HOLDINGS_UPDATED_READY_FOR_POST_PROCESSING",
+      eventHandler.getPostProcessingInitializationEventType());
   }
 
   @Test
-  public void shouldNotProcessEventIfOptimisticLockingErrorExist() throws IOException, ExecutionException, InterruptedException, TimeoutException {
+  void shouldNotProcessEventIfOptimisticLockingErrorExist() {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     var instanceId = String.valueOf(UUID.randomUUID());
     mockSuccessFindByCql(instanceId, instanceRecordCollection);
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(2);
-      failureHandler.accept(new Failure("Cannot update Holdings record because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1", 409));
+      failureHandler.accept(new Failure(
+        "Cannot update Holdings record because it has been changed (optimistic locking): "
+        + "Stored _version is 2, _version of request is 1",
+        409));
       return null;
     }).when(holdingsCollection).update(any(), any(), any());
-    when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withId(UUID.randomUUID().toString()).withVersion(1L)));
+    when(holdingsCollection.findById(anyString())).thenReturn(
+      CompletableFuture.completedFuture(new HoldingsRecord().withId(UUID.randomUUID().toString()).withVersion(1L)));
 
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
     var holdingsId = UUID.randomUUID();
-    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
+    marcRecord.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+    context.put(MARC_HOLDINGS.value(), Json.encode(marcRecord));
     context.put("CURRENT_RETRY_NUMBER", "2");
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
-      .withOkapiUrl(mockServer.baseUrl())
+      .withOkapiUrl(WIRE_MOCK.baseUrl())
       .withContext(context)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
@@ -415,7 +423,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
   }
 
   @Test
-  public void shouldNotProcessEventIfHoldingsNotUpdatedToInventoryStorage() throws IOException, ExecutionException, InterruptedException, TimeoutException {
+  void shouldNotProcessEventIfHoldingsNotUpdatedToInventoryStorage() {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     var instanceId = String.valueOf(UUID.randomUUID());
@@ -425,19 +433,20 @@ public class UpdateMarcHoldingsEventHandlerTest {
       failureHandler.accept(new Failure("Unprocessable Entity", 422));
       return null;
     }).when(holdingsCollection).update(any(), any(), any());
-    when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withId(UUID.randomUUID().toString()).withVersion(1L)));
+    when(holdingsCollection.findById(anyString())).thenReturn(
+      CompletableFuture.completedFuture(new HoldingsRecord().withId(UUID.randomUUID().toString()).withVersion(1L)));
 
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
     var holdingsId = UUID.randomUUID();
-    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
+    marcRecord.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+    context.put(MARC_HOLDINGS.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
-      .withOkapiUrl(mockServer.baseUrl())
+      .withOkapiUrl(WIRE_MOCK.baseUrl())
       .withContext(context)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
@@ -448,19 +457,21 @@ public class UpdateMarcHoldingsEventHandlerTest {
   }
 
   @Test
-  public void shouldProcessEventSecondRetryIfOLErrorExist() throws IOException, ExecutionException, InterruptedException, TimeoutException {
+  void shouldProcessEventSecondRetryIfOlErrorExist() throws ExecutionException, InterruptedException, TimeoutException {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     var instanceId = String.valueOf(UUID.randomUUID());
     mockSuccessFindByCql(instanceId, instanceRecordCollection);
-    doAnswer(new Answer() {
+    doAnswer(new Answer<>() {
       private int count = 0;
+
       @Override
-      public Object answer(InvocationOnMock invocation) throws Throwable {
+      public Object answer(InvocationOnMock invocation) {
         if (count++ == 0) {
           Consumer<Failure> failureHandler = invocation.getArgument(2);
           failureHandler.accept(new Failure(
-            "Cannot update Holdings record because it has been changed (optimistic locking): Stored _version is 2, _version of request is 1",
+            "Cannot update Holdings record because it has been changed (optimistic locking): "
+            + "Stored _version is 2, _version of request is 1",
             409));
         } else {
           Consumer<Success<Void>> successConsumer = invocation.getArgument(1);
@@ -470,19 +481,20 @@ public class UpdateMarcHoldingsEventHandlerTest {
       }
     }).when(holdingsCollection).update(any(), any(), any());
 
-    when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(new HoldingsRecord().withId(UUID.randomUUID().toString()).withVersion(1L)));
+    when(holdingsCollection.findById(anyString())).thenReturn(
+      CompletableFuture.completedFuture(new HoldingsRecord().withId(UUID.randomUUID().toString()).withVersion(1L)));
 
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
     var holdingsId = UUID.randomUUID();
-    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
+    marcRecord.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+    context.put(MARC_HOLDINGS.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
-      .withOkapiUrl(mockServer.baseUrl())
+      .withOkapiUrl(WIRE_MOCK.baseUrl())
       .withContext(context)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
@@ -492,7 +504,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
   }
 
   @Test
-  public void shouldNotProcessEventIfMarcHoldingDoesNotHaveParsedRecord() throws IOException {
+  void shouldNotProcessEventIfMarcHoldingDoesNotHaveParsedRecord() throws IOException {
 
     HoldingsRecord holdings = new HoldingsRecord()
       .withId(String.valueOf(UUID.randomUUID()))
@@ -502,48 +514,49 @@ public class UpdateMarcHoldingsEventHandlerTest {
       .withHoldingsTypeId(String.valueOf(UUID.randomUUID()))
       .withPermanentLocationId(PERMANENT_LOCATION_ID);
 
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(null));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(null));
     HashMap<String, String> context = new HashMap<>();
-    context.put("HOLDINGS", new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
-    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+    context.put("HOLDINGS",
+      new JsonObject(new ObjectMapper().writer().withDefaultPrettyPrinter().writeValueAsString(holdings)).encode());
+    context.put(MARC_HOLDINGS.value(), Json.encode(marcRecord));
     context.put("MAPPING_RULES", mappingRules.encode());
     context.put("MAPPING_PARAMS", new JsonObject().encode());
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_CREATED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
-      .withOkapiUrl(mockServer.baseUrl())
+      .withOkapiUrl(WIRE_MOCK.baseUrl())
       .withContext(context)
       .withProfileSnapshot(profileSnapshotWrapper)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     CompletableFuture<DataImportEventPayload> future = eventHandler.handle(dataImportEventPayload);
 
-    ExecutionException exception = Assert.assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
-    Assert.assertEquals("Error in default mapper.", exception.getCause().getMessage());
+    ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    assertEquals("Error in default mapper.", exception.getCause().getMessage());
     verify(publisher, times(0)).publish(any());
   }
 
   @Test
-  public void shouldNotProcessEventIfFindByCQLHasInternalServerError() throws IOException, ExecutionException, InterruptedException, TimeoutException {
+  void shouldNotProcessEventIfFindByCqlHasInternalServerError() throws IOException {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     doAnswer(invocationOnMock -> {
       Consumer<Failure> failureHandler = invocationOnMock.getArgument(3);
       failureHandler.accept(new Failure("Internal Server Error", 500));
       return null;
-    }).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    }).when(instanceRecordCollection).findByCql(anyString(), any(), any(), any());
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
     var holdingsId = UUID.randomUUID();
-    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
+    marcRecord.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+    context.put(MARC_HOLDINGS.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
-      .withOkapiUrl(mockServer.baseUrl())
+      .withOkapiUrl(WIRE_MOCK.baseUrl())
       .withContext(context)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
@@ -555,7 +568,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
   }
 
   @Test
-  public void shouldNotProcessEventIfFindByCQLTotalRecordsIsZero() throws IOException, ExecutionException, InterruptedException, TimeoutException {
+  void shouldNotProcessEventIfFindByCqlTotalRecordsIsZero() throws IOException {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     doAnswer(invocationOnMock -> {
@@ -564,45 +577,47 @@ public class UpdateMarcHoldingsEventHandlerTest {
       Consumer<Success<MultipleRecords<Instance>>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(result));
       return null;
-    }).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    }).when(instanceRecordCollection).findByCql(anyString(), any(), any(), any());
 
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
     var holdingsId = UUID.randomUUID();
-    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
+    marcRecord.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+    context.put(MARC_HOLDINGS.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
-      .withOkapiUrl(mockServer.baseUrl())
+      .withOkapiUrl(WIRE_MOCK.baseUrl())
       .withContext(context)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
     var future = eventHandler.handle(dataImportEventPayload);
 
     ExecutionException exception = assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
-    assertThat(exception.getCause().getMessage(), containsString("No instance id found for marc holdings with hrid: in00000000315"));
+    assertThat(exception.getCause().getMessage(),
+      containsString("No instance id found for marc holdings with hrid: in00000000315"));
     verify(publisher, times(0)).publish(any());
   }
 
   @Test
-  public void shouldNotProcessEventIfFindByCQLThrowsUnsupportedEncodingException() throws IOException, ExecutionException, InterruptedException, TimeoutException {
+  void shouldNotProcessEventIfFindByCqlThrowsUnsupportedEncodingException() throws IOException {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
-    doThrow(new UnsupportedEncodingException("Unsupported encoding.")).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    doThrow(new UnsupportedEncodingException("Unsupported encoding."))
+      .when(instanceRecordCollection).findByCql(anyString(), any(), any(), any());
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
     var holdingsId = UUID.randomUUID();
-    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
+    marcRecord.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+    context.put(MARC_HOLDINGS.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
-      .withOkapiUrl(mockServer.baseUrl())
+      .withOkapiUrl(WIRE_MOCK.baseUrl())
       .withContext(context)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
@@ -614,7 +629,7 @@ public class UpdateMarcHoldingsEventHandlerTest {
   }
 
   @Test
-  public void shouldReturnFailedFutureIfHasNoHoldingByIdFromSourceRecord() throws IOException {
+  void shouldReturnFailedFutureIfHasNoHoldingByIdFromSourceRecord() {
     when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsCollection);
     when(storage.getInstanceCollection(any())).thenReturn(instanceRecordCollection);
     when(holdingsCollection.findById(anyString())).thenReturn(CompletableFuture.completedFuture(null));
@@ -622,15 +637,15 @@ public class UpdateMarcHoldingsEventHandlerTest {
     mockSuccessFindByCql(instanceId, instanceRecordCollection);
     var holdingsId = UUID.randomUUID();
     var parsedHoldingsRecord = new JsonObject(TestUtil.readFileFromPath(PARSED_HOLDINGS_RECORD));
-    Record record = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
-    record.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
+    Record marcRecord = new Record().withParsedRecord(new ParsedRecord().withContent(parsedHoldingsRecord.encode()));
+    marcRecord.setExternalIdsHolder(new ExternalIdsHolder().withHoldingsId(holdingsId.toString()));
     HashMap<String, String> context = new HashMap<>();
-    context.put(MARC_HOLDINGS.value(), Json.encode(record));
+    context.put(MARC_HOLDINGS.value(), Json.encode(marcRecord));
 
     DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
       .withEventType(DI_INVENTORY_HOLDING_MATCHED.value())
       .withJobExecutionId(UUID.randomUUID().toString())
-      .withOkapiUrl(mockServer.baseUrl())
+      .withOkapiUrl(WIRE_MOCK.baseUrl())
       .withContext(context)
       .withCurrentNode(profileSnapshotWrapper.getChildSnapshotWrappers().getFirst());
 
@@ -640,7 +655,6 @@ public class UpdateMarcHoldingsEventHandlerTest {
     assertThat(exception.getCause().getMessage(), containsString("Holdings record was not found"));
     verify(publisher, times(0)).publish(any());
   }
-
 
   @SneakyThrows
   private void mockSuccessFindByCql(String instanceId, InstanceCollection instanceRecordCollection) {
@@ -652,6 +666,6 @@ public class UpdateMarcHoldingsEventHandlerTest {
       Consumer<Success<MultipleRecords<Instance>>> successHandler = invocationOnMock.getArgument(2);
       successHandler.accept(new Success<>(result));
       return null;
-    }).when(instanceRecordCollection).findByCql(anyString(), any(PagingParameters.class), any(Consumer.class), any(Consumer.class));
+    }).when(instanceRecordCollection).findByCql(anyString(), any(), any(), any());
   }
 }

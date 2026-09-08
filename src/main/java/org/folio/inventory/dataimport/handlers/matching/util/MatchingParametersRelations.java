@@ -4,11 +4,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Class for storing matching parameters(field for retrieving data) relation between matching profile and inventory-storage.
+ * Class for storing matching parameters(field for retrieving data) relation
+ * between matching profile and inventory-storage.
  */
 public class MatchingParametersRelations {
 
-  private Map<String, String> matchingRelations = new HashMap<>();
+  private final Map<String, String> matchingRelations = new HashMap<>();
 
   public MatchingParametersRelations() {
     matchingRelations.put("instance.alternativeTitles[].alternativeTitleTypeId", "alternativeTitleTypes");
@@ -47,9 +48,5 @@ public class MatchingParametersRelations {
 
   public Map<String, String> getMatchingRelations() {
     return matchingRelations;
-  }
-
-  public void setMatchingRelations(Map<String, String> matchingRelations) {
-    this.matchingRelations = matchingRelations;
   }
 }

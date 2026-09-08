@@ -13,6 +13,6 @@ public class AdminApi {
 
   public void health(RoutingContext routingContext) {
     routingContext.response().setStatusCode(200)
-    .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain").end("OK");
+      .putHeader(HttpHeaders.CONTENT_TYPE, "text/plain").end("OK");
   }
 }

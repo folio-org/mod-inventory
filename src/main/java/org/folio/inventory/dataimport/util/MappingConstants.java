@@ -14,6 +14,6 @@ public final class MappingConstants {
   public static final String MARC_BIB_RECORD_TYPE = "marc-bib";
   public static final String MARC_BIB_RECORD_FORMAT = "MARC_BIB";
   public static final String INSTANCE_PATH = "instance";
-  public static final List<String> INSTANCE_REQUIRED_FIELDS = Arrays.asList(SOURCE_KEY, TITLE_KEY, INSTANCE_TYPE_ID_KEY);
-
+  public static final List<String> INSTANCE_REQUIRED_FIELDS =
+    Arrays.asList(SOURCE_KEY, TITLE_KEY, INSTANCE_TYPE_ID_KEY);
 }

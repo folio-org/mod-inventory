@@ -3,32 +3,18 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
+
 package org.folio.inventory.domain.items;
 
 import java.util.Objects;
 
-/**
- * @author ne
- */
-public class Status {
-  private final ItemStatusName name;
-  private final String date;
-
+public record Status(ItemStatusName name, String date) {
   public Status(ItemStatusName name) {
-    this.name = name;
-    this.date = null;
+    this(name, null);
   }
 
-  public Status(ItemStatusName itemStatusName, String date) {
-    this.name = Objects.requireNonNull(itemStatusName, "Status name is required");
+  public Status(ItemStatusName name, String date) {
+    this.name = Objects.requireNonNull(name, "Status name is required");
     this.date = date;
-  }
-
-  public ItemStatusName getName() {
-    return name;
-  }
-
-  public String getDate() {
-    return date;
   }
 }

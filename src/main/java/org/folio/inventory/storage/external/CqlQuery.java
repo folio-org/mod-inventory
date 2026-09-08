@@ -14,14 +14,6 @@ public final class CqlQuery {
     this.query = query;
   }
 
-  public CqlQuery or(CqlQuery other) {
-    return new CqlQuery(format("%s or %s", toString(), other));
-  }
-
-  public CqlQuery and(CqlQuery other) {
-    return new CqlQuery(format("%s and %s", toString(), other));
-  }
-
   public static CqlQuery exactMatchAny(String indexName, Collection<String> values) {
     final String valuesQuery = values.stream()
       .filter(Objects::nonNull)
@@ -41,6 +33,14 @@ public final class CqlQuery {
 
   public static CqlQuery notEqual(String indexName, String value) {
     return new CqlQuery(format("%s<>%s", indexName, StringUtil.cqlEncode(value)));
+  }
+
+  public CqlQuery or(CqlQuery other) {
+    return new CqlQuery(format("%s or %s", this, other));
+  }
+
+  public CqlQuery and(CqlQuery other) {
+    return new CqlQuery(format("%s and %s", this, other));
   }
 
   @Override

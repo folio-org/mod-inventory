@@ -1,0 +1,365 @@
+package org.folio.inventory.storage.external.failure;
+
+import static api.ApiTestSuite.REQUEST_ID;
+import static api.ApiTestSuite.USER_ID;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.any;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import com.github.tomakehurst.wiremock.client.ResponseDefinitionBuilder;
+import com.github.tomakehurst.wiremock.matching.UrlPathPattern;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import lombok.SneakyThrows;
+import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
+import org.folio.inventory.common.VertxAssistant;
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.common.domain.PagingParameters;
+import org.folio.inventory.domain.items.Item;
+import org.folio.inventory.domain.items.ItemCollection;
+import org.folio.inventory.domain.items.ItemStatusName;
+import org.folio.inventory.domain.items.Status;
+import org.folio.inventory.storage.external.ExternalStorageCollections;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+class ExternalItemCollectionTest extends BaseWireMockTest {
+
+  private static final VertxAssistant VERTX_ASSISTANT = new VertxAssistant();
+
+  @BeforeAll
+  static void beforeAll() {
+    VERTX_ASSISTANT.start();
+  }
+
+  @AfterAll
+  static void afterAll() {
+    VERTX_ASSISTANT.stop();
+  }
+
+  @Test
+  @SneakyThrows
+  void badRequestWhenCreatingAnItemTriggersFailureCallback() {
+    WIRE_MOCK.stubFor(any(collectionRoot())
+      .willReturn(badRequestResponse()));
+
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
+
+    collection.add(createItem(),
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
+
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
+
+    assertBadRequest(failure);
+  }
+
+  @Test
+  @SneakyThrows
+  void badRequestWhenUpdatingAnItemTriggersFailureCallback() {
+    WIRE_MOCK.stubFor(any(individualItem())
+      .willReturn(badRequestResponse()));
+
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
+
+    collection.update(createItem(),
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
+
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
+
+    assertBadRequest(failure);
+  }
+
+  @Test
+  @SneakyThrows
+  void badRequestWhenGettingAllItemsTriggersFailureCallback() {
+    WIRE_MOCK.stubFor(any(collectionRoot())
+      .willReturn(badRequestResponse()));
+
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
+
+    collection.findAll(PagingParameters.defaults(),
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
+
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
+
+    assertBadRequest(failure);
+  }
+
+  @Test
+  @SneakyThrows
+  void badRequestWhenGettingAnItemByIdTriggersFailureCallback() {
+    WIRE_MOCK.stubFor(any(individualItem())
+      .willReturn(badRequestResponse()));
+
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
+
+    collection.findById(UUID.randomUUID().toString(),
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
+
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
+
+    assertBadRequest(failure);
+  }
+
+  @Test
+  @SneakyThrows
+  void badRequestWhenDeletingAnItemByIdTriggersFailureCallback() {
+    WIRE_MOCK.stubFor(any(individualItem())
+      .willReturn(badRequestResponse()));
+
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
+
+    collection.delete(UUID.randomUUID().toString(),
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
+
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
+
+    assertBadRequest(failure);
+  }
+
+  @Test
+  @SneakyThrows
+  void badRequestWhenDeletingAllItemsTriggersFailureCallback() {
+    WIRE_MOCK.stubFor(any(collectionRoot())
+      .willReturn(badRequestResponse()));
+
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
+
+    collection.empty(
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
+
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
+
+    assertBadRequest(failure);
+  }
+
+  @Test
+  @SneakyThrows
+  void badRequestWhenFindingItemsTriggersFailureCallback() {
+    WIRE_MOCK.stubFor(any(collectionRoot())
+      .willReturn(badRequestResponse()));
+
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
+
+    collection.findByCql("title=\"*Small Angry*\"",
+      new PagingParameters(10, 0),
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
+
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
+
+    assertBadRequest(failure);
+  }
+
+  @Test
+  @SneakyThrows
+  void serverErrorWhenCreatingAnItemTriggersFailureCallback() {
+    WIRE_MOCK.stubFor(any(collectionRoot())
+      .willReturn(serverErrorResponse()));
+
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
+
+    collection.add(createItem(),
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
+
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
+
+    assertServerError(failure);
+  }
+
+  @Test
+  @SneakyThrows
+  void serverErrorWhenUpdatingAnItemTriggersFailureCallback() {
+    WIRE_MOCK.stubFor(any(individualItem())
+      .willReturn(serverErrorResponse()));
+
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
+
+    collection.update(createItem(),
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
+
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
+
+    assertServerError(failure);
+  }
+
+  @Test
+  @SneakyThrows
+  void serverErrorWhenGettingAllItemsTriggersFailureCallback() {
+    WIRE_MOCK.stubFor(any(collectionRoot())
+      .willReturn(serverErrorResponse()));
+
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
+
+    collection.findAll(PagingParameters.defaults(),
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
+
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
+
+    assertServerError(failure);
+  }
+
+  @Test
+  @SneakyThrows
+  void serverErrorWhenGettingAnItemByIdTriggersFailureCallback() {
+    WIRE_MOCK.stubFor(any(individualItem())
+      .willReturn(serverErrorResponse()));
+
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
+
+    collection.findById(UUID.randomUUID().toString(),
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
+
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
+
+    assertServerError(failure);
+  }
+
+  @Test
+  @SneakyThrows
+  void serverErrorWhenDeletingAnItemByIdTriggersFailureCallback() {
+    WIRE_MOCK.stubFor(any(individualItem())
+      .willReturn(serverErrorResponse()));
+
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
+
+    collection.delete(UUID.randomUUID().toString(),
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
+
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
+
+    assertServerError(failure);
+  }
+
+  @Test
+  @SneakyThrows
+  void serverErrorWhenDeletingAllItemsTriggersFailureCallback() {
+    WIRE_MOCK.stubFor(any(collectionRoot())
+      .willReturn(serverErrorResponse()));
+
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
+
+    collection.empty(
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
+
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
+
+    assertServerError(failure);
+  }
+
+  @Test
+  @SneakyThrows
+  void serverErrorWhenFindingItemsTriggersFailureCallback() {
+    WIRE_MOCK.stubFor(any(collectionRoot())
+      .willReturn(serverErrorResponse()));
+
+    ItemCollection collection = createCollection();
+
+    CompletableFuture<Failure> failureCalled = new CompletableFuture<>();
+
+    collection.findByCql("title=\"*Small Angry*\"",
+      new PagingParameters(10, 0),
+      success -> fail("Completion callback should not be called"),
+      failureCalled::complete);
+
+    Failure failure = failureCalled.get(1000, MILLISECONDS);
+
+    assertServerError(failure);
+  }
+
+  private static Item createItem() {
+    return new Item(null,
+      null,
+      null,
+      new Status(ItemStatusName.CHECKED_OUT), UUID.randomUUID().toString(),
+      UUID.randomUUID().toString(), null)
+      .withBarcode(UUID.randomUUID().toString())
+      .withEnumeration("6575467847")
+      .withPermanentLocationId(UUID.randomUUID().toString())
+      .withTemporaryLocationId(UUID.randomUUID().toString());
+  }
+
+  private ItemCollection createCollection() {
+    return VERTX_ASSISTANT.createUsingVertx(
+        it -> new ExternalStorageCollections(
+          WIRE_MOCK.baseUrl(),
+          it.createHttpClient()))
+      .getItemCollection("test_tenant", "", USER_ID, REQUEST_ID);
+  }
+
+  private void assertBadRequest(Failure failure) {
+    assertThat(failure.reason(), is("Bad Request"));
+    assertThat(failure.statusCode(), is(400));
+  }
+
+  private void assertServerError(Failure failure) {
+    assertThat(failure.reason(), Matchers.is("Server Error"));
+    assertThat(failure.statusCode(), Matchers.is(500));
+  }
+
+  private ResponseDefinitionBuilder serverErrorResponse() {
+    return aResponse()
+      .withStatus(500)
+      .withBody("Server Error")
+      .withHeader("Content-Type", "text/plain");
+  }
+
+  private ResponseDefinitionBuilder badRequestResponse() {
+    return aResponse()
+      .withStatus(400)
+      .withBody("Bad Request")
+      .withHeader("Content-Type", "text/plain");
+  }
+
+  private UrlPathPattern collectionRoot() {
+    return urlPathMatching("/item-storage/items");
+  }
+
+  private UrlPathPattern individualItem() {
+    return urlPathMatching("/item-storage/items/[a-z0-9/-]*");
+  }
+}

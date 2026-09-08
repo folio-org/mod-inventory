@@ -1,8 +1,8 @@
 package org.folio.inventory.validation.status;
 
-import org.folio.inventory.domain.items.ItemStatusName;
-
 import static java.util.Set.of;
+
+import org.folio.inventory.domain.items.ItemStatusName;
 
 public class WithdrawnTargetItemStatusValidator extends AbstractTargetItemStatusValidator {
   public WithdrawnTargetItemStatusValidator() {

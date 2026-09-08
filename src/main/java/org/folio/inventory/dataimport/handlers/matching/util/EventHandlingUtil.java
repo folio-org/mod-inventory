@@ -3,35 +3,30 @@ package org.folio.inventory.dataimport.handlers.matching.util;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.folio.DataImportEventPayload;
 import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.support.JsonHelper;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
 public final class EventHandlingUtil {
-  public static final String PAYLOAD_USER_ID = "userId";
-  public static final String OKAPI_TENANT = "x-okapi-tenant";
-  public static final String OKAPI_TOKEN = "x-okapi-token";
-  public static final String OKAPI_URL = "x-okapi-url";
-  public static final String OKAPI_USER_ID = "x-okapi-user-id";
-  public static final String OKAPI_REQUEST_ID = "x-okapi-request-id";
-  private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
-  public static final int MAX_UUIDS_TO_DISPLAY = 4;
 
-  private EventHandlingUtil() {}
+  public static final int MAX_UUIDS_TO_DISPLAY = 4;
+  private static final String CENTRAL_TENANT_ID = "CENTRAL_TENANT_ID";
+
+  private EventHandlingUtil() { }
 
   public static Context constructContext(String tenantId, String token, String okapiUrl) {
     return constructContext(tenantId, token, okapiUrl, null, null);
   }
 
-  public static Context constructContext(String tenantId, String token, String okapiUrl, String userId, String requestId) {
+  public static Context constructContext(String tenantId, String token, String okapiUrl, String userId,
+                                         String requestId) {
     return new Context() {
       @Override
       public String getTenantId() {
@@ -60,7 +55,8 @@ public final class EventHandlingUtil {
     };
   }
 
-  public static List<String> validateJsonByRequiredFields(final JsonObject jsonObject, final List<String> requiredFields) {
+  public static List<String> validateJsonByRequiredFields(final JsonObject jsonObject,
+                                                          final List<String> requiredFields) {
     ArrayList<String> errorMessages = new ArrayList<>();
     for (String fieldPath : requiredFields) {
       String field = StringUtils.substringBefore(fieldPath, ".");
@@ -81,13 +77,15 @@ public final class EventHandlingUtil {
   }
 
   /**
-   * Extracts match profile from event payload
-   * Additional json encoding is needed to return a copy of object not to modify eventPayload
+   * Extracts match profile from event payload.
+   * Additional json encoding is needed to return a copy of object not to modify eventPayload.
+   *
    * @return MatchProfile object deep copy
-   * */
+   *
+   */
   public static MatchProfile extractMatchProfile(DataImportEventPayload dataImportEventPayload) {
-    if (dataImportEventPayload.getCurrentNode().getContent() instanceof Map) {
-      return (new JsonObject((Map)dataImportEventPayload.getCurrentNode().getContent()))
+    if (dataImportEventPayload.getCurrentNode().getContent() instanceof Map map) {
+      return (new JsonObject(map))
         .mapTo(MatchProfile.class);
     }
 
@@ -95,27 +93,18 @@ public final class EventHandlingUtil {
       .mapTo(MatchProfile.class);
   }
 
-  private static boolean isExistsRequiredProperty(JsonObject representation, String propertyName, String nestedPropertyName) {
-    String propertyValue = StringUtils.isEmpty(nestedPropertyName)
-      ? JsonHelper.getString(representation, propertyName)
-      : JsonHelper.getNestedProperty(representation, propertyName, nestedPropertyName);
-    return StringUtils.isNotEmpty(propertyValue);
-  }
-
   /**
    * Checks if the system user is enabled based on a system property.
-   * <p>
    * This method reads the `SYSTEM_USER_ENABLED` system property and parses
    * its value as a boolean. If the property is not found or cannot be parsed,
    * it defaults to `true`. The method then negates the parsed value and returns it.
-   * <p>
    * Note: This functionality is specific to the Eureka environment.
    *
    * @return {@code true} if the system user is set for Eureka env; otherwise {@code false}.
    */
   public static boolean isSystemUserEnabled() {
     return !Boolean.parseBoolean(System.getenv().getOrDefault("SYSTEM_USER_ENABLED",
-        System.getProperty("SYSTEM_USER_ENABLED", "true")));
+      System.getProperty("SYSTEM_USER_ENABLED", "true")));
   }
 
   /**
@@ -123,7 +112,7 @@ public final class EventHandlingUtil {
    * records is less than or equal to MAX_UUIDS_TO_DISPLAY (4), it includes the
    * UUIDs in the message. Otherwise, it includes the total count.
    *
-   * @param idsJson JSON array string containing the matched record IDs
+   * @param idsJson      JSON array string containing the matched record IDs
    * @param totalRecords total number of matched records, can be null. If null, the size of idsJson array will be used.
    * @return formatted error message
    */
@@ -145,4 +134,11 @@ public final class EventHandlingUtil {
     return message.toString();
   }
 
+  private static boolean isExistsRequiredProperty(JsonObject representation, String propertyName,
+                                                  String nestedPropertyName) {
+    String propertyValue = StringUtils.isEmpty(nestedPropertyName)
+                           ? JsonHelper.getString(representation, propertyName)
+                           : JsonHelper.getNestedProperty(representation, propertyName, nestedPropertyName);
+    return StringUtils.isNotEmpty(propertyValue);
+  }
 }

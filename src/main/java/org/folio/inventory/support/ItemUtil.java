@@ -18,13 +18,14 @@ import static org.folio.inventory.support.JsonArrayHelper.toListOfStrings;
 import static org.folio.inventory.support.JsonHelper.getNestedProperty;
 import static org.folio.inventory.support.JsonHelper.includeIfPresent;
 
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
 import org.folio.inventory.domain.items.CirculationNote;
 import org.folio.inventory.domain.items.EffectiveCallNumberComponents;
 import org.folio.inventory.domain.items.Item;
@@ -32,9 +33,6 @@ import org.folio.inventory.domain.items.LastCheckIn;
 import org.folio.inventory.domain.items.Note;
 import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.domain.sharedproperties.ElectronicAccess;
-
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import org.folio.inventory.exceptions.UnprocessableEntityException;
 import org.folio.inventory.support.http.server.ValidationError;
 
@@ -60,23 +58,24 @@ public final class ItemUtil {
   public static final String PERMANENT_LOAN_TYPE = "permanentLoanType";
   public static final String TEMPORARY_LOAN_TYPE = "temporaryLoanType";
 
-  private static final Set<String> readOnlyFieldNames = new HashSet<>();
+  private static final Set<String> READ_ONLY_FIELD_NAMES = new HashSet<>();
 
   static {
-    readOnlyFieldNames.add(TITLE_KEY);
-    readOnlyFieldNames.add(CALL_NUMBER_KEY);
-    readOnlyFieldNames.add(CONTRIBUTOR_NAMES_KEY);
-    readOnlyFieldNames.add(EFFECTIVE_SHELVING_ORDER_KEY);
-    readOnlyFieldNames.add(EFFECTIVE_CALL_NUMBER_COMPONENTS_KEY);
-    readOnlyFieldNames.add(IS_BOUND_WTH_KEY);
-    readOnlyFieldNames.add(BOUND_WTH_TITLES_KEY);
-    readOnlyFieldNames.add(EFFECTIVE_LOCATION_KEY);
-    readOnlyFieldNames.add(METADATA_KEY);
+    READ_ONLY_FIELD_NAMES.add(TITLE_KEY);
+    READ_ONLY_FIELD_NAMES.add(CALL_NUMBER_KEY);
+    READ_ONLY_FIELD_NAMES.add(CONTRIBUTOR_NAMES_KEY);
+    READ_ONLY_FIELD_NAMES.add(EFFECTIVE_SHELVING_ORDER_KEY);
+    READ_ONLY_FIELD_NAMES.add(EFFECTIVE_CALL_NUMBER_COMPONENTS_KEY);
+    READ_ONLY_FIELD_NAMES.add(IS_BOUND_WTH_KEY);
+    READ_ONLY_FIELD_NAMES.add(BOUND_WTH_TITLES_KEY);
+    READ_ONLY_FIELD_NAMES.add(EFFECTIVE_LOCATION_KEY);
+    READ_ONLY_FIELD_NAMES.add(METADATA_KEY);
   }
 
   private ItemUtil() {
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   public static Item fromStoredItemRepresentation(JsonObject itemFromServer) {
     List<String> formerIds = JsonArrayHelper
       .toListOfStrings(itemFromServer.getJsonArray(Item.FORMER_IDS_KEY));
@@ -110,12 +109,12 @@ public final class ItemUtil {
       .collect(Collectors.toList());
 
     List<String> tags = itemFromServer.containsKey(Item.TAGS_KEY)
-      ? JsonArrayHelper.toListOfStrings(
+                        ? JsonArrayHelper.toListOfStrings(
       itemFromServer.getJsonObject(Item.TAGS_KEY).getJsonArray(Item.TAG_LIST_KEY))
-      : new ArrayList<>();
+                        : new ArrayList<>();
 
     List<EffectiveCallNumberComponents> additionalCallNumbers = toList(
-        itemFromServer.getJsonArray(Item.ADDITIONAL_CALL_NUMBERS_KEY, new JsonArray())).stream()
+      itemFromServer.getJsonArray(Item.ADDITIONAL_CALL_NUMBERS_KEY, new JsonArray())).stream()
       .map(EffectiveCallNumberComponents::from)
       .toList();
 
@@ -172,64 +171,10 @@ public final class ItemUtil {
   }
 
   public static JsonObject toStoredItemRepresentation(Item item) {
-    JsonObject itemToSend = new JsonObject();
-
-    //TODO: Review if this shouldn't be defaulting here
-    itemToSend.put(ID, item.id != null
-      ? item.id
-      : UUID.randomUUID().toString());
-
-    includeIfPresent(itemToSend, VERSION_KEY, item.getVersion());
-
-    itemToSend.put(STATUS, converterForClass(Status.class).toJson(item.getStatus()));
-
-    if(item.getLastCheckIn() != null) {
-      itemToSend.put(Item.LAST_CHECK_IN, item.getLastCheckIn().toJson());
-    }
-    includeIfPresent(itemToSend, Item.HRID_KEY, item.getHrid());
-    includeIfPresent(itemToSend, Item.TRANSIT_DESTINATION_SERVICE_POINT_ID_KEY,
-      item.getInTransitDestinationServicePointId());
-    itemToSend.put(Item.FORMER_IDS_KEY, item.getFormerIds());
-    itemToSend.put(Item.DISCOVERY_SUPPRESS_KEY, item.getDiscoverySuppress());
-    includeIfPresent(itemToSend, COPY_NUMBER, item.getCopyNumber());
-    itemToSend.put(Item.ADMINISTRATIVE_NOTES_KEY, item.getAdministrativeNotes());
-    itemToSend.put(NOTES, item.getNotes());
-    itemToSend.put(Item.CIRCULATION_NOTES_KEY, item.getCirculationNotes());
-    includeIfPresent(itemToSend, BARCODE, item.getBarcode());
-    includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_KEY, item.getItemLevelCallNumber());
-    includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_PREFIX_KEY, item.getItemLevelCallNumberPrefix());
-    includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_SUFFIX_KEY, item.getItemLevelCallNumberSuffix());
-    includeIfPresent(itemToSend, Item.ITEM_LEVEL_CALL_NUMBER_TYPE_ID_KEY, item.getItemLevelCallNumberTypeId());
-    includeIfPresent(itemToSend, Item.ADDITIONAL_CALL_NUMBERS_KEY, item.getAdditionalCallNumbers());
-    includeIfPresent(itemToSend, Item.VOLUME_KEY, item.getVolume());
-    includeIfPresent(itemToSend, DISPLAY_SUMMARY, item.getDisplaySummary());
-    includeIfPresent(itemToSend, ENUMERATION, item.getEnumeration());
-    includeIfPresent(itemToSend, CHRONOLOGY, item.getChronology());
-    includeIfPresent(itemToSend, NUMBER_OF_PIECES, item.getNumberOfPieces());
-    includeIfPresent(itemToSend, Item.DESCRIPTION_OF_PIECES_KEY, item.getDescriptionOfPieces());
-    includeIfPresent(itemToSend, Item.NUMBER_OF_MISSING_PIECES_KEY, item.getNumberOfMissingPieces());
-    includeIfPresent(itemToSend, Item.MISSING_PIECES_KEY, item.getMissingPieces());
-    includeIfPresent(itemToSend, Item.MISSING_PIECES_DATE_KEY, item.getMissingPiecesDate());
-    includeIfPresent(itemToSend, Item.ITEM_DAMAGED_STATUS_ID_KEY, item.getItemDamagedStatusId());
-    includeIfPresent(itemToSend, Item.ITEM_DAMAGED_STATUS_DATE_KEY, item.getItemDamagedStatusDate());
-    includeIfPresent(itemToSend, HOLDINGS_RECORD_ID, item.getHoldingId());
-    includeIfPresent(itemToSend, MATERIAL_TYPE_ID_KEY, item.getMaterialTypeId());
-    includeIfPresent(itemToSend, PERMANENT_LOAN_TYPE_ID_KEY, item.getPermanentLoanTypeId());
-    includeIfPresent(itemToSend, TEMPORARY_LOAN_TYPE_ID_KEY, item.getTemporaryLoanTypeId());
-    includeIfPresent(itemToSend, PERMANENT_LOCATION_ID_KEY, item.getPermanentLocationId());
-    includeIfPresent(itemToSend, TEMPORARY_LOCATION_ID_KEY, item.getTemporaryLocationId());
-    includeIfPresent(itemToSend, Item.ACCESSION_NUMBER_KEY, item.getAccessionNumber());
-    includeIfPresent(itemToSend, Item.ITEM_IDENTIFIER_KEY, item.getItemIdentifier());
-    itemToSend.put(Item.YEAR_CAPTION_KEY, item.getYearCaption());
-    itemToSend.put(Item.ELECTRONIC_ACCESS_KEY, item.getElectronicAccess());
-    itemToSend.put(Item.STATISTICAL_CODE_IDS_KEY, item.getStatisticalCodeIds());
-    itemToSend.put(Item.PURCHASE_ORDER_LINE_IDENTIFIER, item.getPurchaseOrderLineIdentifier());
-    itemToSend.put(Item.TAGS_KEY, new JsonObject().put(Item.TAG_LIST_KEY, new JsonArray(item.getTags())));
-    itemToSend.put(Item.ORDER_KEY, item.getOrder());
-
-    return itemToSend;
+    return mapToJson(item);
   }
 
+  @SuppressWarnings("checkstyle:MethodLength")
   public static Item jsonToItem(JsonObject itemRequest) {
     List<String> formerIds = toListOfStrings(
       itemRequest.getJsonArray(Item.FORMER_IDS_KEY));
@@ -247,28 +192,30 @@ public final class ItemUtil {
       itemRequest.getJsonArray(Item.ADMINISTRATIVE_NOTES_KEY));
 
     List<Note> notes = itemRequest.containsKey(Item.NOTES_KEY)
-      ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.NOTES_KEY)).stream()
-      .map(Note::new)
-      .collect(Collectors.toList())
-      : new ArrayList<>();
+                       ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.NOTES_KEY)).stream()
+                         .map(Note::new)
+                         .collect(Collectors.toList())
+                       : new ArrayList<>();
 
     List<CirculationNote> circulationNotes = itemRequest.containsKey(Item.CIRCULATION_NOTES_KEY)
-      ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.CIRCULATION_NOTES_KEY)).stream()
-      .map(CirculationNote::new)
-      .collect(Collectors.toList())
-      : new ArrayList<>();
+                                             ? JsonArrayHelper.toList(
+        itemRequest.getJsonArray(Item.CIRCULATION_NOTES_KEY)).stream()
+                                               .map(CirculationNote::new)
+                                               .collect(Collectors.toList())
+                                             : new ArrayList<>();
 
     List<ElectronicAccess> electronicAccess = itemRequest.containsKey(Item.ELECTRONIC_ACCESS_KEY)
-      ? JsonArrayHelper.toList(itemRequest.getJsonArray(Item.ELECTRONIC_ACCESS_KEY)).stream()
-      .map(ElectronicAccess::new)
-      .collect(Collectors.toList())
-      : new ArrayList<>();
+                                              ? JsonArrayHelper.toList(
+        itemRequest.getJsonArray(Item.ELECTRONIC_ACCESS_KEY)).stream()
+                                                .map(ElectronicAccess::new)
+                                                .collect(Collectors.toList())
+                                              : new ArrayList<>();
 
     List<String> tags = itemRequest.containsKey(Item.TAGS_KEY)
-      ? getTags(itemRequest) : new ArrayList<>();
+                        ? getTags(itemRequest) : new ArrayList<>();
 
     List<EffectiveCallNumberComponents> additionalCallNumbers = toList(
-        itemRequest.getJsonArray(Item.ADDITIONAL_CALL_NUMBERS_KEY, new JsonArray())).stream()
+      itemRequest.getJsonArray(Item.ADDITIONAL_CALL_NUMBERS_KEY, new JsonArray())).stream()
       .map(EffectiveCallNumberComponents::from)
       .toList();
 
@@ -329,22 +276,17 @@ public final class ItemUtil {
       .withTags(tags);
   }
 
-  private static List<String> getTags(JsonObject itemRequest) {
-    final JsonObject tags = itemRequest.getJsonObject(Item.TAGS_KEY);
-    return tags.containsKey(Item.TAG_LIST_KEY) ?
-      JsonArrayHelper.toListOfStrings(tags.getJsonArray(Item.TAG_LIST_KEY)) : new ArrayList<>();
-  }
-
+  @SuppressWarnings("checkstyle:MethodLength")
   public static JsonObject mapToJson(Item item) {
     JsonObject itemJson = new JsonObject();
     itemJson.put(ID, item.id != null
-      ? item.id
-      : UUID.randomUUID().toString());
+                     ? item.id
+                     : UUID.randomUUID().toString());
 
     includeIfPresent(itemJson, VERSION_KEY, item.getVersion());
     itemJson.put(STATUS, converterForClass(Status.class).toJson(item.getStatus()));
 
-    if(item.getLastCheckIn() != null) {
+    if (item.getLastCheckIn() != null) {
       itemJson.put(Item.LAST_CHECK_IN, item.getLastCheckIn().toJson());
     }
 
@@ -420,13 +362,18 @@ public final class ItemUtil {
     var fieldNames = patchJson.fieldNames();
     for (String fieldName : fieldNames) {
       switch (fieldName) {
-        case VERSION_KEY -> result.put(VERSION_KEY, isNull(patchJson.getValue(fieldName)) ? null : Integer.parseInt(patchJson.getString(fieldName)));
+        case VERSION_KEY -> result.put(VERSION_KEY,
+          isNull(patchJson.getValue(fieldName)) ? null : Integer.parseInt(patchJson.getString(fieldName)));
         case ORDER_KEY -> result.put(ORDER_KEY, getOrder(patchJson));
         case MATERIAL_TYPE -> result.put(MATERIAL_TYPE_ID_KEY, getNestedProperty(patchJson, MATERIAL_TYPE, ID));
-        case PERMANENT_LOAN_TYPE -> result.put(PERMANENT_LOAN_TYPE_ID_KEY, getNestedProperty(patchJson, PERMANENT_LOAN_TYPE, ID));
-        case TEMPORARY_LOAN_TYPE -> result.put(TEMPORARY_LOAN_TYPE_ID_KEY, getNestedProperty(patchJson, TEMPORARY_LOAN_TYPE, ID));
-        case PERMANENT_LOCATION -> result.put(PERMANENT_LOCATION_ID_KEY, getNestedProperty(patchJson, PERMANENT_LOCATION, ID));
-        case TEMPORARY_LOCATION -> result.put(TEMPORARY_LOCATION_ID_KEY, getNestedProperty(patchJson, TEMPORARY_LOCATION, ID));
+        case PERMANENT_LOAN_TYPE ->
+          result.put(PERMANENT_LOAN_TYPE_ID_KEY, getNestedProperty(patchJson, PERMANENT_LOAN_TYPE, ID));
+        case TEMPORARY_LOAN_TYPE ->
+          result.put(TEMPORARY_LOAN_TYPE_ID_KEY, getNestedProperty(patchJson, TEMPORARY_LOAN_TYPE, ID));
+        case PERMANENT_LOCATION ->
+          result.put(PERMANENT_LOCATION_ID_KEY, getNestedProperty(patchJson, PERMANENT_LOCATION, ID));
+        case TEMPORARY_LOCATION ->
+          result.put(TEMPORARY_LOCATION_ID_KEY, getNestedProperty(patchJson, TEMPORARY_LOCATION, ID));
         default -> result.put(fieldName, patchJson.getValue(fieldName));
       }
     }
@@ -434,7 +381,7 @@ public final class ItemUtil {
   }
 
   public static void removeReadOnlyFields(JsonObject itemJson) {
-    readOnlyFieldNames.forEach(itemJson::remove);
+    READ_ONLY_FIELD_NAMES.forEach(itemJson::remove);
   }
 
   public static Integer getOrder(JsonObject itemJson) {
@@ -446,5 +393,12 @@ public final class ItemUtil {
 
       throw new UnprocessableEntityException(validationError);
     }
+  }
+
+  private static List<String> getTags(JsonObject itemRequest) {
+    final JsonObject tags = itemRequest.getJsonObject(Item.TAGS_KEY);
+    return tags.containsKey(Item.TAG_LIST_KEY)
+           ? JsonArrayHelper.toListOfStrings(tags.getJsonArray(Item.TAG_LIST_KEY))
+           : new ArrayList<>();
   }
 }

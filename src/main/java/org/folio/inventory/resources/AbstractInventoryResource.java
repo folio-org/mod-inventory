@@ -4,18 +4,16 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.folio.inventory.support.EndpointFailureHandler.getKnownException;
 import static org.folio.inventory.support.EndpointFailureHandler.handleFailure;
 
+import io.vertx.core.Handler;
+import io.vertx.core.http.HttpClient;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
 import java.util.concurrent.CompletableFuture;
-
 import org.folio.inventory.common.WebContext;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.Clients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.vertx.core.Handler;
-import io.vertx.core.http.HttpClient;
-import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
 
 public abstract class AbstractInventoryResource {
   private static final Logger log = LoggerFactory.getLogger(AbstractInventoryResource.class);

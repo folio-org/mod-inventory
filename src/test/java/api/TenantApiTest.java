@@ -1,103 +1,76 @@
 package api;
 
-import api.support.ApiRoot;
-import api.support.ApiTests;
-import io.vertx.pgclient.PgConnectOptions;
-import org.folio.inventory.common.dao.PostgresConnectionOptions;
-import org.folio.inventory.support.http.client.Response;
-import org.junit.Test;
-
-import java.util.HashMap;
-import java.util.Map;
 import static api.ApiTestSuite.TENANT_ID;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.folio.HttpStatus.HTTP_INTERNAL_SERVER_ERROR;
 import static org.folio.HttpStatus.HTTP_NO_CONTENT;
-import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_DATABASE;
 import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_HOST;
-import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_PASSWORD;
 import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_PORT;
-import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_USERNAME;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-public class TenantApiTest extends ApiTests {
+import java.util.HashMap;
+import java.util.Map;
+import org.folio.inventory.common.dao.PostgresConnectionOptions;
+import org.folio.inventory.resources.TenantApi;
+import org.folio.inventory.support.http.client.Response;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import support.ApiRoot;
+import support.ApiTests;
+import support.PgPoolContainer;
 
-  public static int NO_CONTENT_STATUS = HTTP_NO_CONTENT.toInt();
-  public static int INTERNAL_SERVER_ERROR_STATUS = HTTP_INTERNAL_SERVER_ERROR.toInt();
+class TenantApiTest extends ApiTests {
 
   @Test
-  public void shouldCreateSchemaWithTables() throws Exception {
-    final var postCompleted = okapiClient
-      .post(ApiRoot.tenant(), "{}");
+  void shouldCreateSchemaWithTables() throws Exception {
+    final var postCompleted = okapiClient.post(ApiRoot.tenant(), "{}");
 
     Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(postResponse.getStatusCode(), is(NO_CONTENT_STATUS));
+    assertThat(postResponse.statusCode(), is(HTTP_NO_CONTENT.toInt()));
+  }
+
+  @DisplayName("should fail schema creation when connection options are incorrect")
+  @Test
+  void shouldNotCreateSchema_whenConnectionOptionsAreIncorrect() {
+    // given
+    var tenantApi = new TenantApi(new PostgresConnectionOptions(new HashMap<>()));
+
+    // when
+    var result = tenantApi.initializeSchemaForTenant(TENANT_ID);
+
+    // then
+    assertThat(result.failed(), is(true));
   }
 
   @Test
-  public void shouldNotCreateSchemaWithTablesWithIncorrectConnectionOptions() throws Exception {
-    PgConnectOptions pgConnectOptions = PostgresConnectionOptions.getConnectionOptions(TENANT_ID);
-    Map<String, String> systemProperties = Map.of(DB_HOST, pgConnectOptions.getHost(),
-      DB_DATABASE, pgConnectOptions.getDatabase(),
-      DB_PORT, String.valueOf(pgConnectOptions.getPort()),
-      DB_USERNAME, pgConnectOptions.getUser(),
-      DB_PASSWORD, pgConnectOptions.getPassword());
-    PostgresConnectionOptions.setSystemProperties(new HashMap<>());
-
-    final var postCompleted = okapiClient
-      .post(ApiRoot.tenant(), "{}");
+  void shouldCreateAndDeleteSchema() throws Exception {
+    final var postCompleted = okapiClient.post(ApiRoot.tenant(), "{}");
 
     Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(postResponse.getStatusCode(), is(INTERNAL_SERVER_ERROR_STATUS));
-
-    PostgresConnectionOptions.setSystemProperties(systemProperties);
-  }
-
-  @Test
-  public void shouldCreateAndDeleteSchema() throws Exception {
-    final var postCompleted = okapiClient
-      .post(ApiRoot.tenant(), "{}");
-
-    Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(postResponse.getStatusCode(), is(HTTP_NO_CONTENT.toInt()));
+    assertThat(postResponse.statusCode(), is(HTTP_NO_CONTENT.toInt()));
 
     final var deleteCompleted = okapiClient
       .delete(ApiRoot.tenant());
 
     Response deleteResponse = deleteCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(deleteResponse.getStatusCode(), is(NO_CONTENT_STATUS));
+    assertThat(deleteResponse.statusCode(), is(HTTP_NO_CONTENT.toInt()));
   }
 
+  @DisplayName("should fail schema drop when connection options are incorrect")
   @Test
-  public void shouldNotDropSchemaWithIncorrectConnectionOptions() throws Exception {
-    final var postCompleted = okapiClient
-      .post(ApiRoot.tenant(), "{}");
+  void shouldNotDropSchema_whenConnectionOptionsAreIncorrect() {
+    // given
+    var validTenantApi = new TenantApi(new PostgresConnectionOptions(PgPoolContainer.getConnectionEnv()));
+    var invalidTenantApi =
+      new TenantApi(new PostgresConnectionOptions(Map.of(DB_HOST, "invalid", DB_PORT, "999999")));
+    validTenantApi.initializeSchemaForTenant(TENANT_ID);
 
-    Response postResponse = postCompleted.toCompletableFuture().get(10, SECONDS);
-    assertThat(postResponse.getStatusCode(), is(NO_CONTENT_STATUS));
+    // when
+    var failedDrop = invalidTenantApi.deleteSchemaForTenant(TENANT_ID);
+    var successfulDrop = validTenantApi.deleteSchemaForTenant(TENANT_ID);
 
-    PgConnectOptions pgConnectOptions = PostgresConnectionOptions.getConnectionOptions(TENANT_ID);
-    Map<String, String> systemProperties = Map.of(DB_HOST, pgConnectOptions.getHost(),
-      DB_DATABASE, pgConnectOptions.getDatabase(),
-      DB_PORT, String.valueOf(pgConnectOptions.getPort()),
-      DB_USERNAME, pgConnectOptions.getUser(),
-      DB_PASSWORD, pgConnectOptions.getPassword());
-    PostgresConnectionOptions.setSystemProperties(Map.of(DB_HOST, "invalid", DB_PORT, "999999"));
-
-    final var deleteCompletedBefore = okapiClient
-      .delete(ApiRoot.tenant());
-
-    Response deleteResponseBefore = deleteCompletedBefore.toCompletableFuture().get(10, SECONDS);
-    assertThat(deleteResponseBefore.getStatusCode(), is(INTERNAL_SERVER_ERROR_STATUS));
-
-    PostgresConnectionOptions.setSystemProperties(systemProperties);
-
-    final var deleteCompletedAfter = okapiClient
-      .delete(ApiRoot.tenant());
-
-    Response deleteResponseAfter = deleteCompletedAfter.toCompletableFuture().get(10, SECONDS);
-    assertThat(deleteResponseAfter.getStatusCode(), is(NO_CONTENT_STATUS));
+    // then
+    assertThat(failedDrop.failed(), is(true));
+    assertThat(successfulDrop.succeeded(), is(true));
   }
-
 }

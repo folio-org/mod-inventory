@@ -1,7 +1,8 @@
 package org.folio.inventory.storage;
 
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.json.JsonObject;
 import java.util.function.Function;
-
 import org.folio.inventory.common.Context;
 import org.folio.inventory.domain.AuthorityRecordCollection;
 import org.folio.inventory.domain.CollectionProvider;
@@ -12,10 +13,7 @@ import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.domain.user.UserCollection;
 import org.folio.inventory.storage.external.ExternalStorageCollections;
 
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.json.JsonObject;
-
-public class Storage {
+public final class Storage {
   private final Function<Context, CollectionProvider> providerFactory;
 
   private Storage(final Function<Context, CollectionProvider> providerFactory) {
@@ -25,11 +23,11 @@ public class Storage {
   public static Storage basedUpon(JsonObject config, HttpClient client) {
     String storageType = config.getString("storage.type", "okapi");
 
-    switch(storageType) {
+    switch (storageType) {
       case "external":
         String location = config.getString("storage.location", null);
 
-        if(location == null) {
+        if (location == null) {
           throw new IllegalArgumentException(
             "For external storage, location must be provided.");
         }
@@ -60,7 +58,7 @@ public class Storage {
       context.getTenantId(), context.getToken(), context.getUserId(), context.getRequestId());
   }
 
-  public HoldingsRecordsSourceCollection getHoldingsRecordsSourceCollection (Context context){
+  public HoldingsRecordsSourceCollection getHoldingsRecordsSourceCollection(Context context) {
     return providerFactory.apply(context).getHoldingsRecordsSourceCollection(
       context.getTenantId(), context.getToken(), context.getUserId(), context.getRequestId()
     );
