@@ -1,12 +1,12 @@
 package org.folio.inventory.client.util;
 
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
 import lombok.experimental.UtilityClass;
+import org.folio.HttpHeaders;
 import org.folio.dataimport.util.FolioHeaders;
 import org.folio.rest.tools.ClientHelpers;
 
@@ -47,8 +47,8 @@ public class ClientWrapperUtil {
   }
 
   private static void populateHeaders(HttpRequest<Buffer> request, FolioHeaders folioHeaders) {
-    request.putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-    request.putHeader(HttpHeaderNames.ACCEPT, HttpHeaderValues.APPLICATION_JSON
+    request.putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+    request.putHeader(HttpHeaders.ACCEPT, HttpHeaderValues.APPLICATION_JSON
       .concat(",")
       .concat(HttpHeaderValues.TEXT_PLAIN));
 
