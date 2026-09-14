@@ -6,13 +6,13 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
 import java.util.Map;
+import org.folio.HttpHeaders;
 import org.folio.dataimport.util.FolioHeaders;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.junit.jupiter.api.DisplayName;
@@ -99,8 +99,8 @@ class ClientWrapperUtilTest {
     ClientWrapperUtil.createRequest(HttpMethod.GET, REQUEST_PATH, folioHeaders, webClient);
 
     // assert
-    verify(httpRequest).putHeader(HttpHeaderNames.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
-    verify(httpRequest).putHeader(HttpHeaderNames.ACCEPT,
+    verify(httpRequest).putHeader(HttpHeaders.CONTENT_TYPE, HttpHeaderValues.APPLICATION_JSON);
+    verify(httpRequest).putHeader(HttpHeaders.ACCEPT,
       HttpHeaderValues.APPLICATION_JSON.concat(",").concat(HttpHeaderValues.TEXT_PLAIN));
   }
 
