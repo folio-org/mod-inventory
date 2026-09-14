@@ -16,6 +16,7 @@
 * Fix match results not passed to subsequent matches for consortium tenants [MODINV-1400](https://folio-org.atlassian.net/browse/MODINV-1400)
 * Fix missing logging after dependency bump [MODINV-1411](https://folio-org.atlassian.net/browse/MODINV-1411)
 * Improve Kafka header handling with case-insensitive TreeMap [MODINV-1414](https://folio-org.atlassian.net/browse/MODINV-1414)
+* Rollback the central instance when the sharing operation fails [MODINV-1420](https://folio-org.atlassian.net/browse/MODINV-1420)
 
 ### Tech Dept
 * Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
