@@ -4,6 +4,7 @@ import static java.lang.String.format;
 import static org.folio.dataimport.util.marc.MarcConstants.FIELD_001;
 import static org.folio.dataimport.util.marc.MarcConstants.SUBFIELD_9;
 import static org.folio.dataimport.util.marc.MarcRecordEditor.removeSubfieldsThatContainsValues;
+import static org.folio.inventory.consortium.util.SourceStorageHelper.IdType.INSTANCE;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.inventory.domain.instances.Instance.HRID_KEY;
 import static org.folio.inventory.domain.instances.Instance.SOURCE_KEY;
@@ -81,11 +82,11 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
                                          TargetTenantProvider targetTenantProvider, Map<String, String> kafkaHeaders) {
     MarcRecordEditor.removeFieldFromMarcRecord(new FolioRecordHolder(marcRecord), FIELD_001);
     return restDataImportHelper.importMarcRecord(marcRecord, sharingInstanceMetadata, kafkaHeaders)
-      .compose(importStatus -> commitIfImportSucceeded(importStatus, marcRecord, instance, sharingInstanceMetadata,
+      .compose(importStatus -> commitIfImportSucceeded(importStatus, instance, sharingInstanceMetadata,
         sourceTenantProvider, targetTenantProvider, kafkaHeaders));
   }
 
-  private Future<String> commitIfImportSucceeded(String importStatus, Record marcRecord, Instance instance,
+  private Future<String> commitIfImportSucceeded(String importStatus, Instance instance,
                                                  SharingInstance sharingInstanceMetadata,
                                                  SourceTenantProvider sourceTenantProvider,
                                                  TargetTenantProvider targetTenantProvider,
@@ -98,10 +99,48 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
     String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
 
     return updateTargetInstanceWithNonMarcControlledFields(instance, targetTenantProvider, kafkaHeaders)
+      .recover(cause -> rollbackSharedInstance(instanceId, targetTenantProvider, kafkaHeaders, cause))
       .compose(targetInstance -> sourceStorageHelper
-        .deleteSourceRecordByRecordId(marcRecord.getId(), instanceId, sourceTenant, kafkaHeaders)
-        .map(deletedRecordId -> targetInstance))
-      .compose(targetInstance -> updateSourceInstanceAsShared(instance, targetInstance, sourceTenantProvider));
+        .deleteSourceRecord(instanceId, INSTANCE, sourceTenant, kafkaHeaders)
+        .compose(deletedId -> updateSourceInstanceAsShared(instance, targetInstance, sourceTenantProvider))
+        .recover(cause -> rollbackSourceRecordAndSharedInstance(instanceId, sourceTenant, targetTenantProvider,
+          kafkaHeaders, cause)));
+  }
+
+  /**
+   * Restores the soft-deleted source record on the source tenant, then rolls back the target instance.
+   */
+  private <T> Future<T> rollbackSourceRecordAndSharedInstance(String instanceId, String sourceTenant,
+                                                              TargetTenantProvider targetTenantProvider,
+                                                              Map<String, String> kafkaHeaders, Throwable cause) {
+    LOGGER.warn("rollbackSourceRecordAndSharedInstance:: Restoring source record for instance: {} on tenant: {}",
+      instanceId, sourceTenant);
+
+    return sourceStorageHelper.unDeleteSourceRecord(instanceId, INSTANCE, sourceTenant, kafkaHeaders)
+      .onFailure(e -> LOGGER.error("rollbackSourceRecordAndSharedInstance:: Failed to restore source record for "
+                                   + "instance: {} on tenant: {}.", instanceId, sourceTenant, e))
+      .otherwiseEmpty()
+      .compose(v -> rollbackSharedInstance(instanceId, targetTenantProvider, kafkaHeaders, cause));
+  }
+
+  /**
+   * Removes the instance that data import created on the target tenant, then re-fails with the original cause.
+   */
+  private <T> Future<T> rollbackSharedInstance(String instanceId, TargetTenantProvider targetTenantProvider,
+                                               Map<String, String> kafkaHeaders, Throwable cause) {
+    String targetTenant = targetTenantProvider.tenantId();
+    LOGGER.warn("rollbackSharedInstance:: Rolling back instance: {} shared to target tenant: {}",
+      instanceId, targetTenant, cause);
+
+    return instanceOperations.deleteInstance(instanceId, targetTenantProvider)
+      .onFailure(e -> LOGGER.error("rollbackSharedInstance:: Failed to delete instance: {} on target tenant: {}.",
+        instanceId, targetTenant, e))
+      .otherwiseEmpty()
+      .compose(v -> sourceStorageHelper.deleteSourceRecord(instanceId, INSTANCE, targetTenant, kafkaHeaders))
+      .onFailure(e -> LOGGER.error("rollbackSharedInstance:: Failed to delete source record for instance: {} "
+                                   + "on target tenant: {}.", instanceId, targetTenant, e))
+      .otherwiseEmpty()
+      .compose(v -> Future.failedFuture(cause));
   }
 
   private Future<String> updateSourceInstanceAsShared(Instance instance, Instance targetInstance,

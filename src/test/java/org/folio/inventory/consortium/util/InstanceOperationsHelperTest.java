@@ -1,8 +1,10 @@
 package org.folio.inventory.consortium.util;
 
 import static org.folio.HttpStatus.SC_BAD_REQUEST;
+import static org.folio.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.folio.inventory.dataimport.util.DataImportConstants.ALREADY_EXISTS_ERROR_MSG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -10,9 +12,11 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 import io.vertx.core.json.JsonObject;
+import java.util.UUID;
 import java.util.function.Consumer;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.consortium.exceptions.StorageOperationException;
 import org.folio.inventory.consortium.handlers.TenantProvider;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
@@ -56,6 +60,39 @@ class InstanceOperationsHelperTest {
       .onComplete(result -> {
         Instance addedInstance = result.result();
         assertEquals(existingInstance.getId(), addedInstance.getId());
+      });
+  }
+
+  @Test
+  void deleteInstanceSuccessTest() {
+    var instanceId = UUID.randomUUID().toString();
+
+    doAnswer(invocation -> {
+      Consumer<Success<Void>> successHandler = invocation.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(instanceCollection).delete(eq(instanceId), any(), any());
+
+    instanceOperationsHelper.deleteInstance(instanceId, tenantProvider)
+      .onComplete(result -> assertTrue(result.succeeded()));
+  }
+
+  @Test
+  void deleteInstanceFailureTest() {
+    var instanceId = UUID.randomUUID().toString();
+
+    doAnswer(invocation -> {
+      Consumer<Failure> failureHandler = invocation.getArgument(2);
+      failureHandler.accept(new Failure("Internal Server Error", SC_INTERNAL_SERVER_ERROR));
+      return null;
+    }).when(instanceCollection).delete(eq(instanceId), any(), any());
+
+    instanceOperationsHelper.deleteInstance(instanceId, tenantProvider)
+      .onComplete(result -> {
+        assertTrue(result.failed());
+        var cause = assertInstanceOf(StorageOperationException.class, result.cause());
+        assertEquals("Internal Server Error", cause.getMessage());
+        assertEquals(SC_INTERNAL_SERVER_ERROR, cause.getStatusCode().intValue());
       });
   }
 

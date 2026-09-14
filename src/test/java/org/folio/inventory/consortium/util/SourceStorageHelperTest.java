@@ -3,7 +3,6 @@ package org.folio.inventory.consortium.util;
 import static org.folio.HttpStatus.HTTP_INTERNAL_SERVER_ERROR;
 import static org.folio.HttpStatus.HTTP_NO_CONTENT;
 import static org.folio.HttpStatus.HTTP_OK;
-import static org.folio.inventory.consortium.util.SourceStorageHelper.SRS_RECORD_ID_TYPE;
 import static org.folio.inventory.dataimport.handlers.actions.ReplaceInstanceEventHandler.INSTANCE_ID_TYPE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.folio.HttpStatus;
 import org.folio.Record;
+import org.folio.inventory.consortium.util.SourceStorageHelper.IdType;
 import org.folio.inventory.exceptions.NotFoundException;
 import org.folio.rest.client.SourceStorageRecordsClient;
 import org.junit.jupiter.api.AfterAll;
@@ -105,6 +105,20 @@ class SourceStorageHelperTest {
 
   @Test
   void deleteSourceRecordByInstanceIdSuccessTest() {
+    var tenant = "sourceTenant";
+
+    when(httpResponse.statusCode()).thenReturn(HTTP_NO_CONTENT.toInt());
+    when(sourceStorageClient.deleteSourceStorageRecordsById(any(), any()))
+      .thenReturn(Future.succeededFuture(httpResponse));
+
+    client.deleteSourceRecord(INSTANCE_ID_2, IdType.INSTANCE, tenant, kafkaHeaders)
+      .onComplete(result -> assertEquals(INSTANCE_ID_2, result.result()));
+
+    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(INSTANCE_ID_2, INSTANCE_ID_TYPE);
+  }
+
+  @Test
+  void deleteSourceRecordByRecordIdSuccessTest() {
     var recordId = "991f37c8-cd22-4db7-9543-a4ec68735e95";
     var tenant = "sourceTenant";
 
@@ -112,41 +126,78 @@ class SourceStorageHelperTest {
     when(sourceStorageClient.deleteSourceStorageRecordsById(any(), any()))
       .thenReturn(Future.succeededFuture(httpResponse));
 
-    client.deleteSourceRecordByRecordId(recordId, INSTANCE_ID_2, tenant, kafkaHeaders)
-      .onComplete(result -> assertEquals(INSTANCE_ID_2, result.result()));
+    client.deleteSourceRecord(recordId, IdType.SRS_RECORD, tenant, kafkaHeaders)
+      .onComplete(result -> assertEquals(recordId, result.result()));
 
-    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, SRS_RECORD_ID_TYPE);
+    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, "SRS_RECORD");
   }
 
   @Test
-  void deleteSourceRecordByInstanceIdFailedTest() {
-    var instanceId = "991f37c8-cd22-4db7-9543-a4ec68735e95";
-    var recordId = "fea6477b-d8f5-4d22-9e86-6218407c780b";
+  void deleteSourceRecordFailedTest() {
     var tenant = "sourceTenant";
 
     when(sourceStorageClient.deleteSourceStorageRecordsById(any(), any()))
       .thenReturn(Future.failedFuture(new NotFoundException("Not found")));
 
-    client.deleteSourceRecordByRecordId(recordId, instanceId, tenant, kafkaHeaders)
+    client.deleteSourceRecord(INSTANCE_ID_2, IdType.INSTANCE, tenant, kafkaHeaders)
       .onComplete(result -> assertTrue(result.failed()));
 
-    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, SRS_RECORD_ID_TYPE);
+    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(INSTANCE_ID_2, INSTANCE_ID_TYPE);
   }
 
   @Test
-  void deleteSourceRecordByInstanceIdFailedTestWhenResponseStatusIsNotNoContent() {
-    var instanceId = "991f37c8-cd22-4db7-9543-a4ec68735e95";
-    var recordId = "fea6477b-d8f5-4d22-9e86-6218407c780b";
+  void deleteSourceRecordFailedTestWhenResponseStatusIsNotNoContent() {
     var tenant = "sourceTenant";
 
     when(httpResponse.statusCode()).thenReturn(HTTP_INTERNAL_SERVER_ERROR.toInt());
     when(sourceStorageClient.deleteSourceStorageRecordsById(any(), any()))
       .thenReturn(Future.succeededFuture(httpResponse));
 
-    client.deleteSourceRecordByRecordId(recordId, instanceId, tenant, kafkaHeaders)
+    client.deleteSourceRecord(INSTANCE_ID_2, IdType.INSTANCE, tenant, kafkaHeaders)
       .onComplete(result -> assertTrue(result.failed()));
 
-    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(recordId, SRS_RECORD_ID_TYPE);
+    verify(sourceStorageClient, times(1)).deleteSourceStorageRecordsById(INSTANCE_ID_2, INSTANCE_ID_TYPE);
+  }
+
+  @Test
+  void unDeleteSourceRecordByInstanceIdSuccessTest() {
+    var tenant = "sourceTenant";
+
+    when(httpResponse.statusCode()).thenReturn(HTTP_NO_CONTENT.toInt());
+    when(sourceStorageClient.postSourceStorageRecordsUnDeleteById(any(), any()))
+      .thenReturn(Future.succeededFuture(httpResponse));
+
+    client.unDeleteSourceRecord(INSTANCE_ID_2, IdType.INSTANCE, tenant, kafkaHeaders)
+      .onComplete(result -> assertEquals(INSTANCE_ID_2, result.result()));
+
+    verify(sourceStorageClient, times(1)).postSourceStorageRecordsUnDeleteById(INSTANCE_ID_2, INSTANCE_ID_TYPE);
+  }
+
+  @Test
+  void unDeleteSourceRecordFailedTest() {
+    var tenant = "sourceTenant";
+
+    when(sourceStorageClient.postSourceStorageRecordsUnDeleteById(any(), any()))
+      .thenReturn(Future.failedFuture(new NotFoundException("Not found")));
+
+    client.unDeleteSourceRecord(INSTANCE_ID_2, IdType.INSTANCE, tenant, kafkaHeaders)
+      .onComplete(result -> assertTrue(result.failed()));
+
+    verify(sourceStorageClient, times(1)).postSourceStorageRecordsUnDeleteById(INSTANCE_ID_2, INSTANCE_ID_TYPE);
+  }
+
+  @Test
+  void unDeleteSourceRecordFailedTestWhenResponseStatusIsNotNoContent() {
+    var tenant = "sourceTenant";
+
+    when(httpResponse.statusCode()).thenReturn(HTTP_INTERNAL_SERVER_ERROR.toInt());
+    when(sourceStorageClient.postSourceStorageRecordsUnDeleteById(any(), any()))
+      .thenReturn(Future.succeededFuture(httpResponse));
+
+    client.unDeleteSourceRecord(INSTANCE_ID_2, IdType.INSTANCE, tenant, kafkaHeaders)
+      .onComplete(result -> assertTrue(result.failed()));
+
+    verify(sourceStorageClient, times(1)).postSourceStorageRecordsUnDeleteById(INSTANCE_ID_2, INSTANCE_ID_TYPE);
   }
 
   @Test

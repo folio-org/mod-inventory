@@ -46,7 +46,24 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
         jsonInstanceToPublish.put(HRID_KEY, targetInstance.getHrid());
 
         // Update instance in sourceInstanceCollection
-        return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish), sourceTenantProvider);
+        return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish), sourceTenantProvider)
+          .recover(cause -> rollbackSharedInstance(instanceId, targetTenantProvider, cause));
       });
+  }
+
+  /**
+   * Removes the instance added to the target tenant, then re-fails with the original cause.
+   */
+  private Future<String> rollbackSharedInstance(String instanceId, TargetTenantProvider targetTenantProvider,
+                                                Throwable cause) {
+    String targetTenantId = targetTenantProvider.tenantId();
+    LOGGER.warn("rollbackSharedInstance:: Rolling back instance: {} shared to target tenant: {}",
+      instanceId, targetTenantId, cause);
+
+    return instanceOperations.deleteInstance(instanceId, targetTenantProvider)
+      .onFailure(e -> LOGGER.error("rollbackSharedInstance:: Failed to delete instance: {} on target tenant: {}.",
+        instanceId, targetTenantId, e))
+      .otherwiseEmpty()
+      .compose(v -> Future.failedFuture(cause));
   }
 }

@@ -67,6 +67,20 @@ public class InstanceOperationsHelper {
     return promise.future();
   }
 
+  public Future<Void> deleteInstance(String instanceId, TenantProvider tenantProvider) {
+    var tenantId = tenantProvider.tenantId();
+    LOGGER.info("deleteInstance :: Deleting instance with InstanceId={} from tenant={}", instanceId, tenantId);
+    Promise<Void> promise = Promise.promise();
+    tenantProvider.instanceCollection().delete(instanceId, deleteSuccess -> promise.complete(),
+      deleteFailure -> {
+        LOGGER.error(format("deleteInstance :: Error deleting instance with InstanceId=%s from tenant=%s. "
+                            + "Reason: %s. Status code %s",
+          instanceId, tenantId, deleteFailure.reason(), deleteFailure.statusCode()));
+        promise.fail(new StorageOperationException(deleteFailure));
+      });
+    return promise.future();
+  }
+
   public Future<String> updateInstance(Instance instance, TenantProvider tenantProvider) {
     var tenantId = tenantProvider.tenantId();
     var instanceId = instance.getId();

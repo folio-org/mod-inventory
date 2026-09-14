@@ -1,8 +1,10 @@
 package org.folio.inventory.consortium.handlers;
 
 import static io.vertx.core.buffer.Buffer.buffer;
+import static org.folio.inventory.consortium.util.SourceStorageHelper.IdType.INSTANCE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -10,6 +12,7 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -42,6 +45,7 @@ import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.entities.SharingInstance;
+import org.folio.inventory.consortium.exceptions.StorageOperationException;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.consortium.util.RestDataImportHelper;
 import org.folio.inventory.consortium.util.SourceStorageHelper;
@@ -2726,7 +2730,7 @@ class MarcInstanceSharingHandlerImplTest {
     when(restDataImportHelper.importMarcRecord(any(), any(), any()))
       .thenReturn(Future.succeededFuture("COMMITTED"));
 
-    when(sourceStorageHelper.deleteSourceRecordByRecordId(any(), any(), any(), any()))
+    when(sourceStorageHelper.deleteSourceRecord(any(), any(), any(), any()))
       .thenReturn(Future.succeededFuture(INSTANCE_ID_2));
     when(instance.getHrid()).thenReturn(TARGET_INSTANCE_HRID);
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture());
@@ -2750,6 +2754,7 @@ class MarcInstanceSharingHandlerImplTest {
       assertEquals("CONSORTIUM-MARC", updatedInstance.getSource());
       assertEquals(TARGET_INSTANCE_HRID, updatedInstance.getHrid());
       assertFalse(updatedInstance.getSubjects().isEmpty());
+      verify(instanceOperationsHelper, never()).deleteInstance(any(), any());
       testContext.completeNow();
     })));
   }
@@ -3116,6 +3121,130 @@ class MarcInstanceSharingHandlerImplTest {
     })));
   }
 
+  @Test
+  void shouldRollbackSharedInstanceWhenTargetInstanceUpdateFails(VertxTestContext testContext) {
+    //given: instance carries a statistical code that only exists on the member tenant
+    var localSourceInstance =
+      new Instance(INSTANCE_ID_1, 1, "001", "MARC", "testTitle", UUID.randomUUID().toString())
+        .setStatisticalCodeIds(List.of(UUID.randomUUID().toString()));
+    var importedTargetInstance =
+      new Instance(INSTANCE_ID_1, 1, TARGET_INSTANCE_HRID, "MARC", "testTitle", UUID.randomUUID().toString());
+    var updateFailure = new StorageOperationException("statistical code does not exist", 422);
+
+    when(restDataImportHelper.importMarcRecord(any(), any(), any())).thenReturn(Future.succeededFuture("COMMITTED"));
+    when(instanceOperationsHelper.getInstanceById(any(), any()))
+      .thenReturn(Future.succeededFuture(importedTargetInstance));
+    when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.failedFuture(updateFailure));
+    when(instanceOperationsHelper.deleteInstance(any(), any())).thenReturn(Future.succeededFuture());
+
+    // when
+    var future = marcHandler.publishInstance(localSourceInstance, sharingInstanceMetadata, sourceTenantProvider,
+      targetTenantProvider, kafkaHeaders);
+
+    //then
+    future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
+      assertSame(updateFailure, cause);
+      verifyTargetInstanceRolledBack();
+      verifySourceTenantUntouched();
+      testContext.completeNow();
+    })));
+  }
+
+  @Test
+  void shouldRollbackSharedInstanceWhenSourceRecordDeletionFails(VertxTestContext testContext) {
+    //given
+    var deleteFailure = new StorageOperationException("cannot delete source record", 500);
+
+    when(restDataImportHelper.importMarcRecord(any(), any(), any())).thenReturn(Future.succeededFuture("COMMITTED"));
+    when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
+    when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.succeededFuture(INSTANCE_ID_1));
+    when(instanceOperationsHelper.deleteInstance(any(), any())).thenReturn(Future.succeededFuture());
+    when(sourceStorageHelper.deleteSourceRecord(any(), eq(INSTANCE), eq(MEMBER_TENANT), any()))
+      .thenReturn(Future.failedFuture(deleteFailure));
+
+    // when
+    var future = marcHandler.publishInstance(instance, sharingInstanceMetadata, sourceTenantProvider,
+      targetTenantProvider, kafkaHeaders);
+
+    //then
+    future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
+      assertSame(deleteFailure, cause);
+      verifySourceRecordRestored();
+      verifyTargetInstanceRolledBack();
+      verify(instanceOperationsHelper, never())
+        .updateInstance(any(), argThat(p -> MEMBER_TENANT.equals(p.tenantId())));
+      testContext.completeNow();
+    })));
+  }
+
+  @Test
+  void shouldRestoreSourceRecordAndRollbackSharedInstanceWhenSourceInstanceUpdateFails(
+    VertxTestContext testContext) {
+    //given
+    var updateFailure = new StorageOperationException("optimistic locking", 409);
+
+    when(restDataImportHelper.importMarcRecord(any(), any(), any())).thenReturn(Future.succeededFuture("COMMITTED"));
+    when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
+    when(instanceOperationsHelper.updateInstance(any(), eq(targetTenantProvider)))
+      .thenReturn(Future.succeededFuture(INSTANCE_ID_1));
+    when(instanceOperationsHelper.updateInstance(any(), eq(sourceTenantProvider)))
+      .thenReturn(Future.failedFuture(updateFailure));
+    when(instanceOperationsHelper.deleteInstance(any(), any())).thenReturn(Future.succeededFuture());
+
+    // when
+    var future = marcHandler.publishInstance(instance, sharingInstanceMetadata, sourceTenantProvider,
+      targetTenantProvider, kafkaHeaders);
+
+    //then
+    future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
+      assertSame(updateFailure, cause);
+      verify(sourceStorageHelper).deleteSourceRecord(INSTANCE_ID_1, INSTANCE, MEMBER_TENANT, kafkaHeaders);
+      verifySourceRecordRestored();
+      verifyTargetInstanceRolledBack();
+      testContext.completeNow();
+    })));
+  }
+
+  @Test
+  void shouldReportOriginalCauseWhenRollbackItselfFails(VertxTestContext testContext) {
+    //given
+    var updateFailure = new StorageOperationException("statistical code does not exist", 422);
+
+    when(restDataImportHelper.importMarcRecord(any(), any(), any())).thenReturn(Future.succeededFuture("COMMITTED"));
+    when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
+    when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.failedFuture(updateFailure));
+    when(instanceOperationsHelper.deleteInstance(any(), any()))
+      .thenReturn(Future.failedFuture(new StorageOperationException("cannot delete instance", 500)));
+
+    // when
+    var future = marcHandler.publishInstance(instance, sharingInstanceMetadata, sourceTenantProvider,
+      targetTenantProvider, kafkaHeaders);
+
+    //then: the rollback failure must not mask why sharing failed
+    future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
+      assertSame(updateFailure, cause);
+      verifySourceTenantUntouched();
+      testContext.completeNow();
+    })));
+  }
+
+  private void verifyTargetInstanceRolledBack() {
+    verify(instanceOperationsHelper)
+      .deleteInstance(eq(INSTANCE_ID_1), argThat(p -> CONSORTIUM_TENANT.equals(p.tenantId())));
+    verify(sourceStorageHelper).deleteSourceRecord(INSTANCE_ID_1, INSTANCE, CONSORTIUM_TENANT, kafkaHeaders);
+  }
+
+  private void verifySourceRecordRestored() {
+    verify(sourceStorageHelper).unDeleteSourceRecord(INSTANCE_ID_1, INSTANCE, MEMBER_TENANT, kafkaHeaders);
+  }
+
+  private void verifySourceTenantUntouched() {
+    verify(sourceStorageHelper, never()).deleteSourceRecord(any(), any(), eq(MEMBER_TENANT), any());
+    verify(sourceStorageHelper, never()).unDeleteSourceRecord(any(), any(), any(), any());
+    verify(instanceOperationsHelper, never())
+      .updateInstance(any(), argThat(p -> MEMBER_TENANT.equals(p.tenantId())));
+  }
+
   private @NonNull ArgumentMatcher<Record> hasExpectedFields(
     String parsedRecordFieldsAfterUnlinkLocalLinks) {
     return marcRecord ->
@@ -3133,7 +3262,9 @@ class MarcInstanceSharingHandlerImplTest {
     bibRecord = sourceStorageRecordsResponseBuffer.bodyAsJson(Record.class);
     when(sourceStorageHelper.getSourceRecordByInstanceId(any(), any(), any()))
       .thenReturn(Future.succeededFuture(recordWithLinkedAuthorities));
-    when(sourceStorageHelper.deleteSourceRecordByRecordId(any(), any(), any(), any()))
+    when(sourceStorageHelper.deleteSourceRecord(any(), any(), any(), any()))
+      .thenReturn(Future.succeededFuture(INSTANCE_ID_1));
+    when(sourceStorageHelper.unDeleteSourceRecord(any(), any(), any(), any()))
       .thenReturn(Future.succeededFuture(INSTANCE_ID_1));
   }
 
