@@ -46,7 +46,36 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
         jsonInstanceToPublish.put(HRID_KEY, targetInstance.getHrid());
 
         // Update instance in sourceInstanceCollection
-        return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish), sourceTenantProvider);
+        return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish), sourceTenantProvider)
+          .recover(cause -> rollbackSharedInstance(instanceId, sourceTenantProvider, targetTenantProvider, cause));
+      });
+  }
+
+  /**
+   * Removes the instance added to the target tenant and re-saves the source instance so that it gets back into
+   * the search index, then re-fails with the original cause. If the instance cannot be deleted it is left as is.
+   */
+  private Future<String> rollbackSharedInstance(String instanceId, SourceTenantProvider sourceTenantProvider,
+                                                TargetTenantProvider targetTenantProvider, Throwable cause) {
+    String targetTenantId = targetTenantProvider.tenantId();
+    LOGGER.warn("rollbackSharedInstance:: Rolling back instance: {} shared to target tenant: {}",
+      instanceId, targetTenantId, cause);
+
+    return instanceOperations.deleteInstance(instanceId, targetTenantProvider)
+      .compose(v -> instanceOperations.republishInstance(instanceId, sourceTenantProvider)
+        .transform(ar -> {
+          if (ar.failed()) {
+            LOGGER.error("rollbackSharedInstance:: Failed to re-save instance: {} on source tenant: {}.",
+              instanceId, sourceTenantProvider.tenantId(), ar.cause());
+          }
+          return Future.succeededFuture();
+        }))
+      .transform(ar -> {
+        if (ar.failed()) {
+          LOGGER.error("rollbackSharedInstance:: Failed to delete instance: {} on target tenant: {}. "
+                       + "The instance is left as is.", instanceId, targetTenantId, ar.cause());
+        }
+        return Future.failedFuture(cause);
       });
   }
 }

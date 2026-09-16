@@ -1,21 +1,29 @@
 package org.folio.inventory.consortium.util;
 
 import static org.folio.HttpStatus.SC_BAD_REQUEST;
+import static org.folio.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.folio.inventory.dataimport.util.DataImportConstants.ALREADY_EXISTS_ERROR_MSG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.same;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.vertx.core.json.JsonObject;
+import java.util.UUID;
 import java.util.function.Consumer;
 import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.consortium.exceptions.StorageOperationException;
 import org.folio.inventory.consortium.handlers.TenantProvider;
 import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.instances.InstanceCollection;
+import org.folio.inventory.exceptions.NotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,6 +65,80 @@ class InstanceOperationsHelperTest {
         Instance addedInstance = result.result();
         assertEquals(existingInstance.getId(), addedInstance.getId());
       });
+  }
+
+  @Test
+  void deleteInstanceSuccessTest() {
+    var instanceId = UUID.randomUUID().toString();
+
+    doAnswer(invocation -> {
+      Consumer<Success<Void>> successHandler = invocation.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(instanceCollection).delete(eq(instanceId), any(), any());
+
+    instanceOperationsHelper.deleteInstance(instanceId, tenantProvider)
+      .onComplete(result -> assertTrue(result.succeeded()));
+  }
+
+  @Test
+  void deleteInstanceFailureTest() {
+    var instanceId = UUID.randomUUID().toString();
+
+    doAnswer(invocation -> {
+      Consumer<Failure> failureHandler = invocation.getArgument(2);
+      failureHandler.accept(new Failure("Internal Server Error", SC_INTERNAL_SERVER_ERROR));
+      return null;
+    }).when(instanceCollection).delete(eq(instanceId), any(), any());
+
+    instanceOperationsHelper.deleteInstance(instanceId, tenantProvider)
+      .onComplete(result -> {
+        assertTrue(result.failed());
+        var cause = assertInstanceOf(StorageOperationException.class, result.cause());
+        assertEquals("Internal Server Error", cause.getMessage());
+        assertEquals(SC_INTERNAL_SERVER_ERROR, cause.getStatusCode().intValue());
+      });
+  }
+
+  @Test
+  void republishInstanceResavesTheStoredInstance() {
+    JsonObject jsonInstance = new JsonObject(TestUtil.readFileFromPath(INSTANCE_PATH));
+    Instance storedInstance = Instance.fromJson(jsonInstance);
+
+    doAnswer(invocation -> {
+      Consumer<Success<Instance>> successHandler = invocation.getArgument(1);
+      successHandler.accept(new Success<>(storedInstance));
+      return null;
+    }).when(instanceCollection).findById(eq(storedInstance.getId()), any(), any());
+    doAnswer(invocation -> {
+      Consumer<Success<Void>> successHandler = invocation.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(instanceCollection).update(any(Instance.class), any(), any());
+
+    instanceOperationsHelper.republishInstance(storedInstance.getId(), tenantProvider)
+      .onComplete(result -> assertTrue(result.succeeded()));
+
+    verify(instanceCollection).update(same(storedInstance), any(), any());
+  }
+
+  @Test
+  void republishInstanceFailsWhenInstanceIsNotFound() {
+    var instanceId = UUID.randomUUID().toString();
+
+    doAnswer(invocation -> {
+      Consumer<Success<Instance>> successHandler = invocation.getArgument(1);
+      successHandler.accept(new Success<>(null));
+      return null;
+    }).when(instanceCollection).findById(eq(instanceId), any(), any());
+
+    instanceOperationsHelper.republishInstance(instanceId, tenantProvider)
+      .onComplete(result -> {
+        assertTrue(result.failed());
+        assertInstanceOf(NotFoundException.class, result.cause());
+      });
+
+    verify(instanceCollection, never()).update(any(Instance.class), any(), any());
   }
 
   @Test

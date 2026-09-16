@@ -17,7 +17,15 @@ import org.folio.rest.client.SourceStorageRecordsClient;
 
 public class SourceStorageHelper {
 
-  protected static final String SRS_RECORD_ID_TYPE = "SRS_RECORD";
+  /**
+   * Value of the {@code idType} query parameter accepted by the SRS records endpoints: which identifier the
+   * given id refers to.
+   */
+  public enum IdType {
+    INSTANCE,
+    SRS_RECORD
+  }
+
   private static final Logger LOGGER = LogManager.getLogger(SourceStorageHelper.class);
 
   private static final String GETTING_SOURCE_MARC_RECORD_MSG =
@@ -29,15 +37,23 @@ public class SourceStorageHelper {
   private static final String FAILED_TO_RETRIEVE_MARC_RECORD_ERROR_MSG =
     "Failed to retrieve MARC record for instance with InstanceId=%s from tenant=%s";
   private static final String DELETING_SOURCE_RECORD_MSG =
-    "deleteSourceRecordByRecordId:: Delete source record with recordId={} for instance by InstanceId={} from tenant {}";
+    "deleteSourceRecord:: Delete source record by id={} with idType={} from tenant {}";
   private static final String ERROR_DELETING_SOURCE_RECORD_MSG =
-    "deleteSourceRecordByRecordId:: Error deleting source record with recordId={} by InstanceId={} from tenant {}";
+    "deleteSourceRecord:: Error deleting source record by id={} with idType={} from tenant {}";
   private static final String SOURCE_RECORD_DELETED_MSG =
-    "deleteSourceRecordByRecordId:: Source record with recordId={} for instance with InstanceId={} from tenant {} "
-    + "has been deleted.";
+    "deleteSourceRecord:: Source record by id={} with idType={} from tenant {} has been deleted.";
   private static final String ERROR_DELETING_SOURCE_RECORD_DETAILS_MSG =
-    "Error deleting source record with recordId=%s by InstanceId=%s from tenant %s, responseStatus=%s";
-  private static final String DELETE_SOURCE_RECORD_ERROR_PREFIX_MSG = "deleteSourceRecordByRecordId:: {}";
+    "Error deleting source record by id=%s with idType=%s from tenant %s, responseStatus=%s";
+  private static final String DELETE_SOURCE_RECORD_ERROR_PREFIX_MSG = "deleteSourceRecord:: {}";
+  private static final String UNDELETING_SOURCE_RECORD_MSG =
+    "unDeleteSourceRecord:: Un-delete source record by id={} with idType={} from tenant {}";
+  private static final String ERROR_UNDELETING_SOURCE_RECORD_MSG =
+    "unDeleteSourceRecord:: Error un-deleting source record by id={} with idType={} from tenant {}";
+  private static final String SOURCE_RECORD_UNDELETED_MSG =
+    "unDeleteSourceRecord:: Source record by id={} with idType={} from tenant {} has been un-deleted.";
+  private static final String ERROR_UNDELETING_SOURCE_RECORD_DETAILS_MSG =
+    "Error un-deleting source record by id=%s with idType=%s from tenant %s, responseStatus=%s";
+  private static final String UNDELETE_SOURCE_RECORD_ERROR_PREFIX_MSG = "unDeleteSourceRecord:: {}";
   private static final String UPDATING_SUPPRESS_FROM_DISCOVERY_MSG =
     "updateSourceRecordSuppressFromDiscovery:: Updating suppress from discovery flag for record in SRS, "
     + "instanceId: {}, suppressFromDiscovery: {}";
@@ -50,7 +66,6 @@ public class SourceStorageHelper {
   private static final String SUPPRESS_FROM_DISCOVERY_ERROR_PREFIX_MSG = "updateSourceRecordSuppressFromDiscovery:: {}";
   private static final String CREATING_SOURCE_STORAGE_RECORDS_CLIENT_MSG =
     "getSourceStorageRecordsClient:: Creating SourceStorageRecordsClient for tenant={}";
-
   private final HttpClient httpClient;
 
   public SourceStorageHelper(HttpClient httpClient) {
@@ -80,21 +95,49 @@ public class SourceStorageHelper {
       });
   }
 
-  public Future<String> deleteSourceRecordByRecordId(String recordId, String instanceId, String tenantId,
-                                                     Map<String, String> headers) {
-    LOGGER.info(DELETING_SOURCE_RECORD_MSG, recordId, instanceId, tenantId);
+  /**
+   * Soft-deletes the source record resolved by the given id.
+   *
+   * @return future completed with the id that was passed in
+   */
+  public Future<String> deleteSourceRecord(String id, IdType idType, String tenantId, Map<String, String> headers) {
+    LOGGER.info(DELETING_SOURCE_RECORD_MSG, id, idType, tenantId);
 
     return prepareClient(tenantId, headers)
-      .deleteSourceStorageRecordsById(recordId, SRS_RECORD_ID_TYPE)
-      .onFailure(e -> LOGGER.error(ERROR_DELETING_SOURCE_RECORD_MSG, recordId, instanceId, tenantId, e))
+      .deleteSourceStorageRecordsById(id, idType.name())
+      .onFailure(e -> LOGGER.error(ERROR_DELETING_SOURCE_RECORD_MSG, id, idType, tenantId, e))
       .compose(response -> {
         var statusCode = response.statusCode();
         if (statusCode == HttpStatus.SC_NO_CONTENT) {
-          LOGGER.info(SOURCE_RECORD_DELETED_MSG, recordId, instanceId, tenantId);
-          return Future.succeededFuture(instanceId);
+          LOGGER.info(SOURCE_RECORD_DELETED_MSG, id, idType, tenantId);
+          return Future.succeededFuture(id);
         } else {
-          String msg = format(ERROR_DELETING_SOURCE_RECORD_DETAILS_MSG, recordId, instanceId, tenantId, statusCode);
+          String msg = format(ERROR_DELETING_SOURCE_RECORD_DETAILS_MSG, id, idType, tenantId, statusCode);
           LOGGER.error(DELETE_SOURCE_RECORD_ERROR_PREFIX_MSG, msg);
+          return Future.failedFuture(new StorageOperationException(msg, statusCode));
+        }
+      });
+  }
+
+  /**
+   * Reverts {@link #deleteSourceRecord(String, IdType, String, Map)}. Safe to call on a record that is not deleted.
+   *
+   * @return future completed with the id that was passed in
+   */
+  public Future<String> unDeleteSourceRecord(String id, IdType idType, String tenantId, Map<String, String> headers) {
+    LOGGER.info(UNDELETING_SOURCE_RECORD_MSG, id, idType, tenantId);
+
+    return prepareClient(tenantId, headers)
+      .postSourceStorageRecordsUnDeleteById(id, idType.name())
+      .onFailure(e -> LOGGER.error(ERROR_UNDELETING_SOURCE_RECORD_MSG, id, idType, tenantId, e))
+      .compose(response -> {
+        var statusCode = response.statusCode();
+        if (statusCode == HttpStatus.SC_NO_CONTENT) {
+          LOGGER.info(SOURCE_RECORD_UNDELETED_MSG, id, idType, tenantId);
+          return Future.succeededFuture(id);
+        } else {
+          String msg = format(ERROR_UNDELETING_SOURCE_RECORD_DETAILS_MSG, id, idType, tenantId, statusCode);
+          LOGGER.error(UNDELETE_SOURCE_RECORD_ERROR_PREFIX_MSG, msg);
           return Future.failedFuture(new StorageOperationException(msg, statusCode));
         }
       });
