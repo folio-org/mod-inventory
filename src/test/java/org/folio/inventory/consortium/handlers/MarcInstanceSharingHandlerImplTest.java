@@ -3229,10 +3229,38 @@ class MarcInstanceSharingHandlerImplTest {
     var future = marcHandler.publishInstance(instance, sharingInstanceMetadata, sourceTenantProvider,
       targetTenantProvider, kafkaHeaders);
 
-    //then: the rollback failure must not mask why sharing failed
+    //then: the rollback failure must not mask why sharing failed; the target instance is left with its record
     future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
       assertSame(updateFailure, cause);
-      verify(instanceOperationsHelper).republishInstance(INSTANCE_ID_1, sourceTenantProvider);
+      verify(sourceStorageHelper, never()).deleteSourceRecord(any(), any(), eq(CONSORTIUM_TENANT), any());
+      verify(instanceOperationsHelper, never()).republishInstance(any(), any());
+      verifySourceInstanceNotMarkedAsShared();
+      testContext.completeNow();
+    })));
+  }
+
+  @Test
+  void shouldReportOriginalCauseWhenSourceRecordDeletionOnTargetFails(VertxTestContext testContext) {
+    //given
+    var updateFailure = new StorageOperationException("statistical code does not exist", 422);
+
+    when(restDataImportHelper.importMarcRecord(any(), any(), any())).thenReturn(Future.succeededFuture("COMMITTED"));
+    when(instanceOperationsHelper.getInstanceById(any(), any())).thenReturn(Future.succeededFuture(instance));
+    when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.failedFuture(updateFailure));
+    when(instanceOperationsHelper.deleteInstance(any(), any())).thenReturn(Future.succeededFuture());
+    when(sourceStorageHelper.deleteSourceRecord(any(), eq(INSTANCE), eq(CONSORTIUM_TENANT), any()))
+      .thenReturn(Future.failedFuture(new StorageOperationException("cannot delete source record", 500)));
+    when(instanceOperationsHelper.republishInstance(any(), any()))
+      .thenReturn(Future.failedFuture(new StorageOperationException("cannot re-save instance", 500)));
+
+    // when
+    var future = marcHandler.publishInstance(instance, sharingInstanceMetadata, sourceTenantProvider,
+      targetTenantProvider, kafkaHeaders);
+
+    //then: the remaining rollback steps still run and the original cause is reported
+    future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
+      assertSame(updateFailure, cause);
+      verifyTargetInstanceRolledBack();
       verifySourceInstanceNotMarkedAsShared();
       testContext.completeNow();
     })));

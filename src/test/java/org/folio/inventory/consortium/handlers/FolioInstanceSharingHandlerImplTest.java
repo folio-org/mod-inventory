@@ -126,9 +126,10 @@ class FolioInstanceSharingHandlerImplTest {
     var future = folioHandler.publishInstance(sourceInstance, sharingInstanceMetadata, sourceTenantProvider,
       targetTenantProvider, kafkaHeaders);
 
-    //then: the rollback failure must not mask why sharing failed
+    //then: the rollback failure must not mask why sharing failed; the target instance is left as is
     future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
       assertSame(updateFailure, cause);
+      verify(instanceOperationsHelper, never()).republishInstance(any(), any());
       testContext.completeNow();
     })));
   }

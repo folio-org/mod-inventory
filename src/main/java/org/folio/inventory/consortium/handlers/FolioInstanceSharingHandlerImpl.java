@@ -53,7 +53,7 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
   /**
    * Removes the instance added to the target tenant and re-saves the source instance so that it gets back into
-   * the search index, then re-fails with the original cause.
+   * the search index, then re-fails with the original cause. If the instance cannot be deleted it is left as is.
    */
   private Future<String> rollbackSharedInstance(String instanceId, SourceTenantProvider sourceTenantProvider,
                                                 TargetTenantProvider targetTenantProvider, Throwable cause) {
@@ -62,17 +62,18 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
       instanceId, targetTenantId, cause);
 
     return instanceOperations.deleteInstance(instanceId, targetTenantProvider)
+      .compose(v -> instanceOperations.republishInstance(instanceId, sourceTenantProvider)
+        .transform(ar -> {
+          if (ar.failed()) {
+            LOGGER.error("rollbackSharedInstance:: Failed to re-save instance: {} on source tenant: {}.",
+              instanceId, sourceTenantProvider.tenantId(), ar.cause());
+          }
+          return Future.succeededFuture();
+        }))
       .transform(ar -> {
         if (ar.failed()) {
-          LOGGER.error("rollbackSharedInstance:: Failed to delete instance: {} on target tenant: {}.",
-            instanceId, targetTenantId, ar.cause());
-        }
-        return instanceOperations.republishInstance(instanceId, sourceTenantProvider);
-      })
-      .transform(ar -> {
-        if (ar.failed()) {
-          LOGGER.error("rollbackSharedInstance:: Failed to re-save instance: {} on source tenant: {}.",
-            instanceId, sourceTenantProvider.tenantId(), ar.cause());
+          LOGGER.error("rollbackSharedInstance:: Failed to delete instance: {} on target tenant: {}. "
+                       + "The instance is left as is.", instanceId, targetTenantId, ar.cause());
         }
         return Future.failedFuture(cause);
       });

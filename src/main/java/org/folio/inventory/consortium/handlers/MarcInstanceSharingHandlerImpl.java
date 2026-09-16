@@ -132,8 +132,9 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
   }
 
   /**
-   * Removes the instance that data import created on the target tenant and re-saves the source instance so that it
-   * gets back into the search index, then re-fails with the original cause.
+   * Removes the instance that data import created on the target tenant together with its source record and re-saves
+   * the source instance so that it gets back into the search index, then re-fails with the original cause.
+   * If the instance cannot be deleted it is left as is together with its source record.
    */
   private <T> Future<T> rollbackSharedInstance(String instanceId, SourceTenantProvider sourceTenantProvider,
                                                TargetTenantProvider targetTenantProvider,
@@ -143,24 +144,25 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       instanceId, targetTenant, cause);
 
     return instanceOperations.deleteInstance(instanceId, targetTenantProvider)
+      .compose(v -> sourceStorageHelper.deleteSourceRecord(instanceId, INSTANCE, targetTenant, kafkaHeaders)
+        .transform(ar -> {
+          if (ar.failed()) {
+            LOGGER.error("rollbackSharedInstance:: Failed to delete source record for instance: {} "
+                         + "on target tenant: {}.", instanceId, targetTenant, ar.cause());
+          }
+          return instanceOperations.republishInstance(instanceId, sourceTenantProvider);
+        })
+        .transform(ar -> {
+          if (ar.failed()) {
+            LOGGER.error("rollbackSharedInstance:: Failed to re-save instance: {} on source tenant: {}.",
+              instanceId, sourceTenantProvider.tenantId(), ar.cause());
+          }
+          return Future.succeededFuture();
+        }))
       .transform(ar -> {
         if (ar.failed()) {
           LOGGER.error("rollbackSharedInstance:: Failed to delete instance: {} on target tenant: {}.",
             instanceId, targetTenant, ar.cause());
-        }
-        return sourceStorageHelper.deleteSourceRecord(instanceId, INSTANCE, targetTenant, kafkaHeaders);
-      })
-      .transform(ar -> {
-        if (ar.failed()) {
-          LOGGER.error("rollbackSharedInstance:: Failed to delete source record for instance: {} "
-                       + "on target tenant: {}.", instanceId, targetTenant, ar.cause());
-        }
-        return instanceOperations.republishInstance(instanceId, sourceTenantProvider);
-      })
-      .transform(ar -> {
-        if (ar.failed()) {
-          LOGGER.error("rollbackSharedInstance:: Failed to re-save instance: {} on source tenant: {}.",
-            instanceId, sourceTenantProvider.tenantId(), ar.cause());
         }
         return Future.failedFuture(cause);
       });
