@@ -4,6 +4,7 @@ import static io.vertx.core.buffer.Buffer.buffer;
 import static org.folio.inventory.consortium.util.SourceStorageHelper.IdType.INSTANCE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -45,6 +46,7 @@ import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.consortium.entities.SharingInstance;
+import org.folio.inventory.consortium.exceptions.ConsortiumException;
 import org.folio.inventory.consortium.exceptions.StorageOperationException;
 import org.folio.inventory.consortium.util.InstanceOperationsHelper;
 import org.folio.inventory.consortium.util.RestDataImportHelper;
@@ -2871,6 +2873,8 @@ class MarcInstanceSharingHandlerImplTest {
     when(entitiesLinksService
       .putInstanceAuthorityLinks(any(Context.class), eq(INSTANCE_ID_1), eq(List.of(links.get(1)))))
       .thenReturn(Future.failedFuture(new RuntimeException("Failed to put shared Authority links for central tenant")));
+    when(entitiesLinksService.putInstanceAuthorityLinks(any(Context.class), eq(INSTANCE_ID_1), eq(links)))
+      .thenReturn(Future.succeededFuture());
 
     // when
     final var future = marcHandler.publishInstance(instance, sharingInstanceMetadata, sourceTenantProvider,
@@ -2882,6 +2886,8 @@ class MarcInstanceSharingHandlerImplTest {
     verifyRollbackAuthorityLinksForMemberTenant(links);
 
     future.onComplete(testContext.failing(err -> testContext.verify(() -> {
+      var exception = assertInstanceOf(ConsortiumException.class, err);
+      assertEquals("Failed to put shared Authority links for central tenant", exception.getMessage());
       var updatedInstanceCaptor = ArgumentCaptor.forClass(Instance.class);
       verify(instanceOperationsHelper, times(0)).updateInstance(updatedInstanceCaptor.capture(),
         argThat(p -> MEMBER_TENANT.equals(p.tenantId())));
@@ -3169,7 +3175,6 @@ class MarcInstanceSharingHandlerImplTest {
     //then
     future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
       assertSame(deleteFailure, cause);
-      verifySourceRecordRestored();
       verifyTargetInstanceRolledBack();
       verify(instanceOperationsHelper, never())
         .updateInstance(any(), argThat(p -> MEMBER_TENANT.equals(p.tenantId())));

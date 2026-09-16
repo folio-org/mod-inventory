@@ -61,9 +61,12 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
       instanceId, targetTenantId, cause);
 
     return instanceOperations.deleteInstance(instanceId, targetTenantProvider)
-      .onFailure(e -> LOGGER.error("rollbackSharedInstance:: Failed to delete instance: {} on target tenant: {}.",
-        instanceId, targetTenantId, e))
-      .otherwiseEmpty()
-      .compose(v -> Future.failedFuture(cause));
+      .transform(ar -> {
+        if (ar.failed()) {
+          LOGGER.error("rollbackSharedInstance:: Failed to delete instance: {} on target tenant: {}.",
+            instanceId, targetTenantId, ar.cause());
+        }
+        return Future.failedFuture(cause);
+      });
   }
 }

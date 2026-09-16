@@ -102,9 +102,10 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       .recover(cause -> rollbackSharedInstance(instanceId, targetTenantProvider, kafkaHeaders, cause))
       .compose(targetInstance -> sourceStorageHelper
         .deleteSourceRecord(instanceId, INSTANCE, sourceTenant, kafkaHeaders)
-        .compose(deletedId -> updateSourceInstanceAsShared(instance, targetInstance, sourceTenantProvider))
-        .recover(cause -> rollbackSourceRecordAndSharedInstance(instanceId, sourceTenant, targetTenantProvider,
-          kafkaHeaders, cause)));
+        .recover(cause -> rollbackSharedInstance(instanceId, targetTenantProvider, kafkaHeaders, cause))
+        .compose(deletedId -> updateSourceInstanceAsShared(instance, targetInstance, sourceTenantProvider)
+          .recover(cause -> rollbackSourceRecordAndSharedInstance(instanceId, sourceTenant, targetTenantProvider,
+            kafkaHeaders, cause))));
   }
 
   /**
@@ -117,10 +118,13 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       instanceId, sourceTenant);
 
     return sourceStorageHelper.unDeleteSourceRecord(instanceId, INSTANCE, sourceTenant, kafkaHeaders)
-      .onFailure(e -> LOGGER.error("rollbackSourceRecordAndSharedInstance:: Failed to restore source record for "
-                                   + "instance: {} on tenant: {}.", instanceId, sourceTenant, e))
-      .otherwiseEmpty()
-      .compose(v -> rollbackSharedInstance(instanceId, targetTenantProvider, kafkaHeaders, cause));
+      .transform(ar -> {
+        if (ar.failed()) {
+          LOGGER.error("rollbackSourceRecordAndSharedInstance:: Failed to restore source record for instance: {} "
+                       + "on tenant: {}.", instanceId, sourceTenant, ar.cause());
+        }
+        return rollbackSharedInstance(instanceId, targetTenantProvider, kafkaHeaders, cause);
+      });
   }
 
   /**
@@ -133,14 +137,20 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
       instanceId, targetTenant, cause);
 
     return instanceOperations.deleteInstance(instanceId, targetTenantProvider)
-      .onFailure(e -> LOGGER.error("rollbackSharedInstance:: Failed to delete instance: {} on target tenant: {}.",
-        instanceId, targetTenant, e))
-      .otherwiseEmpty()
-      .compose(v -> sourceStorageHelper.deleteSourceRecord(instanceId, INSTANCE, targetTenant, kafkaHeaders))
-      .onFailure(e -> LOGGER.error("rollbackSharedInstance:: Failed to delete source record for instance: {} "
-                                   + "on target tenant: {}.", instanceId, targetTenant, e))
-      .otherwiseEmpty()
-      .compose(v -> Future.failedFuture(cause));
+      .transform(ar -> {
+        if (ar.failed()) {
+          LOGGER.error("rollbackSharedInstance:: Failed to delete instance: {} on target tenant: {}.",
+            instanceId, targetTenant, ar.cause());
+        }
+        return sourceStorageHelper.deleteSourceRecord(instanceId, INSTANCE, targetTenant, kafkaHeaders);
+      })
+      .transform(ar -> {
+        if (ar.failed()) {
+          LOGGER.error("rollbackSharedInstance:: Failed to delete source record for instance: {} "
+                       + "on target tenant: {}.", instanceId, targetTenant, ar.cause());
+        }
+        return Future.failedFuture(cause);
+      });
   }
 
   private Future<String> updateSourceInstanceAsShared(Instance instance, Instance targetInstance,
@@ -236,13 +246,17 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
     LOGGER.warn("Rollback authority links update for source tenant: {} and instance: {}",
       sharingInstanceMetadata.getSourceTenantId(), instanceId);
 
-    updateLinksForSourceTenant(entityLinks, instanceId, context, sharingInstanceMetadata)
-      .onFailure(
-        e -> LOGGER.error("Error during rollback authority links update for source tenant: {} and instance: {}",
-          sharingInstanceMetadata.getSourceTenantId(), instanceId, e));
+    var consortiumException = new ConsortiumException(
+      cause != null ? cause.getMessage() : "Error updating shared authorities in MARC record");
 
-    return Future.failedFuture(
-      new ConsortiumException(cause != null ? cause.getMessage() : "Error updating shared authorities in MARC record"));
+    return updateLinksForSourceTenant(entityLinks, instanceId, context, sharingInstanceMetadata)
+      .transform(ar -> {
+        if (ar.failed()) {
+          LOGGER.error("Error during rollback authority links update for source tenant: {} and instance: {}",
+            sharingInstanceMetadata.getSourceTenantId(), instanceId, ar.cause());
+        }
+        return Future.failedFuture(consortiumException);
+      });
   }
 
   private Future<Void> unlinkLocalAuthorities(List<LinkingRuleDto> linkingRules, Record marcRecord, String instanceId,
