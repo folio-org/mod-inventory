@@ -2718,6 +2718,7 @@ class MarcInstanceSharingHandlerImplTest {
       .thenReturn(Future.succeededFuture(List.of(Json.decodeValue(LINKING_RULES, LinkingRuleDto[].class))));
 
     when(storage.getAuthorityRecordCollection(any())).thenReturn(authorityRecordCollection);
+    when(instanceOperationsHelper.republishInstance(any(), any())).thenReturn(Future.succeededFuture());
     localAuthority = new Authority().withId(AUTHORITY_ID_1).withSource(Authority.Source.MARC);
     sharedAuthority = new Authority().withId(AUTHORITY_ID_2).withSource(Authority.Source.CONSORTIUM_MARC);
     setupMarcHandler();
@@ -2757,6 +2758,7 @@ class MarcInstanceSharingHandlerImplTest {
       assertEquals(TARGET_INSTANCE_HRID, updatedInstance.getHrid());
       assertFalse(updatedInstance.getSubjects().isEmpty());
       verify(instanceOperationsHelper, never()).deleteInstance(any(), any());
+      verify(instanceOperationsHelper, never()).republishInstance(any(), any());
       testContext.completeNow();
     })));
   }
@@ -3151,7 +3153,7 @@ class MarcInstanceSharingHandlerImplTest {
     future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
       assertSame(updateFailure, cause);
       verifyTargetInstanceRolledBack();
-      verifySourceTenantUntouched();
+      verifySourceInstanceNotMarkedAsShared();
       testContext.completeNow();
     })));
   }
@@ -3220,6 +3222,8 @@ class MarcInstanceSharingHandlerImplTest {
     when(instanceOperationsHelper.updateInstance(any(), any())).thenReturn(Future.failedFuture(updateFailure));
     when(instanceOperationsHelper.deleteInstance(any(), any()))
       .thenReturn(Future.failedFuture(new StorageOperationException("cannot delete instance", 500)));
+    when(instanceOperationsHelper.republishInstance(any(), any()))
+      .thenReturn(Future.failedFuture(new StorageOperationException("cannot re-save instance", 500)));
 
     // when
     var future = marcHandler.publishInstance(instance, sharingInstanceMetadata, sourceTenantProvider,
@@ -3228,7 +3232,8 @@ class MarcInstanceSharingHandlerImplTest {
     //then: the rollback failure must not mask why sharing failed
     future.onComplete(testContext.failing(cause -> testContext.verify(() -> {
       assertSame(updateFailure, cause);
-      verifySourceTenantUntouched();
+      verify(instanceOperationsHelper).republishInstance(INSTANCE_ID_1, sourceTenantProvider);
+      verifySourceInstanceNotMarkedAsShared();
       testContext.completeNow();
     })));
   }
@@ -3237,13 +3242,14 @@ class MarcInstanceSharingHandlerImplTest {
     verify(instanceOperationsHelper)
       .deleteInstance(eq(INSTANCE_ID_1), argThat(p -> CONSORTIUM_TENANT.equals(p.tenantId())));
     verify(sourceStorageHelper).deleteSourceRecord(INSTANCE_ID_1, INSTANCE, CONSORTIUM_TENANT, kafkaHeaders);
+    verify(instanceOperationsHelper).republishInstance(INSTANCE_ID_1, sourceTenantProvider);
   }
 
   private void verifySourceRecordRestored() {
     verify(sourceStorageHelper).unDeleteSourceRecord(INSTANCE_ID_1, INSTANCE, MEMBER_TENANT, kafkaHeaders);
   }
 
-  private void verifySourceTenantUntouched() {
+  private void verifySourceInstanceNotMarkedAsShared() {
     verify(sourceStorageHelper, never()).deleteSourceRecord(any(), any(), eq(MEMBER_TENANT), any());
     verify(sourceStorageHelper, never()).unDeleteSourceRecord(any(), any(), any(), any());
     verify(instanceOperationsHelper, never())

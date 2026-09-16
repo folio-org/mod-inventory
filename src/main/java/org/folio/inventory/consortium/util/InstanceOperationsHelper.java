@@ -81,6 +81,18 @@ public class InstanceOperationsHelper {
     return promise.future();
   }
 
+  /**
+   * Re-saves the instance as is so that its update event is published again. Used to bring the instance back into
+   * the search index after a shared copy with the same id has been deleted on another tenant.
+   */
+  public Future<Void> republishInstance(String instanceId, TenantProvider tenantProvider) {
+    LOGGER.info("republishInstance :: Re-saving instance with InstanceId={} on tenant={}", instanceId,
+      tenantProvider.tenantId());
+    return getInstanceById(instanceId, tenantProvider)
+      .compose(instance -> updateInstance(instance, tenantProvider))
+      .mapEmpty();
+  }
+
   public Future<String> updateInstance(Instance instance, TenantProvider tenantProvider) {
     var tenantId = tenantProvider.tenantId();
     var instanceId = instance.getId();

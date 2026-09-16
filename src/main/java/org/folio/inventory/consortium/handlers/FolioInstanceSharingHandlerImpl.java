@@ -47,15 +47,16 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
 
         // Update instance in sourceInstanceCollection
         return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish), sourceTenantProvider)
-          .recover(cause -> rollbackSharedInstance(instanceId, targetTenantProvider, cause));
+          .recover(cause -> rollbackSharedInstance(instanceId, sourceTenantProvider, targetTenantProvider, cause));
       });
   }
 
   /**
-   * Removes the instance added to the target tenant, then re-fails with the original cause.
+   * Removes the instance added to the target tenant and re-saves the source instance so that it gets back into
+   * the search index, then re-fails with the original cause.
    */
-  private Future<String> rollbackSharedInstance(String instanceId, TargetTenantProvider targetTenantProvider,
-                                                Throwable cause) {
+  private Future<String> rollbackSharedInstance(String instanceId, SourceTenantProvider sourceTenantProvider,
+                                                TargetTenantProvider targetTenantProvider, Throwable cause) {
     String targetTenantId = targetTenantProvider.tenantId();
     LOGGER.warn("rollbackSharedInstance:: Rolling back instance: {} shared to target tenant: {}",
       instanceId, targetTenantId, cause);
@@ -65,6 +66,13 @@ public class FolioInstanceSharingHandlerImpl implements InstanceSharingHandler {
         if (ar.failed()) {
           LOGGER.error("rollbackSharedInstance:: Failed to delete instance: {} on target tenant: {}.",
             instanceId, targetTenantId, ar.cause());
+        }
+        return instanceOperations.republishInstance(instanceId, sourceTenantProvider);
+      })
+      .transform(ar -> {
+        if (ar.failed()) {
+          LOGGER.error("rollbackSharedInstance:: Failed to re-save instance: {} on source tenant: {}.",
+            instanceId, sourceTenantProvider.tenantId(), ar.cause());
         }
         return Future.failedFuture(cause);
       });

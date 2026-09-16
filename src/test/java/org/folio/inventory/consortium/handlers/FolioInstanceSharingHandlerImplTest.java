@@ -59,6 +59,7 @@ class FolioInstanceSharingHandlerImplTest {
     when(sharingInstanceMetadata.getInstanceIdentifier()).thenReturn(UUID.fromString(INSTANCE_ID));
     when(sharingInstanceMetadata.getSourceTenantId()).thenReturn(MEMBER_TENANT);
     when(sharingInstanceMetadata.getTargetTenantId()).thenReturn(CONSORTIUM_TENANT);
+    when(instanceOperationsHelper.republishInstance(any(), any())).thenReturn(Future.succeededFuture());
 
     folioHandler = new FolioInstanceSharingHandlerImpl(instanceOperationsHelper);
   }
@@ -79,6 +80,7 @@ class FolioInstanceSharingHandlerImplTest {
     future.onComplete(testContext.succeeding(result -> testContext.verify(() -> {
       assertEquals(INSTANCE_ID, result);
       verify(instanceOperationsHelper, never()).deleteInstance(any(), any());
+      verify(instanceOperationsHelper, never()).republishInstance(any(), any());
       testContext.completeNow();
     })));
   }
@@ -103,6 +105,7 @@ class FolioInstanceSharingHandlerImplTest {
       assertSame(updateFailure, cause);
       verify(instanceOperationsHelper)
         .deleteInstance(eq(INSTANCE_ID), argThat(p -> CONSORTIUM_TENANT.equals(p.tenantId())));
+      verify(instanceOperationsHelper).republishInstance(INSTANCE_ID, sourceTenantProvider);
       testContext.completeNow();
     })));
   }

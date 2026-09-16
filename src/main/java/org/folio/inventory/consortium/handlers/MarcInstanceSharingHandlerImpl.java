@@ -99,21 +99,25 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
     String sourceTenant = sharingInstanceMetadata.getSourceTenantId();
 
     return updateTargetInstanceWithNonMarcControlledFields(instance, targetTenantProvider, kafkaHeaders)
-      .recover(cause -> rollbackSharedInstance(instanceId, targetTenantProvider, kafkaHeaders, cause))
+      .recover(cause -> rollbackSharedInstance(instanceId, sourceTenantProvider, targetTenantProvider, kafkaHeaders,
+        cause))
       .compose(targetInstance -> sourceStorageHelper
         .deleteSourceRecord(instanceId, INSTANCE, sourceTenant, kafkaHeaders)
-        .recover(cause -> rollbackSharedInstance(instanceId, targetTenantProvider, kafkaHeaders, cause))
+        .recover(cause -> rollbackSharedInstance(instanceId, sourceTenantProvider, targetTenantProvider,
+          kafkaHeaders, cause))
         .compose(deletedId -> updateSourceInstanceAsShared(instance, targetInstance, sourceTenantProvider)
-          .recover(cause -> rollbackSourceRecordAndSharedInstance(instanceId, sourceTenant, targetTenantProvider,
-            kafkaHeaders, cause))));
+          .recover(cause -> rollbackSourceRecordAndSharedInstance(instanceId, sourceTenantProvider,
+            targetTenantProvider, kafkaHeaders, cause))));
   }
 
   /**
    * Restores the soft-deleted source record on the source tenant, then rolls back the target instance.
    */
-  private <T> Future<T> rollbackSourceRecordAndSharedInstance(String instanceId, String sourceTenant,
+  private <T> Future<T> rollbackSourceRecordAndSharedInstance(String instanceId,
+                                                              SourceTenantProvider sourceTenantProvider,
                                                               TargetTenantProvider targetTenantProvider,
                                                               Map<String, String> kafkaHeaders, Throwable cause) {
+    String sourceTenant = sourceTenantProvider.tenantId();
     LOGGER.warn("rollbackSourceRecordAndSharedInstance:: Restoring source record for instance: {} on tenant: {}",
       instanceId, sourceTenant);
 
@@ -123,14 +127,16 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
           LOGGER.error("rollbackSourceRecordAndSharedInstance:: Failed to restore source record for instance: {} "
                        + "on tenant: {}.", instanceId, sourceTenant, ar.cause());
         }
-        return rollbackSharedInstance(instanceId, targetTenantProvider, kafkaHeaders, cause);
+        return rollbackSharedInstance(instanceId, sourceTenantProvider, targetTenantProvider, kafkaHeaders, cause);
       });
   }
 
   /**
-   * Removes the instance that data import created on the target tenant, then re-fails with the original cause.
+   * Removes the instance that data import created on the target tenant and re-saves the source instance so that it
+   * gets back into the search index, then re-fails with the original cause.
    */
-  private <T> Future<T> rollbackSharedInstance(String instanceId, TargetTenantProvider targetTenantProvider,
+  private <T> Future<T> rollbackSharedInstance(String instanceId, SourceTenantProvider sourceTenantProvider,
+                                               TargetTenantProvider targetTenantProvider,
                                                Map<String, String> kafkaHeaders, Throwable cause) {
     String targetTenant = targetTenantProvider.tenantId();
     LOGGER.warn("rollbackSharedInstance:: Rolling back instance: {} shared to target tenant: {}",
@@ -148,6 +154,13 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
         if (ar.failed()) {
           LOGGER.error("rollbackSharedInstance:: Failed to delete source record for instance: {} "
                        + "on target tenant: {}.", instanceId, targetTenant, ar.cause());
+        }
+        return instanceOperations.republishInstance(instanceId, sourceTenantProvider);
+      })
+      .transform(ar -> {
+        if (ar.failed()) {
+          LOGGER.error("rollbackSharedInstance:: Failed to re-save instance: {} on source tenant: {}.",
+            instanceId, sourceTenantProvider.tenantId(), ar.cause());
         }
         return Future.failedFuture(cause);
       });
