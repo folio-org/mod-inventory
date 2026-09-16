@@ -28,7 +28,7 @@
     <mod-source-record-manager-client.version>4.1.0-SNAPSHOT</mod-source-record-manager-client.version>
     <folio-isbn-util.version>1.10.0-SNAPSHOT</folio-isbn-util.version>
 
-    <vertx.version>5.1.7</vertx.version>
+    <vertx.version>5.1.8</vertx.version>
     <lombok.version>1.18.48</lombok.version>
     <postgres.version>42.7.13</postgres.version>
     <liquibase.version>5.0.4</liquibase.version>
@@ -41,7 +41,7 @@
 
     <testcontainers.version>2.0.5</testcontainers.version>
     <junit-bom.version>6.1.3</junit-bom.version>
-    <hamcrest.version>2.2</hamcrest.version>
+    <hamcrest.version>3.0</hamcrest.version>
     <awaitility.version>4.3.0</awaitility.version>
     <rest-assured.version>6.0.1</rest-assured.version>
     <wiremock.version>3.13.2</wiremock.version>
@@ -62,7 +62,7 @@
     <maven-release-plugin.version>3.3.1</maven-release-plugin.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
     <folio-java-checkstyle.version>1.2.0</folio-java-checkstyle.version>
-    <checkstyle.version>14.0.0</checkstyle.version>
+    <checkstyle.version>14.1.0</checkstyle.version>
   </properties>
 
   <dependencyManagement>
