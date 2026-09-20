@@ -47,7 +47,7 @@
     <wiremock.version>3.13.2</wiremock.version>
     <mockito-core.version>5.23.0</mockito-core.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
-    <byte-buddy.version>1.18.13</byte-buddy.version>
+    <byte-buddy.version>1.18.14</byte-buddy.version>
     <json-path-assert.version>3.0.0</json-path-assert.version>
     <assertj-core.version>3.27.7</assertj-core.version>
 
