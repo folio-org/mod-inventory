@@ -51,7 +51,7 @@
     <json-path-assert.version>3.0.0</json-path-assert.version>
     <assertj-core.version>3.27.7</assertj-core.version>
 
-    <folio-module-descriptor-validator.version>1.0.1</folio-module-descriptor-validator.version>
+    <folio-module-descriptor-validator.version>1.0.2-SNAPSHOT</folio-module-descriptor-validator.version>
     <maven-surefire-plugin.version>3.6.0</maven-surefire-plugin.version>
     <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
     <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
