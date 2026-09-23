@@ -63,6 +63,26 @@ The simplest way to fulfil these is to use the [inventory storage module](https:
 There are several properties that should be set for modules that interact with Kafka: **KAFKA_HOST, KAFKA_PORT, OKAPI_URL, ENV** (unique env ID).
 After setup, it is good to check logs in all related modules for errors.
 
+### Mixed-version deployments
+
+Kafka consumers derive the current module ID from `MODULE_NAME` and `MODULE_VERSION`. These values
+must match the values configured for the module's sidecar.
+
+Enable tenant-aware Kafka filtering with:
+
+```text
+FOLIO_KAFKA_TENANT_FILTER_ENABLED=true
+FOLIO_KAFKA_TENANT_FILTER_ALL_TENANTS_DISABLED_STRATEGY=SKIP
+```
+
+With filtering enabled, each module version processes only messages for tenants entitled to that
+version. Messages must contain a non-blank tenant identifier in either the `x-okapi-tenant` or
+`folio.tenantId` Kafka header.
+
+`InstanceIngressConsumerVerticle` uses `OffsetResetStrategy.LATEST` as an example of a consumer that
+should not replay retained messages when a new consumer group starts. All other current consumers
+explicitly use `OffsetResetStrategy.EARLIEST` to preserve their existing replay behavior.
+
 **Environment variables** that can be adjusted for this module and default values:
  * These variables are relevant from the **Iris** release. Module version from 16.3.0:
     * "_inventory.kafka.DataImportConsumerVerticle.instancesNumber_": 5
@@ -148,4 +168,3 @@ This module's [API documentation](https://dev.folio.org/reference/api/#mod-inven
 The built artifacts for this module are available.
 See [configuration](https://dev.folio.org/download/artifacts) for repository access,
 and the [Docker image](https://hub.docker.com/r/folioorg/mod-inventory/).
-

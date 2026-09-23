@@ -27,6 +27,7 @@ import org.folio.kafka.GlobalLoadSensor;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaConsumerWrapper;
 import org.folio.kafka.KafkaTopicNameHelper;
+import org.folio.kafka.OffsetResetStrategy;
 import org.folio.kafka.SubscriptionDefinition;
 
 public abstract class KafkaConsumerVerticle extends AbstractVerticle {
@@ -52,12 +53,14 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
 
   protected abstract Logger getLogger();
 
-  protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, String loadLimitPropertyKey) {
-    return createConsumer(eventType, loadLimitPropertyKey, true);
+  protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, String loadLimitPropertyKey,
+                                                                OffsetResetStrategy autoOffsetReset) {
+    return createConsumer(eventType, loadLimitPropertyKey, true, autoOffsetReset);
   }
 
   protected KafkaConsumerWrapper<String, String> createConsumer(String eventType, String loadLimitPropertyKey,
-                                                                boolean namespacedTopic) {
+                                                              boolean namespacedTopic,
+                                                              OffsetResetStrategy autoOffsetReset) {
     var kafkaConsumerWrapper = KafkaConsumerWrapper.<String, String>builder()
       .context(context)
       .vertx(vertx)
@@ -66,6 +69,7 @@ public abstract class KafkaConsumerVerticle extends AbstractVerticle {
       .globalLoadSensor(new GlobalLoadSensor())
       .subscriptionDefinition(getSubscriptionDefinition(getKafkaConfig().getEnvId(), eventType, namespacedTopic))
       .groupInstanceId(getClass().getSimpleName() + "-" + UUID.randomUUID())
+      .autoOffsetReset(autoOffsetReset)
       .build();
     consumerWrappers.add(kafkaConsumerWrapper);
     return kafkaConsumerWrapper;

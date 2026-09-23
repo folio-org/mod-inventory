@@ -12,11 +12,12 @@ import java.util.UUID;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
-import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.support.KafkaConsumerVerticle;
 import org.folio.kafka.KafkaConsumerWrapper;
 import org.folio.kafka.KafkaTopicNameHelper;
+import org.folio.kafka.OffsetResetStrategy;
 import org.folio.kafka.headers.FolioKafkaHeaders;
+import org.folio.kafka.services.ModuleIdResolver;
 import org.folio.rest.jaxrs.model.Event;
 
 public class CancelledJobExecutionConsumerVerticle extends KafkaConsumerVerticle {
@@ -29,12 +30,13 @@ public class CancelledJobExecutionConsumerVerticle extends KafkaConsumerVerticle
 
   @Override
   public void start(Promise<Void> startPromise) {
-    String moduleName = getModuleName();
-    String groupName = KafkaTopicNameHelper.formatGroupName(DI_JOB_CANCELLED.value(), moduleName);
+    var moduleId = ModuleIdResolver.resolve("mod-inventory");
+    var consumerGroupSuffix = moduleId + "-" + UUID.randomUUID();
+    var groupName = KafkaTopicNameHelper.formatGroupName(DI_JOB_CANCELLED.value(), consumerGroupSuffix);
 
     KafkaConsumerWrapper<String, String> consumerWrapper =
-      createConsumer(DI_JOB_CANCELLED.value(), LOAD_LIMIT_PROPERTY);
-    consumerWrapper.start(this::handle, moduleName)
+      createConsumer(DI_JOB_CANCELLED.value(), LOAD_LIMIT_PROPERTY, OffsetResetStrategy.EARLIEST);
+    consumerWrapper.start(this::handle, consumerGroupSuffix, moduleId)
       .onSuccess(v ->
         LOGGER.info("start:: CancelledJobExecutionConsumerVerticle verticle was started, consumer group: '{}'",
           groupName))
@@ -50,17 +52,6 @@ public class CancelledJobExecutionConsumerVerticle extends KafkaConsumerVerticle
   @Override
   protected String getDefaultLoadLimit() {
     return DEFAULT_LOAD_LIMIT;
-  }
-
-  /**
-   * Constructs a unique module name with pseudo-random suffix.
-   * This ensures that each instance of the module will have own consumer group
-   * and will consume all messages from the topic.
-   *
-   * @return unique module name string.
-   */
-  private String getModuleName() {
-    return ConsumerWrapperUtil.constructModuleName() + "-" + UUID.randomUUID();
   }
 
   private Future<String> handle(KafkaConsumerRecord<String, String> kafkaRecord) {

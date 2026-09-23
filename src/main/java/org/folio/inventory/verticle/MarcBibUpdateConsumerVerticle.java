@@ -1,13 +1,13 @@
 package org.folio.inventory.verticle;
 
-import static org.folio.inventory.dataimport.util.ConsumerWrapperUtil.constructModuleName;
-
 import io.vertx.core.Promise;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.dataimport.consumers.MarcBibUpdateKafkaConsumer;
 import org.folio.inventory.dataimport.handlers.actions.InstanceUpdateDelegate;
 import org.folio.inventory.support.KafkaConsumerVerticle;
+import org.folio.kafka.OffsetResetStrategy;
+import org.folio.kafka.services.ModuleIdResolver;
 
 public class MarcBibUpdateConsumerVerticle extends KafkaConsumerVerticle {
   private static final Logger LOGGER = LogManager.getLogger(MarcBibUpdateConsumerVerticle.class);
@@ -20,9 +20,11 @@ public class MarcBibUpdateConsumerVerticle extends KafkaConsumerVerticle {
 
     var marcBibUpdateKafkaHandler = new MarcBibUpdateKafkaConsumer(vertx, getMaxDistributionNumber(BASE_PROPERTY),
       getKafkaConfig(), instanceUpdateDelegate);
-    var marcBibUpdateConsumerWrapper = createConsumer(SRS_MARC_BIB_EVENT, BASE_PROPERTY, false);
+    var marcBibUpdateConsumerWrapper = createConsumer(SRS_MARC_BIB_EVENT, BASE_PROPERTY, false,
+      OffsetResetStrategy.EARLIEST);
 
-    marcBibUpdateConsumerWrapper.start(marcBibUpdateKafkaHandler, constructModuleName())
+    var moduleId = ModuleIdResolver.resolve("mod-inventory");
+    marcBibUpdateConsumerWrapper.start(marcBibUpdateKafkaHandler, moduleId, moduleId)
       .onFailure(startPromise::fail)
       .onSuccess(ar -> startPromise.complete());
   }
