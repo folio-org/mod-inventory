@@ -18,7 +18,6 @@ import org.folio.inventory.common.dao.EventIdStorageDao;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.consortium.consumers.ConsortiumInstanceSharingConsumer;
 import org.folio.inventory.consortium.entities.SharingInstanceEventType;
-import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.services.SharedInstanceEventIdStorageServiceImpl;
 import org.folio.inventory.storage.Storage;
 import org.folio.kafka.AsyncRecordHandler;
@@ -26,7 +25,9 @@ import org.folio.kafka.GlobalLoadSensor;
 import org.folio.kafka.KafkaConfig;
 import org.folio.kafka.KafkaConsumerWrapper;
 import org.folio.kafka.KafkaTopicNameHelper;
+import org.folio.kafka.OffsetResetStrategy;
 import org.folio.kafka.SubscriptionDefinition;
+import org.folio.kafka.services.ModuleIdResolver;
 
 public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle {
 
@@ -76,10 +77,12 @@ public class ConsortiumInstanceSharingConsumerVerticle extends AbstractVerticle 
       .loadLimit(loadLimit)
       .globalLoadSensor(new GlobalLoadSensor())
       .subscriptionDefinition(subscriptionDefinition)
+      .autoOffsetReset(OffsetResetStrategy.EARLIEST)
       .build();
 
+    var moduleId = ModuleIdResolver.resolve("mod-inventory");
     return consumerWrapper
-      .start(recordHandler, ConsumerWrapperUtil.constructModuleName())
+      .start(recordHandler, moduleId, moduleId)
       .map(consumerWrapper);
   }
 

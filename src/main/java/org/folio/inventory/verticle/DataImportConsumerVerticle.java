@@ -31,9 +31,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventTypes;
 import org.folio.inventory.dataimport.consumers.DataImportKafkaConsumer;
-import org.folio.inventory.dataimport.util.ConsumerWrapperUtil;
 import org.folio.inventory.support.KafkaConsumerVerticle;
 import org.folio.kafka.KafkaConsumerWrapper;
+import org.folio.kafka.OffsetResetStrategy;
+import org.folio.kafka.services.ModuleIdResolver;
 import org.folio.processing.events.EventManager;
 
 public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
@@ -74,10 +75,11 @@ public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
       getMaxDistributionNumber(MAX_DISTRIBUTION_PROPERTY));
 
     var businessHandler = new DataImportKafkaConsumer(vertx, getStorage(), getHttpClient(), getKafkaConfig());
+    var moduleId = ModuleIdResolver.resolve("mod-inventory");
 
     var futures = EVENT_TYPES.stream()
-      .map(type -> super.createConsumer(type.value(), LOAD_LIMIT_PROPERTY))
-      .map(consumerWrapper -> startKafkaConsumer(consumerWrapper, businessHandler))
+      .map(type -> super.createConsumer(type.value(), LOAD_LIMIT_PROPERTY, OffsetResetStrategy.EARLIEST))
+      .map(consumerWrapper -> startKafkaConsumer(consumerWrapper, businessHandler, moduleId))
       .toList();
 
     Future.all(futures)
@@ -91,8 +93,9 @@ public class DataImportConsumerVerticle extends KafkaConsumerVerticle {
   }
 
   private Future<KafkaConsumerWrapper<String, String>> startKafkaConsumer(KafkaConsumerWrapper<String, String> consumer,
-                                                                          DataImportKafkaConsumer businessHandler) {
-    return consumer.start(businessHandler, ConsumerWrapperUtil.constructModuleName())
+                                                                          DataImportKafkaConsumer businessHandler,
+                                                                          String moduleId) {
+    return consumer.start(businessHandler, moduleId, moduleId)
       .map(consumer);
   }
 }

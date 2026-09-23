@@ -14,6 +14,7 @@ import org.folio.dataimport.testsupport.kafka.KafkaExtension;
 import org.folio.dataimport.testsupport.rest.BaseWireMockTest;
 import org.folio.inventory.common.VertxAssistant;
 import org.folio.kafka.KafkaConfig;
+import org.folio.kafka.services.ModuleIdResolver;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -27,11 +28,14 @@ public abstract class KafkaTest extends BaseWireMockTest {
   protected static KafkaConfig kafkaConfig;
   protected static DeploymentOptions deploymentOptions;
 
+  private static final String MODULE_VERSION = "1.0.0";
+
   @BeforeAll
   public static void beforeAll() {
     // Reduce metadata refresh interval so pattern-subscribed consumers discover newly-created
     // topics quickly in tests rather than waiting the default 30 s.
     System.setProperty(KafkaConfig.KAFKA_CONSUMER_METADATA_MAX_AGE_CONFIG, "1000");
+    System.setProperty(ModuleIdResolver.MODULE_VERSION, MODULE_VERSION);
     vertxAssistant = new VertxAssistant();
     vertxAssistant.start();
 
@@ -58,5 +62,6 @@ public abstract class KafkaTest extends BaseWireMockTest {
   @AfterAll
   public static void afterAll() {
     vertxAssistant.stop();
+    System.clearProperty(ModuleIdResolver.MODULE_VERSION);
   }
 }
