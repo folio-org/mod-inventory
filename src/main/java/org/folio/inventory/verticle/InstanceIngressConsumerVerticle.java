@@ -1,12 +1,12 @@
 package org.folio.inventory.verticle;
 
-import static org.folio.inventory.dataimport.util.ConsumerWrapperUtil.constructModuleName;
-
 import io.vertx.core.Promise;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.inventory.instanceingress.InstanceIngressEventConsumer;
 import org.folio.inventory.support.KafkaConsumerVerticle;
+import org.folio.kafka.OffsetResetStrategy;
+import org.folio.kafka.services.ModuleIdResolver;
 
 public class InstanceIngressConsumerVerticle extends KafkaConsumerVerticle {
 
@@ -19,9 +19,18 @@ public class InstanceIngressConsumerVerticle extends KafkaConsumerVerticle {
   public void start(Promise<Void> startPromise) {
     var instanceIngressEventHandler = new InstanceIngressEventConsumer(vertx, getStorage(), getHttpClient());
 
-    var consumerWrapper = createConsumer(INSTANCE_INGRESS_TOPIC, BASE_PROPERTY);
+    // POC - OffsetResetStrategy.LATEST = start from the latest offset and do
+    //       not read the messages that were already in the topic before this
+    //       version was deployed.
+    var consumerWrapper = createConsumer(INSTANCE_INGRESS_TOPIC, BASE_PROPERTY, OffsetResetStrategy.LATEST);
 
-    consumerWrapper.start(instanceIngressEventHandler, constructModuleName())
+    // POC - Resolve the same module id that is used by mgr-tenant-entitlements
+    //       and sidecar for this module.
+    //       eg: mod-inventory-1.0.0-SNAPSHOT.1021
+    var moduleId = ModuleIdResolver.resolve("mod-inventory");
+
+    // POC - Use the three-argument version of start()
+    consumerWrapper.start(instanceIngressEventHandler, moduleId, moduleId)
       .onFailure(startPromise::fail)
       .onSuccess(ar -> startPromise.complete());
   }

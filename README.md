@@ -64,6 +64,13 @@ There are several properties that should be set for modules that interact with K
 After setup, it is good to check logs in all related modules for errors.
 
 **Environment variables** that can be adjusted for this module and default values:
+ * Tenant entitlement aware Kafka message filtering:
+    * `MODULE_VERSION`: no default. Must exactly match the `MODULE_VERSION` supplied to the associated sidecar.
+    * `KAFKA_TENANT_FILTER_ENABLED`: `false`. Set to `true` to enable tenant-aware Kafka filtering.
+    * `KAFKA_TENANT_FILTER_TENANT_DISABLED_STRATEGY`: `SKIP`. Strategy applied when a message's tenant is not entitled to this module version. Supported values are `ACCEPT`, `SKIP`, and `FAIL`.
+    * `KAFKA_TENANT_FILTER_ALL_TENANTS_DISABLED_STRATEGY`: `FAIL`. Strategy applied when no tenants are entitled to this module version. Must be set to `SKIP` in mixed-version environments.
+    * `KAFKA_TENANT_FILTER_ENTITLEMENT_REFRESH_INTERVAL_SECONDS`: `900`. Interval for refreshing the entitlement cache from the sidecar.
+    * `KAFKA_TENANT_FILTER_ENTITLEMENT_LOOKUP_TIMEOUT_SECONDS`: `5`. Timeout for an entitlement lookup request to the sidecar.
  * These variables are relevant from the **Iris** release. Module version from 16.3.0:
     * "_inventory.kafka.DataImportConsumerVerticle.instancesNumber_": 5
     * "_inventory.kafka.MarcBibInstanceHridSetConsumerVerticle.instancesNumber_": 5
@@ -148,4 +155,3 @@ This module's [API documentation](https://dev.folio.org/reference/api/#mod-inven
 The built artifacts for this module are available.
 See [configuration](https://dev.folio.org/download/artifacts) for repository access,
 and the [Docker image](https://hub.docker.com/r/folioorg/mod-inventory/).
-
