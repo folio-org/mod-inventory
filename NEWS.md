@@ -7,7 +7,7 @@
 * Requires `API_NAME vX.Y`
 
 ### Features
-* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+* Update mod-inventory mark-deleted descriptor to require an access token [MODINV-1390](https://folio-org.atlassian.net/browse/MODINV-1390)
 
 ### Bug fixes
 * Imported MARC Bib with 999ff (using "Modify action") is incorrectly linked to Instance [MODINV-1410](https://folio-org.atlassian.net/browse/MODINV-1410)
