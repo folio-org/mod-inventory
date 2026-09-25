@@ -230,9 +230,9 @@ abstract class ExternalStorageModuleCollection<T> {
     return request;
   }
 
-  private void find(String location,
-                    Consumer<Success<MultipleRecords<T>>> resultCallback,
-                    Consumer<Failure> failureCallback) {
+  protected void find(String location,
+                      Consumer<Success<MultipleRecords<T>>> resultCallback,
+                      Consumer<Failure> failureCallback) {
 
     final HttpRequest<Buffer> request = withStandardHeaders(webClient.getAbs(location));
     request.send()

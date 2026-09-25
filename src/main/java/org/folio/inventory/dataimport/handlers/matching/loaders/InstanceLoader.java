@@ -7,13 +7,19 @@ import static org.folio.rest.jaxrs.model.EntityType.INSTANCE;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import org.folio.DataImportEventPayload;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
+import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.AbstractPreloader;
-import org.folio.inventory.domain.SearchableCollection;
 import org.folio.inventory.domain.instances.Instance;
+import org.folio.inventory.domain.instances.InstanceCollection;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.matching.loader.LoadResult;
 import org.folio.processing.matching.loader.query.LoadQuery;
@@ -53,8 +59,19 @@ public class InstanceLoader extends AbstractLoader<Instance> {
   }
 
   @Override
-  protected SearchableCollection<Instance> getSearchableCollection(Context context) {
+  protected InstanceCollection getSearchableCollection(Context context) {
     return storage.getInstanceCollection(context);
+  }
+
+  @Override
+  protected void executeQuery(Context context, String cql, PagingParameters pagingParameters,
+                              Consumer<Success<MultipleRecords<Instance>>> onSuccess, Consumer<Failure> onFailure)
+    throws UnsupportedEncodingException {
+    // Member-tenant instance searches for matching never need consortium shadow copies: a shadow copy
+    // shares its id with the shared instance it mirrors, so excluding it here avoids the local/central
+    // ambiguity described in MODINV-1400 without affecting central-tenant or non-consortium searches,
+    // where no shadow-copy-sourced records exist to exclude.
+    getSearchableCollection(context).findByCql(cql, false, pagingParameters, onSuccess, onFailure);
   }
 
   @Override

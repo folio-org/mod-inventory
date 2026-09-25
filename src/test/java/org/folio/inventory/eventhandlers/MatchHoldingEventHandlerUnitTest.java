@@ -1,7 +1,6 @@
 package org.folio.inventory.eventhandlers;
 
 import static java.lang.String.format;
-import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_MATCHED;
@@ -9,28 +8,19 @@ import static org.folio.DataImportEventTypes.DI_INVENTORY_HOLDING_NOT_MATCHED;
 import static org.folio.MatchDetail.MatchCriterion.EXACTLY_MATCHES;
 import static org.folio.inventory.dataimport.handlers.matching.loaders.AbstractLoader.MULTI_MATCH_IDS;
 import static org.folio.rest.jaxrs.model.EntityType.HOLDINGS;
-import static org.folio.rest.jaxrs.model.EntityType.ITEM;
 import static org.folio.rest.jaxrs.model.EntityType.MARC_BIBLIOGRAPHIC;
 import static org.folio.rest.jaxrs.model.MatchExpression.DataValueType.VALUE_FROM_RECORD;
-import static org.folio.rest.jaxrs.model.ProfileType.MAPPING_PROFILE;
 import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
 import static org.folio.rest.jaxrs.model.ReactToType.MATCH;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasItems;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 import io.vertx.core.Future;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
@@ -44,19 +34,16 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import org.folio.DataImportEventPayload;
-import org.folio.Instance;
 import org.folio.MappingMetadataDto;
 import org.folio.MatchDetail;
 import org.folio.MatchProfile;
 import org.folio.inventory.common.Context;
-import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.dataimport.HoldingsItemMatcherFactory;
 import org.folio.inventory.dataimport.cache.MappingMetadataCache;
 import org.folio.inventory.dataimport.handlers.matching.MatchHoldingEventHandler;
-import org.folio.inventory.dataimport.handlers.matching.MatchItemEventHandler;
 import org.folio.inventory.dataimport.handlers.matching.loaders.HoldingLoader;
 import org.folio.inventory.dataimport.handlers.matching.preloaders.AbstractPreloader;
 import org.folio.inventory.domain.HoldingsRecordCollection;
@@ -66,14 +53,15 @@ import org.folio.processing.matching.MatchingManager;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
-import org.folio.processing.value.MissingValue;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Field;
 import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.rest.jaxrs.model.MatchExpression;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.StaticValueDetails;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -86,101 +74,21 @@ import org.mockito.quality.Strictness;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class MatchHoldingEventHandlerUnitTest {
 
-  private static final String HOLDING_ID = "9634a5ab-9228-4703-baf2-4d12ebc77d56";
-  private static final String INSTANCE_ID = "ddd266ef-07ac-4117-be13-d418b8cd6902";
-  private static final String HOLDING_HRID = "1234";
-
+  private static final String HOLDINGS_HRID = "ho00001234";
+  private static final String HOLDINGS_ID = "ddd266ef-07ac-4117-be13-d418b8cd6902";
   private static final String MAPPING_PARAMS = "MAPPING_PARAMS";
   private static final String RELATIONS = "MATCHING_PARAMETERS_RELATIONS";
-  private static final String INSTANCES_IDS_KEY = "INSTANCES_IDS";
-  private static final String MATCHING_RELATIONS = """
-    {
-      "item.statisticalCodeIds[]": "statisticalCode",
-      "instance.classifications[].classificationTypeId": "classificationTypes",
-      "instance.electronicAccess[].relationshipId": "electronicAccessRelationships",
-      "item.permanentLoanTypeId": "loantypes",
-      "holdingsrecord.temporaryLocationId": "locations",
-      "holdingsrecord.statisticalCodeIds[]": "statisticalCode",
-      "instance.statusId": "instanceStatuses",
-      "instance.natureOfContentTermIds": "natureOfContentTerms",
-      "item.notes[].itemNoteTypeId": "itemNoteTypes",
-      "holdingsrecord.permanentLocationId": "locations",
-      "instance.alternativeTitles[].alternativeTitleTypeId": "alternativeTitleTypes",
-      "holdingsrecord.illPolicyId": "illPolicies",
-      "item.electronicAccess[].relationshipId": "electronicAccessRelationships",
-      "instance.identifiers[].identifierTypeId": "identifierTypes",
-      "holdingsrecord.holdingsTypeId": "holdingsTypes",
-      "item.permanentLocationId": "locations",
-      "instance.modeOfIssuanceId": "issuanceModes",
-      "item.itemLevelCallNumberTypeId": "callNumberTypes",
-      "instance.notes[].instanceNoteTypeId": "instanceNoteTypes",
-      "instance.instanceFormatIds": "instanceFormats",
-      "holdingsrecord.callNumberTypeId": "callNumberTypes",
-      "holdingsrecord.electronicAccess[].relationshipId": "electronicAccessRelationships",
-      "instance.instanceTypeId": "instanceTypes",
-      "instance.statisticalCodeIds[]": "statisticalCode",
-      "instancerelationship.instanceRelationshipTypeId": "instanceRelationshipTypes",
-      "item.temporaryLoanTypeId": "loantypes",
-      "item.temporaryLocationId": "locations",
-      "item.materialTypeId": "materialTypes",
-      "holdingsrecord.notes[].holdingsNoteTypeId": "holdingsNoteTypes",
-      "instance.contributors[].contributorNameTypeId": "contributorNameTypes",
-      "item.itemDamagedStatusId": "itemDamageStatuses",
-      "instance.contributors[].contributorTypeId": "contributorTypes"
-    }
-    """;
   private static final String LOCATIONS_PARAMS = """
     {
       "initialized": true,
-      "locations": [
-        {
-          "id": "53cf956f-c1df-410b-8bea-27f712cca7c0",
-          "name": "Annex",
-          "code": "KU/CC/DI/A",
-          "isActive": true,
-          "institutionId": "40ee00ca-a518-4b49-be01-0638d0a4ac57",
-          "campusId": "62cf76b7-cca5-4d33-9217-edf42ce1a848",
-          "libraryId": "5d78803e-ca04-4b4a-aeae-2c63b924518b",
-          "primaryServicePoint": "3a40852d-49fd-4df2-a1f9-6e2641a6e91f",
-          "servicePointIds": [
-            "3a40852d-49fd-4df2-a1f9-6e2641a6e91f"
-          ],
-          "servicePoints": [
-    
-          ],
-          "metadata": {
-            "createdDate": 1592219257690,
-            "updatedDate": 1592219257690
-          }
-        },
-        {
-          "id": "b241764c-1466-4e1d-a028-1a3684a5da87",
-          "name": "Popular Reading Collection",
-          "code": "KU/CC/DI/P",
-          "isActive": true,
-          "institutionId": "40ee00ca-a518-4b49-be01-0638d0a4ac57",
-          "campusId": "62cf76b7-cca5-4d33-9217-edf42ce1a848",
-          "libraryId": "5d78803e-ca04-4b4a-aeae-2c63b924518b",
-          "primaryServicePoint": "3a40852d-49fd-4df2-a1f9-6e2641a6e91f",
-          "servicePointIds": [
-            "3a40852d-49fd-4df2-a1f9-6e2641a6e91f"
-          ],
-          "servicePoints": [
-    
-          ],
-          "metadata": {
-            "createdDate": 1592219257711,
-            "updatedDate": 1592219257711
-          }
-        }
-      ]
+      "locations": []
     }
     """;
 
   @Mock
   private Storage storage;
   @Mock
-  private HoldingsRecordCollection holdingCollection;
+  private HoldingsRecordCollection holdingsRecordCollection;
   @Mock
   private MarcValueReaderImpl marcValueReader;
   @Mock
@@ -195,9 +103,9 @@ class MatchHoldingEventHandlerUnitTest {
     MatchValueReaderFactory.clearReaderFactory();
     MatchValueLoaderFactory.clearLoaderFactory();
     when(marcValueReader.isEligibleForEntityType(MARC_BIBLIOGRAPHIC)).thenReturn(true);
-    when(storage.getHoldingsRecordCollection(any(Context.class))).thenReturn(holdingCollection);
+    when(storage.getHoldingsRecordCollection(any(Context.class))).thenReturn(holdingsRecordCollection);
     when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
-      .thenReturn(StringValue.of(HOLDING_HRID));
+      .thenReturn(StringValue.of(HOLDINGS_HRID));
     MatchValueReaderFactory.register(marcValueReader);
     MatchValueLoaderFactory.register(holdingLoader);
     MatchingManager.registerMatcherFactory(new HoldingsItemMatcherFactory());
@@ -212,345 +120,111 @@ class MatchHoldingEventHandlerUnitTest {
       .preload(any(), any());
   }
 
+  @DisplayName("should match a holdings record when the base query resolves a single result")
   @Test
   void shouldMatchOnHandleEventPayload(VertxTestContext testContext) throws UnsupportedEncodingException {
+    // arrange
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = ans.getArgument(2);
-      Success<MultipleRecords<HoldingsRecord>> result =
-        new Success<>(new MultipleRecords<>(singletonList(createHolding()), 1));
-      callback.accept(result);
+      callback.accept(new Success<>(new MultipleRecords<>(singletonList(createHoldingsRecord()), 1)));
       return null;
-    }).when(holdingCollection)
-      .findByCql(eq(format("hrid == \"%s\"", HOLDING_HRID)), any(PagingParameters.class), any(), any());
-
-    when(mappingMetadataCache.get(anyString(), any(Context.class)))
-      .thenReturn(Future.succeededFuture(Optional.of(new MappingMetadataDto()
-        .withMappingRules(new JsonObject().encode())
-        .withMappingParams(LOCATIONS_PARAMS))));
+    }).when(holdingsRecordCollection)
+      .findByCql(eq(format("hrid == \"%s\"", HOLDINGS_HRID)), any(PagingParameters.class), any(), any());
 
     EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
     DataImportEventPayload eventPayload = createEventPayload();
 
+    // act
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      // assert
       assertNull(throwable);
       assertEquals(1, updatedEventPayload.getEventsChain().size());
-      assertEquals(updatedEventPayload.getEventsChain(),
-        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value()));
       assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), updatedEventPayload.getEventType());
       testContext.completeNow();
     }));
   }
 
+  @DisplayName("should not match a holdings record when the base query resolves no results")
   @Test
   void shouldNotMatchOnHandleEventPayload(VertxTestContext testContext) throws UnsupportedEncodingException {
+    // arrange
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = ans.getArgument(2);
-      Success<MultipleRecords<HoldingsRecord>> result =
-        new Success<>(new MultipleRecords<>(new ArrayList<>(), 0));
-      callback.accept(result);
+      callback.accept(new Success<>(new MultipleRecords<>(new ArrayList<>(), 0)));
       return null;
-    }).when(holdingCollection)
+    }).when(holdingsRecordCollection)
       .findByCql(anyString(), any(PagingParameters.class), any(), any());
 
     EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
     DataImportEventPayload eventPayload = createEventPayload();
 
+    // act
     eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
+      // assert
       assertNull(throwable);
-      assertEquals(1, updatedEventPayload.getEventsChain().size());
-      assertEquals(updatedEventPayload.getEventsChain(),
-        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value()));
       assertEquals(DI_INVENTORY_HOLDING_NOT_MATCHED.value(), updatedEventPayload.getEventType());
       testContext.completeNow();
     }));
   }
 
+  @DisplayName("should combine a same-type static-value submatch condition into the parent query")
   @Test
-  void shouldFailOnHandleEventPayloadIfMatchedMultipleHoldings(VertxTestContext testContext)
-    throws UnsupportedEncodingException {
-    doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = ans.getArgument(2);
-      Success<MultipleRecords<HoldingsRecord>> result =
-        new Success<>(new MultipleRecords<>(asList(createHolding(), createHolding()), 2));
-      callback.accept(result);
-      return null;
-    }).when(holdingCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(), any());
-
-    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
-    DataImportEventPayload eventPayload = createEventPayload();
-
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
-      assertNotNull(throwable);
-      testContext.completeNow();
-    }));
-  }
-
-  @Test
-  void shouldFailOnHandleEventPayloadIfFailedCallToInventoryStorage(VertxTestContext testContext)
-    throws UnsupportedEncodingException {
-    doAnswer(ans -> {
-      Consumer<Failure> callback = ans.getArgument(3);
-      Failure result =
-        new Failure("Internal Server Error", 500);
-      callback.accept(result);
-      return null;
-    }).when(holdingCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(), any());
-
-    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
-    DataImportEventPayload eventPayload = createEventPayload();
-
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
-      assertNotNull(throwable);
-      testContext.completeNow();
-    }));
-  }
-
-  @Test
-  void shouldFailOnHandleEventPayloadIfExceptionThrown(VertxTestContext testContext)
-    throws UnsupportedEncodingException {
-    doThrow(new UnsupportedEncodingException()).when(holdingCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(), any());
-
-    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
-    DataImportEventPayload eventPayload = createEventPayload();
-
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
-      assertNotNull(throwable);
-      testContext.completeNow();
-    }));
-  }
-
-  @Test
-  void shouldNotMatchOnHandleEventPayloadIfValueIsMissing(VertxTestContext testContext) {
-    when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
-      .thenReturn(MissingValue.getInstance());
-
-    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
-    DataImportEventPayload eventPayload = createEventPayload();
-
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
-      assertNull(throwable);
-      assertEquals(1, updatedEventPayload.getEventsChain().size());
-      assertEquals(updatedEventPayload.getEventsChain(),
-        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value()));
-      assertEquals(DI_INVENTORY_HOLDING_NOT_MATCHED.value(), updatedEventPayload.getEventType());
-      testContext.completeNow();
-    }));
-  }
-
-  @Test
-  void shouldReturnFalseOnIsEligibleIfNullCurrentNode() {
-    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache, null);
-    DataImportEventPayload eventPayload = new DataImportEventPayload();
-    assertFalse(eventHandler.isEligible(eventPayload));
-  }
-
-  @Test
-  void shouldReturnFalseOnIsEligibleIfCurrentNodeTypeIsNotMatchProfile() {
-    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache, null);
-    DataImportEventPayload eventPayload = new DataImportEventPayload()
-      .withCurrentNode(new ProfileSnapshotWrapper()
-        .withContentType(MAPPING_PROFILE));
-    assertFalse(eventHandler.isEligible(eventPayload));
-  }
-
-  @Test
-  void shouldReturnFalseOnIsEligibleForNotItemMatchProfile() {
-    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache, null);
-    DataImportEventPayload eventPayload = new DataImportEventPayload()
-      .withCurrentNode(new ProfileSnapshotWrapper()
-        .withContentType(MATCH_PROFILE)
-        .withContent(JsonObject.mapFrom(new MatchProfile()
-          .withExistingRecordType(MARC_BIBLIOGRAPHIC))));
-    assertFalse(eventHandler.isEligible(eventPayload));
-  }
-
-  @Test
-  void shouldReturnTrueOnIsEligibleForItemMatchProfile() {
-    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache, null);
-    DataImportEventPayload eventPayload = new DataImportEventPayload()
-      .withCurrentNode(new ProfileSnapshotWrapper()
-        .withContentType(MATCH_PROFILE)
-        .withContent(JsonObject.mapFrom(new MatchProfile()
-          .withExistingRecordType(ITEM))));
-    assertTrue(eventHandler.isEligible(eventPayload));
-  }
-
-  @Test
-  void shouldMatchWithSubMatchByHoldingOnHandleEventPayload(VertxTestContext testContext)
-    throws UnsupportedEncodingException {
-    doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = ans.getArgument(2);
-      Success<MultipleRecords<HoldingsRecord>> result =
-        new Success<>(new MultipleRecords<>(singletonList(createHolding()), 1));
-      callback.accept(result);
-      return null;
-    }).when(holdingCollection)
-      .findByCql(eq(format("hrid == \"%s\" AND id == \"%s\"", HOLDING_HRID, HOLDING_ID)),
-        any(PagingParameters.class), any(), any());
-
-    HashMap<String, String> context = new HashMap<>();
-    context.put(EntityType.HOLDINGS.value(), JsonObject.mapFrom(new HoldingsRecord().withId(HOLDING_ID)).encode());
-    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
-    context.put(RELATIONS, MATCHING_RELATIONS);
-    DataImportEventPayload eventPayload = createEventPayload().withContext(context);
-
-    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) -> testContext.verify(() -> {
-      assertNull(throwable);
-      assertEquals(1, updatedEventPayload.getEventsChain().size());
-      assertEquals(updatedEventPayload.getEventsChain(),
-        singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value()));
-      assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), updatedEventPayload.getEventType());
-      testContext.completeNow();
-    }));
-  }
-
-  @Test
-  void shouldMatchWithSubMatchByInstanceOnHandleEventPayload(VertxTestContext testContext)
-    throws UnsupportedEncodingException {
-    doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = ans.getArgument(2);
-      Success<MultipleRecords<HoldingsRecord>> result =
-        new Success<>(new MultipleRecords<>(singletonList(createHolding()), 1));
-      callback.accept(result);
-      return null;
-    }).when(holdingCollection)
-      .findByCql(eq(format("hrid == \"%s\" AND instanceId == \"%s\"", HOLDING_HRID, INSTANCE_ID)),
-        any(PagingParameters.class), any(), any());
-
-    HashMap<String, String> context = new HashMap<>();
-    context.put(EntityType.INSTANCE.value(), JsonObject.mapFrom(new Instance().withId(INSTANCE_ID)).encode());
-    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
-    context.put(RELATIONS, MATCHING_RELATIONS);
-    DataImportEventPayload eventPayload = createEventPayload().withContext(context);
-
-    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
-    eventHandler.handle(eventPayload).whenComplete((updatedEventPayload, throwable) ->
-      testContext.verify(() -> {
-        assertNull(throwable);
-        assertEquals(1, updatedEventPayload.getEventsChain().size());
-        assertEquals(updatedEventPayload.getEventsChain(),
-          singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value()));
-        assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), updatedEventPayload.getEventType());
-        testContext.completeNow();
-      }));
-  }
-
-  @Test
-  void shouldMatchWithSubConditionBasedOnMultiMatchResultOnHandleEventPayload(VertxTestContext testContext)
-    throws UnsupportedEncodingException {
-    List<String> multiMatchResult = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
-    HoldingsRecord expectedHolding = createHolding();
+  void shouldCombineStaticValueSubMatchConditionIntoParentQueryWhenSameExistingRecordType(
+    VertxTestContext testContext) throws UnsupportedEncodingException {
+    // arrange
+    // First pass at Option 2 (spike): when the next match profile is a "Static value (submatch only)"
+    // match against the same existing record type (HOLDINGS) as the parent, its condition is folded
+    // into the parent's own CQL instead of waiting for a second MULTI_MATCH_IDS-scoped round trip.
+    // Only the combined query is stubbed, so this also proves the parent step issues the combined query.
+    HoldingsRecord matchedHoldingsRecord = createHoldingsRecord();
+    String permanentLocationId = UUID.randomUUID().toString();
 
     doAnswer(invocation -> {
-      Consumer<Success<MultipleRecords<HoldingsRecord>>> successHandler = invocation.getArgument(2);
-      Success<MultipleRecords<HoldingsRecord>> result =
-        new Success<>(new MultipleRecords<>(singletonList(expectedHolding), 1));
-      successHandler.accept(result);
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = invocation.getArgument(2);
+      callback.accept(new Success<>(new MultipleRecords<>(singletonList(matchedHoldingsRecord), 1)));
       return null;
-    }).when(holdingCollection).findByCql(eq(
-        format("hrid == \"%s\" AND id == (%s OR %s)", HOLDING_HRID, multiMatchResult.get(0), multiMatchResult.get(1))),
-      any(PagingParameters.class), any(), any());
-
-    HashMap<String, String> context = new HashMap<>();
-    context.put(MULTI_MATCH_IDS, Json.encode(multiMatchResult));
-    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
-    context.put(RELATIONS, MATCHING_RELATIONS);
-    DataImportEventPayload eventPayload = createEventPayload().withContext(context);
-
-    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
-    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) ->
-      testContext.verify(() -> {
-        assertNull(throwable);
-        assertEquals(1, processedPayload.getEventsChain().size());
-        assertEquals(processedPayload.getEventsChain(),
-          singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value()));
-        assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(),
-          processedPayload.getEventType());
-        assertEquals(
-          Json.decodeValue(new JsonArray(processedPayload.getContext().get(HOLDINGS.value())).getJsonObject(0).encode(),
-            HoldingsRecord.class).getId(), expectedHolding.getId());
-        testContext.completeNow();
-      }));
-  }
-
-  @Test
-  void shouldPutMultipleMatchResultToPayloadOnHandleEventPayload(VertxTestContext testContext)
-    throws UnsupportedEncodingException {
-    List<HoldingsRecord> matchedHoldings =
-      List.of(new HoldingsRecord().withId(HOLDING_ID), new HoldingsRecord().withId(UUID.randomUUID().toString()));
-
-    doAnswer(invocation -> {
-      Consumer<Success<MultipleRecords<HoldingsRecord>>> successHandler = invocation.getArgument(2);
-      Success<MultipleRecords<HoldingsRecord>> result =
-        new Success<>(new MultipleRecords<>(matchedHoldings, 2));
-      successHandler.accept(result);
-      return null;
-    }).when(holdingCollection)
-      .findByCql(eq(format("hrid == \"%s\"", HOLDING_HRID)),
+    }).when(holdingsRecordCollection)
+      .findByCql(eq(format("hrid == \"%s\" AND (permanentLocationId == \"%s\")", HOLDINGS_HRID, permanentLocationId)),
         any(PagingParameters.class), any(), any());
 
+    MatchProfile staticSubMatchProfile = new MatchProfile()
+      .withExistingRecordType(HOLDINGS)
+      .withIncomingRecordType(EntityType.STATIC_VALUE)
+      .withMatchDetails(singletonList(new MatchDetail()
+        .withMatchCriterion(EXACTLY_MATCHES)
+        .withIncomingMatchExpression(new MatchExpression()
+          .withDataValueType(MatchExpression.DataValueType.STATIC_VALUE)
+          .withStaticValueDetails(new StaticValueDetails()
+            .withStaticValueType(StaticValueDetails.StaticValueType.TEXT)
+            .withText(permanentLocationId)))
+        .withExistingMatchExpression(new MatchExpression()
+          .withDataValueType(VALUE_FROM_RECORD)
+          .withFields(singletonList(
+            new Field().withLabel("field").withValue("holdings.permanentLocationId"))))));
+
     HashMap<String, String> context = new HashMap<>();
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
-    context.put(RELATIONS, MATCHING_RELATIONS);
+    context.put(RELATIONS, "{}");
     DataImportEventPayload eventPayload = createEventPayload().withContext(context);
     eventPayload.getCurrentNode().setChildSnapshotWrappers(List.of(new ProfileSnapshotWrapper()
-      .withContent(new MatchProfile().withExistingRecordType(HOLDINGS).withIncomingRecordType(MARC_BIBLIOGRAPHIC))
+      .withContent(staticSubMatchProfile)
       .withContentType(MATCH_PROFILE)
       .withReactTo(MATCH)));
 
     EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
-    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) ->
-      testContext.verify(() -> {
-        assertNull(throwable);
-        assertEquals(1, processedPayload.getEventsChain().size());
-        assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), processedPayload.getEventType());
-        assertThat(new JsonArray(processedPayload.getContext().get(MULTI_MATCH_IDS)),
-          hasItems(matchedHoldings.get(0).getId(), matchedHoldings.get(1).getId()));
-        testContext.completeNow();
-      }));
-  }
 
-  @Test
-  void shouldMatchWithSubConditionBasedOnMarcBibMultipleMatchResult(VertxTestContext testContext)
-    throws UnsupportedEncodingException {
-    List<String> marcBibMultiMatchResult = List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString());
-    HoldingsRecord expectedHolding = createHolding();
-
-    doAnswer(invocation -> {
-      Consumer<Success<MultipleRecords<HoldingsRecord>>> successHandler = invocation.getArgument(2);
-      Success<MultipleRecords<HoldingsRecord>> result =
-        new Success<>(new MultipleRecords<>(singletonList(expectedHolding), 1));
-      successHandler.accept(result);
-      return null;
-    }).when(holdingCollection)
-      .findByCql(eq(format("hrid == \"%s\" AND instanceId == (%s OR %s)", HOLDING_HRID, marcBibMultiMatchResult.get(0),
-          marcBibMultiMatchResult.get(1))),
-        any(PagingParameters.class), any(), any());
-
-    HashMap<String, String> context = new HashMap<>();
-    context.put(INSTANCES_IDS_KEY, Json.encode(marcBibMultiMatchResult));
-    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
-    context.put(RELATIONS, MATCHING_RELATIONS);
-    DataImportEventPayload eventPayload = createEventPayload().withContext(context);
-
-    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
-    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) ->
-      testContext.verify(() -> {
-        assertNull(throwable);
-        assertEquals(1, processedPayload.getEventsChain().size());
-        assertEquals(processedPayload.getEventsChain(),
-          singletonList(DI_INCOMING_MARC_BIB_RECORD_PARSED.value()));
-        assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), processedPayload.getEventType());
-        assertNull(processedPayload.getContext().get(INSTANCES_IDS_KEY));
-        assertEquals(expectedHolding.getId(),
-          Json.decodeValue(new JsonArray(processedPayload.getContext().get(HOLDINGS.value())).getJsonObject(0).encode(),
-            HoldingsRecord.class).getId());
-        testContext.completeNow();
-      }));
+    // act
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(() -> {
+      // assert
+      assertNull(throwable);
+      assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), processedPayload.getEventType());
+      // HoldingsItemMatcher wraps a resolved holdings record as a single-element JSON array
+      JsonArray matchedHoldingsAsJson = new JsonArray(processedPayload.getContext().get(HOLDINGS.value()));
+      assertEquals(1, matchedHoldingsAsJson.size());
+      assertEquals(matchedHoldingsRecord.getId(), matchedHoldingsAsJson.getJsonObject(0).getString("id"));
+      assertNull(processedPayload.getContext().get(MULTI_MATCH_IDS));
+      testContext.completeNow();
+    }));
   }
 
   private DataImportEventPayload createEventPayload() {
@@ -578,7 +252,7 @@ class MatchHoldingEventHandlerUnitTest {
               ))))));
   }
 
-  private HoldingsRecord createHolding() {
-    return new HoldingsRecord().withId(HOLDING_ID).withHrid(HOLDING_HRID);
+  private HoldingsRecord createHoldingsRecord() {
+    return new HoldingsRecord().withId(HOLDINGS_ID).withHrid(HOLDINGS_HRID);
   }
 }

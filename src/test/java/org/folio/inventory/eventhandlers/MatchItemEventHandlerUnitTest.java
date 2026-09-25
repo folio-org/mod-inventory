@@ -74,6 +74,7 @@ import org.folio.rest.jaxrs.model.Field;
 import org.folio.rest.jaxrs.model.HoldingsRecord;
 import org.folio.rest.jaxrs.model.MatchExpression;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.StaticValueDetails;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -516,6 +517,54 @@ class MatchItemEventHandlerUnitTest {
       assertEquals(DI_INVENTORY_ITEM_MATCHED.value(), processedPayload.getEventType());
       assertThat(new JsonArray(processedPayload.getContext().get(MULTI_MATCH_IDS)),
         hasItems(matchedItems.get(0).getId(), matchedItems.get(1).getId()));
+      testContext.completeNow();
+    }));
+  }
+
+  @Test
+  void shouldCombineStaticValueSubMatchConditionIntoParentQueryWhenSameExistingRecordType(
+    VertxTestContext testContext) throws UnsupportedEncodingException {
+    Item matchedItem = createItem();
+    String materialTypeId = UUID.randomUUID().toString();
+
+    doAnswer(invocation -> {
+      Consumer<Success<MultipleRecords<Item>>> callback = invocation.getArgument(2);
+      callback.accept(new Success<>(new MultipleRecords<>(singletonList(matchedItem), 1)));
+      return null;
+    }).when(itemCollection)
+      .findByCql(eq(format("hrid == \"%s\" AND (materialTypeId == \"%s\")", ITEM_HRID, materialTypeId)),
+        any(PagingParameters.class), any(), any());
+
+    MatchProfile staticSubMatchProfile = new MatchProfile()
+      .withExistingRecordType(ITEM)
+      .withIncomingRecordType(EntityType.STATIC_VALUE)
+      .withMatchDetails(singletonList(new MatchDetail()
+        .withMatchCriterion(EXACTLY_MATCHES)
+        .withIncomingMatchExpression(new MatchExpression()
+          .withDataValueType(MatchExpression.DataValueType.STATIC_VALUE)
+          .withStaticValueDetails(new StaticValueDetails()
+            .withStaticValueType(StaticValueDetails.StaticValueType.TEXT)
+            .withText(materialTypeId)))
+        .withExistingMatchExpression(new MatchExpression()
+          .withDataValueType(VALUE_FROM_RECORD)
+          .withFields(singletonList(new Field().withLabel("field").withValue("item.materialTypeId"))))));
+
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
+    context.put(RELATIONS, MATCHING_RELATIONS);
+    DataImportEventPayload eventPayload = createEventPayload().withContext(context);
+    eventPayload.getCurrentNode().setChildSnapshotWrappers(List.of(new ProfileSnapshotWrapper()
+      .withContent(staticSubMatchProfile)
+      .withContentType(MATCH_PROFILE)
+      .withReactTo(MATCH)));
+
+    EventHandler eventHandler = new MatchItemEventHandler(mappingMetadataCache, null);
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(DI_INVENTORY_ITEM_MATCHED.value(), processedPayload.getEventType());
+      assertEquals(matchedItem.getId(),
+        new JsonObject(processedPayload.getContext().get(ITEM.value())).getString("id"));
+      assertNull(processedPayload.getContext().get(MULTI_MATCH_IDS));
       testContext.completeNow();
     }));
   }
