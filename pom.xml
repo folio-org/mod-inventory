@@ -28,14 +28,14 @@
     <mod-source-record-manager-client.version>4.1.0-SNAPSHOT</mod-source-record-manager-client.version>
     <folio-isbn-util.version>1.10.0-SNAPSHOT</folio-isbn-util.version>
 
-    <vertx.version>5.1.8</vertx.version>
+    <vertx.version>5.2.0</vertx.version>
     <lombok.version>1.18.48</lombok.version>
     <postgres.version>42.7.13</postgres.version>
     <liquibase.version>5.0.4</liquibase.version>
     <kafkaclients.version>4.3.1</kafkaclients.version>
     <log4j.version>2.26.1</log4j.version>
-    <joda-time.version>2.14.3</joda-time.version>
-    <caffeine.version>3.2.4</caffeine.version>
+    <joda-time.version>2.14.4</joda-time.version>
+    <caffeine.version>3.3.0</caffeine.version>
     <guava.version>33.7.1-jre</guava.version>
     <commons-lang3.version>3.20.0</commons-lang3.version>
 
@@ -45,7 +45,7 @@
     <awaitility.version>4.3.0</awaitility.version>
     <rest-assured.version>6.0.1</rest-assured.version>
     <wiremock.version>3.13.2</wiremock.version>
-    <mockito-core.version>5.23.0</mockito-core.version>
+    <mockito-core.version>5.24.0</mockito-core.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
     <byte-buddy.version>1.18.14</byte-buddy.version>
     <json-path-assert.version>3.0.0</json-path-assert.version>
