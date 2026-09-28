@@ -19,7 +19,9 @@
 * Rollback the central instance when the sharing operation fails [MODINV-1420](https://folio-org.atlassian.net/browse/MODINV-1420)
 
 ### Tech Dept
-* Description ([ISSUE](https://folio-org.atlassian.net/browse/ISSUE))
+
+* Introduce own permission for DELETE /inventory/instances/{id}/mark-deleted
+  ([MODINV-1422](https://folio-org.atlassian.net/browse/MODINV-1422))
 
 ### Dependencies
 * Bump `LIB_NAME` from `OLD_VERSION` to `NEW_VERSION`
