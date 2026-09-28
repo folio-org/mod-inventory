@@ -696,7 +696,7 @@
     },
     {
       "id": "instance-storage",
-      "version": "11.3"
+      "version": "11.5"
     },
     {
       "id": "instance-storage-batch-sync",

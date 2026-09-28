@@ -4,7 +4,7 @@
 
 ### New APIs versions
 * Provides `API_NAME vX.Y`
-* Requires `API_NAME vX.Y`
+* Requires `instance-storage v11.5`
 
 ### Features
 * Update mod-inventory mark-deleted descriptor to require an access token [MODINV-1390](https://folio-org.atlassian.net/browse/MODINV-1390)
