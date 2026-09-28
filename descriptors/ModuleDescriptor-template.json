@@ -519,7 +519,9 @@
         {
           "methods": ["DELETE"],
           "pathPattern": "/inventory/instances/{id}/mark-deleted",
-          "permissionsRequired": ["*"],
+          "permissionsRequired": [
+            "inventory.instances.item.mark-deleted.delete"
+          ],
           "modulePermissions": [
             "inventory-storage.instances.item.get",
             "inventory-storage.instances.item.put",
@@ -971,6 +973,11 @@
       "description": "Get configuration for blocked fields of holdings"
     },
     {
+      "permissionName": "inventory.instances.item.mark-deleted.delete",
+      "displayName": "Inventory - mark individual instance as deleted",
+      "description": "Mark individual instance as deleted"
+    },
+    {
       "permissionName": "inventory.all",
       "displayName": "Inventory - all permissions",
       "description": "Entire set of permissions needed to use the inventory",
@@ -993,6 +1000,7 @@
         "inventory.instances.item.patch.execute",
         "inventory.instances.item.delete",
         "inventory.instances.collection.delete",
+        "inventory.instances.item.mark-deleted.delete",
         "inventory.config.instances.blocked-fields.get",
         "inventory.config.holdings.blocked-fields.get",
         "inventory.items.item.mark-withdrawn.post",
