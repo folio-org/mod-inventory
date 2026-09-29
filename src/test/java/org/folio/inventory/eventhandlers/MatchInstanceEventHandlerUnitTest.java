@@ -77,6 +77,7 @@ import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Field;
 import org.folio.rest.jaxrs.model.MatchExpression;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
+import org.folio.rest.jaxrs.model.StaticValueDetails;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -229,13 +230,13 @@ class MatchInstanceEventHandlerUnitTest {
   @Test
   void shouldMatchOnHandleEventPayload(VertxTestContext testContext) throws UnsupportedEncodingException {
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), eq(false), any(PagingParameters.class), any(), any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
@@ -265,22 +266,22 @@ class MatchInstanceEventHandlerUnitTest {
       instanceCollectionCentralTenant);
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), eq(false), any(PagingParameters.class), any(), any());
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(instance), 1));
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), eq(false), any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> Future.succeededFuture(
       Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
@@ -310,22 +311,22 @@ class MatchInstanceEventHandlerUnitTest {
       .thenReturn(instanceCollectionCentralTenant);
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(instance), 1));
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), eq(false), any(PagingParameters.class), any(), any());
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), eq(false), any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> Future.succeededFuture(
       Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
@@ -349,6 +350,62 @@ class MatchInstanceEventHandlerUnitTest {
   }
 
   @Test
+  void shouldNotThrowMultiMatchExceptionWhenLocalResolvesSinglyButCentralFindsMultipleSharedInstances(
+    VertxTestContext testContext) throws UnsupportedEncodingException {
+    // Reproduces the mixed shadow-copy-state scenario: two shared instances have the same OCLC number,
+    // but only one has local holdings (a shadow copy) at the member tenant. The member tenant's own
+    // storage therefore contains only the shadow-copied instance (single local result), while the
+    // central tenant's storage holds both shared instances (ambiguous). This must be deferred to the
+    // "for matches" submatch profile instead of being treated as a local/central conflict.
+    String centralTenantId = "consortium";
+    String consortiumId = "consortiumId";
+
+    Instance localShadowInstance = createInstance();
+    Instance sharedInstanceWithoutLocalShadowCopy =
+      new Instance(UUID.randomUUID().toString(), 5, INSTANCE_HRID, "CONSORTIUM-MARC", "Wonderful", "12334");
+    List<Instance> centralInstances = List.of(localShadowInstance, sharedInstanceWithoutLocalShadowCopy);
+
+    InstanceCollection centralInstanceCollection = mock(InstanceCollection.class);
+    when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId))))
+      .thenReturn(centralInstanceCollection);
+
+    doAnswer(inv -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+      .when(consortiumService).getConsortiumConfiguration(any());
+
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
+      callback.accept(new Success<>(new MultipleRecords<>(singletonList(localShadowInstance), 1)));
+      return null;
+    }).when(instanceCollection)
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), eq(false), any(PagingParameters.class), any(), any());
+
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
+      callback.accept(new Success<>(new MultipleRecords<>(centralInstances, 2)));
+      return null;
+    }).when(centralInstanceCollection)
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), eq(false), any(PagingParameters.class), any(), any());
+
+    MatchProfile subMatchProfile = new MatchProfile()
+      .withExistingRecordType(INSTANCE)
+      .withIncomingRecordType(MARC_BIBLIOGRAPHIC);
+
+    DataImportEventPayload eventPayload = createEventPayload();
+    eventPayload.getCurrentNode().setChildSnapshotWrappers(List.of(new ProfileSnapshotWrapper()
+      .withContent(subMatchProfile)
+      .withContentType(MATCH_PROFILE)
+      .withReactTo(MATCH)));
+
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processedPayload.getEventType());
+      assertThat(new JsonArray(processedPayload.getContext().get(MULTI_MATCH_IDS)),
+        hasItems(localShadowInstance.getId(), sharedInstanceWithoutLocalShadowCopy.getId()));
+      testContext.completeNow();
+    }));
+  }
+
+  @Test
   void shouldMatchOnLocalAndNotMatchCentralTenant(VertxTestContext testContext) throws UnsupportedEncodingException {
     String centralTenantId = "consortium";
     String consortiumId = "consortiumId";
@@ -359,22 +416,22 @@ class MatchInstanceEventHandlerUnitTest {
       instanceCollectionCentralTenant);
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(new ArrayList<>(), 0));
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), eq(false), any(PagingParameters.class), any(), any());
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), eq(false), any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> Future.succeededFuture(
       Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
@@ -409,22 +466,22 @@ class MatchInstanceEventHandlerUnitTest {
     Instance instance = new Instance(UUID.randomUUID().toString(), 5, INSTANCE_HRID, "MARC", "Wonderful", "12334");
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(new ArrayList<>(), 0));
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), eq(false), any(PagingParameters.class), any(), any());
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(instance), 1));
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
-      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), any(PagingParameters.class), any(), any());
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), eq(false), any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> Future.succeededFuture(
       Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
@@ -462,24 +519,24 @@ class MatchInstanceEventHandlerUnitTest {
       instanceCollectionCentralTenant);
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(instance), 1));
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
       .findByCql(eq(format("%s == \"%s\"", PreloadingFields.POL.getExistingMatchField(), INSTANCE_HRID)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
       callback.accept(result);
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("%s == \"%s\"", PreloadingFields.POL.getExistingMatchField(), INSTANCE_HRID)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> Future.succeededFuture(
       Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
@@ -518,24 +575,24 @@ class MatchInstanceEventHandlerUnitTest {
       instanceCollectionCentralTenant);
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(instance), 1));
       callback.accept(result);
       return null;
     }).when(instanceCollectionCentralTenant)
       .findByCql(eq(format("%s == \"%s\"", PreloadingFields.VRN.getExistingMatchField(), INSTANCE_HRID)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
       callback.accept(result);
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("%s == \"%s\"", PreloadingFields.VRN.getExistingMatchField(), INSTANCE_HRID)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     doAnswer(invocationOnMock -> Future.succeededFuture(
       Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
@@ -563,13 +620,13 @@ class MatchInstanceEventHandlerUnitTest {
   @Test
   void shouldNotMatchOnHandleEventPayload(VertxTestContext testContext) throws UnsupportedEncodingException {
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(new ArrayList<>(), 0));
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(), any());
+      .findByCql(anyString(), eq(false), any(PagingParameters.class), any(), any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
@@ -589,13 +646,13 @@ class MatchInstanceEventHandlerUnitTest {
   void shouldFailOnHandleEventPayloadIfMatchedMultipleInstances(VertxTestContext testContext)
     throws UnsupportedEncodingException {
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(asList(createInstance(), createInstance()), 2));
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(), any());
+      .findByCql(anyString(), eq(false), any(PagingParameters.class), any(), any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
@@ -614,13 +671,13 @@ class MatchInstanceEventHandlerUnitTest {
     Instance instance2 = new Instance(uuid2, 1, "test123", "MARC", "Test Title", "12345");
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(asList(instance1, instance2), 2));
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(), any());
+      .findByCql(anyString(), eq(false), any(PagingParameters.class), any(), any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
@@ -643,13 +700,13 @@ class MatchInstanceEventHandlerUnitTest {
     }
 
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(instances, 5));
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(), any());
+      .findByCql(anyString(), eq(false), any(PagingParameters.class), any(), any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
@@ -665,13 +722,13 @@ class MatchInstanceEventHandlerUnitTest {
   void shouldFailOnHandleEventPayloadIfFailedCallToInventoryStorage(VertxTestContext testContext)
     throws UnsupportedEncodingException {
     doAnswer(ans -> {
-      Consumer<Failure> callback = ans.getArgument(3);
+      Consumer<Failure> callback = ans.getArgument(4);
       Failure result =
         new Failure("Internal Server Error", 500);
       callback.accept(result);
       return null;
     }).when(instanceCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(), any());
+      .findByCql(anyString(), eq(false), any(PagingParameters.class), any(), any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
@@ -685,7 +742,7 @@ class MatchInstanceEventHandlerUnitTest {
   void shouldFailOnHandleEventPayloadIfExceptionThrown(VertxTestContext testContext)
     throws UnsupportedEncodingException {
     doThrow(new UnsupportedEncodingException()).when(instanceCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(), any());
+      .findByCql(anyString(), eq(false), any(PagingParameters.class), any(), any());
 
     DataImportEventPayload eventPayload = createEventPayload();
 
@@ -767,14 +824,14 @@ class MatchInstanceEventHandlerUnitTest {
   void shouldMatchWithSubMatchByInstanceOnHandleEventPayload(VertxTestContext testContext)
     throws UnsupportedEncodingException {
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1));
       callback.accept(result);
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == \"%s\"", INSTANCE_HRID, INSTANCE_ID)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     HashMap<String, String> context = new HashMap<>();
     context.put(EntityType.INSTANCE.value(), JsonObject.mapFrom(createInstance()).encode());
@@ -801,14 +858,14 @@ class MatchInstanceEventHandlerUnitTest {
     Instance expectedInstance = createInstance();
 
     doAnswer(invocation -> {
-      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(expectedInstance), 1));
       successHandler.accept(result);
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID,
-        multiMatchResult.get(0), multiMatchResult.get(1))), any(PagingParameters.class), any(), any());
+        multiMatchResult.get(0), multiMatchResult.get(1))), eq(false), any(PagingParameters.class), any(), any());
 
     HashMap<String, String> context = new HashMap<>();
     context.put(MULTI_MATCH_IDS, Json.encode(multiMatchResult));
@@ -831,6 +888,96 @@ class MatchInstanceEventHandlerUnitTest {
   }
 
   @Test
+  void shouldCombineStaticValueSubMatchConditionIntoParentQueryWhenSameExistingRecordType(
+    VertxTestContext testContext) throws UnsupportedEncodingException {
+    Instance suppressedInstance = createInstance();
+
+    doAnswer(invocation -> {
+      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(3);
+      successHandler.accept(new Success<>(new MultipleRecords<>(singletonList(suppressedInstance), 1)));
+      return null;
+    }).when(instanceCollection)
+      .findByCql(eq(format("hrid == \"%s\" AND (discoverySuppress == \"true\")", INSTANCE_HRID)),
+        eq(false), any(PagingParameters.class), any(), any());
+
+    DataImportEventPayload eventPayload = createEventPayload();
+    eventPayload.getCurrentNode().setChildSnapshotWrappers(List.of(new ProfileSnapshotWrapper()
+      .withContent(createStaticSuppressFromDiscoverySubMatchProfile())
+      .withContentType(MATCH_PROFILE)
+      .withReactTo(MATCH)));
+
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processedPayload.getEventType());
+      assertEquals(suppressedInstance.getId(),
+        new JsonObject(processedPayload.getContext().get(INSTANCE.value())).getString(ID_FIELD));
+      assertNull(processedPayload.getContext().get(MULTI_MATCH_IDS));
+      testContext.completeNow();
+    }));
+  }
+
+  @Test
+  void shouldResolveMixedShadowCopyScenarioViaCombinedStaticSubMatchOnConsortium(VertxTestContext testContext)
+    throws UnsupportedEncodingException {
+    String centralTenantId = "consortium";
+    String consortiumId = "consortiumId";
+
+    Instance localShadowInstance = createInstance();
+    Instance sharedInstanceWithoutLocalShadowCopy =
+      new Instance(UUID.randomUUID().toString(), 5, INSTANCE_HRID, "CONSORTIUM-MARC", "Wonderful", "12334");
+
+    InstanceCollection centralInstanceCollection = mock(InstanceCollection.class);
+    when(storage.getInstanceCollection(Mockito.argThat(context -> context.getTenantId().equals(centralTenantId))))
+      .thenReturn(centralInstanceCollection);
+
+    doAnswer(inv -> Future.succeededFuture(Optional.of(new ConsortiumConfiguration(centralTenantId, consortiumId))))
+      .when(consortiumService).getConsortiumConfiguration(any());
+
+    String combinedCql = format("hrid == \"%s\" AND (discoverySuppress == \"true\")", INSTANCE_HRID);
+
+    // Local storage only contains the shadow-copied instance, so it's the only one that can satisfy
+    // the combined query regardless of its discoverySuppress value.
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
+      callback.accept(new Success<>(new MultipleRecords<>(singletonList(localShadowInstance), 1)));
+      return null;
+    }).when(instanceCollection).findByCql(eq(combinedCql), eq(false), any(PagingParameters.class), any(), any());
+
+    // Central storage holds both shared instances, but only the shadow-copied one satisfies
+    // discoverySuppress == true, so the combined query already resolves to a single result.
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
+      callback.accept(new Success<>(new MultipleRecords<>(singletonList(localShadowInstance), 1)));
+      return null;
+    }).when(centralInstanceCollection).findByCql(eq(combinedCql), eq(false), any(PagingParameters.class), any(), any());
+
+    // What the old, uncombined query would have returned on the central tenant: both shared instances,
+    // which is the ambiguity that used to trigger "Found multiple entities during matching".
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
+      callback.accept(new Success<>(
+        new MultipleRecords<>(List.of(localShadowInstance, sharedInstanceWithoutLocalShadowCopy), 2)));
+      return null;
+    }).when(centralInstanceCollection)
+      .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)), eq(false), any(PagingParameters.class), any(), any());
+
+    DataImportEventPayload eventPayload = createEventPayload();
+    eventPayload.getCurrentNode().setChildSnapshotWrappers(List.of(new ProfileSnapshotWrapper()
+      .withContent(createStaticSuppressFromDiscoverySubMatchProfile())
+      .withContentType(MATCH_PROFILE)
+      .withReactTo(MATCH)));
+
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processedPayload.getEventType());
+      assertEquals(localShadowInstance.getId(),
+        new JsonObject(processedPayload.getContext().get(INSTANCE.value())).getString(ID_FIELD));
+      assertNull(processedPayload.getContext().get(MULTI_MATCH_IDS));
+      testContext.completeNow();
+    }));
+  }
+
+  @Test
   void shouldPutMultipleMatchResultToPayloadOnHandleEventPayload(VertxTestContext testContext)
     throws UnsupportedEncodingException {
     // Also covers the consortium case: when central tenant has shadow copies of the same instances,
@@ -846,22 +993,22 @@ class MatchInstanceEventHandlerUnitTest {
 
     // Local: unscoped query -> 2 instances -> MULTI_MATCH_IDS
     doAnswer(invocation -> {
-      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(3);
       successHandler.accept(new Success<>(new MultipleRecords<>(matchedInstances, 2)));
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     // Central: same instances returned for the MULTI_MATCH_IDS-scoped query (shadow copies)
     doAnswer(invocation -> {
-      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(3);
       successHandler.accept(new Success<>(new MultipleRecords<>(matchedInstances, 2)));
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID,
           matchedInstances.get(0).getId(), matchedInstances.get(1).getId())),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     MatchProfile subMatchProfile = new MatchProfile()
       .withExistingRecordType(INSTANCE)
@@ -894,14 +1041,14 @@ class MatchInstanceEventHandlerUnitTest {
       new Instance(UUID.randomUUID().toString(), 1, "in2", "MARC", "Wonderful", "12334"));
 
     doAnswer(invocation -> {
-      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(matchedInstances, 2));
       successHandler.accept(result);
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     HashMap<String, String> context = new HashMap<>();
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
@@ -924,7 +1071,7 @@ class MatchInstanceEventHandlerUnitTest {
     Instance expectedInstance = createInstance();
 
     doAnswer(invocation -> {
-      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> successHandler = invocation.getArgument(3);
       Success<MultipleRecords<Instance>> result =
         new Success<>(new MultipleRecords<>(singletonList(expectedInstance), 1));
       successHandler.accept(result);
@@ -932,7 +1079,7 @@ class MatchInstanceEventHandlerUnitTest {
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, marcBibMultiMatchResult.get(0),
           marcBibMultiMatchResult.get(1))),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     HashMap<String, String> context = new HashMap<>();
     context.put(INSTANCES_IDS_KEY, Json.encode(marcBibMultiMatchResult));
@@ -969,20 +1116,20 @@ class MatchInstanceEventHandlerUnitTest {
 
     // Local: 2 results for the base query -> MULTI_MATCH_IDS set
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       callback.accept(new Success<>(new MultipleRecords<>(matchedInstances, 2)));
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     // Central: 0 results (no shadow instances) - the IDs filter is applied but nothing is found
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       callback.accept(new Success<>(new MultipleRecords<>(new ArrayList<>(), 0)));
       return null;
     }).when(centralInstanceCollection)
-      .findByCql(anyString(), any(PagingParameters.class), any(), any());
+      .findByCql(anyString(), eq(false), any(PagingParameters.class), any(), any());
 
     var context = new HashMap<String, String>();
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
@@ -1029,30 +1176,30 @@ class MatchInstanceEventHandlerUnitTest {
 
     // Local: scoped by INSTANCE_ID -> finds SH1 (shadow, same UUID)
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       callback.accept(new Success<>(new MultipleRecords<>(singletonList(shadowInstance), 1)));
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == \"%s\"", INSTANCE_HRID, INSTANCE_ID)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     // Central: scoped by INSTANCE_ID (expected after fix) -> finds SC1 only
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       callback.accept(new Success<>(new MultipleRecords<>(singletonList(centralInstance), 1)));
       return null;
     }).when(centralInstanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == (%s)", INSTANCE_HRID, INSTANCE_ID)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     // Central: unscoped query (what happens WITHOUT Fix #3) -> 2 results -> should trigger error
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       callback.accept(new Success<>(new MultipleRecords<>(asList(centralInstance, anotherCentralInstance), 2)));
       return null;
     }).when(centralInstanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     // Context simulates state after Match 1: INSTANCE = SC1 (central original, uuid = INSTANCE_ID)
     var context = new HashMap<String, String>();
@@ -1090,30 +1237,30 @@ class MatchInstanceEventHandlerUnitTest {
 
     // Local: scoped query WITH id filter (MULTI_MATCH_IDS applied) -> 1 result
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       callback.accept(new Success<>(new MultipleRecords<>(singletonList(localInstance), 1)));
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, uuid1, uuid2)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     // Central: scoped query (expected after fix) -> 1 shadow result
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       callback.accept(new Success<>(new MultipleRecords<>(singletonList(shadowInstance), 1)));
       return null;
     }).when(centralInstanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, uuid1, uuid2)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     // Central: unscoped query (what happens WITHOUT the fix) -> 2 results -> should trigger error
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       callback.accept(new Success<>(new MultipleRecords<>(asList(localInstance, shadowInstance), 2)));
       return null;
     }).when(centralInstanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     var context = new HashMap<String, String>();
     context.put(MULTI_MATCH_IDS, Json.encode(multiMatchIds));
@@ -1150,30 +1297,30 @@ class MatchInstanceEventHandlerUnitTest {
 
     // Local: scoped query WITH id filter (INSTANCES_IDS applied) -> 1 result
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       callback.accept(new Success<>(new MultipleRecords<>(singletonList(localInstance), 1)));
       return null;
     }).when(instanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, uuid1, uuid2)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     // Central: scoped query (expected after fix) -> 1 shadow result
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       callback.accept(new Success<>(new MultipleRecords<>(singletonList(shadowInstance), 1)));
       return null;
     }).when(centralInstanceCollection)
       .findByCql(eq(format("hrid == \"%s\" AND id == (%s OR %s)", INSTANCE_HRID, uuid1, uuid2)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     // Central: unscoped query (what happens WITHOUT the fix) -> 2 results -> should trigger error
     doAnswer(ans -> {
-      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(2);
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
       callback.accept(new Success<>(new MultipleRecords<>(asList(localInstance, shadowInstance), 2)));
       return null;
     }).when(centralInstanceCollection)
       .findByCql(eq(format("hrid == \"%s\"", INSTANCE_HRID)),
-        any(PagingParameters.class), any(), any());
+        eq(false), any(PagingParameters.class), any(), any());
 
     var context = new HashMap<String, String>();
     context.put(INSTANCES_IDS_KEY, Json.encode(instancesIds));
@@ -1220,5 +1367,22 @@ class MatchInstanceEventHandlerUnitTest {
 
   private Instance createInstance() {
     return new Instance(INSTANCE_ID, 5, INSTANCE_HRID, "MARC", "Wonderful", "12334");
+  }
+
+  private MatchProfile createStaticSuppressFromDiscoverySubMatchProfile() {
+    return new MatchProfile()
+      .withExistingRecordType(INSTANCE)
+      .withIncomingRecordType(EntityType.STATIC_VALUE)
+      .withMatchDetails(singletonList(new MatchDetail()
+        .withMatchCriterion(EXACTLY_MATCHES)
+        .withIncomingMatchExpression(new MatchExpression()
+          .withDataValueType(MatchExpression.DataValueType.STATIC_VALUE)
+          .withStaticValueDetails(new StaticValueDetails()
+            .withStaticValueType(StaticValueDetails.StaticValueType.TEXT)
+            .withText("true")))
+        .withExistingMatchExpression(new MatchExpression()
+          .withDataValueType(VALUE_FROM_RECORD)
+          .withFields(singletonList(
+            new Field().withLabel("field").withValue("instance.discoverySuppress"))))));
   }
 }

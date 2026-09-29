@@ -12,6 +12,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpRequest;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -20,6 +22,8 @@ import org.apache.logging.log4j.Logger;
 import org.folio.HttpStatus;
 import org.folio.inventory.common.Context;
 import org.folio.inventory.common.domain.Failure;
+import org.folio.inventory.common.domain.MultipleRecords;
+import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.BatchResult;
 import org.folio.inventory.domain.Metadata;
@@ -107,6 +111,18 @@ class ExternalStorageModuleInstanceCollection
         LOGGER.error("Request for batch add failed to send", error);
         failureCallback.accept(new Failure(error.getMessage(), -1));
       });
+  }
+
+  @Override
+  public void findByCql(String cqlQuery, boolean includeShadowCopies, PagingParameters pagingParameters,
+                        Consumer<Success<MultipleRecords<Instance>>> resultCallback,
+                        Consumer<Failure> failureCallback) {
+
+    String encodedQuery = URLEncoder.encode(cqlQuery, StandardCharsets.UTF_8);
+
+    String location = format("%s?query=%s&limit=%s&offset=%s&includeShadowCopies=%s",
+      storageAddress, encodedQuery, pagingParameters.limit(), pagingParameters.offset(), includeShadowCopies);
+    find(location, resultCallback, failureCallback);
   }
 
   @Override

@@ -2,28 +2,42 @@ package org.folio.inventory.dataimport.handlers.matching.loaders;
 
 import static java.lang.String.format;
 import static org.apache.commons.collections.CollectionUtils.isNotEmpty;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.MAX_UUIDS_TO_DISPLAY;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.buildMultiMatchErrorMessage;
 import static org.folio.inventory.dataimport.handlers.matching.util.EventHandlingUtil.constructContext;
 import static org.folio.rest.jaxrs.model.ProfileType.MATCH_PROFILE;
 
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import java.io.UnsupportedEncodingException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.folio.DataImportEventPayload;
+import org.folio.MatchDetail;
+import org.folio.MatchProfile;
 import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.inventory.common.Context;
+import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.PagingParameters;
+import org.folio.inventory.common.domain.Success;
 import org.folio.inventory.domain.SearchableCollection;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.exceptions.MatchingException;
 import org.folio.processing.matching.loader.LoadResult;
 import org.folio.processing.matching.loader.MatchValueLoader;
 import org.folio.processing.matching.loader.query.LoadQuery;
+import org.folio.processing.matching.loader.query.LoadQueryBuilder;
+import org.folio.processing.matching.reader.StaticValueReaderImpl;
+import org.folio.processing.value.Value;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.ProfileSnapshotWrapper;
 import org.folio.rest.jaxrs.model.ReactToType;
@@ -36,6 +50,7 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   private static final String ERROR_LOAD_MSG = "Failed to load records cause: %s, status code: %s";
   private static final int MULTI_MATCH_LOAD_LIMIT = 90;
   private static final String ID_FIELD = "id";
+  private static final StaticValueReaderImpl STATIC_VALUE_READER = new StaticValueReaderImpl();
 
   @Override
   public CompletableFuture<LoadResult> loadEntity(LoadQuery loadQuery, DataImportEventPayload eventPayload) {
@@ -52,33 +67,36 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     PagingParameters pagingParameters = buildPagingParameters(canProcessMultiMatchResult);
 
     try {
-      String cql = loadQuery.getCql() + addCqlSubMatchCondition(eventPayload);
-      getSearchableCollection(context).findByCql(cql, pagingParameters,
-        success -> {
-          MultipleRecords<T> collection = success.result();
-          if (collection.totalRecords() == 1) {
-            loadResult.setValue(mapEntityToJsonString(collection.records().getFirst()));
-          } else if (collection.totalRecords() > 1) {
-            if (canProcessMultiMatchResult) {
-              LOG.info("Found multiple records by CQL query: [{}]. Found records IDs: {}", cql,
-                mapEntityListToIdsJsonString(collection.records()));
-              loadResult.setEntityType(MULTI_MATCH_IDS);
-              loadResult.setValue(mapEntityListToIdsJsonString(collection.records()));
-            } else {
-              String idsJson = mapEntityListToIdsJsonString(collection.records());
-              String errorMessage = buildMultiMatchErrorMessage(idsJson, collection.totalRecords());
-              LOG.error(errorMessage);
-              future.completeExceptionally(new MatchingException(errorMessage));
-              return;
-            }
+      String cql = loadQuery.getCql() + addCqlSubMatchCondition(eventPayload)
+                   + buildCombinedStaticSubMatchCondition(eventPayload);
+
+      Consumer<Success<MultipleRecords<T>>> onSuccess = success -> {
+        MultipleRecords<T> collection = success.result();
+        if (collection.totalRecords() == 1) {
+          loadResult.setValue(mapEntityToJsonString(collection.records().getFirst()));
+        } else if (collection.totalRecords() > 1) {
+          if (canProcessMultiMatchResult) {
+            LOG.info("Found multiple records by CQL query: [{}]. Found records IDs: {}", cql,
+              mapEntityListToIdsJsonString(collection.records()));
+            loadResult.setEntityType(MULTI_MATCH_IDS);
+            loadResult.setValue(mapEntityListToIdsJsonString(collection.records()));
+          } else {
+            String idsJson = mapEntityListToIdsJsonString(collection.records());
+            String errorMessage = buildMultiMatchErrorMessage(idsJson, collection.totalRecords());
+            LOG.error(errorMessage);
+            future.completeExceptionally(new MatchingException(errorMessage));
+            return;
           }
-          future.complete(loadResult);
-        },
-        failure -> {
-          LOG.error(failure.reason());
-          future.completeExceptionally(
-            new MatchingException(format(ERROR_LOAD_MSG, failure.reason(), failure.statusCode())));
-        });
+        }
+        future.complete(loadResult);
+      };
+      Consumer<Failure> onFailure = failure -> {
+        LOG.error(failure.reason());
+        future.completeExceptionally(
+          new MatchingException(format(ERROR_LOAD_MSG, failure.reason(), failure.statusCode())));
+      };
+
+      executeQuery(context, cql, pagingParameters, onSuccess, onFailure);
     } catch (Exception e) {
       LOG.error("Failed to retrieve records", e);
       future.completeExceptionally(e);
@@ -111,6 +129,17 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
 
   protected abstract SearchableCollection<T> getSearchableCollection(Context context);
 
+  /**
+   * Executes the CQL query against this loader's collection. Overridable so entity-specific loaders
+   * can route through a richer search call (e.g. {@link org.folio.inventory.domain.instances.InstanceCollection}'s
+   * shadow-copy-aware search) without changing the shared matching flow above.
+   */
+  protected void executeQuery(Context context, String cql, PagingParameters pagingParameters,
+                              Consumer<Success<MultipleRecords<T>>> onSuccess, Consumer<Failure> onFailure)
+    throws UnsupportedEncodingException {
+    getSearchableCollection(context).findByCql(cql, pagingParameters, onSuccess, onFailure);
+  }
+
   protected abstract String addCqlSubMatchCondition(DataImportEventPayload eventPayload);
 
   protected abstract String mapEntityToJsonString(T entity);
@@ -136,5 +165,46 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     List<ProfileSnapshotWrapper> childProfiles = eventPayload.getCurrentNode().getChildSnapshotWrappers();
     return isNotEmpty(childProfiles) && ReactToType.MATCH.equals(childProfiles.getFirst().getReactTo())
            && MATCH_PROFILE.equals(childProfiles.getFirst().getContentType());
+  }
+
+  /**
+   * First pass at combining a chained "submatch" into the parent query, for the common, safe case:
+   * the immediate next match profile is a "Static value (submatch only)" match against the same
+   * existing record type as the parent. A static value doesn't depend on the incoming record, so it
+   * can be folded into the parent's own CQL and evaluated in the same query instead of relying purely
+   * on a second, MULTI_MATCH_IDS-scoped round trip. This narrows the parent's result up front (avoiding
+   * an intermediate ambiguous multi-match state for this pattern); the submatch step itself still runs
+   * afterward unchanged.
+   */
+  private String buildCombinedStaticSubMatchCondition(DataImportEventPayload eventPayload) {
+    List<ProfileSnapshotWrapper> childProfiles = eventPayload.getCurrentNode().getChildSnapshotWrappers();
+    if (!isNotEmpty(childProfiles) || childProfiles.size() != 1) {
+      return EMPTY;
+    }
+    ProfileSnapshotWrapper childWrapper = childProfiles.getFirst();
+    if (!MATCH_PROFILE.equals(childWrapper.getContentType()) || !ReactToType.MATCH.equals(childWrapper.getReactTo())) {
+      return EMPTY;
+    }
+
+    MatchProfile childMatchProfile = extractMatchProfile(childWrapper);
+    if (childMatchProfile.getExistingRecordType() != getEntityType()
+        || childMatchProfile.getIncomingRecordType() != EntityType.STATIC_VALUE
+        || !isNotEmpty(childMatchProfile.getMatchDetails())) {
+      return EMPTY;
+    }
+
+    MatchDetail childMatchDetail = childMatchProfile.getMatchDetails().getFirst();
+    Value<?> value = STATIC_VALUE_READER.read(eventPayload, childMatchDetail);
+    LoadQuery childQuery = LoadQueryBuilder.build(value, childMatchDetail);
+    return childQuery != null && StringUtils.isNotEmpty(childQuery.getCql())
+      ? format(" AND (%s)", childQuery.getCql())
+      : EMPTY;
+  }
+
+  private MatchProfile extractMatchProfile(ProfileSnapshotWrapper wrapper) {
+    if (wrapper.getContent() instanceof Map map) {
+      return new JsonObject(map).mapTo(MatchProfile.class);
+    }
+    return new JsonObject(Json.encode(wrapper.getContent())).mapTo(MatchProfile.class);
   }
 }

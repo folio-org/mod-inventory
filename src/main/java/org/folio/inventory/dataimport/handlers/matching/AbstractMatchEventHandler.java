@@ -175,7 +175,13 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
     return isMatchedConsortium -> {
       dataImportEventPayload.setTenant(context.getTenantId());
       var consortiumConfig = consortiumConfiguration.get();
+      // A central result stored under MULTI_MATCH_IDS is still ambiguous by design: a downstream
+      // submatch profile is expected to narrow it further, so it must not be treated as a local/central
+      // conflict here (unlike a central result that resolved to a single, genuinely different entity).
+      boolean isCentralResultAmbiguous =
+        StringUtils.isNotEmpty(dataImportEventPayload.getContext().get(MULTI_MATCH_IDS));
       if (Boolean.TRUE.equals(isMatchedConsortium) && isMatchedLocal && localMatchedInstance != null
+          && !isCentralResultAmbiguous
           && !isShadowEntity(localMatchedInstance,
         dataImportEventPayload.getContext().get(getEntityType().value()))) {
         LOGGER.warn("matchCentralTenantIfNeeded:: Found multiple results during matching on local "
@@ -191,7 +197,9 @@ public abstract class AbstractMatchEventHandler implements EventHandler {
         dataImportEventPayload.getContext().put(INSTANCES_IDS, localCallInstancesIds);
       }
       if (StringUtils.isEmpty(dataImportEventPayload.getContext().get(getEntityType().value()))) {
-        dataImportEventPayload.getContext().put(getEntityType().value(), localMatchedInstance);
+        if (!isCentralResultAmbiguous) {
+          dataImportEventPayload.getContext().put(getEntityType().value(), localMatchedInstance);
+        }
       } else {
         dataImportEventPayload.getContext()
           .put(CENTRAL_TENANT_ID_KEY, consortiumConfig.centralTenantId());
