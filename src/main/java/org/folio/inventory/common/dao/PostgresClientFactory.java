@@ -10,9 +10,9 @@ import io.vertx.sqlclient.PreparedQuery;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -21,7 +21,7 @@ public class PostgresClientFactory {
 
   private static final Logger LOGGER = LogManager.getLogger(PostgresClientFactory.class);
 
-  private static final Map<String, Pool> POOL_CACHE = new HashMap<>();
+  private static final Map<String, Pool> POOL_CACHE = new ConcurrentHashMap<>();
 
   private final Vertx vertx;
   private final PostgresConnectionOptions connectionOptions;
