@@ -1,3 +1,6 @@
+## 22.0.5 2026-10-07
+* Rollback the central instance when the sharing operation fails [MODINV-1420](https://folio-org.atlassian.net/browse/MODINV-1420)
+
 ## 22.0.4 2026-08-20
 * Imported MARC Bib with 999ff (using "Modify action") is incorrectly linked to Instance [MODINV-1410](https://folio-org.atlassian.net/browse/MODINV-1410)
 
