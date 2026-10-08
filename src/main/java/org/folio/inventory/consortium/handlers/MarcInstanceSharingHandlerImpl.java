@@ -82,23 +82,85 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
           .compose(result -> {
             if ("COMMITTED".equals(result)) {
               return updateTargetInstanceWithNonMarcControlledFields(instance, target, kafkaHeaders)
+                .recover(cause -> rollbackSharedInstance(instanceId, source, target, kafkaHeaders, cause))
                 // Delete source record by record ID if the result is "COMMITTED"
                 .compose(targetInstance -> deleteSourceRecordByRecordId(marcRecord.getId(), instanceId, sourceTenant, sourceStorageClient)
-                  .map(targetInstance))
-                .compose(targetInstance -> {
-                  // Update JSON instance to include SOURCE=CONSORTIUM-MARC
-                  JsonObject jsonInstanceToPublish = new JsonObject(instance.getJsonForStorage().encode());
-                  jsonInstanceToPublish.put(SOURCE, CONSORTIUM_MARC.getValue());
-                  jsonInstanceToPublish.put(HRID_KEY, targetInstance.getHrid());
-                  // Update instance in sourceInstanceCollection
-                  return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish), source);
-                });
+                  .recover(cause -> rollbackSharedInstance(instanceId, source, target, kafkaHeaders, cause))
+                  .compose(deletedId -> updateSourceInstanceAsShared(instance, targetInstance, source)
+                    .recover(cause -> rollbackSourceRecordAndSharedInstance(marcRecord.getId(), instanceId, source, target,
+                      sourceStorageClient, kafkaHeaders, cause))));
             } else {
               // If the result is not "COMMITTED", skip the deletion and update steps and return the result directly
               return Future.failedFuture(String.format("DI status is %s", result));
             }
           });
       });
+  }
+
+  /**
+   * Restores the soft-deleted source record on the source tenant, then rolls back the target instance.
+   */
+  private <T> Future<T> rollbackSourceRecordAndSharedInstance(String recordId, String instanceId, Source source,
+                                                              Target target, SourceStorageRecordsClient sourceStorageClient,
+                                                              Map<String, String> kafkaHeaders, Throwable cause) {
+    String sourceTenant = source.getTenantId();
+    LOGGER.warn("rollbackSourceRecordAndSharedInstance:: Restoring source record for instance: {} on tenant: {}",
+      instanceId, sourceTenant);
+
+    return unDeleteSourceRecordByRecordId(recordId, instanceId, sourceTenant, sourceStorageClient)
+      .transform(ar -> {
+        if (ar.failed()) {
+          LOGGER.error("rollbackSourceRecordAndSharedInstance:: Failed to restore source record for instance: {} "
+                       + "on tenant: {}.", instanceId, sourceTenant, ar.cause());
+        }
+        return rollbackSharedInstance(instanceId, source, target, kafkaHeaders, cause);
+      });
+  }
+
+  /**
+   * Removes the instance that data import created on the target tenant together with its source record and re-saves
+   * the source instance so that it gets back into the search index, then re-fails with the original cause.
+   * If the instance cannot be deleted it is left as is together with its source record.
+   */
+  private <T> Future<T> rollbackSharedInstance(String instanceId, Source source, Target target,
+                                               Map<String, String> kafkaHeaders, Throwable cause) {
+    String targetTenant = target.getTenantId();
+    LOGGER.warn("rollbackSharedInstance:: Rolling back instance: {} shared to target tenant: {}",
+      instanceId, targetTenant, cause);
+
+    return instanceOperations.deleteInstance(instanceId, target)
+      .compose(v -> deleteSourceRecordByInstanceId(instanceId, targetTenant,
+          getSourceStorageRecordsClient(targetTenant, kafkaHeaders))
+        .transform(ar -> {
+          if (ar.failed()) {
+            LOGGER.error("rollbackSharedInstance:: Failed to delete source record for instance: {} "
+                         + "on target tenant: {}.", instanceId, targetTenant, ar.cause());
+          }
+          return instanceOperations.republishInstance(instanceId, source);
+        })
+        .transform(ar -> {
+          if (ar.failed()) {
+            LOGGER.error("rollbackSharedInstance:: Failed to re-save instance: {} on source tenant: {}.",
+              instanceId, source.getTenantId(), ar.cause());
+          }
+          return Future.succeededFuture();
+        }))
+      .transform(ar -> {
+        if (ar.failed()) {
+          LOGGER.error("rollbackSharedInstance:: Failed to delete instance: {} on target tenant: {}.",
+            instanceId, targetTenant, ar.cause());
+        }
+        return Future.failedFuture(cause);
+      });
+  }
+
+  private Future<String> updateSourceInstanceAsShared(Instance instance, Instance targetInstance, Source source) {
+    // Update JSON instance to include SOURCE=CONSORTIUM-MARC
+    JsonObject jsonInstanceToPublish = new JsonObject(instance.getJsonForStorage().encode());
+    jsonInstanceToPublish.put(SOURCE, CONSORTIUM_MARC.getValue());
+    jsonInstanceToPublish.put(HRID_KEY, targetInstance.getHrid());
+    // Update instance in sourceInstanceCollection
+    return instanceOperations.updateInstance(Instance.fromJson(jsonInstanceToPublish), source);
   }
 
   private Future<Instance> updateTargetInstanceWithNonMarcControlledFields(Instance sourceInstance, Target targetTenantProvider,
@@ -174,11 +236,17 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
   private Future<Record> rollbackAuthorityLinksForSourceTenant(List<Link> entityLinks, String instanceId, Context context, SharingInstance sharingInstanceMetadata, Throwable cause) {
     LOGGER.warn("Rollback authority links update for source tenant: {} and instance: {}", sharingInstanceMetadata.getSourceTenantId(), instanceId);
 
-    updateLinksForSourceTenant(entityLinks, instanceId, context, sharingInstanceMetadata)
-      .onFailure(e -> LOGGER.error("Error during rollback authority links update for source tenant: {} and instance: {}",
-        sharingInstanceMetadata.getSourceTenantId(), instanceId, e));
+    var consortiumException = new ConsortiumException(
+      cause != null ? cause.getMessage() : "Error updating shared authorities in MARC record");
 
-    return Future.failedFuture(new ConsortiumException(cause != null ? cause.getMessage() : "Error updating shared authorities in MARC record"));
+    return updateLinksForSourceTenant(entityLinks, instanceId, context, sharingInstanceMetadata)
+      .transform(ar -> {
+        if (ar.failed()) {
+          LOGGER.error("Error during rollback authority links update for source tenant: {} and instance: {}",
+            sharingInstanceMetadata.getSourceTenantId(), instanceId, ar.cause());
+        }
+        return Future.failedFuture(consortiumException);
+      });
   }
 
   private Future<Void> unlinkLocalAuthorities(List<LinkingRuleDto> linkingRules, Record marcRecord, String instanceId,
@@ -289,6 +357,53 @@ public class MarcInstanceSharingHandlerImpl implements InstanceSharingHandler {
           String msg = format("Error deleting source record with recordId=%s by InstanceId=%s from tenant %s, responseStatus=%s, body=%s",
             recordId, instanceId, tenantId, response.statusCode(), response.bodyAsString());
           LOGGER.error("deleteSourceRecordByRecordId:: {}", msg);
+          return Future.failedFuture(msg);
+        }
+      });
+  }
+
+  Future<String> deleteSourceRecordByInstanceId(String instanceId, String tenantId, SourceStorageRecordsClient client) {
+    LOGGER.info("deleteSourceRecordByInstanceId :: Delete source record for instance by InstanceId={} from tenant {}",
+      instanceId, tenantId);
+
+    return client.deleteSourceStorageRecordsById(instanceId, INSTANCE_ID_TYPE)
+      .onFailure(e -> LOGGER.error("deleteSourceRecordByInstanceId:: Error deleting source record by InstanceId={} from tenant {}",
+        instanceId, tenantId, e))
+      .compose(response -> {
+        if (response.statusCode() == SC_NO_CONTENT) {
+          LOGGER.info("deleteSourceRecordByInstanceId:: Source record for instance with InstanceId={} from tenant {} has been deleted.",
+            instanceId, tenantId);
+          return Future.succeededFuture(instanceId);
+        } else {
+          String msg = format("Error deleting source record by InstanceId=%s from tenant %s, responseStatus=%s, body=%s",
+            instanceId, tenantId, response.statusCode(), response.bodyAsString());
+          LOGGER.error("deleteSourceRecordByInstanceId:: {}", msg);
+          return Future.failedFuture(msg);
+        }
+      });
+  }
+
+  /**
+   * Reverts {@link #deleteSourceRecordByRecordId(String, String, String, SourceStorageRecordsClient)}.
+   * Safe to call on a record that is not deleted.
+   */
+  Future<String> unDeleteSourceRecordByRecordId(String recordId, String instanceId, String tenantId,
+                                                SourceStorageRecordsClient client) {
+    LOGGER.info("unDeleteSourceRecordByRecordId :: Un-delete source record with recordId={} for instance by InstanceId={} from tenant {}",
+      recordId, instanceId, tenantId);
+
+    return client.postSourceStorageRecordsUnDeleteById(recordId, SRS_RECORD_ID_TYPE)
+      .onFailure(e -> LOGGER.error("unDeleteSourceRecordByRecordId:: Error un-deleting source record with recordId={} by InstanceId={} from tenant {}",
+        recordId, instanceId, tenantId, e))
+      .compose(response -> {
+        if (response.statusCode() == SC_NO_CONTENT) {
+          LOGGER.info("unDeleteSourceRecordByRecordId:: Source record with recordId={} for instance with InstanceId={} from tenant {} has been un-deleted.",
+            recordId, instanceId, tenantId);
+          return Future.succeededFuture(instanceId);
+        } else {
+          String msg = format("Error un-deleting source record with recordId=%s by InstanceId=%s from tenant %s, responseStatus=%s, body=%s",
+            recordId, instanceId, tenantId, response.statusCode(), response.bodyAsString());
+          LOGGER.error("unDeleteSourceRecordByRecordId:: {}", msg);
           return Future.failedFuture(msg);
         }
       });

@@ -1,3 +1,6 @@
+## 21.1.23 2026-10-07
+* Rollback the central instance when the sharing operation fails [MODINV-1420](https://folio-org.atlassian.net/browse/MODINV-1420)
+
 ## 21.1.22 2026-07-08
 * Importing Records from BNE z39.50 - record not available error (MODINV-1395) [MODINV-1397](https://folio-org.atlassian.net/browse/MODINV-1397)
 
