@@ -28,9 +28,9 @@
     <mod-source-record-manager-client.version>4.1.0-SNAPSHOT</mod-source-record-manager-client.version>
     <folio-isbn-util.version>1.10.0-SNAPSHOT</folio-isbn-util.version>
 
-    <vertx.version>5.2.0</vertx.version>
+    <vertx.version>5.2.1</vertx.version>
     <lombok.version>1.18.48</lombok.version>
-    <postgres.version>42.7.13</postgres.version>
+    <postgres.version>42.7.14</postgres.version>
     <liquibase.version>5.0.4</liquibase.version>
     <kafkaclients.version>4.3.1</kafkaclients.version>
     <log4j.version>2.26.1</log4j.version>
