@@ -1,3 +1,6 @@
+## 22.0.6 2026-10-20
+* Update data-import-processing-core to 5.0.2
+
 ## 22.0.5 2026-10-07
 * Rollback the central instance when the sharing operation fails [MODINV-1420](https://folio-org.atlassian.net/browse/MODINV-1420)
 
