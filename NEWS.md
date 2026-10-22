@@ -8,6 +8,7 @@
 
 ### Features
 * Update mod-inventory mark-deleted descriptor to require an access token [MODINV-1390](https://folio-org.atlassian.net/browse/MODINV-1390)
+* Recalculate order of item in target holdings on item move [MODINV-1434](https://folio-org.atlassian.net/browse/MODINV-1434)
 
 ### Bug fixes
 * Imported MARC Bib with 999ff (using "Modify action") is incorrectly linked to Instance [MODINV-1410](https://folio-org.atlassian.net/browse/MODINV-1410)
