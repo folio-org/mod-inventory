@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.BinaryOperator;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -53,23 +54,31 @@ public class FakeCqlToJsonInterpreter {
     }
   }
 
+  /**
+   * Builds a comparator for the sortBy clause, e.g. {@code title}, {@code title/sort.descending} or
+   * {@code order/number/sort.descending}. The {@code number} modifier compares values numerically instead
+   * of as text. Nulls go last when ascending and first when descending, like in PostgreSQL.
+   */
   private Comparator<? super JsonObject> sortForQuery(String sort) {
-    if (Strings.CS.contains(sort, "/")) {
-      String propertyName = StringUtils.substring(sort, 0,
-        Strings.CS.lastIndexOf(sort, "/")).trim();
+    String[] parts = sort.split("/");
+    String propertyName = parts[0].trim();
+    boolean numeric = Arrays.stream(parts).skip(1).anyMatch(part -> Strings.CI.equals(part.trim(), "number"));
+    boolean descending = Arrays.stream(parts).skip(1).anyMatch(part -> Strings.CI.contains(part, "descending"));
 
-      String ordering = StringUtils.substring(sort,
-        Strings.CS.lastIndexOf(sort, "/") + 1).trim();
+    Comparator<Comparable<Object>> valueComparator = Comparator.nullsLast(Comparator.naturalOrder());
+    Comparator<JsonObject> comparator = Comparator.comparing(
+      jsonObject -> sortValue(jsonObject, propertyName, numeric), valueComparator);
 
-      if (Strings.CI.contains(ordering, "descending")) {
-        return Comparator.comparing((JsonObject jsonObject) -> getPropertyValue(jsonObject, propertyName))
-          .reversed();
-      } else {
-        return Comparator.comparing(jsonObject -> getPropertyValue(jsonObject, propertyName));
-      }
-    } else {
-      return Comparator.comparing(jsonObject -> getPropertyValue(jsonObject, sort));
+    return descending ? comparator.reversed() : comparator;
+  }
+
+  @SuppressWarnings("unchecked")
+  private Comparable<Object> sortValue(JsonObject jsonObject, String propertyName, boolean numeric) {
+    String value = getPropertyValue(jsonObject, propertyName);
+    if (value == null) {
+      return null;
     }
+    return (Comparable<Object>) (numeric ? (Comparable<?>) Double.valueOf(value) : value);
   }
 
   private boolean containsSort(ImmutablePair<String, String> queryAndSort) {
@@ -195,7 +204,8 @@ public class FakeCqlToJsonInterpreter {
       return jsonRecord.getJsonObject(String.format("%s", fields[0]))
         .getString(String.format("%s", fields[1].trim()));
     } else {
-      return jsonRecord.getString(String.format("%s", field.trim()));
+      // getValue instead of getString: numeric properties such as order are not strings
+      return Objects.toString(jsonRecord.getValue(field.trim()), null);
     }
   }
 
