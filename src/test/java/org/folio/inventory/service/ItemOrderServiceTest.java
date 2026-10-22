@@ -16,6 +16,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import org.folio.inventory.domain.items.Item;
+import org.folio.inventory.domain.items.ItemStatusName;
+import org.folio.inventory.domain.items.Status;
 import org.folio.inventory.exceptions.ExternalResourceFetchException;
 import org.folio.inventory.services.ItemOrderService;
 import org.folio.inventory.storage.external.CollectionResourceClient;
@@ -109,59 +111,57 @@ class ItemOrderServiceTest {
       .hasCauseInstanceOf(ExternalResourceFetchException.class);
   }
 
-  @DisplayName("should move items to holdings record and number them after current max order")
+  @DisplayName("should number items after current max order")
   @Test
   void shouldNumberItemsAfterCurrentMaxOrder() {
     // arrange
-    var stored = List.of(storedItem(5), storedItem(6));
+    var fifth = item(5);
+    var sixth = item(6);
 
     // act
-    var items = itemOrderService.assignOrder(HOLDINGS_ID, stored, 10);
+    var items = itemOrderService.assignOrder(List.of(fifth, sixth), 10);
 
     // assert
     assertThat(items)
-      .extracting(Item::getHoldingId, Item::getOrder)
+      .extracting(Item::getId, Item::getOrder)
       .containsExactly(
-        tuple(HOLDINGS_ID, 11),
-        tuple(HOLDINGS_ID, 12));
+        tuple(fifth.getId(), 11),
+        tuple(sixth.getId(), 12));
   }
 
   @DisplayName("should keep relative order of items and put items without order last")
   @Test
   void shouldKeepRelativeOrderAndPutItemsWithoutOrderLast() {
     // arrange
-    var seventh = storedItem(7);
-    var withoutOrder = storedItem(null);
-    var third = storedItem(3);
+    var seventh = item(7);
+    var withoutOrder = item(null);
+    var third = item(3);
 
     // act
-    var items = itemOrderService.assignOrder(HOLDINGS_ID, List.of(seventh, withoutOrder, third), 0);
+    var items = itemOrderService.assignOrder(List.of(seventh, withoutOrder, third), 0);
 
     // assert
     assertThat(items)
       .extracting(Item::getId, Item::getOrder)
       .containsExactly(
-        tuple(third.getString("id"), 1),
-        tuple(seventh.getString("id"), 2),
-        tuple(withoutOrder.getString("id"), 3));
+        tuple(third.getId(), 1),
+        tuple(seventh.getId(), 2),
+        tuple(withoutOrder.getId(), 3));
   }
 
-  @DisplayName("should return empty list when there are no items to move")
+  @DisplayName("should return empty list when there are no items to number")
   @Test
-  void shouldReturnEmptyList_whenNoItemsToMove() {
+  void shouldReturnEmptyList_whenNoItemsToNumber() {
     // act
-    var items = itemOrderService.assignOrder(HOLDINGS_ID, List.of(), 4);
+    var items = itemOrderService.assignOrder(List.of(), 4);
 
     // assert
     assertThat(items).isEmpty();
   }
 
-  private static JsonObject storedItem(Integer order) {
-    return new JsonObject()
-      .put("id", UUID.randomUUID().toString())
-      .put("holdingsRecordId", UUID.randomUUID().toString())
-      .put("status", new JsonObject().put("name", "Available"))
-      .put("order", order);
+  private static Item item(Integer order) {
+    return new Item(UUID.randomUUID().toString(), null, HOLDINGS_ID, new Status(ItemStatusName.AVAILABLE), null,
+      null, null).withOrder(order);
   }
 
   private static Response itemsResponse(int statusCode, JsonObject... items) {

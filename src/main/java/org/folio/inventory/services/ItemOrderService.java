@@ -1,6 +1,5 @@
 package org.folio.inventory.services;
 
-import io.vertx.core.json.JsonObject;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -10,7 +9,6 @@ import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.exceptions.ExternalResourceFetchException;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.CqlQuery;
-import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.MoveApiUtil;
 
 /**
@@ -55,24 +53,20 @@ public class ItemOrderService {
   }
 
   /**
-   * Places the items into the given holdings record and assigns each an explicit order continuing after
-   * {@code currentMaxOrder}. Items keep their relative order; items without order go last.
+   * Assigns each item an explicit order continuing after {@code currentMaxOrder}. Items keep their
+   * relative order; items without order go last.
    *
-   * @param holdingsRecordId the id of the target holdings record
-   * @param storedItems      the items in storage JSON representation
-   * @param currentMaxOrder  the highest order currently used in the target holdings record (0 if none)
-   * @return a list of Item objects with updated holdingId and order fields
+   * @param items           the items to be placed after the current maximum
+   * @param currentMaxOrder the highest order currently used in the target holdings record (0 if none)
+   * @return a list of Item objects with updated order field, sorted by the new order
    */
-  public List<Item> assignOrder(String holdingsRecordId, List<JsonObject> storedItems, int currentMaxOrder) {
-    var sortedItems = storedItems.stream()
-      .sorted(Comparator.comparing(json -> json.getInteger(Item.ORDER_KEY),
-        Comparator.nullsLast(Comparator.naturalOrder())))
+  public List<Item> assignOrder(List<Item> items, int currentMaxOrder) {
+    var sortedItems = items.stream()
+      .sorted(Comparator.comparing(Item::getOrder, Comparator.nullsLast(Comparator.naturalOrder())))
       .toList();
 
     return IntStream.range(0, sortedItems.size())
-      .mapToObj(i -> ItemUtil.fromStoredItemRepresentation(sortedItems.get(i))
-        .withHoldingId(holdingsRecordId)
-        .withOrder(currentMaxOrder + i + 1))
+      .mapToObj(i -> sortedItems.get(i).withOrder(currentMaxOrder + i + 1))
       .toList();
   }
 }

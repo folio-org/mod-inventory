@@ -37,6 +37,7 @@ import org.folio.inventory.services.ItemOrderService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
+import org.folio.inventory.support.ItemUtil;
 import org.folio.inventory.support.MoveApiUtil;
 import org.folio.inventory.support.http.server.ServerErrorResponse;
 import org.folio.inventory.support.http.server.ValidationError;
@@ -94,7 +95,8 @@ public class MoveApi extends AbstractInventoryResource {
 
             itemsFetchClient.find(itemIdsToUpdate, MoveApiUtil::fetchByIdCql)
               .thenCombine(itemOrderService.fetchMaxOrder(toHoldingsRecordId),
-                (jsons, maxOrder) -> itemOrderService.assignOrder(toHoldingsRecordId, jsons, maxOrder))
+                (jsons, maxOrder) ->
+                  itemOrderService.assignOrder(updateItemFields(toHoldingsRecordId, jsons), maxOrder))
               .thenAccept(itemsToUpdate -> updateItems(routingContext, context, itemIdsToUpdate, itemsToUpdate))
               .exceptionally(e -> {
                 LOGGER.error("moveItems:: Failed to fetch items for moving. IDs: {}", itemIdsToUpdate, e);
@@ -246,6 +248,20 @@ public class MoveApi extends AbstractInventoryResource {
           "findInstanceInConsortium:: Tenant is not part of a consortium. Skipping search in central tenant.");
         return CompletableFuture.completedFuture(null);
       });
+  }
+
+  /**
+   * Updates the holdingId for each item.
+   *
+   * @param toHoldingsRecordId the id of the holdings record to which items will be moved
+   * @param jsons              the list of items in JSON format to be updated
+   * @return a list of Item objects with updated holdingId field
+   */
+  private List<Item> updateItemFields(String toHoldingsRecordId, List<JsonObject> jsons) {
+    return jsons.stream()
+      .map(ItemUtil::fromStoredItemRepresentation)
+      .map(item -> item.withHoldingId(toHoldingsRecordId))
+      .toList();
   }
 
   private void updateItems(RoutingContext routingContext, WebContext context, List<String> idsToUpdate,
