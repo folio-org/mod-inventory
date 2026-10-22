@@ -95,8 +95,7 @@ public class MoveApi extends AbstractInventoryResource {
 
             itemsFetchClient.find(itemIdsToUpdate, MoveApiUtil::fetchByIdCql)
               .thenCombine(itemOrderService.fetchMaxOrder(toHoldingsRecordId),
-                (jsons, maxOrder) ->
-                  itemOrderService.assignOrder(updateItemFields(toHoldingsRecordId, jsons), maxOrder))
+                (jsons, maxOrder) -> updateItemFields(toHoldingsRecordId, jsons, maxOrder, itemOrderService))
               .thenAccept(itemsToUpdate -> updateItems(routingContext, context, itemIdsToUpdate, itemsToUpdate))
               .exceptionally(e -> {
                 LOGGER.error("moveItems:: Failed to fetch items for moving. IDs: {}", itemIdsToUpdate, e);
@@ -251,17 +250,23 @@ public class MoveApi extends AbstractInventoryResource {
   }
 
   /**
-   * Updates the holdingId for each item.
+   * Updates the holdingId for each item and assigns an explicit order continuing after the highest order
+   * currently present in the target holdings record.
    *
    * @param toHoldingsRecordId the id of the holdings record to which items will be moved
    * @param jsons              the list of items in JSON format to be updated
-   * @return a list of Item objects with updated holdingId field
+   * @param currentMaxOrder    the highest order currently used in the target holdings record (0 if none)
+   * @param itemOrderService   the service calculating item order
+   * @return a list of Item objects with updated holdingId and order fields
    */
-  private List<Item> updateItemFields(String toHoldingsRecordId, List<JsonObject> jsons) {
-    return jsons.stream()
+  private List<Item> updateItemFields(String toHoldingsRecordId, List<JsonObject> jsons, int currentMaxOrder,
+                                      ItemOrderService itemOrderService) {
+    var items = jsons.stream()
       .map(ItemUtil::fromStoredItemRepresentation)
       .map(item -> item.withHoldingId(toHoldingsRecordId))
       .toList();
+
+    return itemOrderService.assignOrder(items, currentMaxOrder);
   }
 
   private void updateItems(RoutingContext routingContext, WebContext context, List<String> idsToUpdate,
