@@ -635,7 +635,7 @@ public class Item {
     return lastCheckIn;
   }
 
-  public Object getOrder() {
+  public Integer getOrder() {
     return order;
   }
 }

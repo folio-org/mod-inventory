@@ -33,6 +33,7 @@ import org.folio.inventory.domain.instances.Instance;
 import org.folio.inventory.domain.items.Item;
 import org.folio.inventory.domain.items.ItemCollection;
 import org.folio.inventory.exceptions.BadRequestException;
+import org.folio.inventory.services.ItemOrderService;
 import org.folio.inventory.storage.Storage;
 import org.folio.inventory.storage.external.CollectionResourceClient;
 import org.folio.inventory.storage.external.MultipleRecordsFetchClient;
@@ -90,12 +91,12 @@ public class MoveApi extends AbstractInventoryResource {
             final var itemsStorageClient =
               createItemStorageClient(createHttpClient(client, routingContext, context), context);
             final var itemsFetchClient = createItemsFetchClient(itemsStorageClient);
+            final var itemOrderService = new ItemOrderService(itemsStorageClient);
 
             itemsFetchClient.find(itemIdsToUpdate, MoveApiUtil::fetchByIdCql)
-              .thenAccept(jsons -> {
-                var itemsToUpdate = updateItemFields(toHoldingsRecordId, jsons);
-                updateItems(routingContext, context, itemIdsToUpdate, itemsToUpdate);
-              })
+              .thenCombine(itemOrderService.fetchMaxOrder(toHoldingsRecordId),
+                (jsons, maxOrder) -> updateItemFields(toHoldingsRecordId, jsons, maxOrder, itemOrderService))
+              .thenAccept(itemsToUpdate -> updateItems(routingContext, context, itemIdsToUpdate, itemsToUpdate))
               .exceptionally(e -> {
                 LOGGER.error("moveItems:: Failed to fetch items for moving. IDs: {}", itemIdsToUpdate, e);
                 ServerErrorResponse.internalError(routingContext.response(), e);
@@ -249,19 +250,23 @@ public class MoveApi extends AbstractInventoryResource {
   }
 
   /**
-   * Updates the holdingId and sets the order field to null (storage will recalculate order if it doesn't exist)
-   * for each item.
+   * Updates the holdingId for each item and assigns an explicit order continuing after the highest order
+   * currently present in the target holdings record.
    *
    * @param toHoldingsRecordId the id of the holdings record to which items will be moved
    * @param jsons              the list of items in JSON format to be updated
+   * @param currentMaxOrder    the highest order currently used in the target holdings record (0 if none)
+   * @param itemOrderService   the service calculating item order
    * @return a list of Item objects with updated holdingId and order fields
    */
-  private List<Item> updateItemFields(String toHoldingsRecordId, List<JsonObject> jsons) {
-    return jsons.stream()
+  private List<Item> updateItemFields(String toHoldingsRecordId, List<JsonObject> jsons, int currentMaxOrder,
+                                      ItemOrderService itemOrderService) {
+    var items = jsons.stream()
       .map(ItemUtil::fromStoredItemRepresentation)
       .map(item -> item.withHoldingId(toHoldingsRecordId))
-      .map(item -> item.withOrder(null))
       .toList();
+
+    return itemOrderService.assignOrder(items, currentMaxOrder);
   }
 
   private void updateItems(RoutingContext routingContext, WebContext context, List<String> idsToUpdate,

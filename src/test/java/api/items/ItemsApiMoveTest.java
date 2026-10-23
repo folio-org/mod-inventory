@@ -9,7 +9,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static support.FutureAssistance.getOnCompletion;
 import static support.fixtures.InstanceFixture.smallAngryPlanet;
@@ -25,6 +24,7 @@ import lombok.SneakyThrows;
 import org.folio.inventory.domain.items.ItemStatusName;
 import org.folio.inventory.support.http.client.IndividualResource;
 import org.folio.inventory.support.http.client.Response;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import support.ApiRoot;
 import support.ApiTests;
@@ -70,8 +70,30 @@ public class ItemsApiMoveTest extends ApiTests {
 
     assertThat(firstUpdatedItem.getString(HOLDINGS_RECORD_ID), is(newHoldingsId.toString()));
     assertThat(secondUpdatedItem.getString(HOLDINGS_RECORD_ID), is(newHoldingsId.toString()));
+  }
 
-    assertThat(firstUpdatedItem.getInteger("order"), nullValue());
+  @DisplayName("should assign orders after the highest order of target holdings record keeping moved items sequence")
+  @Test
+  void shouldAssignOrdersAfterHighestOrderOfTargetHoldingsRecord_whenMovingItemsWithMixedOrders() {
+    // given: 10 is the highest order numerically, although "9" is the highest as text
+    final var instanceId = createInstance();
+    final var sourceHoldingsId = createHoldingsForInstance(instanceId);
+    final var targetHoldingsId = createHoldingsForInstance(instanceId);
+    createItem(targetHoldingsId, "645398607541", 2);
+    createItem(targetHoldingsId, "645398607542", 9);
+    createItem(targetHoldingsId, "645398607543", 10);
+    final var seventh = createItem(sourceHoldingsId, "645398607547", 7);
+    final var withoutOrder = createItem(sourceHoldingsId, "645398607546", null);
+    final var third = createItem(sourceHoldingsId, "645398607545", 3);
+
+    // when
+    final var response = moveItems(targetHoldingsId, seventh, withoutOrder, third);
+
+    // then
+    assertThat(response.statusCode(), is(200));
+    assertThat(orderOf(third), is(11));
+    assertThat(orderOf(seventh), is(12));
+    assertThat(orderOf(withoutOrder), is(13));
   }
 
   @Test
@@ -237,6 +259,19 @@ public class ItemsApiMoveTest extends ApiTests {
     InstanceApiClient.createInstance(okapiClient, smallAngryPlanet(instanceId));
 
     return instanceId;
+  }
+
+  private IndividualResource createItem(UUID holdingsId, String barcode, Integer order) {
+    return itemsClient.create(
+      new ItemRequestBuilder()
+        .forHolding(holdingsId)
+        .withBarcode(barcode)
+        .withOrder(order)
+        .withStatus(ItemStatusName.AVAILABLE.value()));
+  }
+
+  private Integer orderOf(IndividualResource item) {
+    return itemsClient.getById(item.getId()).getJson().getInteger("order");
   }
 
   private UUID createHoldingsForInstance(UUID instanceId) {
