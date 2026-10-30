@@ -3,6 +3,7 @@ package org.folio.inventory.dataimport.handlers.actions;
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.folio.ActionProfile.Action.UPDATE;
 import static org.folio.ActionProfile.FolioRecord.HOLDINGS;
 import static org.folio.ActionProfile.FolioRecord.MARC_BIBLIOGRAPHIC;
@@ -102,6 +103,7 @@ public class UpdateHoldingEventHandler implements EventHandler {
           dataImportEventPayload.getContext(), jobExecutionId);
         throw new EventProcessingException(CONTEXT_EMPTY_ERROR_MESSAGE);
       }
+      normalizeHoldingsToJsonArray(dataImportEventPayload);
       if (dataImportEventPayload.getCurrentNode().getChildSnapshotWrappers().isEmpty()) {
         LOGGER.warn("handle:: " + ACTION_HAS_NO_MAPPING_MSG + " jobExecutionId: {}", jobExecutionId);
         return CompletableFuture.failedFuture(new EventProcessingException(ACTION_HAS_NO_MAPPING_MSG));
@@ -250,6 +252,17 @@ public class UpdateHoldingEventHandler implements EventHandler {
       } else {
         future.completeExceptionally(new EventProcessingException(errorsAsStringJson));
       }
+    }
+  }
+
+  /**
+   * Holdings loaded by a preceding MARC-BIB match are stored as a single JSON object,
+   * whereas a Holdings match profile stores a JSON array. This handler works with an array.
+   */
+  private static void normalizeHoldingsToJsonArray(DataImportEventPayload dataImportEventPayload) {
+    String holdings = dataImportEventPayload.getContext().get(HOLDINGS.value());
+    if (isNotBlank(holdings) && holdings.trim().startsWith("{")) {
+      dataImportEventPayload.getContext().put(HOLDINGS.value(), new JsonArray().add(new JsonObject(holdings)).encode());
     }
   }
 

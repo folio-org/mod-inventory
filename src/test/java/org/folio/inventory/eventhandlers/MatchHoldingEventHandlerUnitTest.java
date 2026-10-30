@@ -53,6 +53,7 @@ import org.folio.processing.matching.MatchingManager;
 import org.folio.processing.matching.loader.MatchValueLoaderFactory;
 import org.folio.processing.matching.reader.MarcValueReaderImpl;
 import org.folio.processing.matching.reader.MatchValueReaderFactory;
+import org.folio.processing.matching.reader.StaticValueReaderImpl;
 import org.folio.processing.value.StringValue;
 import org.folio.rest.jaxrs.model.EntityType;
 import org.folio.rest.jaxrs.model.Field;
@@ -225,6 +226,203 @@ class MatchHoldingEventHandlerUnitTest {
       assertNull(processedPayload.getContext().get(MULTI_MATCH_IDS));
       testContext.completeNow();
     }));
+  }
+
+  @DisplayName("should apply a static-value submatch when a preceding holdings match left HOLDINGS as a JSON array")
+  @Test
+  void shouldApplyStaticValueSubMatchWhenHoldingsInContextIsJsonArray(VertxTestContext testContext)
+    throws UnsupportedEncodingException {
+    // arrange
+    MatchValueReaderFactory.register(new StaticValueReaderImpl());
+    String permanentLocationId = UUID.randomUUID().toString();
+    HoldingsRecord holdingsRecord = createHoldingsRecord();
+
+    doAnswer(invocation -> {
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = invocation.getArgument(2);
+      callback.accept(new Success<>(new MultipleRecords<>(singletonList(holdingsRecord), 1)));
+      return null;
+    }).when(holdingsRecordCollection)
+      .findByCql(eq(format("permanentLocationId == \"%s\" AND id == \"%s\"", permanentLocationId, HOLDINGS_ID)),
+        any(PagingParameters.class), any(), any());
+
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
+    context.put(RELATIONS, "{}");
+    context.put(HOLDINGS.value(), new JsonArray().add(JsonObject.mapFrom(holdingsRecord)).encode());
+    DataImportEventPayload eventPayload = createEventPayload().withContext(context);
+    eventPayload.setCurrentNode(new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
+      .withContentType(MATCH_PROFILE)
+      .withContent(new MatchProfile()
+        .withExistingRecordType(HOLDINGS)
+        .withIncomingRecordType(EntityType.STATIC_VALUE)
+        .withMatchDetails(singletonList(new MatchDetail()
+          .withMatchCriterion(EXACTLY_MATCHES)
+          .withExistingRecordType(HOLDINGS)
+          .withIncomingMatchExpression(new MatchExpression()
+            .withDataValueType(MatchExpression.DataValueType.STATIC_VALUE)
+            .withStaticValueDetails(new StaticValueDetails()
+              .withStaticValueType(StaticValueDetails.StaticValueType.TEXT)
+              .withText(permanentLocationId)))
+          .withExistingMatchExpression(new MatchExpression()
+            .withDataValueType(VALUE_FROM_RECORD)
+            .withFields(singletonList(
+              new Field().withLabel("field").withValue("holdings.permanentLocationId"))))))));
+
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
+
+    // act
+    eventHandler.handle(eventPayload).whenComplete((processedPayload, throwable) -> testContext.verify(() -> {
+      // assert
+      assertNull(throwable);
+      assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), processedPayload.getEventType());
+      testContext.completeNow();
+    }));
+  }
+
+  @DisplayName("MODINV-1428: should chain call-number match and static location submatch for a single result")
+  @Test
+  void shouldChainCallNumberMatchAndStaticLocationSubMatchWhenParentResolvesSingleHolding(
+    VertxTestContext testContext) throws UnsupportedEncodingException {
+    // arrange
+    MatchValueReaderFactory.register(new StaticValueReaderImpl());
+    String locationId = UUID.randomUUID().toString();
+    HoldingsRecord onlineHoldings = createHoldingsRecord();
+    ProfileSnapshotWrapper subMatchNode = staticLocationSubMatchNode(locationId);
+
+    // the static location is folded into the parent's own query, so only the online holdings is returned
+    stubFindByCql(format("hrid == \"%s\" AND (permanentLocationId == \"%s\")", HOLDINGS_HRID, locationId),
+      List.of(onlineHoldings));
+    stubFindByCql(format("permanentLocationId == \"%s\" AND id == \"%s\"", locationId, HOLDINGS_ID),
+      List.of(onlineHoldings));
+
+    DataImportEventPayload parentPayload = createEventPayload().withContext(matchingContext());
+    parentPayload.getCurrentNode().setChildSnapshotWrappers(List.of(subMatchNode));
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
+
+    // act: parent match, then the submatch event handled with the payload the parent produced
+    eventHandler.handle(parentPayload)
+      .thenCompose(afterParent -> {
+        afterParent.setCurrentNode(subMatchNode);
+        return eventHandler.handle(afterParent);
+      })
+      .whenComplete((afterSubMatch, throwable) -> testContext.verify(() -> {
+        // assert
+        assertNull(throwable);
+        assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), afterSubMatch.getEventType());
+        JsonArray matched = new JsonArray(afterSubMatch.getContext().get(HOLDINGS.value()));
+        assertEquals(1, matched.size());
+        assertEquals(HOLDINGS_ID, matched.getJsonObject(0).getString("id"));
+        testContext.completeNow();
+      }));
+  }
+
+  @DisplayName("MODINV-1428: should chain call-number match and static location submatch through a multi-match")
+  @Test
+  void shouldChainCallNumberMatchAndStaticLocationSubMatchWhenParentResolvesMultipleHoldings(
+    VertxTestContext testContext) throws UnsupportedEncodingException {
+    // arrange
+    MatchValueReaderFactory.register(new StaticValueReaderImpl());
+    String locationId = UUID.randomUUID().toString();
+    String otherHoldingsId = UUID.randomUUID().toString();
+    HoldingsRecord onlineHoldings = createHoldingsRecord();
+    HoldingsRecord annexHoldings = new HoldingsRecord().withId(otherHoldingsId).withHrid("ho00005678");
+    ProfileSnapshotWrapper subMatchNode = staticLocationSubMatchNode(locationId);
+
+    // both holdings share the call number, so the parent step leaves an ambiguous multi-match result
+    stubFindByCql(format("hrid == \"%s\" AND (permanentLocationId == \"%s\")", HOLDINGS_HRID, locationId),
+      List.of(annexHoldings, onlineHoldings));
+    stubFindByCql(format("permanentLocationId == \"%s\" AND id == (%s OR %s)", locationId, otherHoldingsId,
+      HOLDINGS_ID), List.of(onlineHoldings));
+
+    DataImportEventPayload parentPayload = createEventPayload().withContext(matchingContext());
+    parentPayload.getCurrentNode().setChildSnapshotWrappers(List.of(subMatchNode));
+    EventHandler eventHandler = new MatchHoldingEventHandler(mappingMetadataCache, null);
+
+    // act
+    eventHandler.handle(parentPayload)
+      .thenCompose(afterParent -> {
+        assertEquals(2, new JsonArray(afterParent.getContext().get(MULTI_MATCH_IDS)).size());
+        afterParent.setCurrentNode(subMatchNode);
+        return eventHandler.handle(afterParent);
+      })
+      .whenComplete((afterSubMatch, throwable) -> testContext.verify(() -> {
+        // assert
+        assertNull(throwable);
+        assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), afterSubMatch.getEventType());
+        JsonArray matched = new JsonArray(afterSubMatch.getContext().get(HOLDINGS.value()));
+        assertEquals(1, matched.size());
+        assertEquals(HOLDINGS_ID, matched.getJsonObject(0).getString("id"));
+        assertNull(afterSubMatch.getContext().get(MULTI_MATCH_IDS));
+        testContext.completeNow();
+      }));
+  }
+
+  @DisplayName("MODINV-1428: should not fold a static location name into the parent query")
+  @Test
+  void shouldNotCombineStaticLocationNameIntoParentQueryAndLeaveItToSubMatch(VertxTestContext testContext)
+    throws UnsupportedEncodingException {
+    // arrange
+    MatchValueReaderFactory.register(new StaticValueReaderImpl());
+    String otherHoldingsId = UUID.randomUUID().toString();
+    // a location name can't be used in CQL as is, so any query with it matches nothing
+    stubFindByCql(null, List.of());
+    stubFindByCql(format("hrid == \"%s\"", HOLDINGS_HRID),
+      List.of(createHoldingsRecord(), new HoldingsRecord().withId(otherHoldingsId)));
+
+    ProfileSnapshotWrapper subMatchNode = staticLocationSubMatchNode("L2 (College)");
+    ((MatchProfile) subMatchNode.getContent()).getMatchDetails().getFirst().getExistingMatchExpression()
+      .setFields(singletonList(new Field().withLabel("field").withValue("holdingsrecord.permanentLocationId")));
+    DataImportEventPayload parentPayload = createEventPayload().withContext(matchingContext());
+    parentPayload.getCurrentNode().setChildSnapshotWrappers(List.of(subMatchNode));
+
+    // act
+    new MatchHoldingEventHandler(mappingMetadataCache, null).handle(parentPayload)
+      .whenComplete((processed, throwable) -> testContext.verify(() -> {
+        // assert: the parent leaves a multi-match result for the submatch step to narrow
+        assertNull(throwable);
+        assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), processed.getEventType());
+        assertEquals(2, new JsonArray(processed.getContext().get(MULTI_MATCH_IDS)).size());
+        testContext.completeNow();
+      }));
+  }
+
+  private HashMap<String, String> matchingContext() {
+    HashMap<String, String> context = new HashMap<>();
+    context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
+    context.put(RELATIONS, "{}");
+    return context;
+  }
+
+  private void stubFindByCql(String cql, List<HoldingsRecord> result) throws UnsupportedEncodingException {
+    doAnswer(invocation -> {
+      Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = invocation.getArgument(2);
+      callback.accept(new Success<>(new MultipleRecords<>(result, result.size())));
+      return null;
+    }).when(holdingsRecordCollection)
+      .findByCql(cql == null ? anyString() : eq(cql), any(PagingParameters.class), any(), any());
+  }
+
+  private ProfileSnapshotWrapper staticLocationSubMatchNode(String locationId) {
+    return new ProfileSnapshotWrapper()
+      .withId(UUID.randomUUID().toString())
+      .withContentType(MATCH_PROFILE)
+      .withReactTo(MATCH)
+      .withContent(new MatchProfile()
+        .withExistingRecordType(HOLDINGS)
+        .withIncomingRecordType(EntityType.STATIC_VALUE)
+        .withMatchDetails(singletonList(new MatchDetail()
+          .withMatchCriterion(EXACTLY_MATCHES)
+          .withExistingRecordType(HOLDINGS)
+          .withIncomingMatchExpression(new MatchExpression()
+            .withDataValueType(MatchExpression.DataValueType.STATIC_VALUE)
+            .withStaticValueDetails(new StaticValueDetails()
+              .withStaticValueType(StaticValueDetails.StaticValueType.TEXT)
+              .withText(locationId)))
+          .withExistingMatchExpression(new MatchExpression()
+            .withDataValueType(VALUE_FROM_RECORD)
+            .withFields(singletonList(
+              new Field().withLabel("field").withValue("holdings.permanentLocationId")))))));
   }
 
   private DataImportEventPayload createEventPayload() {

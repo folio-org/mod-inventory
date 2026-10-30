@@ -5,6 +5,7 @@ import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -59,11 +60,7 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
       } else if (isNotEmpty(eventPayload.getContext().get(INSTANCES_IDS_KEY))) {
         cqlSubMatch = getConditionByMultipleMarcBibMatchResult(eventPayload);
       } else if (isNotNullOrEmpty(eventPayload.getContext().get(EntityType.HOLDINGS.value()))) {
-        JsonObject holdingAsJson = new JsonObject(eventPayload.getContext().get(EntityType.HOLDINGS.value()));
-        if (holdingAsJson.getJsonObject(HOLDINGS_FIELD) != null) {
-          holdingAsJson = holdingAsJson.getJsonObject(HOLDINGS_FIELD);
-        }
-        cqlSubMatch = format(" AND id == \"%s\"", holdingAsJson.getString("id"));
+        cqlSubMatch = getConditionByMatchedHoldings(eventPayload.getContext().get(EntityType.HOLDINGS.value()));
       } else if (isNotEmpty(eventPayload.getContext().get(EntityType.INSTANCE.value()))) {
         JsonObject instanceAsJson = new JsonObject(eventPayload.getContext().get(EntityType.INSTANCE.value()));
         cqlSubMatch = format(" AND instanceId == \"%s\"", instanceAsJson.getString("id"));
@@ -84,6 +81,23 @@ public class HoldingLoader extends AbstractLoader<HoldingsRecord> {
       .collect(Collectors.toList());
 
     return Json.encode(idList);
+  }
+
+  /**
+   * Builds an id condition from holdings left in the context by a previous match. A preceding
+   * Holdings/Item match stores them as a JSON array, a MARC-BIB match as a single JSON object.
+   */
+  private String getConditionByMatchedHoldings(String holdingsInContext) {
+    String trimmed = holdingsInContext.trim();
+    JsonArray holdings = trimmed.startsWith("[") ? new JsonArray(trimmed)
+                                                 : new JsonArray().add(new JsonObject(trimmed));
+    List<String> ids = holdings.stream()
+      .map(JsonObject.class::cast)
+      .map(json -> json.getJsonObject(HOLDINGS_FIELD) != null ? json.getJsonObject(HOLDINGS_FIELD) : json)
+      .map(json -> json.getString("id"))
+      .toList();
+    return ids.size() == 1 ? format(" AND id == \"%s\"", ids.getFirst())
+                           : format(" AND id == (%s)", String.join(" OR ", ids));
   }
 
   private static boolean isNotNullOrEmpty(String value) {
