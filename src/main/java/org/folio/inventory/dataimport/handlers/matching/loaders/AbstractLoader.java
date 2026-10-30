@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -29,6 +30,7 @@ import org.folio.inventory.common.domain.Failure;
 import org.folio.inventory.common.domain.MultipleRecords;
 import org.folio.inventory.common.domain.PagingParameters;
 import org.folio.inventory.common.domain.Success;
+import org.folio.inventory.dataimport.handlers.matching.util.MatchingParametersRelations;
 import org.folio.inventory.domain.SearchableCollection;
 import org.folio.okapi.common.XOkapiHeaders;
 import org.folio.processing.exceptions.MatchingException;
@@ -51,6 +53,10 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
   private static final int MULTI_MATCH_LOAD_LIMIT = 90;
   private static final String ID_FIELD = "id";
   private static final StaticValueReaderImpl STATIC_VALUE_READER = new StaticValueReaderImpl();
+  private static final Pattern UUID_PATTERN =
+    Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
+  private static final Map<String, String> MATCHING_RELATIONS =
+    new MatchingParametersRelations().getMatchingRelations();
 
   @Override
   public CompletableFuture<LoadResult> loadEntity(LoadQuery loadQuery, DataImportEventPayload eventPayload) {
@@ -69,6 +75,8 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
     try {
       String cql = loadQuery.getCql() + addCqlSubMatchCondition(eventPayload)
                    + buildCombinedStaticSubMatchCondition(eventPayload);
+      LOG.info("loadEntity:: Searching {} by CQL query: [{}], jobExecutionId: '{}'",
+        getEntityType().value(), cql, eventPayload.getJobExecutionId());
 
       Consumer<Success<MultipleRecords<T>>> onSuccess = success -> {
         MultipleRecords<T> collection = success.result();
@@ -195,10 +203,28 @@ public abstract class AbstractLoader<T> implements MatchValueLoader {
 
     MatchDetail childMatchDetail = childMatchProfile.getMatchDetails().getFirst();
     Value<?> value = STATIC_VALUE_READER.read(eventPayload, childMatchDetail);
+    if (requiresIdTranslation(childMatchDetail, value)) {
+      LOG.info("buildCombinedStaticSubMatchCondition:: Static submatch value for field '{}' requires id translation, "
+               + "it is not combined into the parent query, jobExecutionId: '{}'",
+        childMatchDetail.getExistingMatchExpression().getFields().getFirst().getValue(),
+        eventPayload.getJobExecutionId());
+      return EMPTY;
+    }
     LoadQuery childQuery = LoadQueryBuilder.build(value, childMatchDetail);
     return childQuery != null && StringUtils.isNotEmpty(childQuery.getCql())
       ? format(" AND (%s)", childQuery.getCql())
       : EMPTY;
+  }
+
+  /**
+   * A static name/code for a field that references another record (e.g. a location name for permanentLocationId)
+   * must be translated to an id by the matcher. That translation is not available here,
+   * so such submatches are left to the regular, separate submatch step. A value that is already an id is safe.
+   */
+  private boolean requiresIdTranslation(MatchDetail matchDetail, Value<?> value) {
+    String existingField = matchDetail.getExistingMatchExpression().getFields().getFirst().getValue();
+    return MATCHING_RELATIONS.containsKey(existingField)
+           && !(value != null && value.getValue() instanceof String text && UUID_PATTERN.matcher(text).matches());
   }
 
   private MatchProfile extractMatchProfile(ProfileSnapshotWrapper wrapper) {

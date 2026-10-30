@@ -358,6 +358,35 @@ class MatchHoldingEventHandlerUnitTest {
       }));
   }
 
+  @DisplayName("MODINV-1428: should not fold a static location name into the parent query")
+  @Test
+  void shouldNotCombineStaticLocationNameIntoParentQueryAndLeaveItToSubMatch(VertxTestContext testContext)
+    throws UnsupportedEncodingException {
+    // arrange
+    MatchValueReaderFactory.register(new StaticValueReaderImpl());
+    String otherHoldingsId = UUID.randomUUID().toString();
+    // a location name can't be used in CQL as is, so any query with it matches nothing
+    stubFindByCql(null, List.of());
+    stubFindByCql(format("hrid == \"%s\"", HOLDINGS_HRID),
+      List.of(createHoldingsRecord(), new HoldingsRecord().withId(otherHoldingsId)));
+
+    ProfileSnapshotWrapper subMatchNode = staticLocationSubMatchNode("L2 (College)");
+    ((MatchProfile) subMatchNode.getContent()).getMatchDetails().getFirst().getExistingMatchExpression()
+      .setFields(singletonList(new Field().withLabel("field").withValue("holdingsrecord.permanentLocationId")));
+    DataImportEventPayload parentPayload = createEventPayload().withContext(matchingContext());
+    parentPayload.getCurrentNode().setChildSnapshotWrappers(List.of(subMatchNode));
+
+    // act
+    new MatchHoldingEventHandler(mappingMetadataCache, null).handle(parentPayload)
+      .whenComplete((processed, throwable) -> testContext.verify(() -> {
+        // assert: the parent leaves a multi-match result for the submatch step to narrow
+        assertNull(throwable);
+        assertEquals(DI_INVENTORY_HOLDING_MATCHED.value(), processed.getEventType());
+        assertEquals(2, new JsonArray(processed.getContext().get(MULTI_MATCH_IDS)).size());
+        testContext.completeNow();
+      }));
+  }
+
   private HashMap<String, String> matchingContext() {
     HashMap<String, String> context = new HashMap<>();
     context.put(MAPPING_PARAMS, LOCATIONS_PARAMS);
@@ -370,7 +399,8 @@ class MatchHoldingEventHandlerUnitTest {
       Consumer<Success<MultipleRecords<HoldingsRecord>>> callback = invocation.getArgument(2);
       callback.accept(new Success<>(new MultipleRecords<>(result, result.size())));
       return null;
-    }).when(holdingsRecordCollection).findByCql(eq(cql), any(PagingParameters.class), any(), any());
+    }).when(holdingsRecordCollection)
+      .findByCql(cql == null ? anyString() : eq(cql), any(PagingParameters.class), any(), any());
   }
 
   private ProfileSnapshotWrapper staticLocationSubMatchNode(String locationId) {
