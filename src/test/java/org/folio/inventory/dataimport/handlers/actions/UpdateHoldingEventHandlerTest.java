@@ -280,6 +280,46 @@ class UpdateHoldingEventHandlerTest {
     assertEquals(holdingId, resultedHoldings.getString("id"));
   }
 
+  @Test
+  void shouldProcessEventWhenHoldingsInContextIsSingleJsonObjectFromMarcBibMatch()
+    throws InterruptedException, ExecutionException, TimeoutException {
+    String permanentLocationId = "a1e7c35d-4835-430a-ba3c-f93d5f3cde5a";
+
+    when(fakeReader.read(any(MappingRule.class))).thenReturn(StringValue.of(permanentLocationId));
+    when(storage.getHoldingsRecordCollection(any())).thenReturn(holdingsRecordsCollection);
+    when(storage.getItemCollection(any())).thenReturn(itemCollection);
+
+    MappingManager.registerReaderFactory(fakeReaderFactory);
+    MappingManager.registerWriterFactory(new HoldingWriterFactory());
+    MappingManager.registerMapperFactory(new HoldingsMapperFactory());
+
+    String holdingId = UUID.randomUUID().toString();
+    HoldingsRecord holdingsRecord = new HoldingsRecord()
+      .withId(holdingId)
+      .withInstanceId(UUID.randomUUID().toString())
+      .withHrid(UUID.randomUUID().toString())
+      .withPermanentLocationId(permanentLocationId);
+
+    Record marcRecord = new Record().withParsedRecord(
+      new ParsedRecord().withContent(PARSED_CONTENT_WITH_INSTANCE_ID_AND_MULTIPLE_HOLDINGS));
+    HashMap<String, String> context = new HashMap<>();
+    context.put(HOLDINGS.value(), Json.encode(holdingsRecord));
+    context.put(MARC_BIBLIOGRAPHIC.value(), Json.encode(marcRecord));
+
+    DataImportEventPayload dataImportEventPayload = new DataImportEventPayload()
+      .withEventType(DI_INVENTORY_HOLDING_UPDATED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withContext(context)
+      .withProfileSnapshot(profileSnapshotWrapperForMultipleHoldings)
+      .withCurrentNode(profileSnapshotWrapperForMultipleHoldings.getChildSnapshotWrappers().getFirst());
+
+    DataImportEventPayload actual = updateHoldingEventHandler.handle(dataImportEventPayload).get(5, TimeUnit.SECONDS);
+
+    assertEquals(DI_INVENTORY_HOLDING_UPDATED.value(), actual.getEventType());
+    JsonArray resulted = new JsonArray(actual.getContext().get(HOLDINGS.value()));
+    assertEquals(holdingId, resulted.getJsonObject(0).getString("id"));
+  }
+
   @SuppressWarnings("checkstyle:MethodLength")
   @Test
   void shouldUpdateMultipleHoldingsOnOlRetryAndRemoveRetryCounterFromPayloadViaSeveralRuns()

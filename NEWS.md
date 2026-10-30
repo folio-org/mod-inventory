@@ -19,6 +19,7 @@
 * Improve Kafka header handling with case-insensitive TreeMap [MODINV-1414](https://folio-org.atlassian.net/browse/MODINV-1414)
 * Rollback the central instance when the sharing operation fails [MODINV-1420](https://folio-org.atlassian.net/browse/MODINV-1420)
 * ConcurrentModificationException in PostgresClientFactory when multiple Vert.x event loops access shared pool cache concurrently [MODINV-1429](https://folio-org.atlassian.net/browse/MODINV-1429)
+* Fix Holdings "Static value (submatch only)" submatch failing with DecodeException when preceding match left holdings as a JSON array [MODINV-1428](https://folio-org.atlassian.net/browse/MODINV-1428)
 
 ### Tech Dept
 
