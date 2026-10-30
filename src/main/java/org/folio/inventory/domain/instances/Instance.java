@@ -311,6 +311,10 @@ public class Instance {
     return json;
   }
 
+  public Dates getDates() {
+    return dates;
+  }
+
   public Instance setDates(Dates dates) {
     this.dates = dates;
     return this;
