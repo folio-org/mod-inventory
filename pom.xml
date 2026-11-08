@@ -28,7 +28,7 @@
     <mod-source-record-manager-client.version>4.1.0-SNAPSHOT</mod-source-record-manager-client.version>
     <folio-isbn-util.version>1.10.0-SNAPSHOT</folio-isbn-util.version>
 
-    <vertx.version>5.2.2</vertx.version>
+    <vertx.version>5.2.3</vertx.version>
     <lombok.version>1.18.48</lombok.version>
     <postgres.version>42.7.14</postgres.version>
     <liquibase.version>5.0.4</liquibase.version>
@@ -36,7 +36,7 @@
     <log4j.version>2.26.1</log4j.version>
     <joda-time.version>2.15.1</joda-time.version>
     <caffeine.version>3.3.1</caffeine.version>
-    <guava.version>33.7.2-jre</guava.version>
+    <guava.version>33.8.0-jre</guava.version>
     <commons-lang3.version>3.21.0</commons-lang3.version>
 
     <testcontainers.version>2.0.5</testcontainers.version>
@@ -47,7 +47,7 @@
     <wiremock.version>3.13.2</wiremock.version>
     <mockito-core.version>5.24.0</mockito-core.version>
     <mockito-inline.version>5.2.0</mockito-inline.version>
-    <byte-buddy.version>1.18.16</byte-buddy.version>
+    <byte-buddy.version>1.18.17</byte-buddy.version>
     <json-path-assert.version>3.0.0</json-path-assert.version>
     <assertj-core.version>3.27.7</assertj-core.version>
 
@@ -62,7 +62,7 @@
     <maven-release-plugin.version>3.3.1</maven-release-plugin.version>
     <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
     <folio-java-checkstyle.version>1.2.0</folio-java-checkstyle.version>
-    <checkstyle.version>14.3.0</checkstyle.version>
+    <checkstyle.version>14.4.0</checkstyle.version>
   </properties>
 
   <dependencyManagement>
