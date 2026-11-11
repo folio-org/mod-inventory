@@ -63,6 +63,23 @@ system property variables in this order, and uses the default 9403 as fallback. 
 
 The Docker container exposes port 9403.
 
+## Outgoing HTTP connection pool
+
+Set `HTTP_CLIENT_MAX_POOL_SIZE` on the **mod-inventory container** to configure
+the shared HTTP client's maximum HTTP/1 connections per destination. For example,
+`HTTP_CLIENT_MAX_POOL_SIZE=20` allows up to 20 connections from this client to
+`sidecar:8081`. The default remains **5**.
+
+Alternatively, set the JVM property `-Dinventory.httpClient.maxPoolSize=20`.
+The JVM property takes precedence over the environment variable. Values must be
+positive integers; invalid values prevent startup. Restart the module after
+changing the setting. The effective maximum is logged at startup.
+
+This applies to the HTTP client shared by the inventory REST resources and their
+storage lookups. Independently created clients, including Kafka consumer clients,
+keep their own settings. Sidecar `WEB_CLIENT_*_POOL_MAX_SIZE` settings configure
+separate pools and do not change this module setting.
+
 ## Preparation
 
 ### Running Okapi

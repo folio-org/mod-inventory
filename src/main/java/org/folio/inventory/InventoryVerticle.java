@@ -30,6 +30,7 @@ import org.folio.inventory.storage.Storage;
 
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.PoolOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 
@@ -53,7 +54,11 @@ public class InventoryVerticle extends AbstractVerticle {
     config.fieldNames().forEach(key ->
       log.info(String.format("%s:%s", key, config.getValue(key).toString())));
 
-    HttpClient client = vertx.createHttpClient();
+    int maxPoolSize = Integer.parseInt(System.getProperty("inventory.httpClient.maxPoolSize",
+      System.getenv().getOrDefault("HTTP_CLIENT_MAX_POOL_SIZE",
+        String.valueOf(PoolOptions.DEFAULT_MAX_POOL_SIZE))));
+    HttpClient client = vertx.createHttpClient(new PoolOptions().setHttp1MaxSize(maxPoolSize));
+    log.info("HTTP client HTTP/1 connection pool maximum: {}", maxPoolSize);
 
     Storage storage = Storage.basedUpon(config, client);
 
