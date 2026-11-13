@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -1363,6 +1364,111 @@ class MatchInstanceEventHandlerUnitTest {
               .withFields(singletonList(
                 new Field().withLabel("field").withValue(matchValue))
               ))))));
+  }
+
+  // Returns an event payload where the match is 245$a (incoming MARC) → instance.indexTitle (existing).
+  // Uses the real MarcValueReaderImpl, so context["MARC_BIBLIOGRAPHIC"] must be populated by the caller.
+  private DataImportEventPayload createIndexTitleEventPayload() {
+    return new DataImportEventPayload()
+      .withEventType(DI_INCOMING_MARC_BIB_RECORD_PARSED.value())
+      .withJobExecutionId(UUID.randomUUID().toString())
+      .withEventsChain(new ArrayList<>())
+      .withOkapiUrl("http://localhost:9493")
+      .withTenant("diku")
+      .withToken("token")
+      .withContext(new HashMap<>())
+      .withCurrentNode(new ProfileSnapshotWrapper()
+        .withId(UUID.randomUUID().toString())
+        .withContentType(MATCH_PROFILE)
+        .withContent(new MatchProfile()
+          .withExistingRecordType(INSTANCE)
+          .withIncomingRecordType(MARC_BIBLIOGRAPHIC)
+          .withMatchDetails(singletonList(new MatchDetail()
+            .withMatchCriterion(EXACTLY_MATCHES)
+            .withIncomingMatchExpression(new MatchExpression()
+              .withDataValueType(VALUE_FROM_RECORD)
+              .withFields(List.of(
+                new Field().withLabel("field").withValue("245"),
+                new Field().withLabel("indicator1").withValue("*"),
+                new Field().withLabel("indicator2").withValue("*"),
+                new Field().withLabel("recordSubfield").withValue("a"))))
+            .withExistingMatchExpression(new MatchExpression()
+              .withDataValueType(VALUE_FROM_RECORD)
+              .withFields(singletonList(
+                new Field().withLabel("field").withValue("instance.indexTitle"))))))));
+  }
+
+  // Minimal org.folio.Record JSON with 245 $a, as stored in event context["MARC_BIBLIOGRAPHIC"].
+  private static String marcBibWithIndexTitle(String title245a) {
+    var fields = new io.vertx.core.json.JsonArray()
+      .add(new JsonObject().put("245", new JsonObject()
+        .put("ind1", "0").put("ind2", "0")
+        .put("subfields", new io.vertx.core.json.JsonArray()
+          .add(new JsonObject().put("a", title245a)))));
+    var content = new JsonObject()
+      .put("leader", "00000nam a2200000 i 4500")
+      .put("fields", fields);
+    return new JsonObject()
+      .put("id", UUID.randomUUID().toString())
+      .put("snapshotId", UUID.randomUUID().toString())
+      .put("matchedId", UUID.randomUUID().toString())
+      .put("generation", 0)
+      .put("recordType", "MARC_BIB")
+      .put("parsedRecord", new JsonObject()
+        .put("id", UUID.randomUUID().toString())
+        .put("content", content.encode()))
+      .encode();
+  }
+
+  @Test
+  void shouldNotCallFindByCqlWhenMarcBibliographicContextIsAbsent(VertxTestContext testContext)
+    throws UnsupportedEncodingException {
+    // Simulate the production case: the reader returns MissingValue because the MARC record
+    // is not present in context["MARC_BIBLIOGRAPHIC"]. LoadQueryBuilder.build() receives null
+    // and returns null, so InstanceLoader.loadEntity() exits immediately without an HTTP call.
+    when(marcValueReader.read(any(DataImportEventPayload.class), any(MatchDetail.class)))
+      .thenReturn(MissingValue.getInstance());
+
+    DataImportEventPayload eventPayload = createEventPayload("instance.indexTitle");
+
+    eventHandler.handle(eventPayload).whenComplete((processed, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(DI_INVENTORY_INSTANCE_NOT_MATCHED.value(), processed.getEventType());
+      verify(instanceCollection, times(0)).findByCql(anyString(), anyBoolean(), any(PagingParameters.class), any(), any());
+      testContext.completeNow();
+    }));
+  }
+
+  @Test
+  void shouldBuildCorrectCqlAndMatchWhenMarcBibliographicContextIsPresent(VertxTestContext testContext)
+    throws UnsupportedEncodingException {
+    // Uses the real MarcValueReaderImpl to read 245$a from the event context and verifies
+    // that InstanceLoader sends the correct CQL to mod-inventory-storage.
+    MatchValueReaderFactory.clearReaderFactory();
+    MatchValueReaderFactory.register(new MarcValueReaderImpl());
+
+    String title = "Game on, Hollywood!";
+    String expectedCql = format("indexTitle == \"%s\"", title);
+
+    doAnswer(ans -> {
+      Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
+      callback.accept(new Success<>(new MultipleRecords<>(singletonList(createInstance()), 1)));
+      return null;
+    }).when(instanceCollection).findByCql(anyString(), anyBoolean(), any(PagingParameters.class), any(), any());
+
+    DataImportEventPayload eventPayload = createIndexTitleEventPayload();
+    eventPayload.getContext().put(MARC_BIBLIOGRAPHIC.value(), marcBibWithIndexTitle(title));
+    eventPayload.getContext().put(MAPPING_PARAMS, LOCATIONS_PARAMS);
+    eventPayload.getContext().put(RELATIONS, MATCHING_RELATIONS);
+
+    eventHandler.handle(eventPayload).whenComplete((processed, throwable) -> testContext.verify(() -> {
+      assertNull(throwable);
+      assertEquals(DI_INVENTORY_INSTANCE_MATCHED.value(), processed.getEventType());
+      // Verify findByCql was called with CQL containing the indexTitle value
+      verify(instanceCollection, times(1)).findByCql(
+        org.mockito.ArgumentMatchers.contains(title), anyBoolean(), any(PagingParameters.class), any(), any());
+      testContext.completeNow();
+    }));
   }
 
   private Instance createInstance() {

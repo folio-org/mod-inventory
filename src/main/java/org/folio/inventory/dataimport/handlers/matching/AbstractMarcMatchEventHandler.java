@@ -350,10 +350,54 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         LOG.info("matchRecords:: {}, jobExecutionId: '{}', tenantId: '{}'",
           RECORDS_NOT_FOUND_MESSAGE, payload.getJobExecutionId(), payload.getTenant());
         return Future.succeededFuture(Optional.empty());
+      } else if (localMatchingRes.getTotalRecords() == 1 && localMatchingRes.getIdentifiers().size() == 1
+                 && centralMatchingRes.getTotalRecords() == 1 && centralMatchingRes.getIdentifiers().size() == 1) {
+        return resolveSameRecordInLocalAndCentralTenants(localMatchingRes, centralMatchingRes,
+          recordsMatchingContext, payload);
       } else {
         populatePayloadWithExternalIdentifiers(localMatchingRes, centralMatchingRes, payload);
         return Future.succeededFuture(Optional.empty());
       }
+    });
+  }
+
+  /**
+   * Handles the case when exactly one record is found in each of local and central tenants.
+   * A shared instance has the same SRS record (same matchedId) in both tenants, so it is not a multiple match.
+   * In that case the central record is preferred, unless it is DELETED while the local one is not.
+   * If the records differ, the result is a multiple match.
+   */
+  private Future<Optional<Record>> resolveSameRecordInLocalAndCentralTenants(
+    RecordsIdentifiersCollection localMatchingRes,
+    RecordsIdentifiersCollection centralMatchingRes,
+    RecordsMatchingContext recordsMatchingContext,
+    DataImportEventPayload payload) {
+    return Future.all(
+      getRecordById(localMatchingRes.getIdentifiers().getFirst(),
+        recordsMatchingContext.getLocalTenantRecordsClient(), payload),
+      getRecordById(centralMatchingRes.getIdentifiers().getFirst(),
+        recordsMatchingContext.getCentralTenantRecordsClient(), payload)
+    ).compose(v -> {
+      Record localRecord = v.resultAt(0);
+      Record centralRecord = v.resultAt(1);
+
+      if (StringUtils.isEmpty(localRecord.getMatchedId())
+          || !localRecord.getMatchedId().equals(centralRecord.getMatchedId())) {
+        populatePayloadWithExternalIdentifiers(localMatchingRes, centralMatchingRes, payload);
+        return Future.succeededFuture(Optional.<Record>empty());
+      }
+
+      if (centralRecord.getState() == Record.State.DELETED && localRecord.getState() != Record.State.DELETED) {
+        LOG.info("matchRecords:: Same record found in local and central tenants, central is DELETED, "
+                 + "using local record, jobExecutionId: '{}', tenantId: '{}'",
+          payload.getJobExecutionId(), payload.getTenant());
+        return Future.succeededFuture(Optional.of(localRecord));
+      }
+
+      LOG.info("matchRecords:: Same record found in local and central tenants, using central record, "
+               + "jobExecutionId: '{}', tenantId: '{}'", payload.getJobExecutionId(), payload.getTenant());
+      payload.getContext().put(CENTRAL_TENANT_ID_KEY, recordsMatchingContext.getCentralTenantId());
+      return Future.succeededFuture(Optional.of(centralRecord));
     });
   }
 
