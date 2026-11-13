@@ -21,6 +21,7 @@
 * ConcurrentModificationException in PostgresClientFactory when multiple Vert.x event loops access shared pool cache concurrently [MODINV-1429](https://folio-org.atlassian.net/browse/MODINV-1429)
 * Ensure Instance dates are retained during copy and serialization [MODINV-1439](https://folio-org.atlassian.net/browse/MODINV-1439)
 * Fix Holdings "Static value (submatch only)" submatch failing with DecodeException when preceding match left holdings as a JSON array [MODINV-1428](https://folio-org.atlassian.net/browse/MODINV-1428)
+* ECS | MARC-to-MARC matching reports a multiple match for a shared instance because the same record is found in both the member and the central tenant [MODSOURCE-1022](https://folio-org.atlassian.net/browse/MODSOURCE-1022)
 
 ### Tech Dept
 
