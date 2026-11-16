@@ -608,19 +608,21 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
   }
 
   @Test
-  void shouldMatchCentralRecordIfSameRecordIsDeletedAtLocalAndCentralTenants(VertxTestContext testContext) {
+  void shouldPopulatePayloadWithInstancesIdsIfSameRecordIsDeletedAtLocalAndCentralTenants(
+    VertxTestContext testContext) {
     String matchedId = UUID.randomUUID().toString();
     Record localRecord = buildRecordWithState(matchedId, Record.State.DELETED);
     Record centralRecord = buildRecordWithState(matchedId, Record.State.DELETED);
     stubSameRecordInLocalAndCentralTenants(localRecord, centralRecord);
 
-    matchMarcBibEventHandler.handle(createEventPayload(TENANT_ID))
+    matchMarcBibEventHandler.handle(createEventPayloadWithSubmatchProfile())
       .whenComplete((payload, throwable) -> testContext.verify(() -> {
         assertNull(throwable);
         assertEquals(DI_SRS_MARC_BIB_RECORD_MATCHED.value(), payload.getEventType());
-        assertEquals(CENTRAL_TENANT_ID, payload.getContext().get(CENTRAL_TENANT_ID_KEY));
-        Record actualRecord = Json.decodeValue(payload.getContext().get(MATCHED_MARC_BIB_KEY), Record.class);
-        assertEquals(centralRecord.getId(), actualRecord.getId());
+        assertNotNull(payload.getContext().get(INSTANCES_IDS_KEY));
+        assertEquals(2, new JsonArray(payload.getContext().get(INSTANCES_IDS_KEY)).size());
+        assertNull(payload.getContext().get(MATCHED_MARC_BIB_KEY));
+        assertNull(payload.getContext().get(CENTRAL_TENANT_ID_KEY));
         testContext.completeNow();
       }));
   }
