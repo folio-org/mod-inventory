@@ -1421,8 +1421,7 @@ class MatchInstanceEventHandlerUnitTest {
   }
 
   @Test
-  void shouldNotCallFindByCqlWhenMarcBibliographicContextIsAbsent(VertxTestContext testContext)
-    throws UnsupportedEncodingException {
+  void shouldNotCallFindByCqlWhenMarcBibliographicContextIsAbsent(VertxTestContext testContext) {
     // Simulate the production case: the reader returns MissingValue because the MARC record
     // is not present in context["MARC_BIBLIOGRAPHIC"]. LoadQueryBuilder.build() receives null
     // and returns null, so InstanceLoader.loadEntity() exits immediately without an HTTP call.
@@ -1449,7 +1448,6 @@ class MatchInstanceEventHandlerUnitTest {
     MatchValueReaderFactory.register(new MarcValueReaderImpl());
 
     String title = "Game on, Hollywood!";
-    String expectedCql = format("indexTitle == \"%s\"", title);
 
     doAnswer(ans -> {
       Consumer<Success<MultipleRecords<Instance>>> callback = ans.getArgument(3);
