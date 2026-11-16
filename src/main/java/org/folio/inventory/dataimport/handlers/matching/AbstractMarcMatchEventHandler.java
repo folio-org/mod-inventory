@@ -387,18 +387,28 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
         return Future.succeededFuture(Optional.<Record>empty());
       }
 
-      if (centralRecord.getState() == Record.State.DELETED && localRecord.getState() != Record.State.DELETED) {
+      Record preferredRecord = selectPreferredRecord(localRecord, centralRecord);
+      if (preferredRecord == centralRecord) {
+        LOG.info("matchRecords:: Same record found in local and central tenants, using central record, "
+                 + "jobExecutionId: '{}', tenantId: '{}'", payload.getJobExecutionId(), payload.getTenant());
+        payload.getContext().put(CENTRAL_TENANT_ID_KEY, recordsMatchingContext.getCentralTenantId());
+      } else {
         LOG.info("matchRecords:: Same record found in local and central tenants, central is DELETED, "
                  + "using local record, jobExecutionId: '{}', tenantId: '{}'",
           payload.getJobExecutionId(), payload.getTenant());
-        return Future.succeededFuture(Optional.of(localRecord));
       }
-
-      LOG.info("matchRecords:: Same record found in local and central tenants, using central record, "
-               + "jobExecutionId: '{}', tenantId: '{}'", payload.getJobExecutionId(), payload.getTenant());
-      payload.getContext().put(CENTRAL_TENANT_ID_KEY, recordsMatchingContext.getCentralTenantId());
-      return Future.succeededFuture(Optional.of(centralRecord));
+      return Future.succeededFuture(Optional.of(preferredRecord));
     });
+  }
+
+  /**
+   * Selects which copy of the same record to use. The central tenant record is preferred,
+   * unless it is DELETED while the local one is not.
+   */
+  private Record selectPreferredRecord(Record localRecord, Record centralRecord) {
+    boolean centralDeleted = centralRecord.getState() == Record.State.DELETED;
+    boolean localDeleted = localRecord.getState() == Record.State.DELETED;
+    return centralDeleted && !localDeleted ? localRecord : centralRecord;
   }
 
   private Future<RecordsIdentifiersCollection> getAllMatchedRecordsIdentifiers(RecordMatchingDto recordMatchingDto,
