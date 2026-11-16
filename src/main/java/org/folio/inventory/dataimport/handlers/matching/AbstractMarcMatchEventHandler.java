@@ -365,8 +365,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
    * Handles the case when exactly one record is found in each of local and central tenants.
    * A shared instance has the same SRS record (same matchedId) in both tenants, so it is not a multiple match.
    * In that case the central record is preferred, unless it is DELETED while the local one is not.
-   * If the records differ, or both are DELETED (shared instance marked for deletion), the result
-   * is a multiple match.
+   * If the records differ, the result is a multiple match.
    */
   private Future<Optional<Record>> resolveSameRecordInLocalAndCentralTenants(
     RecordsIdentifiersCollection localMatchingRes,
@@ -382,10 +381,7 @@ public abstract class AbstractMarcMatchEventHandler implements EventHandler {
       Record localRecord = v.resultAt(0);
       Record centralRecord = v.resultAt(1);
 
-      boolean bothDeleted = localRecord.getState() == Record.State.DELETED
-                            && centralRecord.getState() == Record.State.DELETED;
-      if (bothDeleted
-          || StringUtils.isEmpty(localRecord.getMatchedId())
+      if (StringUtils.isEmpty(localRecord.getMatchedId())
           || !localRecord.getMatchedId().equals(centralRecord.getMatchedId())) {
         populatePayloadWithExternalIdentifiers(localMatchingRes, centralMatchingRes, payload);
         return Future.succeededFuture(Optional.<Record>empty());
