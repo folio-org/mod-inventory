@@ -152,7 +152,7 @@ class MatchInstanceEventHandlerUnitTest {
             "3a40852d-49fd-4df2-a1f9-6e2641a6e91f"
           ],
           "servicePoints": [
-    
+
           ],
           "metadata": {
             "createdDate": 1592219257690,
@@ -172,7 +172,7 @@ class MatchInstanceEventHandlerUnitTest {
             "3a40852d-49fd-4df2-a1f9-6e2641a6e91f"
           ],
           "servicePoints": [
-    
+
           ],
           "metadata": {
             "createdDate": 1592219257711,
@@ -1434,7 +1434,8 @@ class MatchInstanceEventHandlerUnitTest {
     eventHandler.handle(eventPayload).whenComplete((processed, throwable) -> testContext.verify(() -> {
       assertNull(throwable);
       assertEquals(DI_INVENTORY_INSTANCE_NOT_MATCHED.value(), processed.getEventType());
-      verify(instanceCollection, times(0)).findByCql(anyString(), anyBoolean(), any(PagingParameters.class), any(), any());
+      verify(instanceCollection, times(0)).findByCql(anyString(),
+        anyBoolean(), any(PagingParameters.class), any(), any());
       testContext.completeNow();
     }));
   }
