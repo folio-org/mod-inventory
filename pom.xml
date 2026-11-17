@@ -31,7 +31,14 @@
     <vertx.version>5.2.3</vertx.version>
     <lombok.version>1.18.48</lombok.version>
     <postgres.version>42.7.14</postgres.version>
-    <liquibase.version>5.0.4</liquibase.version>
+
+    <!--
+      Latest liquibase versions have a different license that is not open source software (OSS):
+      https://www.liquibase.com/blog/liquibase-community-for-the-future-fsl
+      Keep at latest Apache-2.0 licensed version to comply with FOLIO's licensing requirements:
+      https://github.com/folio-org/tech-council/blob/master/MODULE_ACCEPTANCE_CRITERIA.MD
+    -->
+    <liquibase.version>4.33.0</liquibase.version>
     <kafkaclients.version>4.4.0</kafkaclients.version>
     <log4j.version>2.26.1</log4j.version>
     <joda-time.version>2.15.1</joda-time.version>

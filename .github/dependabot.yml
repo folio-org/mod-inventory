@@ -12,3 +12,10 @@ updates:
       all-deps:
         patterns:
           - "*"
+    ignore:
+      # Latest liquibase versions have a different license that is not open source software (OSS):
+      # https://www.liquibase.com/blog/liquibase-community-for-the-future-fsl
+      # Keep at latest Apache-2.0 licensed version to comply with FOLIO's licensing requirements:
+      # https://github.com/folio-org/tech-council/blob/master/MODULE_ACCEPTANCE_CRITERIA.MD
+      - dependency-name: "org.liquibase:liquibase-core"
+        versions: [ "[5.0.0,)" ]

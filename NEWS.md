@@ -21,6 +21,7 @@
 * ConcurrentModificationException in PostgresClientFactory when multiple Vert.x event loops access shared pool cache concurrently [MODINV-1429](https://folio-org.atlassian.net/browse/MODINV-1429)
 * Ensure Instance dates are retained during copy and serialization [MODINV-1439](https://folio-org.atlassian.net/browse/MODINV-1439)
 * Fix Holdings "Static value (submatch only)" submatch failing with DecodeException when preceding match left holdings as a JSON array [MODINV-1428](https://folio-org.atlassian.net/browse/MODINV-1428)
+* Downgrade Liquibase from 5 to 4 [MODINV-1444](https://folio-org.atlassian.net/browse/MODINV-1444)
 
 ### Tech Dept
 
