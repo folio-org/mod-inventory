@@ -44,6 +44,7 @@ import org.folio.JobProfile.DataType;
 import org.folio.MappingProfile;
 import org.folio.dataimport.util.DataImportHeaders;
 import org.folio.inventory.dataimport.cache.CancelledJobsIdsCache;
+import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.dataimport.consumers.DataImportKafkaConsumer;
 import org.folio.inventory.storage.Storage;
 import org.folio.processing.events.EventManager;
@@ -114,6 +115,8 @@ class DataImportKafkaConsumerTest extends KafkaTest {
 
     HttpClient client = vertxAssistant.getVertx().createHttpClient();
     cancelledJobsIdCache = CancelledJobsIdsCache.getInstance();
+    // ProfileSnapshotCache is a JVM-wide singleton; reset it so it is bound to this test's Vertx instance
+    ProfileSnapshotCache.getInstance(vertxAssistant.getVertx(), client, true);
     dataImportConsumer = new DataImportKafkaConsumer(vertxAssistant.getVertx(), mockedStorage, client, kafkaConfig);
 
     EventManager.clearEventHandlers();
