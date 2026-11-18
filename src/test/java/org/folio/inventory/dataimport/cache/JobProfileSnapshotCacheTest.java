@@ -44,7 +44,7 @@ class JobProfileSnapshotCacheTest extends BaseWireMockTest {
   void setUp(Vertx vertx) {
     stubGetJson(PROFILE_SNAPSHOT_URL, Json.encode(jobProfileSnapshot));
 
-    profileSnapshotCache = ProfileSnapshotCache.getInstance(vertx, vertx.createHttpClient());
+    profileSnapshotCache = ProfileSnapshotCache.getInstance(vertx, vertx.createHttpClient(), true);
     context = EventHandlingUtil.constructContext(TENANT_ID, "token", mockServerUrl());
   }
 

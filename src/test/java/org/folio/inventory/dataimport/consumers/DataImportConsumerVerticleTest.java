@@ -30,6 +30,7 @@ import org.folio.DataImportEventPayload;
 import org.folio.JobProfile;
 import org.folio.MappingProfile;
 import org.folio.dataimport.util.DataImportHeaders;
+import org.folio.inventory.dataimport.cache.ProfileSnapshotCache;
 import org.folio.inventory.verticle.DataImportConsumerVerticle;
 import org.folio.processing.events.EventManager;
 import org.folio.processing.events.services.handler.EventHandler;
@@ -87,6 +88,9 @@ class DataImportConsumerVerticleTest extends KafkaTest {
   @BeforeAll
   static void setUpClass() throws Exception {
     EventManager.registerKafkaEventPublisher(kafkaConfig, vertxAssistant.getVertx(), 1);
+    // ProfileSnapshotCache is a JVM-wide singleton; reset it so it is not bound to an HttpClient
+    // of a Vertx instance closed by a previously executed test class
+    ProfileSnapshotCache.getInstance(vertxAssistant.getVertx(), vertxAssistant.getVertx().createHttpClient(), true);
 
     CompletableFuture<String> deployFuture = new CompletableFuture<>();
     vertxAssistant.getVertx()
