@@ -6,6 +6,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR;
 import static org.folio.DataImportEventTypes.DI_INCOMING_MARC_BIB_RECORD_PARSED;
 import static org.folio.DataImportEventTypes.DI_SRS_MARC_BIB_RECORD_MATCHED;
@@ -568,6 +569,111 @@ class MarcBibliographicMatchEventHandlerTest extends BaseWireMockTest {
       assertNull(payload.getContext().get(MATCHED_MARC_BIB_KEY));
       testContext.completeNow();
     }));
+  }
+
+  @Test
+  void shouldMatchCentralRecordIfSameRecordIsDeletedAtLocalAndActualAtCentralTenant(VertxTestContext testContext) {
+    String matchedId = UUID.randomUUID().toString();
+    Record localRecord = buildRecordWithState(matchedId, Record.State.DELETED);
+    Record centralRecord = buildRecordWithState(matchedId, Record.State.ACTUAL);
+    stubSameRecordInLocalAndCentralTenants(localRecord, centralRecord);
+
+    matchMarcBibEventHandler.handle(createEventPayload(TENANT_ID))
+      .whenComplete((payload, throwable) -> testContext.verify(() -> {
+        assertNull(throwable);
+        assertEquals(DI_SRS_MARC_BIB_RECORD_MATCHED.value(), payload.getEventType());
+        assertEquals(CENTRAL_TENANT_ID, payload.getContext().get(CENTRAL_TENANT_ID_KEY));
+        Record actualRecord = Json.decodeValue(payload.getContext().get(MATCHED_MARC_BIB_KEY), Record.class);
+        assertEquals(centralRecord.getId(), actualRecord.getId());
+        testContext.completeNow();
+      }));
+  }
+
+  @Test
+  void shouldMatchLocalRecordIfSameRecordIsActualAtLocalAndDeletedAtCentralTenant(VertxTestContext testContext) {
+    String matchedId = UUID.randomUUID().toString();
+    Record localRecord = buildRecordWithState(matchedId, Record.State.ACTUAL);
+    Record centralRecord = buildRecordWithState(matchedId, Record.State.DELETED);
+    stubSameRecordInLocalAndCentralTenants(localRecord, centralRecord);
+
+    matchMarcBibEventHandler.handle(createEventPayload(TENANT_ID))
+      .whenComplete((payload, throwable) -> testContext.verify(() -> {
+        assertNull(throwable);
+        assertEquals(DI_SRS_MARC_BIB_RECORD_MATCHED.value(), payload.getEventType());
+        assertNull(payload.getContext().get(CENTRAL_TENANT_ID_KEY));
+        Record actualRecord = Json.decodeValue(payload.getContext().get(MATCHED_MARC_BIB_KEY), Record.class);
+        assertEquals(localRecord.getId(), actualRecord.getId());
+        testContext.completeNow();
+      }));
+  }
+
+  @Test
+  void shouldMatchCentralRecordIfSameRecordIsDeletedAtLocalAndCentralTenants(VertxTestContext testContext) {
+    String matchedId = UUID.randomUUID().toString();
+    Record localRecord = buildRecordWithState(matchedId, Record.State.DELETED);
+    Record centralRecord = buildRecordWithState(matchedId, Record.State.DELETED);
+    stubSameRecordInLocalAndCentralTenants(localRecord, centralRecord);
+
+    matchMarcBibEventHandler.handle(createEventPayload(TENANT_ID))
+      .whenComplete((payload, throwable) -> testContext.verify(() -> {
+        assertNull(throwable);
+        assertEquals(DI_SRS_MARC_BIB_RECORD_MATCHED.value(), payload.getEventType());
+        assertEquals(CENTRAL_TENANT_ID, payload.getContext().get(CENTRAL_TENANT_ID_KEY));
+        Record actualRecord = Json.decodeValue(payload.getContext().get(MATCHED_MARC_BIB_KEY), Record.class);
+        assertEquals(centralRecord.getId(), actualRecord.getId());
+        testContext.completeNow();
+      }));
+  }
+
+  @Test
+  void shouldPopulatePayloadWithInstancesIdsIfRecordsAtLocalAndCentralTenantsHaveDifferentMatchedIds(
+    VertxTestContext testContext) {
+    Record localRecord = buildRecordWithState(UUID.randomUUID().toString(), Record.State.ACTUAL);
+    Record centralRecord = buildRecordWithState(UUID.randomUUID().toString(), Record.State.ACTUAL);
+    stubSameRecordInLocalAndCentralTenants(localRecord, centralRecord);
+
+    matchMarcBibEventHandler.handle(createEventPayloadWithSubmatchProfile())
+      .whenComplete((payload, throwable) -> testContext.verify(() -> {
+        assertNull(throwable);
+        assertEquals(DI_SRS_MARC_BIB_RECORD_MATCHED.value(), payload.getEventType());
+        assertNotNull(payload.getContext().get(INSTANCES_IDS_KEY));
+        assertEquals(2, new JsonArray(payload.getContext().get(INSTANCES_IDS_KEY)).size());
+        assertNull(payload.getContext().get(MATCHED_MARC_BIB_KEY));
+        assertNull(payload.getContext().get(CENTRAL_TENANT_ID_KEY));
+        testContext.completeNow();
+      }));
+  }
+
+  private Record buildRecordWithState(String matchedId, Record.State state) {
+    return new Record()
+      .withId(UUID.randomUUID().toString())
+      .withMatchedId(matchedId)
+      .withState(state)
+      .withRecordType(MARC_BIB)
+      .withParsedRecord(new ParsedRecord().withContent(PARSED_CONTENT));
+  }
+
+  private void stubSameRecordInLocalAndCentralTenants(Record localRecord, Record centralRecord) {
+    WIRE_MOCK.stubFor(post(RECORDS_MATCHING_PATH)
+      .withHeader(TENANT.toLowerCase(), equalTo(TENANT_ID))
+      .willReturn(WireMock.ok().withBody(Json.encode(new RecordsIdentifiersCollection()
+        .withIdentifiers(List.of(new RecordIdentifiersDto()
+          .withRecordId(localRecord.getId())
+          .withExternalId(UUID.randomUUID().toString())))
+        .withTotalRecords(1)))));
+
+    WIRE_MOCK.stubFor(post(RECORDS_MATCHING_PATH)
+      .withHeader(TENANT.toLowerCase(), equalTo(CENTRAL_TENANT_ID))
+      .willReturn(WireMock.ok().withBody(Json.encode(new RecordsIdentifiersCollection()
+        .withIdentifiers(List.of(new RecordIdentifiersDto()
+          .withRecordId(centralRecord.getId())
+          .withExternalId(UUID.randomUUID().toString())))
+        .withTotalRecords(1)))));
+
+    WIRE_MOCK.stubFor(get(urlPathEqualTo("/source-storage/records/" + localRecord.getId()))
+      .willReturn(WireMock.ok().withBody(Json.encodePrettily(localRecord))));
+    WIRE_MOCK.stubFor(get(urlPathEqualTo("/source-storage/records/" + centralRecord.getId()))
+      .willReturn(WireMock.ok().withBody(Json.encodePrettily(centralRecord))));
   }
 
   @Test
