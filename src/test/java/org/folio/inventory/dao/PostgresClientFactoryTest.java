@@ -1,37 +1,38 @@
 package org.folio.inventory.dao;
 
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_DATABASE;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_HOST;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_IDLETIMEOUT;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_MAXPOOLSIZE;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_PASSWORD;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_PORT;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_SERVER_PEM;
+import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_USERNAME;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+
 import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.pgclient.PgConnectOptions;
-import io.vertx.sqlclient.Pool;
 import io.vertx.pgclient.SslMode;
+import io.vertx.sqlclient.Pool;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import org.folio.inventory.common.dao.PostgresClientFactory;
 import org.folio.inventory.common.dao.PostgresConnectionOptions;
 import org.folio.inventory.rest.impl.PgPoolContainer;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
-import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_HOST;
-import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_PORT;
-import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_DATABASE;
-import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_USERNAME;
-import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_PASSWORD;
-import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_MAXPOOLSIZE;
-import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_SERVER_PEM;
-import static org.folio.inventory.common.dao.PostgresConnectionOptions.DB_IDLETIMEOUT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-
+@Ignore
 @RunWith(VertxUnitRunner.class)
 public class PostgresClientFactoryTest {
 

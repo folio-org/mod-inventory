@@ -1,3 +1,6 @@
+## 22.0.7 2026-11-18
+* Downgrade Liquibase from 5 to 4 [MODINV-1444](https://folio-org.atlassian.net/browse/MODINV-1444)
+
 ## 22.0.6 2026-10-20
 * Update data-import-processing-core to 5.0.2
 
