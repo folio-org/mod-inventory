@@ -40,7 +40,7 @@ resourceTypes:
         exampleItem: !include examples/item_get.json
     get:
       is: [pageable,
-          searchable: {description: "using CQL (indexes for item and material type)",
+          searchable: {description: "using CQL (indexes for item and material type); use POST /inventory/items/retrieve if query might exceed 3000 bytes",
             example: "barcode==\"65345656554\""}
           ]
     post:
@@ -69,7 +69,7 @@ resourceTypes:
               strict: false
               value: !include examples/cqlQueryRequestDto.json
         description: |
-          Fetch inventory items collection by POST request
+          Fetch inventory items collection by POST request; same as GET /inventory/items but allows longer query strings
     /{itemId}:
       type:
         collection-item:
